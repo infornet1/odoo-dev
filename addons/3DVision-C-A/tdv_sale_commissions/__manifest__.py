@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+{
+    "name": "Sale Commissions",
+    "summary": """commissions on sales""",
+    "description": """""",
+    "author": "3DVision, C.A.",
+    "license": "LGPL-3",
+    "website": "https://www.3dvisionve.com",
+    "category": "Uncategorized",
+    "version": "17.0.0.0",
+    "depends": ["sale_management", "account", "contacts"],
+    "data": [
+        "data/res_group.xml",
+        "security/ir.model.access.csv",
+        "reports/sale_commission_report_views.xml",
+        "reports/sale_commission_templates.xml",
+        "views/sale_order_view.xml",
+        "views/account_move_view.xml",
+        "views/sale_commission_line.xml",
+        "wizards/sale_commission_wizard.xml",
+        "views/sale_commission_view.xml",
+        "views/res_partner.xml",
+        "views/menus.xml",
+        "wizards/batch_commissions_wizard_view.xml",
+        # 'data/ir_rule.xml',
+    ],
+}

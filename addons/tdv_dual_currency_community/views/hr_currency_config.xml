@@ -1,0 +1,30 @@
+<odoo>
+    <record id="view_res_config_settings_form_inherit" model="ir.ui.view">
+        <field name="name">res.config.settings.form.inherit</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='main_currency_setting_container']//field[@name='currency_id']" position="after">
+                <!-- Moneda de Conversión -->
+                <div class="row mt16">
+                    <div class="col-lg-3 o_light_label">
+                        <label for="currency_conversion_id"/>
+                    </div>
+                    <div class="col-lg-9">
+                        <field name="currency_conversion_id" options="{'no_create_edit': True, 'no_open': True}" context="{'active_test': False}" />
+                    </div>
+                </div>
+
+                <!-- Checkbox de Impresión Personalizada -->
+                <div class="row mt16">
+                    <div class="col-lg-3 o_light_label">
+                        <label for="custom_payslip_report"/>
+                    </div>
+                    <div class="col-lg-9">
+                        <field name="custom_payslip_report" class="oe_inline" widget="boolean_checkbox" options="{'terminology': 'check'}" />
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

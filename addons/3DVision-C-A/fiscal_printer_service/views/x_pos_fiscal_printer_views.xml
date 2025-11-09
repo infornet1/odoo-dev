@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="x_pos_fiscal_printer_view_tree" model="ir.ui.view">
+        <field name="name">x.pos.fiscal.printer.view.tree</field>
+        <field name="model">x.pos.fiscal.printer</field>
+        <field name="arch" type="xml">
+            <tree string="Impresoras fiscales" decoration-info="connection_type == 'network'" decoration-success="connection_type == 'usb'" decoration-warning="connection_type == 'serial'">
+                <field name="name" required="1" />
+                <field name="serial"/>
+                <field name="flag_21" />
+                <field name="serial_port" required="1" />
+                <field name="connection_type" />
+                <field name="api_url" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="x_pos_fiscal_printer_view_form" model="ir.ui.view">
+        <field name="name">x.pos.fiscal.printer.view.form</field>
+        <field name="model">x.pos.fiscal.printer</field>
+        <field name="arch" type="xml">
+            <form string="Impresora Fiscal" js_class="fiscal_printer_form" create="true" edit="true">
+                <header>
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div class="d-flex align-items-center">
+                            <button name="test_printer" string="Probar Conexión" type="object" class="o_fiscal_printer_test_button btn-primary me-2" icon="fa-plug"/>
+                            <button name="print_x_report" string="Reporte X" type="object" class="o_fiscal_printer_connect_button btn-success me-2" icon="fa-file-text-o" confirm="¿Desea imprimir el reporte X?"/>
+                            <button name="print_z_report" string="Reporte Z" type="object" class="o_fiscal_printer_connect_button btn-danger" icon="fa-file-text" confirm="¿Desea imprimir el reporte Z?"/>
+                        </div>
+                        <div class="text-muted ms-3" style="padding-left: 12px; border-left: 1px solid #ddd;">
+                            <i class="fa fa-info-circle" style="margin-right: 4px;"/>
+                            <span style="vertical-align: middle;">Configuración de Impresora Fiscal</span>
+                        </div>
+                    </div>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Nombre de la impresora fiscal" required="1" class="oe_inline"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Información Básica" name="basic_info">
+                            <field name="serial" placeholder="Número de serie"/>
+                            <field name="connection_type" widget="selection"/>
+                            <field name="serial_port" placeholder="Puerto serie"/>
+                            <field name="api_url" placeholder="URL de la API" invisible="connection_type != 'api'"/>
+                        </group>
+
+                        <group string="Configuración de Empresa" name="company_config">
+                            <field name="company_id" required="1"/>
+                            <field name="currency_id" required="1"/>
+                            <field name="credit_payment_method" placeholder="Método de pago de crédito"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Estado de la Impresora" name="printer_status">
+                            <field name="display_current_z_report" readonly="1"/>
+                            <field name="last_invoice_number" readonly="1"/>
+                            <field name="last_cn_invoice_number" readonly="1"/>
+                        </group>
+
+                        <group string="Configuración Avanzada" name="advanced_config">
+                            <field name="flag_21"/>
+                            <field name="flag_50"/>
+                            <field name="flag_63"/>
+                        </group>
+                    </group>
+
+                    <!-- <field name="usb_vendor_id" />
+                    <field name="usb_product_id" /> -->
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="x_pos_fiscal_printer_action" model="ir.actions.act_window">
+        <field name="name">Impresoras Fiscales</field>
+        <field name="res_model">x.pos.fiscal.printer</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configure su primera impresora fiscal
+            </p>
+            <p>
+                Las impresoras fiscales permiten generar reportes y documentos 
+                cumpliendo con las regulaciones fiscales locales.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="x_pos_fiscal_printer_menu" name="Impresoras Fiscales" action="x_pos_fiscal_printer_action" sequence="10"/>
+
+</odoo>

@@ -1,0 +1,356 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_purchase_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-08 18:05+0000\n"
+"PO-Revision-Date: 2025-07-08 18:05+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_purchase_report
+#: model:ir.actions.report,print_report_name:tdv_purchase_report.action_report_tdv_purchase_report
+msgid "'%s' % object.name"
+msgstr ""
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report_line__invoice_type__01
+msgid "01 - Invoice"
+msgstr "01 - Factura"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report_line__invoice_type__02
+msgid "02 - Debit Note"
+msgstr "02 - Nota de débito"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report_line__invoice_type__03
+msgid "03 - Credit Note"
+msgstr "03 - Nota de crédito"
+
+#. module: tdv_purchase_report
+#: model:ir.actions.report,name:tdv_purchase_report.action_report_tdv_purchase_report
+msgid "3DV Purchase Book Report"
+msgstr "Libro de Compras 3DV"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+msgid ""
+"<i class=\"fa fa-long-arrow-right mx-2\" aria-label=\"Arrow icon\" "
+"title=\"Arrow\"/>"
+msgstr ""
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__reversal_move_reference
+msgid "Affected document"
+msgstr "Documento afectado"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__purchase_type__all
+msgid "All"
+msgstr "Todas"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__amount_untaxed
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__amount_untaxed
+msgid "Amount Untaxed"
+msgstr "Base Imponible"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__state__cancelled
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#. module: tdv_purchase_report
+#. odoo-python
+#: code:addons/tdv_purchase_report/models/purchase_report.py:0
+#, python-format
+msgid "Cannot return to Draft status."
+msgstr "No se puede volver al estado de Borrador."
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__company_id
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__company_id
+msgid "Company"
+msgstr "Compañía"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__control_number
+msgid "Control Number"
+msgstr "Número de Control"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__purchase_type__fiscal
+msgid "Control number"
+msgstr "Número de control"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__create_uid
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__create_date
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__create_date
+msgid "Created on"
+msgstr "Creado en"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__currency_id
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__currency_id
+msgid "Currency"
+msgstr "Moneda"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+msgid "Date"
+msgstr "Fecha"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__date_from
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__date_from
+msgid "Date From"
+msgstr "Desde"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__date_to
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__date_to
+msgid "Date To"
+msgstr "Hasta"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__display_name
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__invoice_type
+msgid "Document Type"
+msgstr "Tipo de Documento"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__state__draft
+msgid "Draft"
+msgstr "Borrador"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__amount_exempt
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__amount_exempt
+msgid "Exempt Amount"
+msgstr "Monto Exento"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_bank_statement_line__file_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_move__file_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_payment__file_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__file_number
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.view_account_move_form_inherit_tdv_purchase_report
+msgid "File Number"
+msgstr "Número de Expediente"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__invoice_reference
+msgid "Fiscal Correlative"
+msgstr "Referencia Fiscal"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+msgid "Generate Report"
+msgstr "Generar Informe"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__id
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__id
+msgid "ID"
+msgstr "IDENTIFICACIÓN"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_bank_statement_line__import_plan_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_move__import_plan_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_account_payment__import_plan_number
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__import_plan_number
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.view_account_move_form_inherit_tdv_purchase_report
+msgid "Import Plan Number"
+msgstr "Número de Plan de Importación"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__invoice_id
+msgid "Invoice"
+msgstr "Factura"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__invoice_date
+msgid "Invoice Date"
+msgstr "Fecha de la factura"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+msgid "Invoice Lines"
+msgstr "Líneas de factura"
+
+#. module: tdv_purchase_report
+#: model:ir.model,name:tdv_purchase_report.model_account_move
+msgid "Journal Entry"
+msgstr "Asiento contable"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__write_uid
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__write_date
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__write_date
+msgid "Last Updated on"
+msgstr "Última actualización en"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__purchase_type__no_fiscal
+msgid "No control number"
+msgstr "Sin número de control"
+
+#. module: tdv_purchase_report
+#: model_terms:ir.actions.act_window,help:tdv_purchase_report.action_tdv_purchase_report
+msgid "No create Reports"
+msgstr "No hay reportes creados"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__partner_id
+msgid "Partner"
+msgstr "Proveedor"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__purchase_report_id
+msgid "Purchase  Book"
+msgstr "Libro de Compras"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__line_ids
+msgid "Purchase Book Lines"
+msgstr "Líneas del Libro de Compras"
+
+#. module: tdv_purchase_report
+#: model:ir.actions.act_window,name:tdv_purchase_report.action_tdv_purchase_report
+#: model:ir.model,name:tdv_purchase_report.model_tdv_purchase_report
+#: model:ir.ui.menu,name:tdv_purchase_report.purchase_report_menu
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_form
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_report.tdv_purchase_report_view_tree
+msgid "Purchase Report"
+msgstr "Libro de Compras"
+
+#. module: tdv_purchase_report
+#: model:ir.model,name:tdv_purchase_report.model_tdv_purchase_report_line
+msgid "Purchase Report Line"
+msgstr "Línea de Reporte de Compras"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__purchase_type
+msgid "Purchase Type"
+msgstr "Tipo de compra"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields.selection,name:tdv_purchase_report.selection__tdv_purchase_report__state__registered
+msgid "Registered"
+msgstr "Registrado"
+
+#. module: tdv_purchase_report
+#: model:ir.model,name:tdv_purchase_report.model_report_tdv_purchase_report_purchase_report_xlsx
+msgid "Report XLSX"
+msgstr "Reporte XLSX"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__show_nro_exp
+msgid "Show File Number in XLSX"
+msgstr "Mostrar Número de Expediente en XLSX"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__show_nro_plan_import
+msgid "Show Import Plan Number in XLSX"
+msgstr "Mostrar Número de Planilla de Importación en XLSX"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__state
+msgid "State"
+msgstr "Estado"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__amount_tax
+msgid "Tax"
+msgstr "Impuesto"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__tax_totals
+msgid "Tax Totals"
+msgstr "Totales de Impuestos"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__amount_tax
+msgid "Taxes"
+msgstr "Impuestos"
+
+#. module: tdv_purchase_report
+#. odoo-python
+#: code:addons/tdv_purchase_report/models/purchase_book_line.py:0
+#, python-format
+msgid "The date on the invoice %s is required"
+msgstr "Se requiere la fecha en la factura %s"
+
+#. module: tdv_purchase_report
+#. odoo-python
+#: code:addons/tdv_purchase_report/models/purchase_report.py:0
+#, python-format
+msgid "The dates are required for registration"
+msgstr "Las fechas son necesarias para el registro"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report__amount_total
+msgid "Total"
+msgstr "Total"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__amount_total
+msgid "Total Amount"
+msgstr "Monto Total"
+
+#. module: tdv_purchase_report
+#: model:ir.model.fields,field_description:tdv_purchase_report.field_tdv_purchase_report_line__tax_totals
+msgid "Totals"
+msgstr "Totales"
+
+#. module: tdv_purchase_report
+#. odoo-python
+#: code:addons/tdv_purchase_report/models/purchase_report.py:0
+#, python-format
+msgid "You cannot delete a report that is not in Draft status."
+msgstr "No se puede eliminar un reporte que no esté en estado de Borrador."
+
+#. module: tdv_purchase_report
+#. odoo-python
+#: code:addons/tdv_purchase_report/models/purchase_report.py:0
+#, python-format
+msgid ""
+"You must generate the report before printing. Please click 'Generate Report'"
+" first."
+msgstr "Debe generar el informe antes de imprimir. Por favor, haga clic en 'Generar informe' primero."

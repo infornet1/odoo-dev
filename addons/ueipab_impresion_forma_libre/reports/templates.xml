@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="freeform_template" inherit_id="impresion_forma_libre.freeform_template">
+        <xpath expr="//span[@t-field='o.invoice_date']" position="replace">
+            <span t-field="o.fiscal_print_date" />
+        </xpath>
+    </template>
+
+</odoo>

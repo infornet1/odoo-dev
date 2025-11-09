@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_partner_form_inherit_base" model="ir.ui.view">
+        <field name="name">res.partner.view.form.inherit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <field name="sale_commission_partner"
+                    options=" {'no_quick_create':True,'no_create_edit':True,'no_open': True,}"
+                    domain="[('has_commissions', '=', True)]" />
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="commissions" string="Commissions"
+                    groups="tdv_sale_commissions.commission_manager_group">
+                    <group>
+                        <group string="Commissions">
+                            <field name="has_commissions" />
+                            <field name="sale_commission_rate" widget="percentage" />
+                            <field name="service_commission_rate" widget="percentage" />
+                        </group>
+                        <group string="Generation mode">
+                            <field name="generation_mode" />
+                        </group>
+                    </group>
+                    <group>
+                        <field name="special_commission_rate">
+                            <tree editable="bottom">
+                                <field name="related_partner" />
+                                <field name="service_rate" widget="percentage" />
+                                <field name="sale_rate" widget="percentage" />
+                            </tree>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

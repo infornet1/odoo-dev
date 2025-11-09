@@ -1,0 +1,41 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_retention_purchase_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-27 20:11+0000\n"
+"PO-Revision-Date: 2025-05-27 20:11+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_retention_purchase_report
+#: model:ir.model.fields,field_description:tdv_retention_purchase_report.field_tdv_purchase_report_line__amount_detained
+msgid "Amount Detained"
+msgstr "Monto Retenido"
+
+#. module: tdv_retention_purchase_report
+#: model:ir.model,name:tdv_retention_purchase_report.model_tdv_purchase_report_line
+msgid "Purchase Report Line"
+msgstr "Línea de Reporte de Compras"
+
+#. module: tdv_retention_purchase_report
+#: model:ir.model,name:tdv_retention_purchase_report.model_report_tdv_purchase_report_purchase_report_xlsx
+msgid "Report XLSX"
+msgstr "Reporte XLSX"
+
+#. module: tdv_retention_purchase_report
+#: model:ir.model.fields,field_description:tdv_retention_purchase_report.field_tdv_purchase_report_line__retention_id
+msgid "Retention"
+msgstr "Retención"
+
+#. module: tdv_retention_purchase_report
+#: model:ir.model.fields,field_description:tdv_retention_purchase_report.field_tdv_purchase_report_line__retention_line_id
+msgid "Retention Line"
+msgstr "Línea de Retención"

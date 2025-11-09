@@ -1,0 +1,10 @@
+<odoo>
+
+  <menuitem
+    id="purchase_report_menu"
+    name="Purchase Report"
+    action="action_tdv_purchase_report"
+    parent="tribute_fields.fiscal_reports_root_menu"
+    sequence="10"/>
+
+</odoo>

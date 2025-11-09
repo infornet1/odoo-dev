@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+        <record id="view_vehicle_form" model="ir.ui.view">
+            <field name="name">vehicle.form</field>
+            <field name="model">vehicle</field>
+            <field name="arch" type="xml">
+                <form string="Vehículo">
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="number_plate"/>
+                            <field name="color"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_vehicle_tree" model="ir.ui.view">
+            <field name="name">vehicle.tree</field>
+            <field name="model">vehicle</field>
+            <field name="arch" type="xml">
+                <tree string="Vehículos">
+                    <field name="name"/>
+                    <field name="number_plate"/>
+                    <field name="color"/>
+                </tree>
+            </field>
+        </record>
+        
+
+        <record id="action_vehicle" model="ir.actions.act_window">
+            <field name="name">Vehículos</field>
+            <field name="res_model">vehicle</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No create registers
+            </p>
+            </field>
+        </record>
+</odoo>

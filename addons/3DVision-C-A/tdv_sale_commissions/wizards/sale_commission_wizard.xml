@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="sale_commission_wizard_action" model="ir.actions.act_window">
+        <field name="name">Sale Commission</field>
+        <field name="res_model">sale.commission.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="sale_commission_wizard_view_form" model="ir.ui.view">
+        <field name="name">sale.commission.wizard.view.form</field>
+        <field name="model">sale.commission.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Sale Commission">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="from_date" />
+                        </group>
+                        <group>
+                            <field name="to_date" />
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button class="btn btn-primary" string="Validate" type="object"
+                        name="create_commissions" />
+                    <button string="Cancelar" class="oe_link" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="category_pos_cliente" model="res.partner.category">
+            <field name="name">POS_CLIENTE</field>
+        </record>
+    </data>
+
+</odoo> 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_company_view" model="ir.ui.view">
+        <field name="name">res.company.view</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='parent_id']" position="after">
+                <field name="ruc"/>
+                <field name="taxpayer_license"/>
+                <field name="municipality"/>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

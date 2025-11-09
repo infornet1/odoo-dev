@@ -1,0 +1,262 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* sales_summary
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-04-16 14:13+0000\n"
+"PO-Revision-Date: 2024-04-16 14:13+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: sales_summary
+#: model:ir.actions.report,print_report_name:sales_summary.report_action_account_move_summary
+msgid "'Sales report'"
+msgstr "'Reporte de ventas'"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.view_form_account_move_summary_wizard
+msgid ""
+"<i class=\"fa fa-long-arrow-right mx-2\" aria-label=\"Arrow icon\" "
+"title=\"Arrow\"/>"
+msgstr ""
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "<strong>Total Cash Sales:</strong>"
+msgstr "<strong>Ventas al Contado:</strong>"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "<strong>Total Due:</strong>"
+msgstr "<strong>Total Adeudado:</strong>"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "<strong>Total Previous Charges:</strong>"
+msgstr "<strong>Cobros:</strong>"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "<strong>Total:</strong>"
+msgstr "<strong>Total:</strong>"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Amount"
+msgstr "Monto"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Amount Due"
+msgstr "Monto adeudado"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Amount in Currency"
+msgstr "Monto en moneda"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.view_form_account_move_summary_wizard
+msgid "Close"
+msgstr "Cerrar"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__create_date
+msgid "Created on"
+msgstr "Creado en"
+
+#. module: sales_summary
+#: model:ir.ui.menu,name:sales_summary.sales_summary_menu
+msgid "Daily reports"
+msgstr "Reportes Diarios"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+#: model_terms:ir.ui.view,arch_db:sales_summary.view_form_account_move_summary_wizard
+msgid "Date"
+msgstr "Fecha"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__display_name
+msgid "Display Name"
+msgstr "Mostrar nombre"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__date_from
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "From"
+msgstr "Desde"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__has_invoices
+msgid "Has Invoices"
+msgstr "Tiene Facturas"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__has_journals
+msgid "Has Journals"
+msgstr "Tiene Diarios"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__has_payments
+msgid "Has Payments"
+msgstr "Tiene Pagos"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__id
+msgid "ID"
+msgstr "IDENTIFICACIÓN"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.view_form_account_move_summary_wizard
+msgid "Imprimir"
+msgstr ""
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "In payment process"
+msgstr "En proceso de pago"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Invoices -"
+msgstr "Facturas -"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Journal"
+msgstr "Diario"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Journals"
+msgstr "Diarios"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard____last_update
+msgid "Last Modified on"
+msgstr "Última modificación"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__write_date
+msgid "Last Updated on"
+msgstr "Ultima actualización en"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Legacy"
+msgstr "Legado"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Name"
+msgstr "Nombre"
+
+#. module: sales_summary
+#. odoo-python
+#: code:addons/sales_summary/wizards/account_move_summary_wizard.py:0
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_invoices__no
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_journals__no
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_payments__no
+#, python-format
+msgid "No"
+msgstr ""
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Paid"
+msgstr "Pagada"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Partially paid"
+msgstr "Parcialmente pagado"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Partner"
+msgstr "Cliente"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Payment Type"
+msgstr "Tipo de pago"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Payments"
+msgstr "Pagos"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Reconciled Moves"
+msgstr "Movimientos Conciliados"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Reversed"
+msgstr "Revertida"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Sales Report"
+msgstr "Reporte de ventas"
+
+#. module: sales_summary
+#: model:ir.actions.act_window,name:sales_summary.action_sales_summary_invoice_summary_wizard
+#: model:ir.actions.report,name:sales_summary.report_action_account_move_summary
+#: model:ir.ui.menu,name:sales_summary.invoice_summary
+msgid "Sales report"
+msgstr "salesReport"
+
+#. module: sales_summary
+#: model:ir.model.fields,field_description:sales_summary.field_account_move_summary_wizard__date_to
+msgid "To"
+msgstr "Hasta"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Total"
+msgstr ""
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "Unpaid"
+msgstr "No pagadas"
+
+#. module: sales_summary
+#: model:ir.model,name:sales_summary.model_account_move_summary_wizard
+msgid "Wizard of account move summary"
+msgstr "Resumen de movimiento de asistente de cuenta"
+
+#. module: sales_summary
+#. odoo-python
+#: code:addons/sales_summary/wizards/account_move_summary_wizard.py:0
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_invoices__yes
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_journals__yes
+#: model:ir.model.fields.selection,name:sales_summary.selection__account_move_summary_wizard__has_payments__yes
+#, python-format
+msgid "Yes"
+msgstr "Sí"
+
+#. module: sales_summary
+#: model_terms:ir.ui.view,arch_db:sales_summary.sales_report
+msgid "to"
+msgstr "Hasta"

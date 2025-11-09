@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+
+    <record id="pos_payment_method_view_form_inherit" model="ir.ui.view">
+        <field name="name">pos.payment.method.inherit</field>
+        <field name="model">pos.payment.method</field>
+        <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='company_id']" position="after">
+                <field name="x_printer_code" widget='selection'></field>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="pos_payment_method_view_tree_inherit_point_of_sale" model="ir.ui.view">
+        <field name="name">pos.payment.method.view.list.inherit</field>
+        <field name="model">pos.payment.method</field>
+        <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='journal_id']" position="after">
+                <field name="x_printer_code" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

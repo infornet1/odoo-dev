@@ -1,0 +1,4 @@
+[submodule "3DVision-C-A"]
+	path = 3DVision-C-A
+	url = git@github.com:3DVision-CA/tdv_addons.git
+	branch = 17.0

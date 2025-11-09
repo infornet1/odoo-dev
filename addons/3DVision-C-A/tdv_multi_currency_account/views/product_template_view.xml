@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+
+  <record id="inherited_product_template_form_view" model="ir.ui.view">
+  <field name="name">product.template.inherit</field>
+  <field name="model">product.template</field>
+  <field name="inherit_id" ref="product.product_template_only_form_view"/>
+  <field name="arch" type="xml">
+    <field name="tax_string" position="replace"/>
+
+    <field name="taxes_id" position="replace">
+      <label for="taxes_id" string="Customer Taxes"/>
+      <div>
+        <field class="oe_inline" name="taxes_id" widget="many2many_tags" context="{'default_type_tax_use':'sale', 'search_default_sale': 1, 'search_default_service': type == 'service', 'search_default_goods': type == 'consu'}"/>
+        <field class="ml-3" name="tax_string"/>
+      </div>
+    </field>
+
+    <field name="currency_id" position="after">
+      <field name="ref_currency_id" invisible="1"/>
+    </field>
+
+    <xpath expr="//div[@name='pricing']" position="inside">
+      <field name="ref_list_price" widget="monetary" class="oe_inline ml-5"/>
+    </xpath>
+
+    <xpath expr="//div[@name='standard_price_uom']" position="inside">
+      <field name="ref_standard_price" widget="monetary" class="oe_inline ml-5"/>
+      <span groups="uom.group_uom" class="oe_read_only">per
+        <field name="uom_name"/>
+      </span>
+    </xpath>
+
+    <xpath expr="//div[@name='options']" position="inside">
+      <span class="d-inline-block">
+        <field name="fixed_price" />
+        <label for="fixed_price"/>
+      </span>
+
+    </xpath>
+  </field>
+  </record>
+
+  <record id="inherited_product_template_kanban_view" model="ir.ui.view">
+    <field name="name">product.template.inherit</field>
+    <field name="model">product.template</field>
+    <field name="inherit_id" ref="product.product_template_kanban_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//div[@name='product_lst_price']" position="replace">
+        <div name="product_ref_price" class="mt-1">
+          <field name="ref_list_price" />
+        </div>
+        <div name="product_lst_price" class="mt-1">
+          <field name="list_price" widget="monetary"/>
+        </div>
+        <field name="currency_id" invisible="1"/>
+        <field name="ref_currency_id" invisible="1"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="product_template_tree_view_inherit_tdv_multi_currency_account" model="ir.ui.view">
+    <field name="name">product.template.view.tree.inherit</field>
+    <field name="model">product.template</field>
+    <field name="inherit_id" ref="product.product_template_tree_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//tree" position="attributes">
+        <attribute name="js_class" value="tdv_multi_currency_account_product_template_tree">tdv_multi_currency_account_product_template_tree</attribute>
+      </xpath>
+      <field name="list_price" position="after">
+        <field name="ref_list_price"/>
+      </field>
+    </field>
+  </record>
+
+  <record id="product_template_view_tree_inherit_tdv_multi_currency_account" model="ir.ui.view">
+    <field name="name">product.template.view.tree.inherit</field>
+    <field name="model">product.template</field>
+    <field name="inherit_id" ref="account.product_template_view_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//tree" position="attributes">
+        <attribute name="js_class" value="tdv_multi_currency_account_product_template_tree">tdv_multi_currency_account_product_template_tree</attribute>
+      </xpath>
+      <field name="list_price" position="after">
+        <field name="ref_list_price"/>
+      </field>
+    </field>
+  </record>
+
+</odoo>

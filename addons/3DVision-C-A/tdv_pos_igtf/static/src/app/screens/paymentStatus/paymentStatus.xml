@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_pos_igtf.PaymentScreenStatus" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('payment-status-total-due')]" position="after">
+            <div t-if="hasIgtf" class="payment-status-igtf fs-3 text-muted">
+                <span>IGTF </span>
+                <span t-esc="totalIgtfText"/>
+            </div>
+        </xpath>
+    </t>
+</template>

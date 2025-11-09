@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+        <template id="account_move_summary_report">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+
+                <t t-set="payment_status" t-value="{
+                    'paid': 'Ventas de Contado',
+                    'not_paid': 'Ventas a Credito',
+                    'partial': 'Pagadas Parcialmente',
+                    'in_payment': 'En proceso de pago',
+                    'reversed': 'Facturas Revertidas',
+                    'invoice_legacy': 'Invoice Legacy',
+                    'charges': 'Cobros'
+                }"/>
+
+                <t t-set="badge_types" t-value="{
+                    'paid': 'success',
+                    'in_payment': 'success',
+                    'partial': 'warning',
+                    'invoice_legacy': 'warning',
+                    'reversed': 'danger',
+                    'not_paid': 'danger',
+                }"/>
+
+                <t t-set="totals" t-value="[]"/>
+
+                <h3 class="text-center">Resumen de Facturas</h3>
+                <h5 class="text-center"> Desde <t t-esc="date_start"/> - Hasta <t t-esc="date_end"/></h5>
+
+                <br/>
+
+                <t t-foreach="moves_data" t-as="moves_by_group">
+                    <!-- <t t-if="moves_by_group_value"> -->
+
+                        <t t-set="total" t-value="0"/>
+                        <t t-set="ref_total" t-value="0"/>
+                        <t t-set="total_residual" t-value="0"/>
+                        <t t-set="ref_total_residual" t-value="0"/>
+
+                        <h5 class="text-center"><t t-esc="payment_status[moves_by_group]"/></h5>
+                        <table class="table table-sm small table-bordered">
+                            <thead class="table-active">
+                                <tr class="text-center">
+                                    <th scope="col" class="align-middle text-center">N°</th>
+                                    <th scope="col" class="align-middle text-center">Documento</th>
+                                    <th scope="col" class="align-middle text-center">Cliente</th>
+                                    <th scope="col" class="align-middle text-center">Estado</th>
+                                    <th scope="col" class="align-middle text-center">Pagos</th>
+                                    <t t-if="moves_by_group != 'not_paid'">
+                                        <th scope="col" colspan="2" class="align-middle text-center">Monto</th>
+                                    </t>
+                                    <t t-if="moves_by_group != 'paid'">
+                                        <th scope="col" colspan="2" class="align-middle text-center">Monto Adeudado</th>
+                                    </t>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="moves_by_group_value" t-as="move">
+                                    <th scope="col" class="align-middle"><t t-esc="move_index + 1"/></th>
+                                    <td class="align-middle"><t t-esc="move[0]"/></td>
+                                    <td class="align-middle"><t t-esc="move[1]"/></td>
+                                    <td class="align-middle text-center"><span t-attf-class="badge badge-{{badge_types[moves_by_group]}}" t-esc="move[3]"/></td>
+                                    <td class="align-middle">
+                                        <!-- <t t-foreach="move[8]" t-as="payment">
+                                            <div class="d-block text-center">
+                                                <span t-esc="payment[0]"/> -
+                                                <span t-esc="payment[1]"/>
+                                            </div>
+                                        </t> -->
+                                    </td>
+                                    <td class="align-middle text-right"><t t-esc="move[4]" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}" /></td>
+                                    <!-- <td class="align-middle text-right"><t t-esc="move[5]" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                                    <!-- <t t-if="moves_by_group not in ['not_paid','paid']"> -->
+                                        <!-- <td class="align-middle text-right"><t t-esc="move[6]" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}" /></td> -->
+                                        <!-- <td class="align-middle text-right"><t t-esc="move[7]" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                                    <!-- </t> -->
+
+                                    <t t-set="total" t-value="total + move[4]"/>
+                                    <t t-set="ref_total" t-value="ref_total + move[5]"/>
+                                    <!-- <t t-set="total_residual" t-value="total_residual + move[6]"/> -->
+                                    <!-- <t t-set="ref_total_residual" t-value="ref_total_residual + move[7]"/> -->
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold text-right align-middle" colspan="5">TOTAL</td>
+                                    <!-- <td class="font-weight-bold align-middle text-right"><t t-esc="total" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td> -->
+                                    <!-- <td class="font-weight-bold align-middle text-right"><t t-esc="ref_total" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                                    <!-- <t t-if="moves_by_group not in ['not_paid','paid']"> -->
+                                        <!-- <td class="font-weight-bold align-middle text-right"><t t-esc="total_residual" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td> -->
+                                        <!-- <td class="font-weight-bold align-middle text-right"><t t-esc="ref_total_residual" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                                    <!-- </t> -->
+                                </tr>
+                            </tbody>
+                            <!-- <t t-if="moves_by_group != 'partial'">
+                                <t t-set="totals" t-value="totals + [(moves_by_group, total, ref_total)]"/>
+                            </t>
+                            <t t-else="">
+                                <t t-set="totals" t-value="totals + [(moves_by_group, total - total_residual, ref_total - ref_total_residual, total_residual, ref_total_residual)]"/>
+                            </t> -->
+                        </table>
+                    <!-- </t> -->
+                    <br/> <hr/> <br/>
+                </t>
+
+                <t t-set="total" t-value="0"/>
+                <t t-set="total_in_currency" t-value="0"/>
+                <t t-set="ref_total" t-value="0"/>
+
+                <h3 class="text-center">Resumen de Pagos</h3>
+                <table class="table table-sm small table-bordered">
+                    <thead class="table-active">
+                        <tr class="text-center">
+                            <th scope="col" class="align-middle text-center">N°</th>
+                            <th scope="col" class="align-middle text-center">Pago</th>
+                            <th scope="col" class="align-middle text-center">Cliente</th>
+                            <th scope="col" class="align-middle text-center">Facturas Afectadas</th>
+                            <th scope="col" class="align-middle text-center">Tipo</th>
+                            <th scope="col" class="align-middle text-center">Fecha</th>
+                            <th scope="col" class="align-middle text-center">Diario</th>
+                            <th scope="col" colspan="3" class="align-middle text-center">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="payments_data" t-as="payment">
+                            <th scope="col" class="align-middle"><t t-esc="payment_index + 1"/></th>
+                            <td class="align-middle"><span t-esc="payment[0]"/></td>
+                            <td class="align-middle"><span t-esc="payment[1]"/></td>
+                            <td class="align-middle">
+                                <t t-foreach="payment[8]" t-as="invoice_related">
+                                    <span class="d-block" t-esc="invoice_related"/>
+                                </t>
+                            </td>
+                            <td class="align-middle text-center"><span t-attf-class="badge badge-{{'success' if payment[2] == 'Entrada' else 'danger'}}" t-esc="payment[2]"/></td>
+                            <td class="align-middle text-center"><span t-esc="payment[3]"/></td>
+                            <td class="align-middle text-center"><span t-esc="payment[4]"/></td>
+                            <td class="align-middle text-right"><span t-attf-class="text-right {{'text-danger' if 0 > payment[5] else ''}}" t-esc="payment[5]" t-options="{'widget': 'monetary', 'display_currency': env['res.currency'].browse([payment[9]])}"/></td>
+                            <td class="align-middle text-right"><span t-attf-class="text-right {{'text-danger' if 0 > payment[6] else ''}}" t-esc="payment[6]" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td>
+                            <!-- <td class="align-middle text-right"><span t-attf-class="text-right {{'text-danger' if 0 > payment[7] else ''}}" t-esc="payment[7]" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+
+                            <t t-set="total_in_currency" t-value="total_in_currency + payment[5]"/>
+                            <t t-set="total" t-value="total + payment[6]"/>
+                            <t t-set="ref_total" t-value="ref_total + payment[7]"/>
+
+                        </tr>
+                        <tr>
+                            <td class="align-middle text-right font-weight-bold" colspan="7"><span>TOTAL</span></td>
+                            <td class="align-middle text-center font-weight-bold"><span>-</span></td>
+                            <td class="align-middle text-right font-weight-bold"><span t-esc="total" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td>
+                            <!-- <td class="align-middle text-right font-weight-bold"><span t-esc="ref_total" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                        </tr>
+                    </tbody>
+
+                    <t t-set="totals" t-value="totals + [('charges', total, ref_total)]"/>
+
+                </table>
+
+                <br/> <hr/> <br/>
+
+                <t t-set="total" t-value="0"/>
+                <t t-set="ref_total" t-value="0"/>
+
+                <h3 class="text-center">Resumen de Metodos de Pago</h3>
+                <div class="w-50 table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-active">
+                            <tr>
+                                <th scope="col" class="align-middle text-center">#</th>
+                                <th scope="col" class="align-middle text-center">Metodo</th>
+                                <th scope="col" colspan="2" class="align-middle text-center">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="journals_data" t-as="journal">
+                                <td class="align-middle"> <t t-esc="journal_index + 1"/></td>
+                                <td class="align-middle"> <t t-esc="journal[0]"/></td>
+                                <td class="align-middle text-right"> <t t-esc="journal[1]" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td>
+                                <!-- <td class="align-middle text-right"> <t t-esc="journal[2]" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+
+                                <t t-set="total" t-value="total + journal[1]"/>
+                                <t t-set="ref_total" t-value="ref_total + journal[2]"/>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="align-middle text-right"><span>TOTAL</span></td>
+                                <td class="align-middle text-right"><span t-esc="total" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td>
+                                <!-- <td class="align-middle text-right"><span t-esc="ref_total" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <br/> <hr/> <br/>
+
+                <t t-set="totals_summary" t-value="docs._get_summary_data(totals)"/>
+
+                <h3 class="text-center">Resumen General</h3>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-active">
+                        <tr>
+                            <th class="align-middle text-center" scope="col">#</th>
+                            <th class="align-middle text-center" scope="col">Concepto</th>
+                            <th class="align-middle text-center" scope="col" colspan="2">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="totals_summary" t-as="item">
+                            <th scope="col" class="text-center align-middle"><span t-esc="item_index + 1"/></th>
+                            <td class="align-middle"><span t-esc="payment_status[item]"/></td>
+                            <td class="text-right align-middle"><span t-esc="item_value[0]" t-options="{'widget': 'monetary', 'display_currency': env.company.currency_id}"/></td>
+                            <!-- <td class="text-right align-middle"><span t-esc="item_value[1]" t-options="{'widget': 'monetary', 'display_currency': env.company.ref_currency_id}"/></td> -->
+                        </tr>
+                    </tbody>
+                </table>
+            </t>
+        </t>
+    </template>
+
+</odoo>

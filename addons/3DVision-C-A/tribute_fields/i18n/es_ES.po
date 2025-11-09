@@ -1,0 +1,125 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tribute_fields
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-11-17 15:35+0000\n"
+"PO-Revision-Date: 2023-11-17 15:35+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tribute_fields
+#: model:ir.model,name:tribute_fields.model_res_company
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: tribute_fields
+#: model:ir.model,name:tribute_fields.model_res_partner
+msgid "Contact"
+msgstr "Contacto"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_account_bank_statement_line__control_number
+#: model:ir.model.fields,field_description:tribute_fields.field_account_move__control_number
+#: model:ir.model.fields,field_description:tribute_fields.field_account_payment__control_number
+msgid "Control Number"
+msgstr "Número de control"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_res_partner__ced_rif
+#: model:ir.model.fields,field_description:tribute_fields.field_res_users__ced_rif
+msgid "Document/RIF"
+msgstr "Cedula / RIF"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_account_bank_statement_line__fiscal_correlative
+#: model:ir.model.fields,field_description:tribute_fields.field_account_move__fiscal_correlative
+#: model:ir.model.fields,field_description:tribute_fields.field_account_payment__fiscal_correlative
+msgid "Fiscal Correlative"
+msgstr "Correlativo fiscal"
+
+#. module: tribute_fields
+#: model_terms:ir.ui.view,arch_db:tribute_fields.inherited_base_partner_form
+msgid "Fiscal Information"
+msgstr "Información fiscal"
+
+#. module: tribute_fields
+#: model_terms:ir.ui.view,arch_db:tribute_fields.view_account_invoice_filter_inherit_tribute_fields
+msgid "Fiscal Invoices"
+msgstr "Facturas fiscales"
+
+#. module: tribute_fields
+#: model:ir.ui.menu,name:tribute_fields.fiscal_reports_root_menu
+msgid "Fiscal Reports"
+msgstr "Informes fiscales"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_account_bank_statement_line__fiscal_check
+#: model:ir.model.fields,field_description:tribute_fields.field_account_move__fiscal_check
+#: model:ir.model.fields,field_description:tribute_fields.field_account_payment__fiscal_check
+msgid "Is Fiscal"
+msgstr "Es fiscal"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_res_partner__is_legal_entity
+#: model:ir.model.fields,field_description:tribute_fields.field_res_users__is_legal_entity
+msgid "Is Legal Entity"
+msgstr "Es entidad Jurica"
+
+#. module: tribute_fields
+#: model:ir.model,name:tribute_fields.model_account_move
+msgid "Journal Entry"
+msgstr "Asiento contable"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_res_company__taxpayer_license
+#: model:ir.model.fields,field_description:tribute_fields.field_res_partner__taxpayer_license
+#: model:ir.model.fields,field_description:tribute_fields.field_res_users__taxpayer_license
+msgid "LAE"
+msgstr "LAE"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_res_company__municipality
+msgid "Municipality"
+msgstr "Municipio"
+
+#. module: tribute_fields
+#: model_terms:ir.ui.view,arch_db:tribute_fields.view_account_invoice_filter_inherit_tribute_fields
+msgid "No Fiscal Invoices"
+msgstr "Sin facturas fiscales"
+
+#. module: tribute_fields
+#: model:ir.model.fields,field_description:tribute_fields.field_res_company__ruc
+#: model:ir.model.fields,field_description:tribute_fields.field_res_partner__ruc
+#: model:ir.model.fields,field_description:tribute_fields.field_res_users__ruc
+msgid "RUC"
+msgstr "RUC"
+
+#. module: tribute_fields
+#. odoo-python
+#: code:addons/tribute_fields/models/account_move.py:0
+#, python-format
+msgid ""
+"The 'Control Number' and 'Fiscal Correlative' fields are only for fiscal "
+"invoices"
+msgstr ""
+"Los campos de 'Número de control' y 'Correlativo fiscal' son solo para "
+"facturas fiscales"
+
+#. module: tribute_fields
+#. odoo-python
+#: code:addons/tribute_fields/models/account_move.py:0
+#, python-format
+msgid ""
+"The fiscal correlative and the control number must be unique, check the "
+"following documents: %s"
+msgstr ""
+"El correlativo fiscal y el número de control deben ser únicos, verifique "
+"los Siguientes documentos: %s"

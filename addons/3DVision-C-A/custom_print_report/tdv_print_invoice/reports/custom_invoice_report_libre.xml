@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Definición del formato de papel personalizado para el diseño libre -->
+    <record id="custom_invoice_libre_paperformat" model="report.paperformat">
+        <field name="name">Formato Libre Factura</field>
+        <field name="format">custom</field>
+        <field name="default" eval="False"/>
+        <field name="format">custom</field>
+        <field name="page_height">279</field>
+        <field name="page_width">216</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">30</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Acción de reporte PDF para el diseño libre -->
+    <record id="action_custom_invoice_report_free" model="ir.actions.report">
+        <field name="name">Factura Libre</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">tdv_print_invoice.custom_invoice_template_libre</field>
+        <field name="print_report_name">'Factura Simple - %s' % object.name</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="tdv_print_invoice.custom_invoice_libre_paperformat"/>
+    </record>
+
+    
+    <template id="custom_invoice_template_libre">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                
+                <div class="article" style="font-family: 'Calibri'; font-size: x-small; position: relative; min-height: 100%;">
+                    <!-- Encabezado vacío -->
+                    <div class="header" style="height: 40px;"></div>
+
+                    <div style="text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: -40px;">
+                        <strong>FACTURA</strong>
+                    </div>
+
+                    <!-- Datos del cliente y factura -->
+                    <div class="row" style="display: flex; justify-content: space-between; margin-top: 50px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <div style="width: 60%; min-width: 300px; margin-bottom: 15px;">
+                            <div style="margin-bottom: 5px;">
+                                <strong>Cliente:</strong>
+                                <span t-field="o.partner_id"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>RIF:</strong>
+                                <span t-field="o.partner_id.vat"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Direccion:</strong>
+                                <span t-out="o.partner_id.street"/>
+                                <span t-out="o.partner_id.street2"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Teléfono:</strong>
+                                <span t-out="o.partner_id.phone"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Referencia:</strong>
+                                <span t-field="o.invoice_origin"/>
+                            </div>
+                        </div>
+                        <div style="width: 35%; min-width: 100px; text-align: right;">
+                            <div style="margin-bottom: 5px;">
+                                <strong>N° Factura:</strong>
+                                <span t-field="o.fiscal_correlative"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Fecha:</strong>
+                                <span t-field="o.invoice_date" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Vencimiento:</strong>
+                                <span t-field="o.invoice_date_due" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                            <div t-if="o.invoice_user_id">
+                                <strong>Vendedor</strong>
+                                <span t-field="o.invoice_user_id"/>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Tabla de productos -->
+                    <table class="table table-sm table-borderless" style="font-size: x-small;">
+                        <thead>
+                            <tr>
+                                <th class="text-center">#</th>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">P. Unitario</th>
+                                <th class="text-end">Impuestos</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="idx" t-value="0"/>
+                            <tr t-foreach="o.invoice_line_ids.sorted('sequence')" t-as="line">
+                                <!-- Incrementa el índice solo si NO es sección/nota -->
+                                <t t-set="idx" t-value="line.display_type not in ['line_section', 'line_note'] and idx + 1 or idx"/>
+
+                                <tr>
+                                    <!-- Muestra el índice solo si es producto -->
+                                    <td class="text-center">
+                                        <span t-esc="line.display_type not in ['line_section', 'line_note'] and idx or ''"/>
+                                    </td>
+
+                                    <td>
+                                        <span t-esc="line.product_id.default_code"/>
+                                    </td>
+
+                                    <!-- Descripción -->
+                                    <td>
+                                        <span t-field="line.product_id.name"/>
+                                        <!-- Estilo aplicado solo a secciones -->
+                                        <t t-if="line.display_type == 'line_section'">
+                                            <style>
+                                                tr[t-as-line]:has(td span[t-field='line.name'][t-if='line.display_type == line_section']) {
+                                                    font-weight: bold;
+                                                    background-color: #f8f9fa;
+                                                }
+                                            </style>
+                                        </t>
+                                    </td>
+
+                                    <!-- Muestra columnas numéricas solo si es producto -->
+                                    <td class="text-end">
+                                        <span t-if="line.display_type not in ['line_section', 'line_note']" t-field="line.quantity"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-if="line.display_type not in ['line_section', 'line_note']" t-field="line.price_unit"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-if="line.display_type not in ['line_section', 'line_note']" t-field="line.tax_ids"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-if="line.display_type not in ['line_section', 'line_note']" t-field="line.price_subtotal"/>
+                                    </td>
+                                </tr>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                    <div class="row" style="display: flex;">
+                        <!-- Columna izquierda: términos y condiciones -->
+
+                        <!-- Columna central: tasa de cambio y total referencial -->
+                        <div style="width: 50%; text-align: center;line-height: 1.1; margin-top: 30px;">
+                            <table style="width: 90%; font-size: x-small; border-collapse: collapse; margin-top: 10px;">
+                                <tr>
+                                    <td colspan="2" style="text-align: left;">
+                                        Tasa de cambio:
+                                        <t t-set="secondary_currency" t-value="o.company_id.currency_id.search([('active','=',True),('id','!=',o.company_id.currency_id.id)], limit=1)"/>
+                                        <t t-if="secondary_currency and secondary_currency.rate_ids">
+                                            <span t-esc="'%.2f' % secondary_currency.rate_ids[0].company_rate"/>
+                                            <span t-esc="secondary_currency.symbol"/>
+                                        </t>
+                                        <t t-if="not (secondary_currency and secondary_currency.rate_ids)">
+                                            <span>No disponible</span>
+                                        </t>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align: left; font-weight: bold;">
+                                        Total:
+                                        <t t-if="secondary_currency and secondary_currency.rate_ids">
+                                            <span t-esc="o.amount_total * secondary_currency.rate_ids[0].company_rate" t-options='{"widget": "monetary", "display_currency": secondary_currency}'/>
+                                        </t>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align: left; font-weight: bold;">
+                                        Impuestos:
+                                        <t t-if="secondary_currency and secondary_currency.rate_ids">
+                                            <span t-esc="o.amount_tax * secondary_currency.rate_ids[0].company_rate" t-options='{"widget": "monetary", "display_currency": secondary_currency}'/>
+                                        </t>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <!-- Columna derecha: montos -->
+                        <div class="col-4 text-end" style="width: 50%; text-align: right; color: #000000; margin-top: 35px;">
+                            <table style="width: 100%; font-size: x-small; border-collapse: collapse; margin-top: 10px;">
+                                <tr>
+                                    <td style="border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: left;">Subtotal: </td>
+                                    <td style="border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: right;">
+                                        <span t-field="o.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;">Monto Exento: </td>
+                                    <td style="text-align: right;">
+                                        <span t-esc="'%.2f' % 0.0"/>
+                                        <span t-esc="o.currency_id.symbol"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;">
+                                        <strong>Base Imponible: </strong>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <span t-field="o.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;">IVA 16%:</td>
+                                    <td style="text-align: right;">
+                                        <span t-field="o.amount_tax" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 2px solid #000; font-weight: bold; text-align: left;">Total: </td>
+                                    <td style="border-top: 2px solid #000; text-align: right; font-weight: bold;">
+                                        <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div style="margin-top: 60px; border-top: 1px solid #000; padding-top: 5px;">
+                        <div style="text-align: center;">
+                            <div>
+                                <span t-field="o.narration"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer" style="width: 100%; font-size: x-small;padding-top: 2px; margin-top: 30px; position: relative;"></div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

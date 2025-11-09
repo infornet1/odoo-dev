@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_hr_contract_form_inherit" model="ir.ui.view">
+        <field name="name">hr.contract.form.inherit</field>
+        <field name="model">hr.contract</field>
+        <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Campo wage: readonly cuando enable_secondary_currency es True -->
+            <xpath expr="//field[@name='wage']" position="attributes">
+                <attribute name="readonly">enable_secondary_currency</attribute>
+            </xpath>
+
+            <!-- Añadir sección de conversión -->
+            <xpath expr="//page[@name='information']//group[@name='salary']" position="inside">
+                <div class="d-flex flex-column" style="gap: 8px;">
+                    <div class="d-flex align-items-center mb-2" style="white-space: nowrap;">
+                        <field name="enable_secondary_currency" widget="boolean_button" options='{"terminology": "check"}'/>
+                        <span style="margin-left: 8px; font-weight: bold;">Activar conversión secundaria</span>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <label for="wage_in_ves" string="Salario de conversión" class="me-3" style="min-width: 120px; font-weight: bold;"/>
+                        <field 
+                            name="wage_in_ves" 
+                            class="oe_inline o_hr_narrow_field" 
+                            widget="monetary" 
+                            options="{'currency_field': 'conversion_currency_id', 'currency_format': '¤ #,##0.00'}"
+                            readonly="not enable_secondary_currency"/>
+                    </div>
+                </div>
+                <field name="conversion_currency_id" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template_id" xml:space="preserve">
+  <t t-name="OrderSummary" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension" owl="1">
+    <xpath expr="//div[hasclass('line')]" position="before">
+      <t t-set="_second_total" t-value="getSecondTotal()"/>
+      <t t-set="_second_tax" t-value="getSecondTax()"/>
+    </xpath>
+    
+    <xpath expr="//div[hasclass('total')]/span[last()]" position="after">
+      | <t t-esc="_second_total"/>
+    </xpath>
+
+    <xpath expr="//div[hasclass('subentry')]/span[last()]" position="after">
+      | <t t-esc="_second_tax.displayAmount"/>
+    </xpath>
+  </t>
+</template>

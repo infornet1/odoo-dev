@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem
+        id="sale_commssion_menu"
+        name="Sale Commission"
+        parent="account.menu_finance"
+        groups="tdv_sale_commissions.commission_manager_group">
+        <menuitem
+            id="generate_sale_commission_menu"
+            name="Generate Sale Commission"
+            action="sale_commission_wizard_action"
+            sequence="10"/>
+        <menuitem
+            id="sale_commission_menu"
+            name="Sale Commissions"
+            action="tdv_sale_commission_action"
+            sequence="10"/>
+    </menuitem>
+
+</odoo>

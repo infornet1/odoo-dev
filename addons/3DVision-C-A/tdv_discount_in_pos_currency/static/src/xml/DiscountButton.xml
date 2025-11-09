@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t owl="1" t-name="DiscountButton">
+        <div class="d-flex flex-column align-items-center">
+            <div class="control-button btn btn-light rounded-0 fw-bolder w-100" t-on-click="() => this.onClick()" style="min-width: 120px;">
+                <i class="fa fa-percent"/> Currency Payment
+            </div>
+            <t t-if="this.pos.get_order()">
+                <span class="badge bg-info mt-1" style="font-size: 0.85em; margin-top: 2px;">
+                    Selected: <t t-esc="this.getCurrencySymbol()"/> <t t-esc="this.formatCurrencyValue(this.pos.get_order().get_currency_amount())"/> in currency
+                </span>
+            </t>
+        </div>
+    </t>
+</templates> 

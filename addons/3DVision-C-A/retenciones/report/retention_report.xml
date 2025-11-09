@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="report_retention">
+    <t t-call="web.external_layout">
+      <t t-set="display_address" t-value="False"/>
+      <t t-set="company" t-value="o.company_id"/>
+      <div class="col-3 mb-4">
+          <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height: 100px;" alt="Logo de la Empresa"/>
+      </div>
+      <div class="small">
+        <div class="row">
+          <div class="col-6">
+            <div class="ms-5">
+              <h2>
+                <span t-if="o.type == 'iva'">IVA Retention Receipt</span>
+                <span t-if="o.type == 'islr'">ISLR Retention Receipt</span>
+                <span t-if="o.type == 'iae'">IAE Retention Receipt</span>
+              </h2>
+              <span t-if="o.type == 'iva'">Ley del IVA, Art 11: "La Administración Tributaria podrá asignar como responsables del pago del impuesto, en
+              calidad de Agentes de Retención a quienes por sus funciones públicas o por razón de sus actividades privadas
+              intervengan en operaciones gravadas con el impuestos establecido en la Ley".</span>
+              <span t-if="o.type == 'islr'">According to article 24 of Decree 1808 dated 05/12/1997</span>
+              <span t-if="o.type == 'iae'">Ordenanza sobre agente de retención de Impuestos Sobre Actividades Economicas:
+                Art 1: La presente ordenanza tiene por objeto establecer las personas que, son responsables en calidad de
+                agente de retención del pago del impuesto de patente de industria y Comercio, en los casos y en las
+                condiciones previstas de esta ordenanza.</span>
+            </div>
+          </div>
+          <div class="col-6 text-end">
+            <div>
+              <span class="fw-bold">Receipt Number:</span>
+              <span t-field="o.correlative"/>
+            </div>
+            <div>
+              <span class="fw-bold">Reference:</span>
+              <span t-field="o.name"/>
+            </div>
+            <div>
+              <span class="fw-bold">Date:</span>
+              <span t-field="o.date"/>
+            </div>
+            <div>
+              <span class="fw-bold">Period</span>
+              <span t-field="o.period"/>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-6">
+            <div>
+              <span class="fw-bold">Name or corporate reason for the retention agent:</span>
+              <span t-field="o.company_id"/>
+            </div>
+            <div>
+              <span class="fw-bold">VAT of the Retention Agent:</span>
+              <span t-if="o.company_id.company_registry" t-field="o.company_id.company_registry"/>
+              <span t-elif="o.company_id.vat" t-field="o.company_id.vat"/>
+              <span t-elif="o.company_id.ced_rif" t-field="o.company_id.ced_rif"/>
+            </div>
+            <div>
+              <span class="fw-bold">Fiscal Directorate of the Retention Agent:</span> <br/>
+              <span t-out="o.company_id.partner_id._display_address(True)"/>
+            </div>
+            <div t-if="o.type == 'iae'">
+              <span class="fw-bold">Single Taxpayer Registration</span>
+              <span t-field="o.company_id.ruc"/>
+            </div>
+            <div t-if="o.type == 'iae'">
+              <span class="fw-bold">Economic Activity License</span>
+              <span t-field="o.company_id.taxpayer_license"/>
+            </div>
+          </div>
+          <div class="col-6 text-end">
+            <div>
+              <span class="fw-bold">Name or social reason of the retained agent:</span>
+              <span t-field="o.partner_id"/>
+            </div>
+            <div>
+              <span class="fw-bold">VAT of the retained subject:</span>
+              <span t-if="o.partner_id.vat" t-field="o.partner_id.vat"/>
+              <span t-elif="o.partner_id.ced_rif" t-field="o.partner_id.ced_rif"/>
+            </div>
+            <div>
+              <span class="fw-bold">Fiscal address of the retained agent:</span> <br/>
+              <span t-out="o.partner_id._display_address(True)"/>
+            </div>
+            <div t-if="o.type == 'iae'">
+              <span class="fw-bold">Single Taxpayer Registration</span>
+              <span t-field="o.partner_id.ruc"/>
+            </div>
+            <div t-if="o.type == 'iae'">
+              <span class="fw-bold">Economic Activity License</span>
+              <span t-field="o.partner_id.taxpayer_license"/>
+            </div>
+          </div>
+        </div>
+        <table class="table table-sm mt-3">
+          <thead>
+            <tr>
+              <th class="align-middle">#</th>
+              <th class="align-middle">Invoice date</th>
+              <th class="align-middle">Invoice number</th>
+              <th class="align-middle">Control number</th>
+              <th t-if="o.type != 'islr'" class="align-middle">Document type</th>
+              <th t-if="o.type == 'iva'" class="align-middle">Debit or credit note</th>
+              <th t-if="o.type == 'iva'" class="align-middle">Documento Afectado</th>
+              <th t-if="o.type == 'iae'" class="align-middle">Transaction Type</th>
+              <th class="align-middle">Total purchases including VAT</th>
+              <th class="align-middle">No tax credit</th>
+              <th class="align-middle">Taxable base</th>
+              <th t-if="o.type != 'iva'" class="align-middle">Retention Code</th>
+              <th class="align-middle">Retention percentage</th>
+              <th class="align-middle">VAT tax</th>
+              <th t-if="o.type == 'islr' and not o.is_legal_entity" class="align-middle">Subtracting</th>
+              <th class="align-middle">Total detained</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="text-center" t-foreach="o.line_ids" t-as="line">
+              <td class="align-middle"><span t-out="line_index + 1"/></td>
+              <td class="align-middle"><span t-field="line.invoice_id.invoice_date"/></td>
+              <td class="align-middle">
+                <span t-if="not line.invoice_id.reversed_entry_id" t-field="line.invoice_ref"/>
+                <span t-if="line.invoice_id.reversed_entry_id"> </span>
+              </td>
+              <td class="align-middle"><span t-field="line.control_number"/></td>
+              <td t-if="o.type != 'islr'" class="align-middle"><span t-field="line.registry_type"/></td>
+              <td t-if="o.type == 'iva'" class="align-middle">
+                <span t-if="line.invoice_id.reversed_entry_id" t-field="line.invoice_ref"/>
+              </td>
+              <td t-if="o.type == 'iva'" class="align-middle"><span t-if="line.invoice_id.reversed_entry_id" t-field="line.invoice_id.reversed_entry_id.fiscal_correlative"/></td>
+              <td t-if="o.type == 'iae'" class="align-middle"><span t-field="line.iae_type"/></td>
+              <td class="align-middle"><span t-field="line.amount_total"/></td>
+              <td class="align-middle"><span t-field="line.amount_untaxed"/></td>
+              <td class="align-middle"><span t-field="line.amount_base"/></td>
+              <td t-if="o.type != 'iva'" class="align-middle"><span t-field="line.ret_tax_id.code"/></td>
+              <td class="align-middle"><span t-field="line.ret_tax_id.tax"/>%</td>
+              <td class="align-middle"><span t-field="line.amount_tax"/></td>
+              <td t-if="o.type == 'islr' and not o.is_legal_entity" class="align-middle text-danger"><span t-field="line.amount_subtracting"/></td>
+              <td class="align-middle"><span t-field="line.amount_detained"/></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-primary">
+              <td t-if="o.type == 'iva'" class="text-end" colspan="7">Total</td>
+              <td t-if="o.type == 'islr'" class="text-end" colspan="4">Total</td>
+              <td t-if="o.type == 'iae'" class="text-end" colspan="6">Total</td>
+              <td class="text-center"><span t-out="sum(o.line_ids.mapped('amount_total'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+              <td class="text-center"><span t-out="sum(o.line_ids.mapped('amount_untaxed'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+              <td class="text-center"><span t-out="sum(o.line_ids.mapped('amount_base'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+              <td t-if="o.type != 'iva'" class="text-center">-</td>
+              <td class="text-center">-</td>
+              <td class="text-center"><span t-out="sum(o.line_ids.mapped('amount_tax'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+              <td t-if="o.type == 'islr' and not o.is_legal_entity" class="align-middle text-center text-danger"><span t-out="sum(o.line_ids.mapped('amount_subtracting'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+              <td class="text-center"><span t-out="sum(o.line_ids.mapped('amount_detained'))" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+            </tr>
+          </tfoot>
+        </table>
+        <div class="footer">
+          <div class="d-inline-block text-center mb-2">
+            <img t-if="o.signature" t-att-src="image_data_uri(o.signature)" height="150px" width="250px" alt="Logo" class="p-3 text-center" style="margin-left: 5em;"/>
+            <h7 class="d-block border-top border-dark text-center" style="width: 20em; margin-left: 5em;">Signature and seal of retention agent</h7>
+          </div>
+          <div class="me-4 d-inline-block">
+            <h7 class="d-block border-top border-dark text-center" style="width: 20em; margin-left: 20em;">Signature and seal of retained subject </h7>
+          </div>
+          <div class="text-end">
+            <span>Reception date: _____/_____/________</span>
+          </div>
+          <div t-if="o.type == 'iva'" class="border-top border-dark text-center">
+            <span>Please return signed, stamped and with receipt date in accordance with the provisions of Administrative Provision No. SNAT/2025/000054</span>
+          </div>
+          <div t-if="o.type == 'islr'" class="border-top border-dark text-center">
+             <span>Please return signed, stamped and with receipt date in accordance with the provisions of Decree 1.808</span>
+          </div>
+          <div t-if="o.type == 'iae'" class="border-top border-dark text-center">
+             <span>Please return signed, stamped and with receipt date in accordance with the provisions of the Ordinance on Withholding Agents of the Tax on Economic Activities of Industry, Commerce and Services</span>
+          </div>
+          <div t-if="o.type not in ['iva', 'islr', 'iae']" class="border-top border-dark text-center">
+            <div t-field="o.company_id.report_footer"/>
+          </div>
+        </div>
+      </div>
+    </t>
+  </template>
+
+  <template id="retention_lang_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="retenciones.report_retention" t-lang="o.partner_id.lang" />
+      </t>
+    </t>
+  </template>
+
+</odoo>
+
+<!-- HEADERS -->
+
+  <!-- <template id="iae_header_template">
+    <header>
+      <t t-call="retenciones.date_template"/>
+      <div class="ms-5 w-50">
+        <h3>IMPUESTO A LAS ACTIVIDADES ECONOMICAS</h3>
+        <p class="text-justify" style="font-size: x-small">
+            ORDENANZA SOBRE AGENTE DE RETENCION DE IMPUESTO SOBRE ACTIVIDADES ECONOMICAS: ART 1: "La presente ordenanza tiene por
+            objeto establecer las personas que, son responsables en calidad de agente de retencion del pago del impuesto de patente de impuesto de patente de industria y comercio, en
+            los casos y en las condiciones presvistas en esta ordenanza.
+          </p>
+      </div>
+      <t t-call="retenciones.info_template"/>
+    </header>
+  </template> -->
+
+<!-- <template id="iva_header_template">
+    <header>
+      <t t-call="retenciones.date_template"/>
+      <div class="ms-5 w-50">
+        <h3>COMPROBANTE RETENCION DE IVA</h3>
+        <p class="text-justify" style="font-size: x-small">Providencia Administrativa N SNAT/2015/0049 del 10/08/2015
+          <br/>
+        Ley IVA, art 11: La administración Tributaria podrá asignar como reponsables del pago del impuesto, calidad de agentes de
+        de retención a quienes por sus funciones públicas o por razón de sus actividades privadas intervengan en operaciones
+        grabadas con el impuesto establecido en la Ley.
+        </p>
+      </div>
+      <t t-call="retenciones.info_template"/>
+    </header>
+  </template>
+ -->
+
+  <!-- <template id="islr_header_template">
+    <header>
+      <t t-call="retenciones.date_template"/>
+      <div class="ms-5 w-50">
+        <h3>IMPUESTO SOBRE LA RENTA</h3>
+        <p class="text-justify" style="font-size: x-small">Segun el Articulo 24 del decreto 1808 de fecha 12/05/1997</p>
+      </div>
+      <t t-call="retenciones.info_template"/>
+    </header>
+  </template> -->

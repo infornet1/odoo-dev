@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<template id="template" xml:space="preserve">
+  <t t-name="TDVOrderline" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension" owl="1">
+    <xpath expr="//span[@class='price']" position="inside">
+      | <t t-esc="env.pos.format_currency(env.pos.convertAmount(props.line.get_display_price(), env.pos.secondCurrency), null, env.pos.secondCurrency)"/>
+    </xpath>
+  </t>
+</template>

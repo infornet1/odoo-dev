@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="purchase_report_paperformat" model="report.paperformat">
+    <field name="name">A4 Portrait</field>
+    <field name="format">A4</field>
+    <field name="orientation">Landscape</field>
+  </record>
+
+</odoo>

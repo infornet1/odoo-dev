@@ -1,0 +1,94 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_pos_contact_label
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-19 20:07+0000\n"
+"PO-Revision-Date: 2025-05-19 20:07+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,field_description:tdv_pos_contact_label.field_pos_config__allowed_partner_tag_ids
+msgid "Allowed Partner Tags"
+msgstr "Etiquetas de Cliente Permitidas"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,field_description:tdv_pos_contact_label.field_res_config_settings__pos_allowed_partner_tag_ids
+msgid "Allowed Partner Tags in POS"
+msgstr "Etiquetas de Clientes Permitidas en POS"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,help:tdv_pos_contact_label.field_pos_config__restrict_partner_by_tag
+#: model:ir.model.fields,help:tdv_pos_contact_label.field_res_config_settings__pos_restrict_partner_by_tag
+msgid "Allows limiting visible partners in POS based on selected tags."
+msgstr "Permite limitar los clientes visibles en el POS en función de las etiquetas seleccionadas."
+
+#. module: tdv_pos_contact_label
+#: model_terms:ir.ui.view,arch_db:tdv_pos_contact_label.view_pos_config_form_contact_label
+msgid "Allows you to limit the partners visible in the POS based on selected tags."
+msgstr "Permite limitar los clientes visibles en el POS en función de las etiquetas seleccionadas."
+
+#. module: tdv_pos_contact_label
+#: model:ir.model,name:tdv_pos_contact_label.model_res_config_settings
+msgid "Config Settings"
+msgstr "Ajustes de Configuración"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model,name:tdv_pos_contact_label.model_res_partner
+msgid "Contact"
+msgstr "Contacto"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,help:tdv_pos_contact_label.field_pos_config__allowed_partner_tag_ids
+#: model:ir.model.fields,help:tdv_pos_contact_label.field_res_config_settings__pos_allowed_partner_tag_ids
+msgid "Only partners with these tags will be available in the POS."
+msgstr "Solo los clientes con estas etiquetas estarán disponibles en el POS."
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,field_description:tdv_pos_contact_label.field_pos_config__pos_client_category_id
+msgid "POS Client Category"
+msgstr "Categoría de Cliente POS"
+
+#. module: tdv_pos_contact_label
+#: model:res.partner.category,name:tdv_pos_contact_label.category_pos_cliente
+msgid "POS_CLIENTE"
+msgstr "POS_CLIENTE"
+
+#. module: tdv_pos_contact_label
+#: model_terms:ir.ui.view,arch_db:tdv_pos_contact_label.view_res_config_settings_pos_contact_label
+msgid "Partner Restriction by Tag"
+msgstr "Restricción de Clientes por Etiqueta"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model,name:tdv_pos_contact_label.model_pos_config
+msgid "Point of Sale Configuration"
+msgstr "Configuración del Punto de Venta"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,field_description:tdv_pos_contact_label.field_pos_config__restrict_partner_by_tag
+#: model_terms:ir.ui.view,arch_db:tdv_pos_contact_label.view_res_config_settings_pos_contact_label
+msgid "Restrict Partners by Tag"
+msgstr "Restringir Clientes por Etiqueta"
+
+#. module: tdv_pos_contact_label
+#: model:ir.model.fields,field_description:tdv_pos_contact_label.field_res_config_settings__pos_restrict_partner_by_tag
+msgid "Restrict Partners by Tag in POS"
+msgstr "Restringir Clientes por Etiqueta en POS"
+
+#. module: tdv_pos_contact_label
+#: model_terms:ir.ui.view,arch_db:tdv_pos_contact_label.view_pos_config_form_contact_label
+msgid "Restrict partners by tag"
+msgstr "Restringir clientes por etiqueta"
+
+#. module: tdv_pos_contact_label
+#: model_terms:ir.ui.view,arch_db:tdv_pos_contact_label.view_res_config_settings_pos_contact_label
+msgid "Restricts visible partners in the POS based on selected tags."
+msgstr "Restringe los clientes visibles en el POS en función de las etiquetas seleccionadas."

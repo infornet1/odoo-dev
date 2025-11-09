@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="point_of_sale.PaymentScreenButtons" t-inherit-mode="extension">
+        <xpath expr="//button[contains(@class, 'partner-button')]" position="before">
+            <t t-if="this.currencySpecialNote">
+                <div class="alert alert-info mt-2" style="font-size: 1.1em;">
+                    <t t-esc="this.currencySpecialNote"/>
+                </div>
+            </t>
+            <t t-if="this.showDivisaButton">
+                <button 
+                    class="btn btn-primary mt-2 mb-2 w-100 shadow-sm" 
+                    style="height: 48px; font-size: 1.1em; border-radius: 8px; background: #3f51b5; color: #fff; border: none;"
+                    t-on-click="this.showDivisaPaymentMethodsPopup">
+                    <i class="fa fa-money me-2"></i>
+                    Currency Payment Methods
+                </button>
+            </t>
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_move_form_inherit_tribute_fields" model="ir.ui.view">
+    <field name="name">account.move.view.form.inherit</field>
+    <field name="model">account.move</field>
+    <field name="inherit_id" ref="account.view_move_form" />
+    <field name="arch" type="xml">
+      <field name="ref" position="after">
+        <field name="invoice_print_method" invisible="1" />
+        <field name="fiscal_check" invisible="move_type == 'entry'" readonly="state == 'posted'" />
+        <field name="control_number" invisible="move_type == 'entry' or invoice_print_method == 'fiscal_machine'" readonly="state == 'posted'" />
+        <field name="fiscal_correlative" invisible="move_type == 'entry' or invoice_print_method == 'fiscal_machine'" readonly="state == 'posted'" />
+        <field name="ticket_ref" invisible="move_type == 'entry' or invoice_print_method == 'free_form'"/>
+        <field name="fp_serial_num" invisible="move_type == 'entry' or invoice_print_method == 'free_form'"/>
+        <field name="num_report_z" invisible="move_type == 'entry' or invoice_print_method == 'free_form'"/>
+      </field>
+    </field>
+  </record>
+  <record id="view_invoice_tree_inherit_tribute_fields" model="ir.ui.view">
+    <field name="name">account.move.view.tree.inherit</field>
+    <field name="model">account.move</field>
+    <field name="inherit_id" ref="account.view_invoice_tree"/>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="fiscal_check" widget="boolean_toggle" readonly="1" optional="show"/>
+        <field name="fiscal_correlative" optional="show"/>
+        <field name="control_number" optional="show"/>
+        <field name="ticket_ref" optional="show"/>
+        <field name="fp_serial_num" optional="show"/>
+        <field name="num_report_z" optional="show"/>
+      </field>
+    </field>
+  </record>
+  <record id="view_account_invoice_filter_inherit_tribute_fields" model="ir.ui.view">
+    <field name="name">account.move.view.search.inherit</field>
+    <field name="model">account.move</field>
+    <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+    <field name="arch" type="xml">
+      <field name="name" position="after">
+        <field name="fiscal_correlative" filter_domain="[('fiscal_correlative','ilike',self)]"/>
+        <field name="control_number" filter_domain="[('control_number','ilike',self)]"/>
+      </field>
+      <xpath expr="//filter[@name='myinvoices']" position="after">
+        <separator/>
+        <filter name="fiscal_check" string="Fiscal Invoices" domain="[('fiscal_check', '=', True)]"/>
+        <filter name="no_fiscal_check" string="No Fiscal Invoices" domain="[('fiscal_check', '=', False)]"/>
+      </xpath>
+      <xpath expr="//group" position="inside">
+        <filter string="Fiscal Invoices" name="fiscal_check" context="{'group_by': 'fiscal_check'}"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

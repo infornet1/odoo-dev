@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="action_retention_tax" model="ir.actions.act_window">
+    <field name="name">Tasas de Retenciones</field>
+    <field name="res_model">retention.tax</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        No holds have been created yet
+      </p>
+    </field>
+  </record>
+  <record id="retencion_tax_tree_view" model="ir.ui.view">
+    <field name="name">retention.tax.tree.view</field>
+    <field name="model">retention.tax</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="name" />
+        <field name="type" optional="show" widget="badge" decoration-success="type == 'iva'"
+          decoration-warning="type == 'iae'" decoration-danger="type == 'islr'"
+        />
+        <field name="tax" />
+      </tree>
+    </field>
+  </record>
+  <record id="retention_tax_view_form" model="ir.ui.view">
+    <field name="name">retention.tax.view.form</field>
+    <field name="model">retention.tax</field>
+    <field name="arch" type="xml">
+      <form string="">
+        <sheet>
+          <group>
+            <field name="name" />
+            <field name="tax_name" />
+            <field name="company_id" />
+            <field name="currency_id" />
+            <field name="tax" />
+            <field name="type" />
+            <field name="code" />
+            <field name="decrement" widget="monetary" invisible="type != 'islr'" />
+            <!-- attrs="{'invisible': [('type','!=','islr')]}" -->
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="retention_tax_view_search" model="ir.ui.view">
+    <field name="name">retention.tax.view.search</field>
+    <field name="model">retention.tax</field>
+    <field name="arch" type="xml">
+      <search string="Search Tax">
+        <field name="name" string="Name" filter_domain="['|',('name', 'ilike', self),('code', 'ilike', self)]"/>
+      </search>
+    </field>
+  </record>
+</odoo>

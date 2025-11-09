@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="freeform_letter_lang_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="impresion_forma_libre.freeform_template" t-lang="o.partner_id.lang" />
+      </t>
+    </t>
+  </template>
+  <template id="freeform_half_letter_lang_template">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <t t-call="impresion_forma_libre.freeform_template" t-lang="o.partner_id.lang" />
+      </t>
+    </t>
+  </template>
+  <template id="freeform_template">
+    <div class="article small" style="font-family: 'calibri'; font-size: x-small;">
+      <div class="row">
+        <div class="col-4">
+          <strong>Partner:</strong>
+          <span t-field="o.partner_id" />
+          <br />
+          <strong>VAT:</strong>
+          <span t-field="o.partner_id.vat" />
+          <br />
+          <strong>Address:</strong>
+          <span t-out="o.partner_id._display_address(True)" /> -
+          <span t-field="o.partner_id.phone" />
+          <br />
+        </div>
+        <div class="col-4 text-center">
+          <h5 t-if="not o.is_credit_note and not o.is_debit_note">Invoice</h5>
+          <h5 t-if="o.is_credit_note">Credit Note</h5>
+          <h5 t-if="o.is_debit_note">Debit Note</h5>
+        </div>
+        <div class="col-4 text-end">
+          <t t-if="o.company_id.municipality">
+            <strong>Municipality</strong>
+            <span t-field="o.company_id.municipality" />
+            <br />
+          </t>
+          <strong t-if="not o.is_credit_note and not o.is_debit_note">Invoice N°:</strong>
+          <strong t-if="o.is_credit_note">Credit Note N°:</strong>
+          <strong t-if="o.is_debit_note">Debit Note N°:</strong>
+          <span t-field="o.fiscal_correlative" />
+          <br />
+          <strong>Date:</strong>
+          <span t-field="o.invoice_date"/>
+          <br />
+          <strong>Due date:</strong>
+          <span t-field="o.invoice_date_due" />
+          <br />
+          <strong>Payment condition:</strong>
+          <span t-field="o.fiscal_payment_condition" />
+          <br />
+          <t t-if="o.company_id.ruc and o._validate_na(o.company_id.ruc)">
+            <strong>RUC:</strong>
+            <span t-field="o.company_id.ruc" />
+            <br />
+          </t>
+          <t t-if="o.company_id.taxpayer_license and o._validate_na(o.company_id.taxpayer_license)">
+            <strong>LAE:</strong>
+            <span t-field="o.company_id.taxpayer_license" />
+            <br />
+          </t>
+        </div>
+      </div>
+      <div class="">
+        <t t-set="show_discount" t-value="any(o.invoice_line_ids.mapped('discount'))"/>
+        <table class="table table-sm">
+          <thead class="thead">
+            <tr>
+              <th scope="col" class="text-center">#</th>
+              <th scope="col" class="text-start">Description</th>
+              <th scope="col" class="text-end">Unit Price</th>
+              <th scope="col" class="text-end">Quantity</th>
+              <th scope="col" class="text-start">Measure</th>
+              <th t-if="show_discount" scope="col" class="text-end">Discount</th>
+              <th scope="col" class="text-end">Amount Untaxed</th>
+              <th scope="col" class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr t-foreach="o.invoice_line_ids" t-as="line">
+              <td class="text-center">
+                <span t-out="line_index + 1"/>
+              </td>
+              <td>
+                <span t-field="line.name"/>
+                <span t-if="line.price_total == line.price_subtotal">(E)</span>
+              </td>
+              <td class="text-end">
+                <span t-field="line.price_unit" />
+              </td>
+              <td class="text-end">
+                <span t-field="line.quantity" />
+              </td>
+              <td>
+                <span t-field="line.product_id.uom_id"/>
+              </td>
+              <td t-if="show_discount" class="text-end">
+                <span t-field="line.discount"/>%
+              </td>
+              <td class="text-end">
+                <span t-field="line.price_subtotal" />
+              </td>
+              <td class="text-end">
+                <span t-field="line.price_total" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="clearfix">
+        <div id="total" class="row">
+          <div class="col-auto me-2">
+            <t t-if="o.fiscal_currency_id">
+              <div class="text-center">
+                <strong t-if="o.currency_id.name != 'VEB'" class="ml-auto">Summary in Document Currency</strong>
+                <strong t-else="" class="ml-auto">Summary in Document Currency</strong>
+              </div>
+              <table class="table table-sm table-borderless">
+                <t t-set="tax_totals" t-value="o.fiscal_tax_totals" />
+                <t t-call="account.document_tax_totals" />
+              </table>
+            </t>
+          </div>
+          <div class="col-auto ms-2">
+            <div class="text-center">
+              <strong t-if="o.fiscal_currency_id.name == 'VEB'" class="ml-auto">Summary in Document Currency</strong>
+              <strong t-else="" class="ml-auto">Summary in Fiscal Currency</strong>
+            </div>
+            <table class="table table-sm table-borderless">
+              <t t-set="tax_totals" t-value="o.tax_totals" />
+              <t t-call="account.document_tax_totals" />
+            </table>
+          </div>
+        </div>
+        <p t-if="o.fiscal_currency_id" class="mt-3">As established in Art. 25 of the Value Added Tax Law, the amounts of the invoice are expressed in Bs. Calculated at
+          <span t-out="o._get_rate()"/> the exchange rate established by the BCV
+        </p>
+      </div>
+      <div name="terms_and_conditions">
+        <span t-field="o.narration"/>
+      </div>
+    </div>
+  </template>
+</odoo>

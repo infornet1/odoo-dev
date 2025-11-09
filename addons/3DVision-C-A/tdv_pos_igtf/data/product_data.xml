@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+    <record id="igtf_product" model="product.product">
+      <field name="name">IGTF</field>
+      <field name="list_price">0.0</field>
+      <field name="standard_price">0.0</field>
+      <field name="detailed_type">service</field>
+      <field name="available_in_pos">1</field>
+    </record>
+  </data>
+</odoo>

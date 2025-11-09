@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="res_config_settings_view_form_inherit_custom_print" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.inherit.custom.print</field>
+    <field name="model">res.config.settings</field>
+    <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+    <field name="arch" type="xml">
+      <block name="quotation_order_setting_container" position="inside">
+        <setting id="custom_delivery_print_enabled" help="Enable custom print format for delivery reports.">
+          <field name="enable_custom_delivery_print"/>
+        </setting>
+      </block>
+    </field>
+  </record>
+</odoo>

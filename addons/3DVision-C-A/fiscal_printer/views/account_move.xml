@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="inherited_account_move_form" model="ir.ui.view">
+        <field name="name">account.move.form.view.inherited</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//header//button" position="before">
+                <button name="send_to_fiscal_printer" type="object" string="Imprimir Factura fiscal" class="btn btn-primary" invisible="fp_state == 'printed' or state != 'posted' or move_type not in ('out_invoice', 'out_refund')"/>
+                <!-- invisible="fp_state != 'none' or state != 'posted' or move_type not in ('out_invoice', 'out_refund') or not has_same_fp_group -->
+            </xpath>
+            <xpath expr="//group[@id='header_left_group']" position="inside">
+                <field name="ticket_ref" invisible="move_type in ('entry') and ticket_ref == 0" />
+                <field name="fp_serial_num" invisible="move_type in ('entry') and fp_serial_num == ''" />
+                <field name="cn_ticket_ref" invisible="move_type in ('entry') and cn_ticket_ref == 0" />
+                <field name="has_same_fp_group" invisible='1' />
+            </xpath>
+
+            <xpath expr="//group[@id='header_right_group']" position="inside">
+                <field name="num_report_z" invisible="move_type in ('entry') and num_report_z == 0"/>
+                <field name="fp_state" invisible="move_type in ('entry') and fp_state == 'none'"/>
+            </xpath>
+            <!-- <xpath expr="//group[@id='header_right_group']" position="inside">
+                <field name="fp_internal_reference" />
+            </xpath> -->
+        </field>
+    </record>
+
+    <record id="inherited_account_move_tree" model="ir.ui.view">
+        <field name="name">account.move.tree.view.inherited</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_partner_display_name']" position="before">
+                <field name="fp_serial_num" string="Referencia Maquina Fiscal" optional="hide" />
+                <field name="ticket_ref" string="Referencia Fiscal" optional="hide" />
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

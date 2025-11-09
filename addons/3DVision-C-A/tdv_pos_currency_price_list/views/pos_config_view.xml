@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extender la vista de configuración del POS -->
+        <record id="pos_config_view_form_inherit_currency_price_list" model="ir.ui.view">
+            <field name="name">pos.config.form.inherit.currency.price.list</field>
+            <field name="model">pos.config</field>
+            <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet" position="inside">
+                    <group string="Currency Control by Price List" name="group_currency_price_list_control" class="o_setting_box">
+                        <field name="enable_currency_price_list_control"/>
+                    </group>
+                    
+                    <group string="Price Lists for Currency Control" name="group_currency_control_pricelists" class="o_setting_box" invisible="not enable_currency_price_list_control">
+                        <field name="currency_control_pricelist_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    </group>
+                    
+                    <group string="Currency Payment Methods" name="group_special_currency_payment_methods" class="o_setting_box" invisible="not enable_currency_price_list_control">
+                        <field name="special_currency_payment_method_ids" widget="many2many_tags" options="{'no_create': True}" context="{'show_disabled': True}"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Vista de configuración del sistema -->
+        <record id="res_config_settings_view_form_inherit_currency_price_list" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.currency.price.list</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//block[@id='pos_interface_section']" position="after">
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-xs-12 col-md-6 o_setting_box" id="enable_currency_price_list_control">
+                            <div class="o_setting_left_pane">
+                                <field name="pos_enable_currency_price_list_control"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="pos_enable_currency_price_list_control" string="Enable Currency Control by Price List"/>
+                                <div class="content-group mt16" invisible="not pos_enable_currency_price_list_control">
+                                    <div style="padding-top: 12px;">
+                                        <label for="pos_currency_control_pricelist_ids">Price Lists for Currency Control</label>
+                                        <field name="pos_currency_control_pricelist_ids" class="mt-3" widget="many2many_tags" options="{'no_create': True}"/>
+                                    </div>
+                                    <div style="padding-top: 12px;">
+                                        <label for="pos_special_currency_payment_method_ids">Currency Payment Methods</label>
+                                        <field name="pos_special_currency_payment_method_ids" class="mt-3" widget="many2many_tags" options="{'no_create': True}" context="{'show_disabled': True}"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

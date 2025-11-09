@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="fiscal_printer_service.InvoiceAction">
+        <div class="fiscal_printer_invoice_action" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.85);">
+            <div class="invoice-animation-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="invoice-animation" style="position: relative; width: 200px; height: 200px;">
+                    <!-- Printer body -->
+                    <div style="position: absolute; bottom: 0; left: 25px; width: 150px; height: 100px; background: #e0e0e0; border-radius: 20px 20px 30px 30px; border: 4px solid #b0b0b0;"></div>
+                    <!-- Invoice paper -->
+                    <div class="invoice-paper" style="position: absolute; top: 0; left: 62px; width: 75px; height: 120px; background: #fff; border: 2px solid #ccc; border-radius: 0 0 16px 16px; animation: invoice-print 1.5s infinite;">
+                        <!-- Invoice header -->
+                        <div style="width: 90%; height: 8px; background: #333; margin: 8px auto 4px auto; border-radius: 4px;"></div>
+                        <!-- Invoice lines -->
+                        <div style="width: 80%; height: 4px; background: #666; margin: 4px auto; border-radius: 2px;"></div>
+                        <div style="width: 70%; height: 4px; background: #666; margin: 4px auto; border-radius: 2px;"></div>
+                        <div style="width: 85%; height: 4px; background: #666; margin: 4px auto; border-radius: 2px;"></div>
+                        <div style="width: 75%; height: 4px; background: #666; margin: 4px auto; border-radius: 2px;"></div>
+                        <!-- Invoice total -->
+                        <div style="width: 90%; height: 6px; background: #333; margin: 8px auto 4px auto; border-radius: 3px;"></div>
+                    </div>
+                    <!-- Printer slot -->
+                    <div style="position: absolute; top: 0; left: 62px; width: 75px; height: 20px; background: #b0b0b0; border-radius: 10px 10px 5px 5px;"></div>
+                    <!-- Printer button -->
+                    <div style="position: absolute; bottom: 25px; right: 45px; width: 25px; height: 25px; background: #ff9800; border-radius: 50%; border: 2px solid #f57c00;"></div>
+                </div>
+                <span style="margin-top: 32px; color: #555; font-size: 2rem;">Imprimiendo factura fiscal...</span>
+            </div>
+            <style>
+                @keyframes invoice-print {
+                    0% { height: 30px; opacity: 0.7; }
+                    40% { height: 120px; opacity: 1; }
+                    70% { height: 120px; opacity: 1; }
+                    100% { height: 30px; opacity: 0.7; }
+                }
+            </style>
+        </div>
+    </t>
+</templates> 

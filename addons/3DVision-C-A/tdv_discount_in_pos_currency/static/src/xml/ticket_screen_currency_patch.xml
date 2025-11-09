@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
+        <!-- Agrega la columna al header -->
+        <xpath expr="//div[@class='header-row d-flex text-bg-700 fw-bolder']/div[@class='col end p-2'][last()]" position="after">
+            <div class="col end p-2">Currency Amount</div>
+            <div class="col end p-2">Is refund</div>
+        </xpath>
+        <!-- Agrega el valor en cada fila, muestra solo el valor de la orden -->
+        <xpath expr="//div[contains(@class, 'order-row')]/div[@class='col end p-2'][last()]" position="after">
+            <div class="col end p-2">
+                <div>
+                    <t t-esc="order.currency_amount"/>
+                </div>
+            </div>
+            <div class="col end p-2">
+                <div>
+                    <t t-esc="order.is_refund ? 'True' : 'False'"/>
+                </div>
+            </div>
+        </xpath>
+    </t>
+</templates> 

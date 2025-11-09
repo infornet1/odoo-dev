@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="hr_payslip_form_view_report_button" model="ir.ui.view">
+            <field name="name">hr.payslip.form.report.button</field>
+            <field name="model">hr.payslip</field>
+            <field name="inherit_id" ref="hr_payroll.view_hr_payslip_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='action_print_payslip']" position="after">
+                    <!-- Declarar el campo computado -->
+                    <field name="show_custom_report" invisible="1"/>
+                    <div class="btn-group" invisible="not show_custom_report">
+                        <button class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" groups="hr_payroll.group_hr_payroll_user">
+                            <span>Impresión</span>
+                        </button>
+                        <div class="dropdown-menu">
+                            <button type="action" name="%(tdv_dual_currency.action_report_payslip_ves)d" string="Imprimir con Conversión" class="dropdown-item" />
+                            <button type="action" name="%(tdv_dual_currency.action_report_payslip_custom)d" string="Imprimir Personalizada" class="dropdown-item" />
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

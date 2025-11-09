@@ -1,0 +1,73 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_pos_payment_ref
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-09-26 15:58+0000\n"
+"PO-Revision-Date: 2024-09-26 15:58+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model.fields,help:tdv_pos_payment_ref.field_pos_payment_method__is_ref_payment
+msgid ""
+"If it is marked, this payment method will require a reference at the point "
+"of sale"
+msgstr ""
+"Si está marcado, este método de pago requerirá una referencia en el punto "
+"De venta"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model.fields,field_description:tdv_pos_payment_ref.field_pos_payment_method__is_ref_payment
+msgid "Is Ref Payment"
+msgstr "Referencia"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model,name:tdv_pos_payment_ref.model_pos_order
+msgid "Point of Sale Orders"
+msgstr "Órdenes de Punto de Venta"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model,name:tdv_pos_payment_ref.model_pos_payment_method
+msgid "Point of Sale Payment Methods"
+msgstr "Métodos de pago de punto de venta"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model,name:tdv_pos_payment_ref.model_pos_payment
+msgid "Point of Sale Payments"
+msgstr "Pagos de punto de venta"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model,name:tdv_pos_payment_ref.model_pos_session
+msgid "Point of Sale Session"
+msgstr "Sesión de punto de venta"
+
+#. module: tdv_pos_payment_ref
+#. odoo-javascript
+#: code:addons/tdv_pos_payment_ref/static/src/app/screens/payment_screen/payment_lines/payment_lines.js:0
+#: code:addons/tdv_pos_payment_ref/static/src/app/screens/payment_screen/payment_screen.js:0
+#, python-format
+msgid "Referecia de pago"
+msgstr ""
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model.fields,field_description:tdv_pos_payment_ref.field_pos_order__reference
+msgid "Reference Order"
+msgstr "Orden de referencia"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model.fields,field_description:tdv_pos_payment_ref.field_pos_payment__reference
+msgid "Reference Payment"
+msgstr "Pago de Referencia"
+
+#. module: tdv_pos_payment_ref
+#: model:ir.model.fields,help:tdv_pos_payment_ref.field_pos_payment__reference
+msgid "Reference entered for payment"
+msgstr "Referencia ingresada para el pago"

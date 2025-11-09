@@ -1,0 +1,91 @@
+<odoo>
+
+  <record id="action_tdv_sales_book_views" model="ir.actions.act_window">
+    <field name="name">Sales Book</field>
+    <field name="res_model">tdv.sale.book</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        No create Reports
+      </p>
+    </field>
+  </record>
+
+  <record id="tdv_sale_book_view_tree" model="ir.ui.view">
+    <field name="name">tdv.sale.book.view.tree</field>
+    <field name="model">tdv.sale.book</field>
+    <field name="arch" type="xml">
+      <tree string="Sale Books">
+        <field name="name"/>
+        <field name="date_from" optional="show"/>
+        <field name="date_to" optional="show"/>
+        <field name="company_id" optional="hide"/>
+        <field name="currency_id" optional="hide"/>
+        <field name="amount_untaxed" optional="show"/>
+        <field name="amount_exempt" optional="show"/>
+        <field name="amount_tax" optional="show"/>
+        <field name="amount_total" optional="show"/>
+      </tree>
+    </field>
+  </record>
+
+  <record id="tdv_sale_book_view_form" model="ir.ui.view">
+    <field name="name">tdv.sale.book.view.form</field>
+    <field name="model">tdv.sale.book</field>
+    <field name="arch" type="xml">
+      <form string="Sale Book">
+        <header>
+          <button string="Generate" name="generate" type="object" class="oe_highlight"
+            confirm="Do you want to continue with this action?"/>
+        </header>
+        <sheet>
+          <group>
+            <group>
+              <field name="name"/>
+              <label for="date_from" string="Date"/>
+              <div class="o_row">
+                <field name="date_from" widget="daterange" options="{'related_end_date': 'date_to'}"/>
+                <i class="fa fa-long-arrow-right mx-2" aria-label="Arrow icon" title="Arrow"/>
+                <field name="date_to" widget="daterange" options="{'related_start_date': 'date_from'}"/>
+              </div>
+              <field name="sales_type" widget="radio" options="{'horizontal': true}"/>
+            </group>
+            <group>
+              <field name="company_id" options="{'no_create': True, 'no_open': True}"/>
+              <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
+              <field name="amount_untaxed" />
+              <field name="amount_exempt" />
+              <field name="amount_tax" />
+              <field name="amount_total" />
+            </group>
+          </group>
+          <notebook>
+            <page name="sales_book_lines" string="Lines">
+              <field name="line_ids">
+                <tree editable="bottom">
+                  <field name="invoice_id"/>
+                  <field name="company_id" optional="hide"/>
+                  <field name="partner_id"/>
+                  <field name="is_legal_entity" widget="boolean_toggle"/>
+                  <field name="invoice_date"/>
+                  <field name="invoice_reference"/>
+                  <field name="reversal_move_reference" optional="hide"/>
+                  <field name="control_number"/>
+                  <field name="invoice_type"/>
+                  <field name="amount_untaxed"/>
+                  <field name="amount_tax"/>
+                  <field name="amount_exempt"/>
+                  <field name="amount_total"/>
+                  <field name="currency_id" optional="hide"/>
+                  <field name="date_from" column_invisible="True"/>
+                  <field name="date_to" column_invisible="True"/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+</odoo>

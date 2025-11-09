@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<data>
+
+		<record id="paperformat_eq_payslip_report" model="report.paperformat">
+			<field name="name">Payslip Report</field>
+			<field name="default" eval="True" />
+			<field name="format">custom</field>
+			<field name="page_height">297</field>
+			<field name="page_width">210</field>
+			<field name="orientation">Landscape</field>
+			<field name="margin_top">30</field>
+			<field name="margin_bottom">23</field>
+			<field name="margin_left">5</field>
+			<field name="margin_right">5</field>
+			<field name="header_line" eval="False" />
+			<field name="header_spacing">20</field>
+			<field name="dpi">90</field>
+		</record>
+
+		<record id="action_print_payslip" model="ir.actions.report">
+			<field name="name">Payslip</field>
+			<field name="report_type">qweb-pdf</field>
+			<field name="report_name">eq_payslip_report.report_payslip_template</field>
+			<field name="report_file">eq_payslip_report.report_payslip_template</field>
+			<field name="model">wizard.payslip.report</field>
+			<field name="paperformat_id" ref="eq_payslip_report.paperformat_eq_payslip_report" />
+		</record>
+
+		<record id="action_print_payslip_secondary" model="ir.actions.report">
+			<field name="name">Payslip Conversion</field>
+			<field name="report_type">qweb-pdf</field>
+			<field name="report_name">eq_payslip_report.report_payslip_template_secondary</field>
+			<field name="report_file">eq_payslip_report.report_payslip_template_secondary</field>
+			<field name="model">wizard.payslip.report</field>
+			<field name="paperformat_id" ref="eq_payslip_report.paperformat_eq_payslip_report" />
+		</record>
+
+	</data>
+</odoo>

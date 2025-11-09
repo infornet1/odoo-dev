@@ -1,0 +1,4 @@
+/* Oculta la X en líneas de pago especiales */
+.paymentline[data-is-divisa-special="1"] .delete-button {
+    display: none !important;
+} 

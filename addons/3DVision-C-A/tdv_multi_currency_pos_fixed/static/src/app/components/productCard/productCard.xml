@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_multi_curency_pos.ProductCard" t-inherit="point_of_sale.ProductCard" t-inherit-mode="extension">
+        <xpath expr="//span[hasclass('price-tag')]" position="replace">
+            <span class="price-tag text-primary mt-2 fw-bolder" t-esc="props.price" />
+            <span class="price-tag text-primary fw-bolder" t-esc="props.secondPrice" />
+        </xpath>
+    </t>
+</template>

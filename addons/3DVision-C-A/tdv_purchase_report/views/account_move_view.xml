@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_account_move_form_inherit_tdv_purchase_report" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.tdv_purchase_report</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group/field[@name='fiscal_correlative']" position="after">
+                <field name="import_plan_number" invisible="move_type != 'in_invoice' and move_type != 'in_refund'" string="Import Plan Number"/>
+                <field name="file_number" invisible="move_type != 'in_invoice' and move_type != 'in_refund'" string="File Number"/>
+            </xpath>
+        </field>
+    </record>
+</odoo> 

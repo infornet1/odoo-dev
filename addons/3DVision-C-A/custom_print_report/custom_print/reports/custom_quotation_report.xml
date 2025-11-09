@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción de reporte PDF -->
+    <record id="action_custom_quotation_report" model="ir.actions.report">
+        <field name="name">Cotizacion Personalizada</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_print.custom_quotation_template</field>
+        <field name="print_report_name">'Cotizacion - %s' % object.name</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Template principal del reporte -->
+    <template id="custom_quotation_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="article" style="font-family: 'Calibri'; font-size: small; position: relative; min-height: 100%;">
+                    <!-- Encabezado compacto -->
+                    <div class="header" style="position: relative; margin-bottom: 20px; padding-bottom: 10px;">
+
+                        <!-- Contenedor principal: logo - nombre - número -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 10px; flex-wrap: wrap;">
+
+                            <!-- Logo -->
+                            <div t-if="o.company_id.logo" style="flex: 0 0 auto; margin-right: 15px;">
+                                <img t-att-src="image_data_uri(o.company_id.logo)" style="height: 70px; max-width: 150px; object-fit: contain;"/>
+                            </div>
+
+                            <!-- Nombre de la empresa -->
+                            <div style="text-align: center; flex: 1 1 auto; min-width: 200px; margin: 0 5px; padding: 0;">                                
+                                <h2 style="margin: 0; padding: 0; font-size: 1.8em; line-height: 1.2; font-weight: bold;">
+                                    <span t-field="o.company_id.name"/>
+                                </h2>
+                                <div style="text-align: left; font-size: 0.9em; line-height: 1.1; margin-top: 2px; padding: 0;margin: 0 400px 0 0px;">
+                                    <t t-foreach="o.company_id.street.split('\n')" t-as="line">
+                                        <div t-esc="line" style="margin: 0; padding: 0;"/>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <!-- Número de cotización -->
+                            <div style="position: absolute; top: 0; right: 0; padding: 5px;">
+                                <div style="font-weight: bold; font-size: 1.3em;">COTIZACIÓN</div>
+                                <div style="font-size: 1.1em;">N°: <span t-field="o.name"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos del cliente y cotización -->
+                    <div class="row" style="display: flex; justify-content: space-between; margin-top: 50px; margin-bottom: 10px; flex-wrap: wrap;">
+
+                        <div style="width: 60%; min-width: 300px; margin-bottom: 15px;">
+                            <div style="margin-bottom: 5px;">
+                                <strong>Cliente:</strong>
+                                <span t-field="o.partner_id"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>RIF:</strong>
+                                <span t-field="o.partner_id.vat"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Direccion:</strong>
+                                <span t-out="o.partner_id._display_address()"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Telefono:</strong>
+                                <span t-field="o.partner_id.phone"/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Correo:</strong>
+                                <span t-field="o.partner_id.email"/>
+                            </div>
+                        </div>
+                        <div style="width: 35%; min-width: 200px; text-align: right;">
+                            <div style="margin-bottom: 5px;">
+                                <strong>Fecha:</strong>
+                                <span t-field="o.date_order" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Valido hasta:</strong>
+                                <span t-field="o.validity_date" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Referencia:</strong>
+                                <span t-field="o.client_order_ref"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de productos -->
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #aaa;">
+                                <th style="width:5%; text-align: center; padding-bottom: 8px;">#</th>
+                                <th style="width:50%; text-align: left; padding-bottom: 8px;">Descripción</th>
+                                <th style="width:10%; text-align: right; padding-bottom: 8px;">Cantidad</th>
+                                <th style="width:15%; text-align: right; padding-bottom: 8px;">P. Unitario</th>
+                                <th style="width:10%; text-align: right; padding-bottom: 8px;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="idx" t-value="0"/>
+                            <tr t-foreach="o.order_line" t-as="line">
+                                <t t-set="idx" t-value="idx + 1"/>
+                                <td style="text-align: center; padding: 5px 0;">
+                                    <span t-esc="idx"/>
+                                </td>
+                                <td style="padding: 5px 0;">
+                                    <span t-field="line.name"/>
+                                </td>
+                                <td style="text-align: right; padding: 5px 0;">
+                                    <span t-field="line.product_uom_qty"/>
+                                </td>
+                                <td style="text-align: right; padding: 5px 0;">
+                                    <span t-field="line.price_unit" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </td>
+                                <td style="text-align: right; padding: 5px 0;">
+                                    <span t-field="line.price_subtotal" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pie de página ultra compacto -->
+                    <div class="footer" style="width: 100%; font-size: 8pt; color: #555; border-top: 6px solid #ccc; padding-top: 4px; background: white; margin-bottom: 20px;">
+                        <div class="row">
+                            <!-- Columna izquierda: términos e instrucciones -->
+                            <div class="col-8">
+                                <div style="margin-bottom: 2px;">
+                                    <strong>Términos y condiciones:</strong>
+                                    <div style="margin-top: 1px; white-space: pre-line; line-height: 1.1;">
+                                        <span t-field="o.note"/>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 0px;">
+                                    <strong>INSTRUCCIONES BANCARIAS:</strong>
+                                    <div style="margin-top: 1px; line-height: 1.1;">
+                    Banco Provincial - Cuenta Corriente Bs# 0108-0088-94-0101057682<br/>
+                    Beneficiario: Aplus Services, C.A. - RIF: J-50101560-0
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna derecha: montos -->
+                            <div class="col-4 text-end">
+                                <div>
+                                    <strong>Subtotal:</strong>
+                                    <span t-field="o.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </div>
+                                <div>
+                                    <strong>IVA (Impuesto):</strong>
+                                    <span t-field="o.amount_tax" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </div>
+                                <div style="font-weight: bold;">
+                                    <strong>Total:</strong>
+                                    <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

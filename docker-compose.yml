@@ -1,0 +1,32 @@
+version: '3.3'
+services:
+    web:
+        container_name: odoo-dev-web
+        image: odoo:17.0
+        restart: always
+        volumes:
+            - /opt/odoo-dev/addons/3DVision-C-A:/mnt/extra-addons/3DVision-C-A
+            - /opt/odoo-dev/addons:/mnt/extra-addons
+            - /opt/odoo-dev/config:/etc/odoo
+            - odoo-web-data:/var/lib/odoo
+        ports:
+            - "8019:8069"
+            - "8020:8072"
+        depends_on:
+            - postgres
+    postgres:
+        container_name: odoo-dev-postgres
+        image: postgres:14
+        restart: always
+        environment:
+            - POSTGRES_DB=postgres
+            - POSTGRES_PASSWORD=odoo8069
+            - POSTGRES_USER=odoo
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        volumes:
+            - odoo-db-data:/var/lib/postgresql/data/pgdata
+        ports:
+            - "5433:5432"
+volumes:
+    odoo-web-data:
+    odoo-db-data:

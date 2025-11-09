@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="point_of_sale.PaymentScreenButtons" t-inherit-mode="extension">
+        <xpath expr="//button[contains(@class, 'partner-button')]/span[@class='partner-name']" position="replace">
+            <span class="partner-name">
+                <t t-if="currentOrder.get_partner()">
+                    <t t-esc="currentOrder.get_partner().name"/>
+                    <br/>
+                    <t t-if="currentOrder.get_partner().vat">
+                        <span class="partner-nif" style="color: #fffffff; font-size: 0.9em;">RIF/C.I.: <t t-esc="currentOrder.get_partner().vat"/></span>
+                    </t>
+                    <t t-else="">
+                        <span class="partner-nif" style="color: orange; font-size: 0.8em;">SIN RIF/C.I.</span>
+                    </t>
+                </t>
+                <t t-else="">Customer</t>
+            </span>
+        </xpath>
+    </t>
+</templates>

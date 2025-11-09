@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="TDVPaymentScreenStatus" t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('total')]" position="after">
+            <div class="total">
+                <t t-esc="secondTotalDueText"/>
+            </div>
+        </xpath>
+
+        <xpath expr="//div[hasclass('payment-status-remaining')]/span[last()]" position="inside">
+            | <t t-esc="secondRemainingText"/>
+        </xpath>
+
+        <xpath expr="//div[hasclass('payment-status-total-due')]/span[last()]" position="inside">
+            | <t t-esc="secondTotalDueText"/>
+        </xpath>
+
+        <xpath expr="//div[hasclass('payment-status-change')]/span[last()]" position="inside">
+            | <t t-esc="secondChangeText"/>
+        </xpath>
+    </t>
+</template>

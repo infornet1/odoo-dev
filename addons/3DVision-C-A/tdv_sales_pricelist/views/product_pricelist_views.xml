@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- (view list PriceList) -->
+  <data>
+    <record id="view_product_pricelist_item_form_inherit" model="ir.ui.view">
+      <field name="name">product.pricelist.item.form.inherit</field>
+      <field name="model">product.pricelist.item</field>
+      <field name="inherit_id" ref="product.product_pricelist_item_form_view"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='name']" position="after">
+          <group string="Pricelist">
+            <field name="pricelist_id" string="Pricelist"/>
+          </group>
+        </xpath>
+      </field>
+    </record>
+
+    <record id="view_product_pricelist_tree" model="ir.ui.view">
+      <field name="name">product.pricelist.view.tree</field>
+      <field name="model">product.pricelist.item</field>
+      <field name="arch" type="xml">
+        <tree string="List Pricelist" expand="context.get('expand', False)">
+          <field name="name"/>
+          <field name="pricelist_id" />
+          <field name="product_id" optional="show"/>
+          <field name="product_tmpl_id" optional="show"/>
+          <field name="applied_on" optional="hide"/>
+          <field name="date_start"/>
+          <field name="date_end"/>
+          <field name="min_quantity"/>
+          <field name="fixed_price"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="view_product_pricelist_filter" model="ir.ui.view">
+      <field name="name">product.pricelist.view.filter.search.inherit</field>
+      <field name="model">product.pricelist.item</field>
+      <field name="inherit_id" ref="product.product_pricelist_item_view_search"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='pricelist_id']" position="after">
+          <!-- <field name="name"/> -->
+          <field name="min_quantity"/>
+          <field name="product_id"/>
+          <field name="product_tmpl_id"/>
+          <field name="fixed_price"/>
+          <field name="date_start"/>
+          <field name="date_end"/>
+        </xpath>
+
+      </field>
+    </record>
+
+
+
+    <record id="action_product_pricelist_item_tree" model="ir.actions.act_window">
+      <field name="name">Pricelist Items</field>
+      <field name="res_model">product.pricelist.item</field>
+      <field name="view_mode">tree,form</field>
+      <field name="view_id" ref="view_product_pricelist_tree"/>
+      <!-- <field name="search_view_id" ref="view_product_pricelist_filter"/> -->
+      <field name="context">{'group_by': 'pricelist_id'}</field>
+    </record>
+
+    <menuitem id="menu_product_pricelist_item" name="Pricelist Items" parent="sale.menu_product_pricelist_main" action="action_product_pricelist_item_tree" sequence="35"/>
+
+    <menuitem id="menu_product_pricelist_stock" name="Pricelist Items" parent="stock.menu_stock_inventory_control" action="action_product_pricelist_item_tree" sequence="105"/>
+
+  </data>
+
+</odoo>

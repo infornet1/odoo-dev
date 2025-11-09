@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="point_of_sale.PaymentScreenPaymentLines" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[contains(@class, 'paymentline')]" position="attributes">
+            <t t-att-data-is-divisa-special="line.is_divisa_special ? '1' : undefined"/>
+        </xpath>
+        <xpath expr="//button[contains(@class, 'delete-button')]" position="attributes">
+            <t t-if="!line.is_divisa_special"/>
+        </xpath>
+        <xpath expr="//div[contains(@class, 'delete-button')]" position="attributes">
+            <t t-if="!line.is_divisa_special"/>
+        </xpath>
+    </t>
+</templates> 

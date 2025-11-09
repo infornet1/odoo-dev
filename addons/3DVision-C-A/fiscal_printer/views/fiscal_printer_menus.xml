@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <menuitem id="tf_fiscal_printer_root" name="TF Fiscal Printer">
+        <menuitem id="configurations" name="Configuraciones">
+            <menuitem id="fp_tax_menu_action" action="fp_tax_action" />
+        </menuitem>
+    </menuitem>
+</odoo>

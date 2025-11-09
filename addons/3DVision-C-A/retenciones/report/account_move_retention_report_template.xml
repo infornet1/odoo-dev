@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="account_move_retention_report_template" name="template_name">
+    <t t-call="web.html_container">
+      <t t-call="web.external_layout">
+        <t t-foreach="docs" t-as="move">
+          <t t-set="values_dict"
+            t-value="{
+              'Monto de Factura': (move.invoice_amount, move.ref_invoice_amount),
+              'IVA Retenido': (-move.iva_amount, -move.ref_iva_amount),
+              'ISLR Retenido': (-move.islr_amount, -move.ref_islr_amount),
+              'IAE Retenido': (-move.iae_amount, -move.ref_iae_amount),
+              'Monto a Pagar': (move.amount_total, move.ref_amount_total),
+            }" />
+          <span t-field="move.partner_id"
+            t-options='{"widget": "contact", "fields": ["address", "name", "vat"], "no_marker": True}' />
+          <h2 class="text-center">Teórico a pagar
+            <t t-out="move.invoice_name" />
+          </h2>
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr class="text-center">
+                <th class="align-middle">Concepto</th>
+                <th colspan="2" class="align-middle">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr t-foreach="values_dict" t-as="item">
+                <td t-attf-class="{{'text-danger' if 0 > item_value[0] else ''}} text-left">
+                  <span t-out="item" />
+                </td>
+                <td t-attf-class="{{'text-danger' if 0 > item_value[0] else ''}} text-right w-25">
+                  <span t-out="item_value[0]" t-options="{'widget': 'monetary', 'display_currency': move.currency_id}" />
+                </td>
+                <td t-attf-class="{{'text-danger' if 0 > item_value[0] else ''}} text-right w-25">
+                  <span t-out="item_value[1]" t-options="{'widget': 'monetary', 'display_currency': move.ref_currency_id}" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </t>
+      </t>
+    </t>
+  </template>
+</odoo>

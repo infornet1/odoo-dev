@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_currency_wizard,currency.wizard.access,model_currency_salary_update_wizard,base.group_user,1,1,1,1
+currency_payslip_update_rate_wizard_system,currency.payslip.update.rate.wizard,model_currency_payslip_update_rate_wizard,base.group_system,1,1,1,0
+currency_payslip_update_rate_wizard_payroll,currency.payslip.update.rate.wizard,model_currency_payslip_update_rate_wizard,hr_payroll.group_hr_payroll_user,1,1,1,0

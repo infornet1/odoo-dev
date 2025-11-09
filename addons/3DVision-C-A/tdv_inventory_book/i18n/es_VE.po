@@ -1,0 +1,279 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_inventory_book
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-22 18:04+0000\n"
+"PO-Revision-Date: 2025-08-22 18:04+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_inventory_book
+#: model:ir.actions.report,print_report_name:tdv_inventory_book.action_report_commissions_xlsx
+msgid "'Inventory %s' % object.name"
+msgstr "'Inventario %s' % object.name"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Are you sure you want to cancel this record?"
+msgstr "¿Está seguro que desea cancelar este registro?"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid ""
+"Are you sure you want to confirm this record? Inventory information will be "
+"generated."
+msgstr "¿Está seguro que desea confirmar este registro? Se generará la información de inventario."
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields.selection,name:tdv_inventory_book.selection__tdv_inventory_resume__state__cancelled
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__company_id
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__company_id
+msgid "Company"
+msgstr "Compañía"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Confirm"
+msgstr "Confirmar"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__create_uid
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__create_date
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__currency_id
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__currency_id
+msgid "Currency"
+msgstr "Moneda"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,help:tdv_inventory_book.field_tdv_inventory_resume_line__uom_id
+msgid "Default unit of measure used for all stock operations."
+msgstr "Unidad de medida por defecto utilizada para todas las operaciones de inventario."
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__description
+msgid "Description"
+msgstr "Descripción"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__display_name
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__display_name
+msgid "Display Name"
+msgstr "Nombre a mostrar"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields.selection,name:tdv_inventory_book.selection__tdv_inventory_resume__state__draft
+msgid "Draft"
+msgstr "Borrador"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__end_date
+msgid "End Date"
+msgstr "Fecha de finalización"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__id
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__id
+msgid "ID"
+msgstr "ID"
+
+#. module: tdv_inventory_book
+#: model:ir.model,name:tdv_inventory_book.model_report_tdv_invetory_report_report
+msgid "Inventory Report"
+msgstr "Reporte de inventario"
+
+#. module: tdv_inventory_book
+#: model:ir.actions.act_window,name:tdv_inventory_book.tdv_inventory_resume_action
+#: model:ir.model,name:tdv_inventory_book.model_tdv_inventory_resume
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__inventory_resume_id
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_tree
+msgid "Inventory Resume"
+msgstr "Resumen de inventario"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Inventory resume"
+msgstr "Resumen de inventario"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__write_uid
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__write_date
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_line_view_tree
+msgid "Line"
+msgstr "Línea"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__inventory_line_ids
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Lines"
+msgstr "Líneas"
+
+#. module: tdv_inventory_book
+#: model:ir.ui.menu,name:tdv_inventory_book.tdv_inventory_resume_menu
+msgid "Monthly Inventory resume"
+msgstr "Resumen de inventario mensual"
+
+#. module: tdv_inventory_book
+#: model:ir.actions.act_window,name:tdv_inventory_book.tdv_inventory_resume_line_action
+msgid "Montly inventory resume line"
+msgstr "Línea de resumen de inventario mensual"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__name
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: tdv_inventory_book
+#. odoo-python
+#: code:addons/tdv_inventory_book/models/tdv_inventory_resume.py:0
+#, python-format
+msgid "Only cancelled records can be reset to draft."
+msgstr "Solo se pueden restablecer registros cancelados a borrador."
+
+#. module: tdv_inventory_book
+#. odoo-python
+#: code:addons/tdv_inventory_book/models/tdv_inventory_resume.py:0
+#, python-format
+msgid "Only draft records can be posted."
+msgstr "Solo se pueden confirmar registros borradores."
+
+#. module: tdv_inventory_book
+#. odoo-python
+#: code:addons/tdv_inventory_book/models/tdv_inventory_resume.py:0
+#, python-format
+msgid "Only posted records can be cancelled."
+msgstr "Solo se pueden cancelar registros confirmados."
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields.selection,name:tdv_inventory_book.selection__tdv_inventory_resume__state__posted
+msgid "Posted"
+msgstr "Confirmado"
+
+#. module: tdv_inventory_book
+#: model:ir.actions.report,name:tdv_inventory_book.action_report_commissions_xlsx
+msgid "Print Resume"
+msgstr "Imprimir Resumen"
+
+#. module: tdv_inventory_book
+#: model_terms:ir.ui.view,arch_db:tdv_inventory_book.tdv_inventory_resume_view_form
+msgid "Reopen"
+msgstr "Reabrir"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__self_consumption_qty
+msgid "Self consumption QTY"
+msgstr "Cantidad de auto consumo"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__self_consumption_amount
+msgid "Self consumption amount"
+msgstr "Monto de auto consumo"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__start_date
+msgid "Start Date"
+msgstr "Fecha de inicio"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume__state
+msgid "State"
+msgstr "Estado"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__total_sold_qty
+msgid "Total sold"
+msgstr "Total vendido"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__uom_id
+msgid "Unit of Measure"
+msgstr "Unidad de medida"
+
+#. module: tdv_inventory_book
+#. odoo-python
+#: code:addons/tdv_inventory_book/models/tdv_inventory_resume.py:0
+#, python-format
+msgid "You can only delete records in draft state."
+msgstr "Solo se pueden eliminar registros en estado borrador."
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__final_amount_qty
+msgid "final amount"
+msgstr "Cantidad final"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__final_cost
+msgid "final cost"
+msgstr "Costo final"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__initial_amount_qty
+msgid "initial amount"
+msgstr "Cantidad inicial"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__initial_cost
+msgid "initial cost"
+msgstr "Costo inicial"
+
+#. module: tdv_inventory_book
+#: model:ir.model,name:tdv_inventory_book.model_tdv_inventory_resume_line
+msgid "inventory resume line"
+msgstr "Línea de resumen de inventario"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__product_id
+msgid "product"
+msgstr "Producto"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__total_purchased_qty
+msgid "total purchased"
+msgstr "Total comprado"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__total_purchased_amount
+msgid "total purchased amount"
+msgstr "Monto total comprado"
+
+#. module: tdv_inventory_book
+#: model:ir.model.fields,field_description:tdv_inventory_book.field_tdv_inventory_resume_line__total_sold_amount
+msgid "total sold amount"
+msgstr "Monto total vendido"

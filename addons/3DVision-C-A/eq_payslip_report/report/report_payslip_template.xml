@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<template id="report_payslip_template">
+		<t t-call="web.html_container">
+			<t t-call="web.internal_layout">
+				<div class="page">
+					<style>
+						table, tr, td, th {
+						border: 1px solid black !important;
+						}
+					</style>
+					<t t-set="total_rule_sum_dict" t-value="{}" />
+					<table border="1" class="table">
+						<tr style="border:1px solid black;">
+							<th rowspan="2">No #</th>
+							<th rowspan="2">Payslip Ref</th>
+							<th rowspan="2">Employee</th>
+							<th rowspan="2">Designation</th>
+							<th rowspan="2">Period</th>
+							<t t-foreach="_get_header" t-as="idx">
+								<t t-foreach="idx" t-as="key">
+									<th t-att-colspan="len(key_value)" class="text-center">
+										<span t-esc="key.name" />
+									</th>
+								</t>
+							</t>
+						</tr>
+						<tr>
+							<t t-foreach="_get_header" t-as="idx">
+								<t t-foreach="idx.values()" t-as="key">
+									<t t-foreach="key_value" t-as="rule">
+										<th class="text-center">
+											<span t-esc="rule.name" />
+										</th>
+									</t>
+								</t>
+							</t>
+						</tr>
+						<tr t-foreach="slip_ids" t-as="payslip">
+							<td>
+								<span t-esc="payslip_index + 1" />
+							</td>
+							<td>
+								<span t-field="payslip.number" />
+							</td>
+							<td>
+								<span t-field="payslip.employee_id" />
+							</td>
+							<td>
+								<span t-field="payslip.employee_id.job_id" />
+							</td>
+							<td>
+								<span t-field="payslip.date_from" />
+								to
+								<span t-field="payslip.date_to" />
+							</td>
+							<t t-foreach="_get_rule_list" t-as="col_rule_id">
+								<td class="text-end">
+									<t t-set="amount"
+										t-value="sum(payslip.line_ids.filtered(lambda l: l.salary_rule_id.id == col_rule_id.id).mapped('total')) or 0.0" />
+									<span t-esc="'%.2f'% amount" />
+									<t t-set="total_rule_sum_dict"
+										t-value="get_update_pdf_total_dict(total_rule_sum_dict, col_rule_id, amount)" />
+								</td>
+							</t>
+						</tr>
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td class="text-center font-weight-bold">Total</td>
+							<td t-foreach="_get_rule_list" t-as="col_rule_id"
+								class="text-end font-weight-bold">
+								<span t-esc="'%.2f'% sum(total_rule_sum_dict.get(col_rule_id))" />
+							</td>
+						</tr>
+					</table>
+				</div>
+			</t>
+		</t>
+	</template>
+
+	<template id="report_payslip_template_secondary">
+		<t t-call="web.html_container">
+			<t t-call="web.internal_layout">
+				<div class="page">
+					<style>
+						table, tr, td, th {
+						border: 1px solid black !important;
+						}
+					</style>
+					<t t-set="total_rule_sum_dict" t-value="{}" />
+					<table border="1" class="table">
+						<tr style="border:1px solid black;">
+							<th rowspan="2">No #</th>
+							<th rowspan="2">Payslip Ref</th>
+							<th rowspan="2">Employee</th>
+							<th rowspan="2">Designation</th>
+							<th rowspan="2">Period</th>
+							<t t-foreach="_get_header" t-as="idx">
+								<t t-foreach="idx" t-as="key">
+									<th t-att-colspan="len(key_value)" class="text-center">
+										<span t-esc="key.name" />
+									</th>
+								</t>
+							</t>
+						</tr>
+						<tr>
+							<t t-foreach="_get_header" t-as="idx">
+								<t t-foreach="idx.values()" t-as="key">
+									<t t-foreach="key_value" t-as="rule">
+										<th class="text-center">
+											<span t-esc="rule.name" />
+										</th>
+									</t>
+								</t>
+							</t>
+						</tr>
+						<tr t-foreach="slip_ids" t-as="payslip">
+							<td>
+								<span t-esc="payslip_index + 1" />
+							</td>
+							<td>
+								<span t-field="payslip.number" />
+							</td>
+							<td>
+								<span t-field="payslip.employee_id" />
+							</td>
+							<td>
+								<span t-field="payslip.employee_id.job_id" />
+							</td>
+							<td>
+								<span t-field="payslip.date_from" />
+								a
+								<span t-field="payslip.date_to" />
+							</td>
+							<t t-foreach="_get_rule_list" t-as="col_rule_id">
+								<td class="text-end">
+									<t t-set="amount"
+										t-value="sum(payslip.line_ids.filtered(lambda l: l.salary_rule_id.id == col_rule_id.id).mapped('total_in_ves')) or 0.0" />
+									<span t-esc="'%.2f'% amount" />
+									<t t-set="total_rule_sum_dict"
+										t-value="get_update_pdf_total_dict(total_rule_sum_dict, col_rule_id, amount)" />
+								</td>
+							</t>
+						</tr>
+						<tr>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td></td>
+							<td class="text-center font-weight-bold">Total</td>
+							<td t-foreach="_get_rule_list" t-as="col_rule_id"
+								class="text-end font-weight-bold">
+								<span t-esc="'%.2f'% sum(total_rule_sum_dict.get(col_rule_id))" />
+							</td>
+						</tr>
+					</table>
+				</div>
+			</t>
+		</t>
+	</template>
+
+</odoo>

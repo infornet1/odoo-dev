@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <menuitem id="retentions_menu" name="Retenciones" sequence="60"
+    web_icon="retenciones,static/description/icon.png">
+    <menuitem id="menu_retentions_root" name="Retenciones">
+      <menuitem id="retention_menu" name="All" action="retention_action" sequence="10"/>
+      <menuitem id="retention_customer_menu" name="Customer" action="retention_customer_action" sequence="20"/>
+      <menuitem id="retention_vendor_menu" name="Vendor" action="retention_vendor_action" sequence="30"/>
+      <!-- <menuitem id="retention_line_menu" name="Líneas de Retención" action="action_retention_line" sequence="20"/> -->
+    </menuitem>
+    <menuitem id="menu_settings_retentions" name="Impuestos de Retención" action="action_retention_tax" />
+  </menuitem>
+</odoo>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="iva_retention_sequence" model="ir.sequence">
+            <field name="name">IVA Retention Sequence</field>
+            <field name="code">iva</field>
+            <field name="active">TRUE</field>
+            <field name="prefix">IVA/</field>
+            <field name="padding">8</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="company_id"></field>
+        </record>
+
+        <record id="islr_retention_sequence" model="ir.sequence">
+            <field name="name">ISLR Retention Sequence</field>
+            <field name="code">islr</field>
+            <field name="active">TRUE</field>
+            <field name="prefix">ISLR/</field>
+            <field name="padding">8</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="company_id"></field>
+        </record>
+
+        <record id="iae_retention_sequence" model="ir.sequence">
+            <field name="name">IAE Retention Sequence</field>
+            <field name="code">iae</field>
+            <field name="active">TRUE</field>
+            <field name="prefix">IAE/</field>
+            <field name="padding">8</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="company_id"></field>
+        </record>
+    </data>
+</odoo>

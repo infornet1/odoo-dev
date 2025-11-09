@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="inherited_account_payment_register_form" model="ir.ui.view">
+    <field name="name">account.payment.register.inherit</field>
+    <field name="model">account.payment.register</field>
+    <field name="inherit_id" ref="account.view_account_payment_register_form" />
+    <field name="arch" type="xml">
+      <xpath expr="//div[@name='amount_div']" position="after">
+        <field name="applies_to_igtf" invisible="1" />
+        <label for="igtf_tax" invisible="not applies_to_igtf"/>
+        <!-- attrs="{'invisible': [('applies_to_igtf', '=', False)]}"  -->
+        <div class="row">
+          <field class="col-auto oe_inline" name="igtf_tax" invisible="not is_igtf or not can_edit_wizard or (can_group_payments and not group_payment)"
+             />
+             <!-- attrs="{'invisible': ['|',('is_igtf', '=', False),'|', ('can_edit_wizard', '=', False), '&amp;', ('can_group_payments', '=', True), ('group_payment', '=', False)]}" -->
+          <field class="col-auto oe_inline" name="is_igtf" widget="boolean_toggle"
+             invisible="not applies_to_igtf"/>
+             <!-- attrs="{'invisible': [('applies_to_igtf', '=', False)]}" -->
+        </div>
+        <field name="amount_igtf" invisible="not is_igtf or not can_edit_wizard or (can_group_payments and not group_payment)"
+           />
+           <!-- attrs="{'invisible': ['|',('is_igtf', '=', False),'|', ('can_edit_wizard', '=', False), '&amp;', ('can_group_payments', '=', True), ('group_payment', '=', False)]}" -->
+        <field name="igtf_journal_id"  invisible="not is_igtf"
+          options="{'no_open': True, 'no_create': True}" />
+          <!-- attrs="{'invisible': [('is_igtf', '=', False)]}" -->
+      </xpath>
+    </field>
+  </record>
+
+</odoo>

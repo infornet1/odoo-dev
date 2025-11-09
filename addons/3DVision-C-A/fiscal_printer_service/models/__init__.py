@@ -1,0 +1,1 @@
+from . import x_pos_fiscal_printer

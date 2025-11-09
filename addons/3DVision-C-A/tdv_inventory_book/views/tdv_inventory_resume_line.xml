@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="tdv_inventory_resume_line_action" model="ir.actions.act_window">
+        <field name="name">Montly inventory resume line</field>
+        <field name="res_model">tdv.inventory.resume.line</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="tdv_inventory_resume_line_view_tree" model="ir.ui.view">
+        <field name="name">tdv.inventory.resume.line.view.tree</field>
+        <field name="model">tdv.inventory.resume.line</field>
+        <field name="arch" type="xml">
+            <tree string="Line" editable='bottom'>
+                <field name="product_id" />
+                <field name="uom_id" />
+                <field name="initial_amount_qty" />
+                <field name="initial_cost" />
+                <field name="total_purchased_qty" />
+                <field name="total_purchased_amount"/>
+                <field name="total_sold_qty" />
+                <field name="total_sold_amount"/>
+                <field name="self_consumption_qty" />
+                <field name="self_consumption_amount" />
+                <field name="final_amount_qty" />
+                <field name="final_cost" />
+                <field name="currency_id" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

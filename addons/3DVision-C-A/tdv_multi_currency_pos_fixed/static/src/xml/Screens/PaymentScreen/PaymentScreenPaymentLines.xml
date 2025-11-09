@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="TDVPaymentScreenPaymentLines" t-inherit="point_of_sale.PaymentScreenPaymentLines" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('selected')]//div[hasclass('payment-name')]" position="inside">
+             (<t t-esc="line.payment_method.currency_id.symbol"/>)
+        </xpath>
+        <xpath expr="//div[hasclass('selected')]//div[hasclass('payment-amount')]" position="replace">
+            <div class="payment-amount">
+                <t t-esc="formatLineAmount(line)">
+            </div>
+        </xpath>
+    </t>
+</template>

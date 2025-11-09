@@ -1,0 +1,103 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_multi_currency_sale
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-11-17 15:12+0000\n"
+"PO-Revision-Date: 2023-11-17 15:12+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_multi_currency_sale
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.report_saleorder_document
+msgid "<span>Rate:</span>"
+msgstr "<span>Tasa de Cambio:</span>"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__company_currency_id
+msgid "Company Currency"
+msgstr "Moneda de la empresa"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__rate_string
+msgid "Rate"
+msgstr "Tasa"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model,name:tdv_multi_currency_sale.model_sale_order
+msgid "Sales Order"
+msgstr "Pedido de venta"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_company_currency_id
+msgid "Second Company Currency"
+msgstr "Moneda Secundaria de la Empresa"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_currency_id
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.view_order_form_inherit_tdv_multi_currency_sale
+msgid "Second Currency"
+msgstr "Moneda Secundaria"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_currency_rate
+msgid "Second Rate"
+msgstr "Segunda tarifa"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_tax_totals
+msgid "Second Tax Totals"
+msgstr "Totales del impuesto secundario"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_amount_tax
+msgid "Second Taxed"
+msgstr "Impuestos (Segunda Moneda)"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_amount_total
+msgid "Second Total"
+msgstr "Total (Segunda Moneda)"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_amount_untaxed
+msgid "Second Untaxed Amount"
+msgstr "Base Imponible (Segunda Moneda)"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__show_second_currency_rate
+msgid "Show Second Currency Rate"
+msgstr "Mostrar la segunda tasa monetaria en el informe"
+
+#. module: tdv_multi_currency_sale
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.view_order_form_inherit_tdv_multi_currency_sale
+msgid "Terms and conditions..."
+msgstr "Términos y condiciones..."
+
+#. module: tdv_multi_currency_sale
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.view_quotation_tree_inherit_tdv_multi_currency_sale
+msgid "Total"
+msgstr "Totala"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__amount_total_in_company_currency
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.view_quotation_tree_inherit_tdv_multi_currency_sale
+msgid "Total in Company Currency"
+msgstr "Total en moneda de la empresa"
+
+#. module: tdv_multi_currency_sale
+#: model:ir.model.fields,field_description:tdv_multi_currency_sale.field_sale_order__second_amount_total_in_company_currency
+msgid "Total in Company Second Currency"
+msgstr "Total en moneda de la empresa (Segunda Moneda)"
+
+#. module: tdv_multi_currency_sale
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_sale.view_quotation_tree_inherit_tdv_multi_currency_sale
+msgid "Total in Second Company Currency"
+msgstr "Total en moneda de la empresa (Segunda Moneda)"

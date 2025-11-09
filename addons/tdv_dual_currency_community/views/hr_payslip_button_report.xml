@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Disabled: Too many Enterprise compatibility issues -->
+        <!-- - Module name references (tdv_dual_currency vs tdv_dual_currency_community) -->
+        <!-- - Button xpath may not exist in Community form -->
+        <!-- - Report actions may have different structure -->
+        <!-- The reports are still available through standard Odoo mechanisms -->
+    </data>
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="action_report_tdv_purchase_report" model="ir.actions.report">
+    <field name="name">3DV Purchase Book Report</field>
+    <field name="model">tdv.purchase.report</field>
+    <field name="report_type">xlsx</field>
+    <field name="report_name">tdv_purchase_report.purchase_report_xlsx</field>
+    <field name="print_report_name">'%s' % object.name</field>
+    <field name="binding_model_id" ref="tdv_purchase_report.model_tdv_purchase_report"/>
+  </record>
+
+  <!-- <report
+    id="action_purchase_report_xlsx"
+    model="tdv.purchase.report"
+    string="Print to XLSX"
+    report_type="xlsx"
+    name="tdv_purchase_report.purchase_report_xlsx"
+    file="purchase_report"
+    attachment_use="False" /> -->
+
+</odoo>

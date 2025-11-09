@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="tdv_pos_kitchen_customer_name.OrderChangeReceipt" t-inherit="point_of_sale.OrderChangeReceipt" t-inherit-mode="extension">
+        <!-- Add customer name after the order data -->
+        <xpath expr="//div[hasclass('pos-receipt-order-data')]" position="after">
+            <t t-if="changes.partner_name">
+                <div class="pos-receipt-title">
+                    Cliente: <t t-esc="changes.partner_name" />
+                </div>
+            </t>
+        </xpath>
+    </t>
+
+</templates>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_multi_currency_pos.ClosePosPopup" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(pm.amount)']" position="replace">
+            <td t-esc="pm.amount_full_precision !== undefined ? env.utils.formatCurrency(pm.amount_full_precision, true, pm.currency) : env.utils.formatCurrency(pm.amount, true, pm.currency)"/>
+        </xpath>
+        <xpath expr="//td[@t-esc='env.utils.formatCurrency(getDifference(pm.id))']" position="replace">
+            <td t-if="_showDiff" t-esc="env.utils.formatCurrency(getDifference(pm.id), true, pm.currency)"
+                t-att-class="{'warning text-danger fw-bolder': getDifference(pm.id)}"/>
+        </xpath>
+    </t>
+</template>

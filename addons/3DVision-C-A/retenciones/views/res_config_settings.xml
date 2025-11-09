@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="res_config_settings_view_form_inherit_retenciones" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.inherit.retenciones</field>
+    <field name="model">res.config.settings</field>
+    <field name="priority" eval="50" />
+    <field name="inherit_id" ref="base.res_config_settings_view_form" />
+    <field name="arch" type="xml">
+      <xpath expr="//form" position="inside">
+        <app data-string="Retenciones" string="Retenciones" name="retenciones">
+          <h2>Contabilidad</h2>
+          <div class="row mt16 o_settings_container" name="default_accounting_settings_container">
+            <!-- Configuración de Retenciones de Proveedores -->
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane" />
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Diarios de Proveedores</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Diarios por defecto para el registro de retenciones de proveedores
+                </div>
+                <div class="content-group">
+                  <div class="row mt16">
+                    <label for="iva_retention_journal_id" class="col-lg-5 o_light_label" string="IVA"/>
+                    <field name="iva_retention_journal_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="islr_retention_journal_id" class="col-lg-5 o_light_label" string="ISLR"/>
+                    <field name="islr_retention_journal_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="iae_retention_journal_id" class="col-lg-5 o_light_label" string="IAE"/>
+                    <field name="iae_retention_journal_id" options="{'no_create': True}" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Configuración de Retenciones de Clientes -->
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane" />
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Diarios de Clientes</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Diarios por defecto para el registro de retenciones de clientes
+                </div>
+                <div class="content-group">
+                  <div class="row mt16">
+                    <label for="iva_retention_customer_journal_id" class="col-lg-5 o_light_label" string="IVA"/>
+                    <field name="iva_retention_customer_journal_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="islr_retention_customer_journal_id" class="col-lg-5 o_light_label" string="ISLR"/>
+                    <field name="islr_retention_customer_journal_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="iae_retention_customer_journal_id" class="col-lg-5 o_light_label" string="IAE"/>
+                    <field name="iae_retention_customer_journal_id" options="{'no_create': True}" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Cuentas de Retención de Proveedores -->
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane" />
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Cuentas de Proveedores</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Cuentas contables por defecto para retenciones de proveedores
+                </div>
+                <div class="content-group">
+                  <div class="row mt16">
+                    <label for="iva_account_id" class="col-lg-5 o_light_label" string="IVA"/>
+                    <field name="iva_account_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="islr_account_id" class="col-lg-5 o_light_label" string="ISLR"/>
+                    <field name="islr_account_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="iae_account_id" class="col-lg-5 o_light_label" string="IAE"/>
+                    <field name="iae_account_id" options="{'no_create': True}" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Cuentas de Retención de Clientes -->
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane" />
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Cuentas de Clientes</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Cuentas contables por defecto para retenciones de clientes
+                </div>
+                <div class="content-group">
+                  <div class="row mt16">
+                    <label for="iva_customer_account_id" class="col-lg-5 o_light_label" string="IVA"/>
+                    <field name="iva_customer_account_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="islr_customer_account_id" class="col-lg-5 o_light_label" string="ISLR"/>
+                    <field name="islr_customer_account_id" options="{'no_create': True}" />
+                  </div>
+                  <div class="row">
+                    <label for="iae_customer_account_id" class="col-lg-5 o_light_label" string="IAE"/>
+                    <field name="iae_customer_account_id" options="{'no_create': True}" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h2>Reportes</h2>
+          <div class="row mt16 o_settings_container" name="default_report_settings_container">
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane" />
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Firma</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Agregar una firma por defecto en la página de sus retenciones
+                </div>
+                <div class="col-12 col-lg-6 mt16">
+                  <field name="retention_signature" widget="image" />
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-6 o_setting_box">
+              <div class="o_setting_left_pane">
+                <field name="active_retention_theoretical" />
+              </div>
+              <div class="o_setting_right_pane">
+                <span class="o_form_label">Reporte teórico</span>
+                <span class="fa fa-lg fa-building-o" title="Valores específicos por compañía"
+                  aria-label="Valores específicos por compañía"
+                  groups="base.group_multi_company" role="img" />
+                <div class="text-muted">
+                  Activar un reporte teórico del monto a pagar incluyendo las retenciones
+                  aplicadas a la factura
+                </div>
+              </div>
+            </div>
+          </div>
+        </app>
+      </xpath>
+    </field>
+  </record>
+  
+  <record id="action_retenciones_configuration" model="ir.actions.act_window">
+    <field name="name">Configuración</field>
+    <field name="res_model">res.config.settings</field>
+    <field name="view_mode">form</field>
+    <field name="target">inline</field>
+    <field name="context">{'module' : 'retenciones', 'bin_size': False}</field>
+  </record>
+</odoo>

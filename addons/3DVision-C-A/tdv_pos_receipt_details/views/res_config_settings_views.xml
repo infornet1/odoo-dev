@@ -1,0 +1,113 @@
+<odoo>
+    <data>
+        <record id="pos_settings_view" model="ir.ui.view">
+            <field name="name">pos.settings.view</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id"
+                   ref="point_of_sale.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//block[@id='pos_interface_section']"
+                       position="inside">
+                       <setting help="Enable to show customer details on receipt">
+                        <field name="receipt_partner_details"/>
+                        <div class="content-group" invisible="not receipt_partner_details">
+                            <div class="mt16">
+                                
+                                <setting>
+                                    <field name="receipt_partner_name" invisible="not receipt_partner_details"/>
+                                </setting>
+                                <setting>
+                                    <field name="receipt_partner_address" invisible="not receipt_partner_details"/>
+                                </setting>
+                                <setting>
+                                    <field name="receipt_partner_phone" invisible="not receipt_partner_details"/>
+                                   </setting>
+                                   <setting>
+                                    <field name="receipt_partner_email" invisible="not receipt_partner_details"/>
+                                   </setting>
+                                   <setting>
+                                    <field name="receipt_partner_vat" invisible="not receipt_partner_details"/>
+                                   </setting>
+            
+                                
+                               
+                            </div>
+                    
+                            <div class="mt8">
+                            </div>
+                        </div>
+                       </setting>
+    
+                       
+                       
+                       
+             
+
+                    <!-- <div class="col-12 col-lg-6 o_setting_box">
+                        <div class="o_setting_left_pane">
+                            <field name="receipt_partner_details"/>
+                        </div>
+                        <div class="o_setting_right_pane">
+                            <label for="receipt_partner_details"/>
+                            <div class="content-group"
+                                 id="warning_text_pos_restaurant">
+                                Enable to show customer details on receipt
+                            </div>
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <field name="receipt_partner_name"/>
+                                </div>
+                                <div class="o_setting_right_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <label for="receipt_partner_name"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <field name="receipt_partner_address"/>
+                                </div>
+                                <div class="o_setting_right_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <label for="receipt_partner_address"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <field name="receipt_partner_phone"/>
+                                </div>
+                                <div class="o_setting_right_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <label for="receipt_partner_phone"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <field name="receipt_partner_email"/>
+                                </div>
+                                <div class="o_setting_right_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <label for="receipt_partner_email"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <field name="receipt_partner_vat"/>
+                                </div>
+                                <div class="o_setting_right_pane"
+                                     attrs="{'invisible': [('receipt_partner_details','=',False)]}">
+                                    <label for="receipt_partner_vat"/>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div> -->
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

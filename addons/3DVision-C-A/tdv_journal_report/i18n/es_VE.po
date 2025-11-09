@@ -1,0 +1,71 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_journal_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-25 21:16+0000\n"
+"PO-Revision-Date: 2025-02-25 21:16+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_journal_report
+#: model:account.report.column,name:tdv_journal_report.journal_report_credit
+msgid "Credit"
+msgstr "Crédito"
+
+#. module: tdv_journal_report
+#: model:account.report.column,name:tdv_journal_report.journal_report_debit
+msgid "Debit"
+msgstr "Débito"
+
+#. module: tdv_journal_report
+#. odoo-python
+#: code:addons/tdv_journal_report/models/journal_report.py:0
+#, python-format
+msgid "End Balance"
+msgstr "Balance final"
+
+#. module: tdv_journal_report
+#. odoo-python
+#: code:addons/tdv_journal_report/models/journal_report.py:0
+#, python-format
+msgid "General Ledger"
+msgstr "Ledger general"
+
+#. module: tdv_journal_report
+#. odoo-python
+#: code:addons/tdv_journal_report/models/journal_report.py:0
+#, python-format
+msgid "Initial Balance"
+msgstr "Balance inicial"
+
+#. module: tdv_journal_report
+#. odoo-python
+#: code:addons/tdv_journal_report/models/journal_report.py:0
+#, python-format
+msgid "Journal Items"
+msgstr "Artículos del diario"
+
+#. module: tdv_journal_report
+#: model:account.report,name:tdv_journal_report.journal_report
+#: model:ir.actions.client,name:tdv_journal_report.action_tdv_journal_report
+#: model:ir.ui.menu,name:tdv_journal_report.menu_action_tdv_journal_report
+msgid "Journal Report"
+msgstr "Libro Diario"
+
+#. module: tdv_journal_report
+#: model:ir.model,name:tdv_journal_report.model_tdv_journal_report_handler
+msgid "Journal Report Custom Handler"
+msgstr "Revista Report Handler"
+
+#. module: tdv_journal_report
+#: model:ir.ui.menu,name:tdv_journal_report.tdv_journal_report_menu
+msgid "TDV Journal Report"
+msgstr "Informe de revista TDV"

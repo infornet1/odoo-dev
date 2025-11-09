@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista heredada para facturas con atributo invisible directo -->
+    <record id="view_move_form_inherit_custom_print" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.custom.print</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Campo lógico oculto -->
+            <xpath expr="//field[@name='invoice_origin']" position="after">
+                <field name="enable_custom_invoice_format" invisible="1"/>
+            </xpath>
+            
+            <!-- Botón de impresión personalizada -->
+            <xpath expr="//button[@name='action_invoice_sent']" position="after">
+                <field name="enable_custom_invoice_format" invisible="1"/>
+                <div class="btn-group" invisible="not enable_custom_invoice_format">
+                    <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span>Impresión personalizada</span>
+                    </button>
+                    <div class="dropdown-menu" role="menu">
+                        <button type="object" name="action_print_custom_invoice" string="Formato Normal" class="dropdown-item"/>
+                        <button type="object" name="action_print_custom_invoice_free" string="Formato Simple" class="dropdown-item"/>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

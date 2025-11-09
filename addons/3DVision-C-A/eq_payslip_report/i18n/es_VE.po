@@ -1,0 +1,157 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* eq_payslip_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-05 19:21+0000\n"
+"PO-Revision-Date: 2025-06-05 19:21+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.wizard_payslip_report_view_form
+msgid "* Click button to print Employee Payslip Report."
+msgstr "* Haz clic en el botón para imprimir el reporte de recibo de nómina del empleado."
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.wizard_payslip_report_view_form
+msgid "Cerrar"
+msgstr "Cerrar"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "Designation"
+msgstr "Cargo"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__xls_file
+msgid "Download"
+msgstr "Descargar"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "Employee"
+msgstr "Empleado"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__name
+msgid "File name"
+msgstr "Nombre del archivo"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__id
+msgid "ID"
+msgstr "ID"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "No #"
+msgstr "N°"
+
+#. module: eq_payslip_report
+#: model:ir.actions.report,name:eq_payslip_report.action_print_payslip
+msgid "Payslip"
+msgstr "Recibo de nómina"
+
+#. module: eq_payslip_report
+#: model:ir.actions.report,name:eq_payslip_report.action_print_payslip_secondary
+msgid "Payslip Conversion"
+msgstr "Recibo de pagos en conversión"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "Payslip Ref"
+msgstr "Referencia de recibo"
+
+#. module: eq_payslip_report
+#: model:ir.model.fields,field_description:eq_payslip_report.field_wizard_payslip_report__payslip_ids
+msgid "Payslip Ref."
+msgstr "Referencia de recibo"
+
+#. module: eq_payslip_report
+#: model:ir.actions.act_window,name:eq_payslip_report.action_wizard_payslip_report
+msgid "Payslip Report"
+msgstr "Reporte de recibos de nómina"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "Period"
+msgstr "Período"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.wizard_payslip_report_view_form
+msgid "Recibo de pagos (Excel)"
+msgstr "Recibo de pagos (Excel)"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.wizard_payslip_report_view_form
+msgid "Recibo de pagos (PDF)"
+msgstr "Recibo de pagos (PDF)"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.wizard_payslip_report_view_form
+msgid "Recibo de pagos en conversión (PDF)"
+msgstr "Recibo de pagos en conversión (PDF)"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template_secondary
+msgid "Total"
+msgstr "Total"
+
+#. module: eq_payslip_report
+#: model:ir.model,name:eq_payslip_report.model_wizard_payslip_report
+msgid "Wizard Payslip Report"
+msgstr "Asistente de reporte de recibos de nómina"
+
+#. module: eq_payslip_report
+#: model:ir.model,name:eq_payslip_report.model_report_eq_payslip_report_report_payslip_template
+msgid "report.eq_payslip_report.report_payslip_template"
+msgstr "reporte.eq_payslip_report.reporte_recibo_plantilla"
+
+#. module: eq_payslip_report
+#: model:ir.model,name:eq_payslip_report.model_report_eq_payslip_report_report_payslip_template_secondary
+msgid "report.eq_payslip_report.report_payslip_template_secondary"
+msgstr "reporte.eq_payslip_report.reporte_recibo_plantilla_conversion"
+
+#. module: eq_payslip_report
+#: model_terms:ir.ui.view,arch_db:eq_payslip_report.report_payslip_template
+msgid "to"
+msgstr "a"

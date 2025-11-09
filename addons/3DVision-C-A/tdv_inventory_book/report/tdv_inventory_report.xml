@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_report_commissions_xlsx" model="ir.actions.report">
+        <field name="name">Print Resume</field>
+        <field name="model">tdv.inventory.resume</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">tdv_invetory_report.report</field>
+        <field name="print_report_name">'Inventory %s' % object.name</field>
+        <field name="binding_model_id" ref="tdv_inventory_book.model_tdv_inventory_resume"/>
+    </record>
+
+</odoo>

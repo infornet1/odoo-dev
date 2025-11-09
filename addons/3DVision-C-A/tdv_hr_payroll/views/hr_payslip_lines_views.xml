@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<record id="action_hr_payslip_line_view" model="ir.actions.act_window">
+    <field name="name">Payslip Lines</field>
+    <field name="res_model">hr.payslip.line</field>
+    <field name="context">{'search_default_group_by_date_from': 1, 'search_default_group_by_employee_id': 1}</field>
+    <field name="view_mode">tree,form</field>
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            No inputs have been created yet
+        </p>
+    </field>
+</record>
+
+<record id="hr_payslip_line_tree_inherit_tdv_hr_payroll" model="ir.ui.view">
+    <field name="name">hr.payslip.line.view.list.inherit</field>
+    <field name="model">hr.payslip.line</field>
+    <field name="inherit_id" ref="hr_payroll.view_hr_payslip_line_tree"/>
+    <field name="arch" type="xml">
+        <xpath expr="//tree" position="attributes">
+            <attribute name="default_order" value="date_from desc">date_from desc</attribute>
+        </xpath>
+        <xpath expr="//field[@name='employee_id']" position="attributes">
+            <attribute name="column_invisible" value="False">False</attribute>
+        </xpath>
+        <xpath expr="//field[@name='category_id']" position="attributes">
+            <attribute name="optional" value="hide">hide</attribute>
+        </xpath>
+        <xpath expr="//field[@name='sequence']" position="attributes">
+            <attribute name="optional" value="hide">hide</attribute>
+        </xpath>
+        <xpath expr="//field[@name='rate']" position="attributes">
+            <attribute name="optional" value="hide">hide</attribute>
+        </xpath>
+        <field name="employee_id" position="after">
+            <field name="employee_identificacion"/>
+            <field name="employee_bank_account_id" optional="hide"/>
+            <field name="payslip_run_id" optional="hide"/>
+            <field name="slip_id" optional="hide"/>
+            <field name="contract_id" optional="hide"/>
+            <field name="date_from"/>
+            <field name="date_to"/>
+        </field>
+        <field name="total" position="after">
+            <field name="state" widget="badge"
+                decoration-info="state == 'draft'"
+                decoration-warning="state == 'verify'"
+                decoration-success="state == 'done'"
+                decoration-primary="state == 'paid'"/>
+        </field>
+    </field>
+</record>
+
+<record id="hr_payslip_line_view_search_register_inherit_tdv_hr_payroll" model="ir.ui.view">
+    <field name="name">hr.payslip.line.view.search.inherit</field>
+    <field name="model">hr.payslip.line</field>
+    <field name="inherit_id" ref="hr_payroll.hr_payslip_line_view_search_register"/>
+    <field name="arch" type="xml">
+        <xpath expr="//filter[@name='employee_id']" position="attributes">
+            <attribute name="name" value="group_by_employee_id">group_by_employee_id</attribute>
+        </xpath>
+        <field name="slip_id" position="after">
+            <field name="payslip_run_id"/>
+            <field name="employee_id"/>
+            <field name="salary_rule_id"/>
+            <field name="state"/>
+            <field name="code"/>
+        </field>
+        <xpath expr="//group" position="before">
+            <separator/>
+            <filter name="state_done" string="Done" domain="[('state', '=', 'done')]"/>
+            <filter name="state_waiting" string="Waiting" domain="[('state', '=', 'verify')]"/>
+            <filter name="state_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+        </xpath>
+        <xpath expr="//group" position="inside">
+            <filter name="group_by_state" string="State" context="{'group_by':'state'}"/>
+            <filter name="group_by_payslip_run_id" string="Payslip Run" context="{'group_by':'payslip_run_id'}"/>
+        </xpath>
+    </field>
+</record>
+
+<menuitem
+    id="menu_hr_payslip_lines"
+    name="Payslip Lines"
+    action="action_hr_payslip_line_view"
+    parent="hr_payroll.menu_hr_payroll_report"
+    sequence="10"/>
+
+</odoo>

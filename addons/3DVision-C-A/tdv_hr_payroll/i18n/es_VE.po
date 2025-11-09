@@ -1,0 +1,237 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_hr_payroll
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-02 02:04+0000\n"
+"PO-Revision-Date: 2025-02-02 02:04+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,help:tdv_hr_payroll.field_hr_payslip_input__state
+#: model:ir.model.fields,help:tdv_hr_payroll.field_hr_payslip_line__state
+msgid ""
+"* When the payslip is created the status is 'Draft'\n"
+"                \n"
+"* If the payslip is under verification, the status is 'Waiting'.\n"
+"                \n"
+"* If the payslip is confirmed then status is set to 'Done'.\n"
+"                \n"
+"* When user cancel payslip the status is 'Rejected'."
+msgstr ""
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_line__employee_bank_account_id
+msgid "Bank Account Number"
+msgstr "Número de cuenta bancaria"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Batch"
+msgstr "Lote"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_input__payslip_run_id
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_line__payslip_run_id
+msgid "Batch Name"
+msgstr "Nombre por lotes"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Code"
+msgstr "Código"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__contract_id
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_input__contract_id
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Contract"
+msgstr "Contrato"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__create_date
+msgid "Created on"
+msgstr "Creado en"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__name
+msgid "Description"
+msgstr "Descripción"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_line_view_search_register_inherit_tdv_hr_payroll
+msgid "Done"
+msgstr "Hecho"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_line_view_search_register_inherit_tdv_hr_payroll
+msgid "Draft"
+msgstr "Borrador"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_input__employee_id
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Employee"
+msgstr "Empleada"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_contract
+msgid "Employee Contract"
+msgstr "Contrato del empleado"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,help:tdv_hr_payroll.field_hr_payslip_line__employee_bank_account_id
+msgid "Employee bank account to pay salaries"
+msgstr "Cuenta bancaria de empleados para pagar salarios"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Group By"
+msgstr "Grupo de"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__id
+msgid "ID"
+msgstr "IDENTIFICACIÓN"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_line__employee_identificacion
+msgid "Identification No"
+msgstr "Identificación no"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_rule_parameter__is_contractual
+msgid "Is Contractual"
+msgstr "Es contractual"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__write_date
+msgid "Last Updated on"
+msgstr "Última actualización"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_contract_rule_parameter_line
+msgid "Lines between a contract and a rule parameter"
+msgstr "Líneas entre un contrato y un parámetro de regla"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.actions.act_window,help:tdv_hr_payroll.action_hr_payslip_line_view
+#: model_terms:ir.actions.act_window,help:tdv_hr_payroll.action_hr_payslip_other_inputs_view
+msgid "No inputs have been created yet"
+msgstr "No se han creado entradas todavía"
+
+#. module: tdv_hr_payroll
+#: model:ir.actions.act_window,name:tdv_hr_payroll.action_hr_payslip_other_inputs_view
+#: model:ir.ui.menu,name:tdv_hr_payroll.menu_hr_payslip_other_inputs
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_tree
+msgid "Other Inputs"
+msgstr "Otras entradas"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract__rule_parameter_line_ids
+msgid "Parameter rules"
+msgstr "Reglas de parámetros"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_payslip
+msgid "Pay Slip"
+msgstr "Recibo de nómina"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Payslip"
+msgstr "Slip de pago"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_payslip_input
+msgid "Payslip Input"
+msgstr "Entrada de recibo de nómina"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_payslip_line
+msgid "Payslip Line"
+msgstr "Línea de recibo de nómina"
+
+#. module: tdv_hr_payroll
+#: model:ir.actions.act_window,name:tdv_hr_payroll.action_hr_payslip_line_view
+#: model:ir.ui.menu,name:tdv_hr_payroll.menu_hr_payslip_lines
+msgid "Payslip Lines"
+msgstr "Líneas de sueldo"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_line_view_search_register_inherit_tdv_hr_payroll
+msgid "Payslip Run"
+msgstr "payslipRun"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__rule_parameter_id
+msgid "Rule Parameter"
+msgstr "Parámetro de regla"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_contract_view_form_inherit_tdv_hr_payroll
+msgid "Rule Parameters"
+msgstr "Parámetros de regla"
+
+#. module: tdv_hr_payroll
+#: model:ir.model,name:tdv_hr_payroll.model_hr_rule_parameter
+msgid "Salary Rule Parameter"
+msgstr "Parámetro de regla salarial"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+msgid "Search Inputs"
+msgstr "Entradas de búsqueda"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_line_view_search_register_inherit_tdv_hr_payroll
+msgid "State"
+msgstr "Estado"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_input__state
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_payslip_line__state
+msgid "Status"
+msgstr "Estado"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,help:tdv_hr_payroll.field_hr_payslip_input__contract_id
+msgid "The contract this input should be applied to"
+msgstr "El contrato al que se debe aplicar esta entrada"
+
+#. module: tdv_hr_payroll
+#: model:ir.model.fields,field_description:tdv_hr_payroll.field_hr_contract_rule_parameter_line__value
+msgid "Value"
+msgstr "Valor"
+
+#. module: tdv_hr_payroll
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_input_view_search
+#: model_terms:ir.ui.view,arch_db:tdv_hr_payroll.hr_payslip_line_view_search_register_inherit_tdv_hr_payroll
+msgid "Waiting"
+msgstr "Espera"

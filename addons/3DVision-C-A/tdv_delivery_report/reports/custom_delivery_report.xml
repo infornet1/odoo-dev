@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- Definición del formato de papel personalizado -->
+    <record id="custom_delivery_paperformat" model="report.paperformat">
+        <field name="name">Formato Personalizado</field>
+        <field name="default" eval="True"/>
+        <field name="format">custom</field>
+        <field name="page_height">279</field>
+        <field name="page_width">216</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+<!-- Accion de reporte PDF -->
+    <record id="action_custom_delivery_report" model="ir.actions.report">
+        <field name="name">Entrega Personalizada</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">tdv_delivery_report.custom_delivery_template</field>
+        <field name="print_report_name">'Guia de Despacho - %s' % object.name</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="tdv_delivery_report.custom_delivery_paperformat"/>
+    </record>
+
+
+    <template id="tdv_delivery_report.custom_delivery_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="article" style="font-family: 'Calibri'; font-size: small; position: relative; min-height: 100%;">
+<style>
+.table{
+  font-size: 10px !important;
+  display:block;
+  padding-top:130px;
+}
+table{
+    width:100%;
+    border: none !important;
+    <!-- background-color:red; -->
+    <!-- display:block !important;  -->
+ 
+   
+}
+tr,td,thead,tbody{
+  border: none !important;
+  padding: 4px 0;
+}
+th{
+    text-align: left;
+    font-weight: bold;
+    border:none;
+    <!-- border-bottom: 1px solid #c3c3c3; -->
+    padding-bottom:6px;
+}
+</style>
+
+
+<div class="header" style="font-size:12px !important;">
+    <div class="info-company" style="width:100%; position: relative;">
+        <div style="display: block;">
+            <img t-att-src="image_data_uri(o.company_id.logo)" style="height: 90px; max-width: 220px; object-fit: contain; display: block; margin-bottom: 10px;"/>
+            <div style="text-align: left; font-size: 0.9em; line-height: 1.1; margin-top: 10px;">
+                <t t-foreach="o.company_id.street.split('\n')" t-as="line">
+                    <div t-esc="line" style="margin: 0; padding: 0; font-weight:600;"/>
+                </t>
+                <span style="font-weight:600;" t-field="o.company_id.vat"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="padding-left:540px;margin-bottom:10px;">
+        <span style="font-weight:600; font-size:24px;">GU<span style="font-size:33px;">í</span>A DE DESPACHO</span><br/>
+    </div>
+
+    <div style="width:49%; float:right; padding-left:100px;">
+        <div class="info-delivery">           
+            <span><strong>Referencia:</strong> <span t-field="o.name"/></span><br/>
+            <span><strong>Numero de Orden:</strong> <span t-field="o.origin"/></span><br/>
+            <span><strong>Fecha de Envio:</strong> <span t-field="o.date_done"/></span><br/>
+            <span><strong>Chofer:</strong> <span t-field="o.chofer.name"></span></span><br/>
+            <span><strong>Vehículo:</strong> <span t-field="o.vehiculo"/></span>  <span style="margin-left:5px;"><strong>Placa:</strong> <span t-field="o.vehiculo.number_plate"/></span><br/>
+            <span><strong>Color:</strong> <span t-field="o.vehiculo.color"/></span>
+        </div>
+    </div>
+
+
+    <div style="width:49%; float:left;">
+        <div class="info-client">
+            <span><strong>Cliente:</strong> <span t-field="o.partner_id.name"/></span><br/>
+            <span><strong>RIF:</strong> <span t-field="o.partner_id.vat"/></span><br/>
+            <span><strong>Direccion de Envio:</strong>
+                <span t-field="o.partner_id.street"/>
+                <span t-field="o.partner_id.street2"/>
+                <span t-field="o.partner_id.city"/>
+                <span t-field="o.partner_id.state_id"/>
+                <span t-field="o.partner_id.country_id"/>
+            </span><br/>
+            <span><strong>Teléfono:</strong>
+                <t t-if="o.partner_id.phone"><span t-field="o.partner_id.phone"/></t>
+                <t t-if="o.partner_id.mobile"> / <span t-field="o.partner_id.mobile"/></t>
+            </span>
+        </div>
+    </div>
+
+
+
+    <div class="table">
+        <table>
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Producto</th>
+            <!-- <th>Numero de serie/lote</th> -->
+            <th>Entregado</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <t t-set="line_number" t-value="0"/>
+        <t t-foreach="o.move_line_ids" t-as="line">
+            <t t-if="line.quantity &gt; 0">
+            <tr>
+                <td>
+                    <t t-set="line_number" t-value="line_number + 1"/>
+                    <span t-esc="line_number"/>
+                </td>
+                <td>
+                    <span t-field="line.product_id"/>
+                </td>
+                <!-- <td>
+                    <span t-field="line.lot_id"/>
+                </td> -->
+                <td>
+                    <span t-field="line.quantity"/> <span t-field="line.product_uom_id"></span>
+                </td>
+            </tr>
+            </t>
+        </t>
+        </tbody>
+        </table>
+
+    
+    </div>
+
+    <div class="footer"  style="width: 100%; font-size: small; color: #000000; border-top: 2px solid #ccc; padding-top: 2px; margin-top: 30px; position: relative;"></div>
+
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

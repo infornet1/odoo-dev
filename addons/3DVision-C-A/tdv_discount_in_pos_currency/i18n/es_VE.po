@@ -1,0 +1,310 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_discount_in_pos_currency
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-07-11 18:12+0000\n"
+"PO-Revision-Date: 2025-07-11 18:12+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_config__enable_special_discount
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_res_config_settings__enable_special_discount
+msgid ""
+"Allows enabling or disabling the currency discount in the Point of Sale"
+msgstr "Permite habilitar o deshabilitar el descuento en divisa en el Punto de Venta"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Amount ("
+msgstr "Monto ("
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_order__currency_amount
+msgid "Amount in the selected currency for this order."
+msgstr "Monto en la divisa seleccionada para esta orden."
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_config__currency_discount_mode
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_res_config_settings__currency_discount_mode
+msgid ""
+"Choose if the discount/ref calculation is done with the main or secondary "
+"currency."
+msgstr "Elija si el cálculo del descuento/ref se realiza con la moneda principal o secundaria."
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Close"
+msgstr "Cerrar"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model,name:tdv_discount_in_pos_currency.model_res_config_settings
+msgid "Config Settings"
+msgstr "Configuración"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Confirm"
+msgstr "Confirmar"
+
+#. module: tdv_discount_in_pos_currency
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_config_form_inherit_discount
+msgid "Currency"
+msgstr ""
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__currency_amount
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_order_tree_currency_amount
+msgid "Currency Amount"
+msgstr "Monto cargado en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__display_currency_amount
+msgid "Currency Amount Display"
+msgstr "Visualización del monto en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_config_form_inherit_discount
+msgid "Currency Discount"
+msgstr "Descuento en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__discount_special_amount
+msgid "Currency Discount (Ref)"
+msgstr "Descuento en divisa (Ref)"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/DiscountButton.xml:0
+#, python-format
+msgid "Currency Payment"
+msgstr "Pago en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/patch_payment_screen.xml:0
+#, python-format
+msgid "Currency Payment Methods"
+msgstr "Métodos de Pago en Divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__currency_symbol
+msgid "Currency Symbol"
+msgstr "Símbolo de la divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_config__display_discount_currency_id
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__display_discount_currency_id
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_res_config_settings__display_discount_currency_id
+msgid "Currency for Discount/Ref"
+msgstr "Divisa para Descuento/Ref"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_config__currency_discount_mode
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_res_config_settings__currency_discount_mode
+msgid "Currency mode for discount/ref"
+msgstr "Divisa para descuento/ref"
+
+#. module: tdv_discount_in_pos_currency
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_config_form_inherit_discount
+msgid "Currency options for discount/ref"
+msgstr "Opciones de divisa para descuento/ref"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_order__currency_dynamic_id
+msgid "Currency to use for display, based on POS config."
+msgstr "Divisa a mostrar, según la configuración del POS."
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_config__display_discount_currency_id
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_res_config_settings__display_discount_currency_id
+msgid "Currency used for discounts and reference in POS."
+msgstr "Divisa usada para descuentos y referencia en el POS."
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_order__display_discount_currency_id
+msgid "Currency used for the currency amount."
+msgstr "Divisa usada para el monto en divisa."
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_config__discount_percentage
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_res_config_settings__discount_percentage
+msgid "Discount Percentage"
+msgstr "Porcentaje de Descuento"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_config__discount_percentage
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_res_config_settings__discount_percentage
+msgid "Discount percentage to apply on the entered amount"
+msgstr "Porcentaje de descuento a aplicar sobre el monto ingresado"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Distribute the special amount among the selected payment methods:"
+msgstr "Distribuya el monto especial entre los métodos de pago seleccionados:"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_order__currency_dynamic_id
+msgid "Dynamic Currency"
+msgstr "Divisa dinámica"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_config__enable_special_discount
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_res_config_settings__enable_special_discount
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.res_config_settings_view_form_inherit_discount
+msgid "Enable currency discount in POS"
+msgstr "Habilitar descuento en divisa en el POS"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/js/Screens/DiscountButton.js:0
+#, python-format
+msgid "Enter the amount to pay in currency"
+msgstr "Ingrese el monto a pagar en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Method"
+msgstr "Método"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/js/Screens/DiscountButton.js:0
+#, python-format
+msgid "No products"
+msgstr "Sin productos"
+
+#. module: tdv_discount_in_pos_currency
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_config_form_inherit_discount
+msgid "Currency options for discount/ref"
+msgstr "Opciones de divisa para descuento/ref"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_pos_config__special_discount_payment_method_ids
+#: model:ir.model.fields,field_description:tdv_discount_in_pos_currency.field_res_config_settings__special_discount_payment_method_ids
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.res_config_settings_view_form_inherit_discount
+#: model_terms:ir.ui.view,arch_db:tdv_discount_in_pos_currency.view_pos_config_form_inherit_discount
+msgid "Payment Methods for Currency Discount"
+msgstr "Métodos de Pago para Descuento en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model,name:tdv_discount_in_pos_currency.model_pos_config
+msgid "Point of Sale Configuration"
+msgstr "Configuración del Punto de Venta"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model,name:tdv_discount_in_pos_currency.model_pos_order
+msgid "Point of Sale Orders"
+msgstr "Órdenes del Punto de Venta"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/app/components/orderWidget/orderWidget.xml:0
+#: code:addons/tdv_discount_in_pos_currency/static/src/app/components/orderWidget/orderWidget.xml:0
+#, python-format
+msgid "Ref:"
+msgstr "Ref:"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_config__special_discount_payment_method_ids
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_res_config_settings__special_discount_payment_method_ids
+msgid ""
+"Select the payment methods to be used for the currency discount in the POS."
+msgstr "Seleccione los métodos de pago que se utilizarán para el descuento en divisa en el POS."
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/DiscountButton.xml:0
+#, python-format
+msgid "Selected:"
+msgstr "Seleccionado:"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Should be:"
+msgstr "Debe ser:"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields,help:tdv_discount_in_pos_currency.field_pos_order__currency_symbol
+msgid "Symbol of the currency used for the currency amount."
+msgstr "Símbolo de la divisa usada para el monto en divisa."
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Total entered:"
+msgstr "Total ingresado:"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields.selection,name:tdv_discount_in_pos_currency.selection__pos_config__currency_discount_mode__main
+msgid "Use main currency for discount/ref"
+msgstr "Usar moneda principal para descuento/ref"
+
+#. module: tdv_discount_in_pos_currency
+#: model:ir.model.fields.selection,name:tdv_discount_in_pos_currency.selection__pos_config__currency_discount_mode__secondary
+msgid "Use secondary currency for discount/ref"
+msgstr "Usar moneda secundaria para descuento/ref"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/js/Screens/DiscountButton.js:0
+#, python-format
+msgid "You must add at least one product before applying the discount."
+msgstr "Debe agregar al menos un producto antes de aplicar el descuento."
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/DiscountButton.xml:0
+#, python-format
+msgid "in currency"
+msgstr "en divisa"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/ticket_screen_currency_patch.xml:0
+#, python-format
+msgid "Is refund"
+msgstr "Reembolso"
+
+#  #. module: tdv_discount_in_pos_currency
+#  #. odoo-javascript
+#  #: code:addons/tdv_discount_in_pos_currency/static/src/xml/ticket_screen_currency_patch.xml:0
+#  #, python-format
+#  msgid "True"
+#  msgstr "Sí"
+
+#  #. module: tdv_discount_in_pos_currency
+#  #. odoo-javascript
+#  #: code:addons/tdv_discount_in_pos_currency/static/src/xml/ticket_screen_currency_patch.xml:0
+#  #, python-format
+#  msgid "False"
+#  msgstr "No"
+
+#. module: tdv_discount_in_pos_currency
+#. odoo-javascript
+#: code:addons/tdv_discount_in_pos_currency/static/src/xml/ticket_screen_currency_patch.xml:0
+#, python-format
+msgid "Currency Amount"
+msgstr "Monto cargado en divisa"

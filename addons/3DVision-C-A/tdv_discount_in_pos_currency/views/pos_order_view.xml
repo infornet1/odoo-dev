@@ -1,0 +1,12 @@
+<odoo>
+<record id="view_pos_order_tree_currency_amount" model="ir.ui.view">
+    <field name="name">pos.order.tree.currency.amount</field>
+    <field name="model">pos.order</field>
+    <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+    <field name="arch" type="xml">
+        <xpath expr="//field[@name='amount_total']" position="after">
+            <field name="display_currency_amount" string="Currency Amount" readonly="1" optional="show"/>
+        </xpath>
+    </field>
+</record>
+</odoo> 

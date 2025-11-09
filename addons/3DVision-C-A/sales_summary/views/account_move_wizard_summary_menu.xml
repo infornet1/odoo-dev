@@ -1,0 +1,15 @@
+<odoo>
+
+  <record id="action_sales_summary_invoice_summary_wizard" model="ir.actions.act_window">
+    <field name="name">Sales report</field>
+    <field name="res_model">account.move.summary.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <!-- Top menu item -->
+  <menuitem id="sales_summary_menu" name="Daily reports" parent="account.menu_finance_reports">
+    <menuitem name="Sales report" id="invoice_summary" action="action_sales_summary_invoice_summary_wizard"/>
+  </menuitem>
+
+</odoo>

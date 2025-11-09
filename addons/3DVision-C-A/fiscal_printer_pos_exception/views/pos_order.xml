@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <record id="view_pos_pos_form_inherit" model="ir.ui.view">
+        <field name="name">pos.order.inherit</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <!-- <xpath expr="//header//button" position="before">
+                <button 
+                    name="send_to_fiscal_printer" 
+                    string="Ticket Fiscal" 
+                    type="object" 
+                    confirm="Estas seguro de continuar con la creacion de ticket fiscal?"
+                    attrs="{'invisible':[('is_ticket_generated', '=', True)]}"
+                />
+                <field name="is_ticket_generated" invisible="1"/>
+            </xpath> -->
+            <xpath expr="//field[@name='fiscal_position_id']" position="after">
+                <field name="num_factura" readonly="1"/>
+                <field name="fiscal_serial" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

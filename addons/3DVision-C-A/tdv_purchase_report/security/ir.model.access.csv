@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+tdv_purchase_report.access_tdv_purchase_report,access_tdv_purchase_report,tdv_purchase_report.model_tdv_purchase_report,base.group_user,1,1,1,1
+tdv_purchase_report.access_tdv_purchase_report_line,access_tdv_purchase_report_line,tdv_purchase_report.model_tdv_purchase_report_line,base.group_user,1,1,1,1

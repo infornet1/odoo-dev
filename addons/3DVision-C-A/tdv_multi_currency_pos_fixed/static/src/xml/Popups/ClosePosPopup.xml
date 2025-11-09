@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="TDVClosePosPopup" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension" owl="1">
+        <xpath expr="//table/tbody[last()]" position="replace">
+            <tbody t-if="otherPaymentMethods.length &gt; 0">
+                <tr t-foreach="otherPaymentMethods" t-as="pm" t-key="pm.id">
+                    <td t-esc="pm.name"/>
+                    <td t-esc="env.pos.format_currency(env.pos.convertAmount(pm.amount, pm.currency), null, pm.currency)"/>
+                    <t t-set="_showDiff" t-value="_getShowDiff(pm)" />
+                    <td t-if="_showDiff" t-on-input="(event) => this.handleInputChange(pm.id, event, pm.currency)">
+                        <input class="pos-input" t-ref="closingCashInput_{{pm.id}}"/>
+                    </td>
+                    <td t-if="_showDiff" t-esc="env.pos.format_currency(env.pos.convertAmount(state.payments[pm.id].difference, pm.currency), null, pm.currency)" t-att-class="{'warning': state.payments[pm.id].difference}"/>
+                </tr>
+            </tbody>
+        </xpath>
+    </t>
+</template>

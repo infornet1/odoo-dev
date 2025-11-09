@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="tdv_pos_currency_price_list.DivisaPaymentMethodsPopup" owl="1">
+        <div class="modal-body bg-white" style="border-radius: 8px; background: #fff !important; opacity: 1 !important;">
+            <h4>Currency Payment Methods</h4>
+            <p>Distribute the special amount between the selected payment methods:</p>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Amount (<t t-esc="this.getCurrencySymbol()"/>)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="specialPaymentMethods" t-as="pm" t-key="pm.id">
+                        <tr>
+                            <td><t t-esc="pm.name"/></td>
+                            <td>
+                                <input type="number" min="0" step="0.01" class="form-control form-control-sm" t-att-value="amounts[pm.id]" t-on-input="(ev) => this.onInputChange(pm.id, ev)"/>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+            <div class="mt-2">
+                <strong>Total entered: <t t-esc="this.getCurrencySymbol()"/><t t-esc="this.getFormattedValue(totalEntered)"/></strong> / <strong>Must be: <t t-esc="this.getCurrencySymbol()"/><t t-esc="this.getFormattedValue(totalAmount)"/></strong>
+            </div>
+            <div class="text-danger mt-1" t-if="error.msg">
+                <t t-esc="error.msg"/>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" t-on-click="() => this.onCancel()">Close</button>
+            <button class="btn btn-primary" t-on-click="() => this.confirm()" t-att-disabled="Math.abs(totalEntered - totalAmount) > 0.01">Confirm</button>
+        </div>
+    </t>
+</templates>

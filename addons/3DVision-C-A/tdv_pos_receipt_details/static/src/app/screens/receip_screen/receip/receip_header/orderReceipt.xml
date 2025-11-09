@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="OrderReceipt" t-inherit="point_of_sale.ReceiptHeader"
+       t-inherit-mode="extension">
+       <xpath expr="//div[hasclass('cashier')]" position="after">
+         
+        <t t-if="props.data.partner">
+            <t t-if="props.data.partner.name">
+                <div>
+                    <b>Name:</b>
+                    <t t-esc="props.data.partner.name"/>
+                </div>
+            </t>   
+            <t t-if="props.data.partner.street">
+                <div>
+                    <b>Address:</b>
+                    <t t-esc="props.data.partner.street"/>
+                </div>
+            </t>
+            <t t-if="props.data.partner.phone">
+                <div>
+                    <b>Phone:</b>
+                    <t t-esc="props.data.partner.phone"/>
+                </div>
+
+            </t>
+            <t t-if="props.data.partner.email">
+                <div>
+                    <b>Email:</b>
+                    <t t-esc="props.data.partner.email"/>
+                </div>
+
+            </t>
+            <t t-if="props.data.partner.vat">
+                <div>
+                    <b>Vat:</b>
+                    <t t-esc="props.data.partner.vat"/>
+                </div>
+
+            </t>
+           </t> 
+            <!-- <t t-if="env.pos.config.receipt_partner_details">
+                <t t-if="this.env.pos.selectedOrder.partner">
+                    <t t-if="env.pos.config.receipt_partner_name">
+                        <div style="font-weight:bold;">Customer Name:
+                            <t t-esc="this.env.services.pos.selectedOrder.partner.name"/>
+                        </div>
+                    </t>
+                    <t t-if="env.pos.config.receipt_partner_address">
+                            <div style="font-weight:bold;">Customer Address:
+                            <t t-esc="this.env.services.pos.selectedOrder.partner.street || ''"/>
+                            </div>
+                    </t>
+                    <t t-if="env.pos.config.receipt_partner_phone">
+                        <div style="font-weight:bold;">Customer Phone:
+                            <t t-esc="this.env.services.pos.selectedOrder.partner.phone || ''"/>
+                        </div>
+                    </t>
+                    <t t-if="env.pos.config.receipt_partner_email">
+                        <div style="font-weight:bold;">Customer Email:
+                            <t t-esc="this.env.services.pos.selectedOrder.partner.email or ''"/>
+                        </div>
+                    </t>
+                    <t t-if="env.pos.config.receipt_partner_vat">
+                        <div style="font-weight:bold;">Customer Vat:
+                            <t t-esc="this.env.services.pos.selectedOrder.partner.vat || ''"/>
+                        </div>
+                    </t>
+                </t>
+            </t> -->
+            <!-- <t t-if="env.pos.invoice">
+                <div style="font-weight:bold;">Invoice Number:
+                    <t t-esc="this.env.pos.invoice"/>
+                </div>
+            </t>
+            <t t-if="env.pos.qr_code">
+                <t t-if="env.pos.qr_image">
+                    <div style="font-weight:bold;">
+                        <img t-attf-src="{{env.pos.qr_image}}"
+                             style="width:50%;"/>
+                    </div>
+                </t>
+            </t> -->
+        </xpath>
+    </t>
+</templates>
+
+<!-- 
+<t t-if="env.pos.config.receipt_partner_details">
+    <t t-if="this.env.pos.selectedOrder.partner">
+        <t t-if="env.pos.config.receipt_partner_name">
+            <div style="font-weight:bold;">Customer Name:
+                <t t-esc="this.env.services.pos.selectedOrder.partner.name"/>
+            </div>
+        </t>
+        <t t-if="env.pos.config.receipt_partner_address">
+                <div style="font-weight:bold;">Customer Address:
+                <t t-esc="this.env.services.pos.selectedOrder.partner.street || ''"/>
+                </div>
+        </t>
+        <t t-if="env.pos.config.receipt_partner_phone">
+            <div style="font-weight:bold;">Customer Phone:
+                <t t-esc="this.env.services.pos.selectedOrder.partner.phone || ''"/>
+            </div>
+        </t>
+        <t t-if="env.pos.config.receipt_partner_email">
+            <div style="font-weight:bold;">Customer Email:
+                <t t-esc="this.env.services.pos.selectedOrder.partner.email or ''"/>
+            </div>
+        </t>
+        <t t-if="env.pos.config.receipt_partner_vat">
+            <div style="font-weight:bold;">Customer Vat:
+                <t t-esc="this.env.services.pos.selectedOrder.partner.vat || ''"/>
+            </div>
+        </t>
+    </t>
+</t> -->

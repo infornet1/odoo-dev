@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="fp_fiscal_group_action" model="ir.actions.act_window">
+        <field name="name">Fiscal Group</field>
+        <field name="res_model">fp.fiscal.group</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="fp_fiscal_group_view_tree" model="ir.ui.view">
+        <field name="name">fp.fiscal.group.view.tree</field>
+        <field name="model">fp.fiscal.group</field>
+        <field name="arch" type="xml">
+            <tree string="Fiscal Group">
+                <field name="name" />
+                <field name="description" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="fp_fiscal_group_view_form" model="ir.ui.view">
+        <field name="name">fp.fiscal.group.view.form</field>
+        <field name="model">fp.fiscal.group</field>
+        <field name="arch" type="xml">
+            <form string="Fiscal Group">
+                <sheet>
+                    <group>
+                        <field name="name" />
+                        <field name="description" />
+                        <field name="user_ids" widget='many2many'
+                            domain="[('fp_fiscal_group_id', '=', False)]">
+                            <tree>
+                                <field name="display_name" />
+                                <field name="email" />
+                                <field name="vat" />
+                                <field name="ced_rif" />
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>

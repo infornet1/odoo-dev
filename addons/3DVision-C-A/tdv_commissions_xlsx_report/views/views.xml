@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="action_report_commissions_xlsx" model="ir.actions.report">
+    <field name="name">Generate Commissions Resume</field>
+    <field name="model">tdv.sale.commission</field>
+    <field name="report_type">xlsx</field>
+    <field name="report_name">tdv_commissions_xlsx_report.commissions</field>
+    <field name="print_report_name">'Comisiones %s' % object.name</field>
+    <field name="binding_model_id" ref="tdv_sale_commissions.model_tdv_sale_commission"/>
+  </record>
+
+</odoo>

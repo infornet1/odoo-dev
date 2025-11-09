@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_order_form_inherit_sale" model="ir.ui.view">
+        <field name="name">sale.order.view.form.inherit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']//tree" position="inside">
+                <field
+                    name="commission_partner_id"
+                    optional="hide"
+                    domain="[('has_commissions', '=', True)]"
+                    options=" {'no_quick_create':True,'no_create_edit':True,'no_open': True,}" />
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

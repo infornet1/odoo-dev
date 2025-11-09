@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Formato de papel para prestaciones sociales -->
+        <record id="social_benefits_paperformat" model="report.paperformat">
+            <field name="name">Prestaciones Sociales</field>
+            <field name="format">A4</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">40</field>
+            <field name="margin_bottom">40</field>
+            <field name="margin_left">20</field>
+            <field name="margin_right">20</field>
+            <field name="header_line">false</field>
+            <field name="header_spacing">30</field>
+        </record>
+
+        <!-- Acción de reporte para prestaciones sociales -->
+        <record id="action_report_social_benefits" model="ir.actions.report">
+            <field name="name">Informe de Prestaciones Sociales</field>
+            <field name="model">hr.payslip</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">tdv_dual_currency.report_social_benefits_template</field>
+            <field name="print_report_name">'Prestaciones_Sociales_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_from.strftime('%Y%m%d'))</field>
+            <field name="paperformat_id" ref="social_benefits_paperformat"/>
+            <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Template para informe de prestaciones sociales -->
+        <template id="report_social_benefits_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <div class="article" style="font-family: 'Arial', sans-serif; font-size: 11px;">
+                        <div class="page">
+                            <!-- Encabezado oficial -->
+                            <div class="text-center" style="margin-bottom: 25px; border-bottom: 3px solid #2E8B57; padding-bottom: 20px;">
+                                <h2 style="color: #2E8B57; margin: 0; font-weight: bold; text-transform: uppercase;">
+                                    <span t-field="o.company_id.name"/>
+                                </h2>
+                                <p style="margin: 5px 0; font-size: 10px; color: #555;">
+                                    RIF: <span t-field="o.company_id.vat" t-if="o.company_id.vat"/>
+                                </p>
+                                <h3 style="color: #2E8B57; margin: 15px 0; font-weight: bold; text-transform: uppercase;">
+                                    INFORME DE ANTIGÜEDAD DE PRESTACIONES SOCIALES E INTERESES
+                                </h3>
+                                <h4 style="color: #333; margin: 10px 0; font-style: italic;">
+                                    Cálculo según la Ley Orgánica del Trabajo (LOTTT)
+                                </h4>
+                            </div>
+
+                            <!-- Datos del trabajador -->
+                            <table class="table table-sm" style="margin-bottom: 20px; border: 2px solid #2E8B57;">
+                                <tr style="background-color: #f0f8f0;">
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold; width: 25%;">Trabajador:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; width: 25%;">
+                                        <span t-field="o.employee_id.name"/>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold; width: 25%;">Cédula:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; width: 25%;">
+                                        <span t-field="o.employee_id.identification_id"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold;">Cargo:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57;">
+                                        <span t-field="o.employee_id.job_id.name"/>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold;">Fecha Ingreso:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57;">
+                                        <span t-field="o.contract_id.date_start"/>
+                                    </td>
+                                </tr>
+                                <tr style="background-color: #f0f8f0;">
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold;">Departamento:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57;">
+                                        <span t-field="o.employee_id.department_id.name" t-if="o.employee_id.department_id"/>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold;">Fecha Cálculo:</td>
+                                    <td style="padding: 8px; border: 1px solid #2E8B57;">
+                                        <span t-esc="datetime.datetime.now().strftime('%d/%m/%Y')"/>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Cálculo de antigüedad -->
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="background-color: #e6f7e6; color: #2E8B57; padding: 10px; margin: 0; border: 2px solid #2E8B57; text-align: center; font-weight: bold;">
+                                    CÁLCULO DE ANTIGÜEDAD LABORAL
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #2E8B57;">
+                                    <tr style="background-color: #f5fdf5;">
+                                        <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold; width: 50%;">Fecha de Ingreso:</td>
+                                        <td style="padding: 8px; border: 1px solid #2E8B57; text-align: center; width: 50%;">
+                                            <span t-field="o.contract_id.date_start"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #2E8B57; font-weight: bold;">Fecha de Cálculo:</td>
+                                        <td style="padding: 8px; border: 1px solid #2E8B57; text-align: center;">
+                                            <span t-field="o.date_to"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #e6f7e6; font-weight: bold; color: #2E8B57;">
+                                        <td style="padding: 10px; border: 1px solid #2E8B57;">ANTIGÜEDAD TOTAL:</td>
+                                        <td style="padding: 10px; border: 1px solid #2E8B57; text-align: center; font-size: 14px;">
+                                            <span t-esc="o._get_years_worked()"/> AÑOS
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Salario base para cálculo -->
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="background-color: #fff7e6; color: #cc8800; padding: 10px; margin: 0; border: 2px solid #cc8800; text-align: center; font-weight: bold;">
+                                    SALARIO BASE PARA CÁLCULO
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #cc8800;">
+                                    <tr style="background-color: #fffdf5;">
+                                        <td style="padding: 8px; border: 1px solid #cc8800; font-weight: bold; width: 60%;">Salario Mensual Actual:</td>
+                                        <td style="padding: 8px; border: 1px solid #cc8800; text-align: right; width: 40%;">
+                                            <t t-set="basic_salary" t-value="0"/>
+                                            <t t-foreach="o.line_ids.filtered(lambda line: line.code == 'BASIC')" t-as="basic_line">
+                                                <t t-set="basic_salary" t-value="basic_line.total_in_ves or basic_line.total"/>
+                                            </t>
+                                            <span t-esc="basic_salary" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #cc8800; font-weight: bold;">Salario Diario (Base ÷ 30):</td>
+                                        <td style="padding: 8px; border: 1px solid #cc8800; text-align: right;">
+                                            <span t-esc="basic_salary / 30" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Cálculo de prestaciones sociales -->
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="background-color: #e6f2ff; color: #0066cc; padding: 10px; margin: 0; border: 2px solid #0066cc; text-align: center; font-weight: bold;">
+                                    PRESTACIONES SOCIALES ACUMULADAS
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #0066cc;">
+                                    <thead style="background-color: #f0f8ff;">
+                                        <tr>
+                                            <th style="padding: 8px; border: 1px solid #0066cc; text-align: left; width: 50%;">Concepto</th>
+                                            <th style="padding: 8px; border: 1px solid #0066cc; text-align: center; width: 20%;">Días</th>
+                                            <th style="padding: 8px; border: 1px solid #0066cc; text-align: right; width: 30%;">Monto (Bs.)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Primer año: 5 días por mes -->
+                                        <tr>
+                                            <td style="padding: 8px; border: 1px solid #0066cc;">Prestaciones Primer Año (5 días x mes trabajado):</td>
+                                            <td style="padding: 8px; border: 1px solid #0066cc; text-align: center;">
+                                                <t t-set="first_year_days" t-value="o._get_years_worked() >= 1 and 60 or o._get_years_worked() * 60"/>
+                                                <span t-esc="int(first_year_days)"/>
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #0066cc; text-align: right;">
+                                                <span t-esc="(basic_salary / 30) * first_year_days" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Años adicionales: 15 días por año -->
+                                        <tr t-if="o._get_years_worked() > 1">
+                                            <td style="padding: 8px; border: 1px solid #0066cc;">Prestaciones Años Adicionales (15 días x año):</td>
+                                            <td style="padding: 8px; border: 1px solid #0066cc; text-align: center;">
+                                                <t t-set="additional_years" t-value="o._get_years_worked() - 1"/>
+                                                <t t-set="additional_days" t-value="additional_years * 15"/>
+                                                <span t-esc="int(additional_days)"/>
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #0066cc; text-align: right;">
+                                                <span t-esc="(basic_salary / 30) * additional_days" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                        </tr>
+                                        <!-- Total prestaciones -->
+                                        <tr style="background-color: #e6f2ff; font-weight: bold; color: #0066cc;">
+                                            <td style="padding: 10px; border: 1px solid #0066cc;">TOTAL PRESTACIONES SOCIALES:</td>
+                                            <td style="padding: 10px; border: 1px solid #0066cc; text-align: center;">
+                                                <t t-set="total_days" t-value="first_year_days + (additional_days if o._get_years_worked() > 1 else 0)"/>
+                                                <span t-esc="int(total_days)"/>
+                                            </td>
+                                            <td style="padding: 10px; border: 1px solid #0066cc; text-align: right;">
+                                                <t t-set="total_prestaciones" t-value="o._get_social_benefits_amount()"/>
+                                                <span t-esc="total_prestaciones" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Cálculo de intereses -->
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="background-color: #fff0f0; color: #cc0000; padding: 10px; margin: 0; border: 2px solid #cc0000; text-align: center; font-weight: bold;">
+                                    INTERESES SOBRE PRESTACIONES SOCIALES
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #cc0000;">
+                                    <tr style="background-color: #fffafa;">
+                                        <td style="padding: 8px; border: 1px solid #cc0000; font-weight: bold; width: 60%;">Tasa de Interés Anual (Legal):</td>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; text-align: center; width: 40%;">
+                                            12%
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; font-weight: bold;">Años para Cálculo de Intereses:</td>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; text-align: center;">
+                                            <span t-esc="o._get_years_worked()"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; font-weight: bold;">Base para Cálculo de Intereses:</td>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; text-align: right;">
+                                            <span t-esc="total_prestaciones" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #fff0f0; font-weight: bold; color: #cc0000;">
+                                        <td style="padding: 10px; border: 1px solid #cc0000;">TOTAL INTERESES ACUMULADOS:</td>
+                                        <td style="padding: 10px; border: 1px solid #cc0000; text-align: right;">
+                                            <t t-set="total_interests" t-value="o._get_interest_amount()"/>
+                                            <span t-esc="total_interests" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Resumen total -->
+                            <div style="border: 3px solid #8B0000; background-color: #f5f5f5; padding: 20px; text-align: center; margin-bottom: 25px;">
+                                <h3 style="color: #8B0000; margin: 0; font-weight: bold; text-transform: uppercase;">
+                                    RESUMEN TOTAL DE PRESTACIONES SOCIALES
+                                </h3>
+                                <table style="width: 100%; margin-top: 15px;">
+                                    <tr>
+                                        <td style="text-align: left; padding: 5px; color: #8B0000; font-weight: bold;">Prestaciones Sociales Acumuladas:</td>
+                                        <td style="text-align: right; padding: 5px; color: #8B0000; font-weight: bold;">
+                                            <span t-esc="total_prestaciones" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left; padding: 5px; color: #8B0000; font-weight: bold;">Intereses Acumulados:</td>
+                                        <td style="text-align: right; padding: 5px; color: #8B0000; font-weight: bold;">
+                                            <span t-esc="total_interests" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="border-top: 2px solid #8B0000;">
+                                        <td style="text-align: left; padding: 10px; color: #8B0000; font-weight: bold; font-size: 16px;">TOTAL GENERAL:</td>
+                                        <td style="text-align: right; padding: 10px; color: #8B0000; font-weight: bold; font-size: 16px;">
+                                            <span t-esc="total_prestaciones + total_interests" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Notas legales -->
+                            <div style="border: 1px solid #666; padding: 15px; background-color: #f9f9f9; margin-bottom: 20px;">
+                                <h5 style="color: #333; margin: 0 0 10px 0; font-weight: bold;">NOTAS LEGALES:</h5>
+                                <ul style="font-size: 9px; margin: 0; padding-left: 15px; line-height: 1.3;">
+                                    <li>Cálculo realizado según la Ley Orgánica del Trabajo, los Trabajadores y las Trabajadoras (LOTTT), Art. 142-156.</li>
+                                    <li>El trabajador tiene derecho a 5 días de salario por cada mes de servicio durante el primer año.</li>
+                                    <li>A partir del segundo año, se agregan 2 días adicionales por cada año trabajado hasta un máximo de 30 días por año.</li>
+                                    <li>Los intereses se calculan sobre la base de la tasa legal vigente.</li>
+                                    <li>Este informe es únicamente para efectos informativos y no constituye liquidación final.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Pie de página -->
+                            <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 9px; color: #666;">
+                                <div class="row">
+                                    <div class="col-4">
+                                        <p style="margin: 0;">
+                                            <strong>Fecha:</strong> <span t-esc="datetime.datetime.now().strftime('%d/%m/%Y')"/>
+                                        </p>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <p style="margin: 0;">
+                                            <strong>Sistema:</strong> Odoo HRMS
+                                        </p>
+                                    </div>
+                                    <div class="col-4 text-right">
+                                        <p style="margin: 0;">
+                                            <strong>Usuario:</strong> <span t-esc="user.name"/>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

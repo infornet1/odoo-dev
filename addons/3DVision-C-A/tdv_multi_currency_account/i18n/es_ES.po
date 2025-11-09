@@ -1,0 +1,194 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_multi_currency_account
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-11-17 14:52+0000\n"
+"PO-Revision-Date: 2023-11-17 14:52+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.report_invoice_document
+msgid "<span>Rate:</span>"
+msgstr "<span>Tasa de Cambio:</span>"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.report_invoice_document
+msgid "Amount Due"
+msgstr "Monto adeudado"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model,name:tdv_multi_currency_account.model_res_company
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model,name:tdv_multi_currency_account.model_res_config_settings
+msgid "Config Settings"
+msgstr "Opciones de configuración"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.inherited_product_template_form_view
+msgid "Customer Taxes"
+msgstr "Impuestos al cliente"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_company__fixed_ref
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_config_settings__fixed_ref
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.res_config_settings_view_form_inherit_tdv_multi_currency_account
+msgid "Fixed Currency"
+msgstr "Moneda fija"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model,name:tdv_multi_currency_account.model_account_move
+msgid "Journal Entry"
+msgstr "Asiento contable"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.report_invoice_document
+msgid "Paid on"
+msgstr "Pagado"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model,name:tdv_multi_currency_account.model_product_template
+msgid "Product"
+msgstr "Producto"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_company__product_cost_updatable
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_config_settings__product_cost_updatable
+msgid "Product Cost Update"
+msgstr "Actualización de costos del producto"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__rate_string
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__rate_string
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__rate_string
+msgid "Rate"
+msgstr "Tasa"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_product__ref_standard_price
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_template__ref_standard_price
+msgid "Reference Cost"
+msgstr "Costo de referencia"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_product__ref_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_template__ref_currency_id
+msgid "Reference Currency"
+msgstr "Divisa de referencia"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_product__ref_list_price
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_product_template__ref_list_price
+msgid "Reference Price"
+msgstr "Precio de referencia"
+
+#. module: tdv_multi_currency_account
+#. odoo-javascript
+#: code:addons/tdv_multi_currency_account/static/src/components/second_tax_totals.xml:0
+#, python-format
+msgid "Rounding"
+msgstr "Redondeo"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_company_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_company_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_company_currency_id
+msgid "Second Company Currency"
+msgstr "Segunda moneda de la compañía"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_company__second_currency_id
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_res_config_settings__second_currency_id
+msgid "Second Currency"
+msgstr "Moneda secundaria"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_currency_rate
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_currency_rate
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_currency_rate
+msgid "Second Rate"
+msgstr "Segunda tarifa"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_amount_tax_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_amount_tax_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_amount_tax_signed
+msgid "Second Tax"
+msgstr "Impuesto (Segunda Moneda)"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_amount_untaxed_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_amount_untaxed_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_amount_untaxed_signed
+msgid "Second Tax Excluded"
+msgstr "Base Imponible (Segunda Moneda)"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_tax_totals
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_tax_totals
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_tax_totals
+msgid "Second Tax Totals"
+msgstr "Totales del Impuesto secundario"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_amount_total_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_amount_total_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_amount_total_signed
+msgid "Second Total"
+msgstr "Total (Segunda Moneda)"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__show_second_currency_rate
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__show_second_currency_rate
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__show_second_currency_rate
+msgid "Show Second Currency Rate"
+msgstr "Mostrar la segunda tasa monetaria en el informe"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.view_move_form_inherit_tdv_multi_currency_account
+msgid "Terms and Conditions"
+msgstr "Términos y condiciones"
+
+#. module: tdv_multi_currency_account
+#. odoo-javascript
+#: code:addons/tdv_multi_currency_account/static/src/components/second_tax_totals.xml:0
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.view_invoice_tree_inherit_tdv_multi_currency_account
+#, python-format
+msgid "Total"
+msgstr "Total"
+
+#. module: tdv_multi_currency_account
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_bank_statement_line__second_amount_total_in_currency_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_move__second_amount_total_in_currency_signed
+#: model:ir.model.fields,field_description:tdv_multi_currency_account.field_account_payment__second_amount_total_in_currency_signed
+msgid "Total in Second Currency"
+msgstr "Total en divisa secundaria"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.res_config_settings_view_form_inherit_tdv_multi_currency_account
+msgid "Update Cost?"
+msgstr "¿Actualizar Costos?"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.res_config_settings_view_form_inherit_tdv_multi_currency_account
+msgid "Update Prices"
+msgstr "Precios de actualización"
+
+#. module: tdv_multi_currency_account
+#: model_terms:ir.ui.view,arch_db:tdv_multi_currency_account.inherited_product_template_form_view
+msgid "per"
+msgstr "por"

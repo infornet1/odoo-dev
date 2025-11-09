@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_res_config_settings_pos_contact_label" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.contact.label</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='point_of_sale']/div" position="before">
+                <block title="Partner Restriction by Tag" id="pos_contact_label_section">
+                    <setting string="Restrict Partners by Tag"
+                            help="Restricts visible partners in the POS based on selected tags.">
+                        <field name="pos_restrict_partner_by_tag"/>
+                        <field name="pos_allowed_partner_tag_ids" widget="many2many_tags"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo> 

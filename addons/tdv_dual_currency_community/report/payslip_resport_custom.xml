@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <template id="report_payslip_custom">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <!-- Encabezado (Mismo estilo) -->
+                            <h4 class="text-center" style="margin-top: -50px; margin-bottom: 20px;">
+                                Recibo de salario - <span t-field="o.employee_id.name"/>
+ -
+                            <span t-field="o.date_from"/>
+ -                            <span t-field="o.date_to"/>
+                        </h4>
+
+                        <!-- Tabla de Datos (Estructura idéntica) -->
+                        <table class="table table-sm" style="border-top: 1px solid black">
+                            <tr>
+                                <td class="text-left">
+                                    <strong>Empleado</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.name"/>
+                                </td>
+                                <td class="text-left">
+                                    <strong>Identificador</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.identification_id"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">
+                                    <strong>Designación</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.job_id.name"/>
+                                </td>
+                                <td class="text-left">
+                                    <strong>Estado civil</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.marital"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">
+                                    <strong>Correo</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.work_email" t-if="o.employee_id.work_email"/>
+                                    <span t-if="not o.employee_id.work_email">No especificado</span>
+                                </td>
+                                <td class="text-left">
+                                    <strong>Teléfono</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.employee_id.work_phone" t-if="o.employee_id.work_phone"/>
+                                    <span t-if="not o.employee_id.work_phone">No especificado</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">
+                                    <strong>Periodo de pago</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.date_from"/>
+ -                                    <span t-field="o.date_to"/>
+                                </td>
+                                <td class="text-left">
+                                    <strong>Inicio contrato</strong>
+                                </td>
+                                <td class="text-left">
+                                    <span t-field="o.contract_id.date_start"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Tabla de Ingresos (Mismos estilos y filtros) -->
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left;">Concepto</th>
+                                    <th style="text-align: center;">Cantidad</th>
+                                    <th style="text-align: right;">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total > 0 and line.code != 'NET')" t-as="line" t-att-style="'color:rgb(59, 134, 165);' if line.code in ['BASIC', 'GROSS'] or line.name in ['Salario Básico', 'Salario Bruto'] else ''">
+                                    <td class="text-left">
+                                        <span t-field="line.name"/>
+                                    </td>
+                                    <td class="text-center">
+                                        <span t-field="line.quantity" t-if="line.quantity"/>
+                                        <span t-else="">-</span>
+                                    </td>
+                                    <td class="text-right" style="text-align: right;">
+                                        <span t-field="line.total" t-options="{
+                    'widget': 'monetary',
+                    'display_currency': o.company_id.currency_id,
+                    'currency_format': '¤ #,##0.00'
+                }"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Tabla de Deducciones (Mismo formato y colores) -->
+                        <table class="table table-sm">
+                            <thead>
+                                <tr style="visibility: collapse;">
+                                    <th style="width: 60%"></th>
+                                    <th style="width: 14%"></th>
+                                    <th style="width: 20%"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total &lt; 0)" t-as="line">
+                                    <td class="text-left" style="width: 60%">
+                                        <span t-field="line.name"/>
+                                    </td>
+                                    <td class="text-left">                                        <!-- Alineación centrada -->
+                                        <span t-field="line.quantity" t-if="line.quantity"/>
+                                        <span t-else="">-</span>
+                                    </td>
+                                    <td class="text-right" style="text-align: right; width: 20%; color: #ff0000;">
+                                        <span t-field="line.total" t-options="{
+                    'widget': 'monetary',
+                    'display_currency': o.company_id.currency_id,
+                    'currency_format': '¤ #,##0.00'
+                }"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Total Neto (Mismo estilo azul) -->
+                        <table class="table table-sm" style="margin-top: 20px;">
+                            <tbody>
+                                <tr style="color: #007bff;">
+                                    <td class="text-left">
+                                        <strong>Salario Neto</strong>
+                                    </td>
+                                    <td colspan="2" class="text-right" style="text-align: right;">
+                                        <span t-field="o.line_ids.filtered(lambda l: l.code == 'NET').total" t-options="{
+                                                      'widget': 'monetary',
+                                                      'display_currency': o.company_id.currency_id,
+                                                      'currency_format': '¤ #,##0.00'
+                                                  }"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    
+                        <!-- Total a Pagar (Mismo formato) -->
+                        <div class="mt-4 text-right">
+                            <strong>
+                                    Salario a Pagar a <span t-field="o.employee_id.name"/>
+: 
+                            <span t-field="o.line_ids.filtered(lambda l: l.code == 'NET').total" t-options="{
+                                              'widget': 'monetary',
+                                              'display_currency': o.company_id.currency_id,
+                                              'currency_format': '¤ #,##0.00'
+                                          }"/>
+                        </strong>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </t>
+</template>
+
+<!-- Acción del Reporte (Configuración idéntica) -->
+<record id="action_report_payslip_custom" model="ir.actions.report">
+    <field name="name">Recibo de Nómina (Estándar)</field>
+    <field name="model">hr.payslip</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">tdv_dual_currency.report_payslip_custom</field>
+    <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+    <field name="binding_type">report</field>
+</record>
+</data>
+</odoo>

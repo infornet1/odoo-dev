@@ -1,0 +1,220 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_pos_currency_price_list
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-19 14:02+0000\n"
+"PO-Revision-Date: 2025-08-19 14:02+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Amount ("
+msgstr "Monto ("
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Close"
+msgstr "Cerrar"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model,name:tdv_pos_currency_price_list.model_res_config_settings
+msgid "Config Settings"
+msgstr "Configuración"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Confirm"
+msgstr "Confirmar"
+
+#. module: tdv_pos_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.pos_order_form_inherit_currency_price_list
+msgid "Currency Control"
+msgstr "Control de Divisa"
+
+#. module: tdv_pos_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.pos_config_view_form_inherit_currency_price_list
+msgid "Currency Control by Price List"
+msgstr "Control de Divisa por Lista de Precio"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_pos_config__special_currency_payment_method_ids
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_res_config_settings__pos_special_currency_payment_method_ids
+#, python-format
+msgid "Currency Payment Methods"
+msgstr "Métodos de Pago en Divisa POS"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Distribute the special amount between the selected payment methods:"
+msgstr "Distribuir el monto especial entre los métodos de pago seleccionados:"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_pos_config__enable_currency_price_list_control
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_res_config_settings__pos_enable_currency_price_list_control
+msgid "Enable Currency Control by Price List"
+msgstr "Habilitar Control de Divisa por Lista de Precio"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_pos_config__enable_currency_price_list_control
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_res_config_settings__pos_enable_currency_price_list_control
+msgid "Enables currency control based on the selected price list in the POS"
+msgstr "Activa el control de divisa basado en la lista de precios seleccionada en el POS"
+
+#. module: tdv_pos_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.res_config_settings_view_form_inherit_currency_price_list
+msgid "Enable Currency Control by Price List"
+msgstr "Habilitar Control de Divisa por Lista de Precio"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_pos_order__is_refund
+msgid "Indicates if this order is a refund generated from the POS."
+msgstr "Indica si esta orden es un reembolso generado desde el POS."
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_pos_order__is_refund
+msgid "Is Refund"
+msgstr "Es Reembolso"
+
+#. module: tdv_pos_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.pos_config_view_form_inherit_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.res_config_settings_view_form_inherit_currency_price_list
+msgid "Price Lists for Currency Control"
+msgstr "Listas de Precio para Control de Divisa"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Method"
+msgstr "Método"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Must be:"
+msgstr "Debe ser:"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/patch_payment_screen.xml:0
+#, python-format
+msgid "Currency Payment Methods"
+msgstr "Métodos de Pago en Divisa POS"
+
+#. module: tdv_pos_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.pos_config_view_form_inherit_currency_price_list
+#: model_terms:ir.ui.view,arch_db:tdv_pos_currency_price_list.res_config_settings_view_form_inherit_currency_price_list
+msgid "Currency Payment Methods"
+msgstr "Métodos de Pago en Divisa POS"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model,name:tdv_pos_currency_price_list.model_pos_config
+msgid "Point of Sale Configuration"
+msgstr "Configuración de Punto de Venta"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model,name:tdv_pos_currency_price_list.model_pos_order
+msgid "Point of Sale Orders"
+msgstr "Órdenes de Punto de Venta"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_pos_config__currency_control_pricelist_ids
+#: model:ir.model.fields,field_description:tdv_pos_currency_price_list.field_res_config_settings__pos_currency_control_pricelist_ids
+msgid "Price Lists for Currency Control"
+msgstr "Listas de Precio para Control de Divisa"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_pos_config__currency_control_pricelist_ids
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_res_config_settings__pos_currency_control_pricelist_ids
+msgid "Price lists that will activate currency control in the POS"
+msgstr "Listas de precio que activarán el control de divisa en el POS"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/ticket_screen_currency_patch.xml:0
+#, python-format
+msgid "Refund"
+msgstr "Reembolso"
+
+#. module: tdv_pos_currency_price_list
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_pos_config__special_currency_payment_method_ids
+#: model:ir.model.fields,help:tdv_pos_currency_price_list.field_res_config_settings__pos_special_currency_payment_method_ids
+msgid ""
+"Special payment methods that will be used when currency control is active"
+msgstr "Métodos de pago especiales que se usarán cuando el control de divisa esté activo"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/xml/divisa_payment_methods_popup.xml:0
+#, python-format
+msgid "Total entered:"
+msgstr "Total ingresado:"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "Note: You must pay"
+msgstr "Nota: Se debe pagar"
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "in currency."
+msgstr "en divisa."
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "This special payment method is disabled. Use the currency popup."
+msgstr "Este método de pago especial está deshabilitado. Use el popup de divisa."
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "This payment method is disabled until the currency payment is completed."
+msgstr "Este método de pago está deshabilitado hasta que se complete el pago en divisa."
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "You must select a valid payment method to enter an amount."
+msgstr "Debe seleccionar un método de pago válido para ingresar un monto."
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "You cannot edit this special payment method here. Use the popup to modify it."
+msgstr "No puede editar este método de pago especial desde aquí. Use el popup para modificarlo."
+
+#. module: tdv_pos_currency_price_list
+#. odoo-javascript
+#: code:addons/tdv_pos_currency_price_list/static/src/js/patch_payment_screen.js:0
+#, python-format
+msgid "You cannot delete this special payment method here. Use the popup to modify it."
+msgstr "No puede eliminar este método de pago especial desde aquí. Use el popup para modificarlo."
+

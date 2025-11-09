@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Formato de papel para liquidación -->
+        <record id="vacation_liquidation_paperformat" model="report.paperformat">
+            <field name="name">Liquidación de Vacaciones</field>
+            <field name="format">A4</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">40</field>
+            <field name="margin_bottom">40</field>
+            <field name="margin_left">20</field>
+            <field name="margin_right">20</field>
+            <field name="header_line">false</field>
+            <field name="header_spacing">30</field>
+        </record>
+
+        <!-- Acción de reporte para liquidación -->
+        <record id="action_report_vacation_liquidation" model="ir.actions.report">
+            <field name="name">Liquidación de Vacaciones y Utilidades</field>
+            <field name="model">hr.payslip</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">tdv_dual_currency.report_vacation_liquidation_template</field>
+            <field name="print_report_name">'Liquidacion_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_from.strftime('%Y%m%d'))</field>
+            <field name="paperformat_id" ref="vacation_liquidation_paperformat"/>
+            <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Template para liquidación de vacaciones y utilidades -->
+        <template id="report_vacation_liquidation_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <div class="article" style="font-family: 'Arial', sans-serif; font-size: 12px;">
+                        <div class="page">
+                            <!-- Encabezado oficial -->
+                            <div class="text-center" style="margin-bottom: 30px; border-bottom: 3px solid #8B0000; padding-bottom: 20px;">
+                                <h2 style="color: #8B0000; margin: 0; font-weight: bold; text-transform: uppercase;">
+                                    <span t-field="o.company_id.name"/>
+                                </h2>
+                                <p style="margin: 5px 0; font-size: 11px; color: #555;">
+                                    RIF: <span t-field="o.company_id.vat" t-if="o.company_id.vat"/>
+                                </p>
+                                <h3 style="color: #8B0000; margin: 15px 0; font-weight: bold; text-transform: uppercase;">
+                                    RECIBO DE LIQUIDACIÓN DE VACACIONES Y UTILIDADES
+                                </h3>
+                                <h4 style="color: #333; margin: 10px 0; font-style: italic;">
+                                    Expresado en Bolívares (Bs.)
+                                </h4>
+                            </div>
+
+                            <!-- Información del empleado -->
+                            <table class="table table-sm" style="margin-bottom: 25px; border: 2px solid #8B0000;">
+                                <tr style="background-color: #f5f5f5;">
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold; width: 25%;">Empleado:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; width: 25%;">
+                                        <span t-field="o.employee_id.name"/>
+                                    </td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold; width: 25%;">Cédula de Identidad:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; width: 25%;">
+                                        <span t-field="o.employee_id.identification_id"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold;">Cargo:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000;">
+                                        <span t-field="o.employee_id.job_id.name"/>
+                                    </td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold;">Fecha de Ingreso:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000;">
+                                        <span t-field="o.contract_id.date_start"/>
+                                    </td>
+                                </tr>
+                                <tr style="background-color: #f5f5f5;">
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold;">Departamento:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000;">
+                                        <span t-field="o.employee_id.department_id.name" t-if="o.employee_id.department_id"/>
+                                        <span t-if="not o.employee_id.department_id">No especificado</span>
+                                    </td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold;">Años de Servicio:</td>
+                                    <td style="padding: 10px; border: 1px solid #8B0000; font-weight: bold; color: #8B0000;">
+                                        <span t-esc="o._get_years_worked()"/> años
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Cálculo de vacaciones -->
+                            <div style="margin-bottom: 25px;">
+                                <h4 style="background-color: #e6f3ff; color: #0066cc; padding: 10px; margin: 0; border: 2px solid #0066cc; text-align: center; font-weight: bold;">
+                                    LIQUIDACIÓN DE VACACIONES
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #0066cc;">
+                                    <tr style="background-color: #f0f8ff;">
+                                        <td style="padding: 8px; border: 1px solid #0066cc; font-weight: bold;">Días de Vacaciones Acumulados:</td>
+                                        <td style="padding: 8px; border: 1px solid #0066cc; text-align: center; font-weight: bold; color: #0066cc;">
+                                            <span t-esc="o._get_vacation_days_accrued()"/> días
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #0066cc; font-weight: bold;">Salario Diario Promedio:</td>
+                                        <td style="padding: 8px; border: 1px solid #0066cc; text-align: right;">
+                                            <t t-set="basic_salary" t-value="0"/>
+                                            <t t-foreach="o.line_ids.filtered(lambda line: line.code == 'BASIC')" t-as="basic_line">
+                                                <t t-set="basic_salary" t-value="basic_line.total_in_ves or basic_line.total"/>
+                                            </t>
+                                            <span t-esc="basic_salary / 30" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #e6f3ff; font-weight: bold;">
+                                        <td style="padding: 10px; border: 1px solid #0066cc;">TOTAL VACACIONES:</td>
+                                        <td style="padding: 10px; border: 1px solid #0066cc; text-align: right; color: #0066cc;">
+                                            <span t-esc="(basic_salary / 30) * o._get_vacation_days_accrued()" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Cálculo de utilidades -->
+                            <div style="margin-bottom: 25px;">
+                                <h4 style="background-color: #fff2e6; color: #cc6600; padding: 10px; margin: 0; border: 2px solid #cc6600; text-align: center; font-weight: bold;">
+                                    LIQUIDACIÓN DE UTILIDADES
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #cc6600;">
+                                    <tr style="background-color: #fffaf5;">
+                                        <td style="padding: 8px; border: 1px solid #cc6600; font-weight: bold;">Días de Utilidades (según LOTTT):</td>
+                                        <td style="padding: 8px; border: 1px solid #cc6600; text-align: center; font-weight: bold; color: #cc6600;">
+                                            <t t-set="utilidades_days" t-value="o._get_years_worked() >= 1 and 30 or o._get_years_worked() * 30"/>
+                                            <span t-esc="int(utilidades_days)"/> días
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #cc6600; font-weight: bold;">Salario Diario Promedio:</td>
+                                        <td style="padding: 8px; border: 1px solid #cc6600; text-align: right;">
+                                            <span t-esc="basic_salary / 30" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #fff2e6; font-weight: bold;">
+                                        <td style="padding: 10px; border: 1px solid #cc6600;">TOTAL UTILIDADES:</td>
+                                        <td style="padding: 10px; border: 1px solid #cc6600; text-align: right; color: #cc6600;">
+                                            <span t-esc="(basic_salary / 30) * utilidades_days" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Resumen de deducciones de la liquidación -->
+                            <div style="margin-bottom: 25px;" t-if="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total_in_ves &lt; 0)">
+                                <h4 style="background-color: #ffe6e6; color: #cc0000; padding: 10px; margin: 0; border: 2px solid #cc0000; text-align: center; font-weight: bold;">
+                                    DEDUCCIONES APLICABLES
+                                </h4>
+                                <table class="table table-sm" style="border: 2px solid #cc0000;">
+                                    <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total_in_ves &lt; 0)" t-as="line">
+                                        <td style="padding: 8px; border: 1px solid #cc0000; font-weight: bold;">
+                                            <span t-field="line.name"/>:
+                                        </td>
+                                        <td style="padding: 8px; border: 1px solid #cc0000; text-align: right; color: #cc0000;">
+                                            <span t-field="line.total_in_ves" t-options="{
+                                                'widget': 'monetary',
+                                                'display_currency': o.company_id.currency_conversion_id,
+                                                'currency_format': '¤ #,##0.00'
+                                            }"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Total neto de liquidación -->
+                            <div style="border: 3px solid #8B0000; background-color: #f5f5f5; padding: 20px; text-align: center; margin-bottom: 25px;">
+                                <h3 style="color: #8B0000; margin: 0; font-weight: bold; text-transform: uppercase;">
+                                    TOTAL NETO DE LIQUIDACIÓN
+                                </h3>
+                                <h2 style="color: #8B0000; margin: 15px 0; font-weight: bold;">
+                                    <t t-set="vacation_amount" t-value="(basic_salary / 30) * o._get_vacation_days_accrued()"/>
+                                    <t t-set="utilities_amount" t-value="(basic_salary / 30) * utilidades_days"/>
+                                    <t t-set="total_deductions" t-value="sum(line.total_in_ves for line in o.line_ids.filtered(lambda l: l.appears_on_payslip and l.total_in_ves < 0))"/>
+                                    <t t-set="net_liquidation" t-value="vacation_amount + utilities_amount + total_deductions"/>
+                                    <span t-esc="net_liquidation" t-options="{
+                                        'widget': 'monetary',
+                                        'display_currency': o.company_id.currency_conversion_id,
+                                        'currency_format': '¤ #,##0.00'
+                                    }"/>
+                                </h2>
+                            </div>
+
+                            <!-- Marco legal y declaración -->
+                            <div style="border: 1px solid #666; padding: 15px; background-color: #f9f9f9; margin-bottom: 20px;">
+                                <h5 style="color: #333; margin: 0 0 10px 0; font-weight: bold;">MARCO LEGAL:</h5>
+                                <p style="font-size: 10px; margin: 5px 0; line-height: 1.4;">
+                                    Esta liquidación se realiza de conformidad con la Ley Orgánica del Trabajo, los Trabajadores y las Trabajadoras (LOTTT),
+                                    específicamente los artículos referentes a vacaciones (Arts. 190-200) y utilidades (Arts. 131-140).
+                                </p>
+                                <p style="font-size: 10px; margin: 5px 0; line-height: 1.4;">
+                                    <strong>DECLARACIÓN:</strong> El trabajador declara haber recibido conforme el monto indicado como liquidación
+                                    de vacaciones y utilidades correspondientes al período laborado.
+                                </p>
+                            </div>
+
+                            <!-- Firmas -->
+                            <div style="margin-top: 40px;">
+                                <table style="width: 100%;">
+                                    <tr>
+                                        <td style="width: 50%; text-align: center; border-top: 1px solid #333; padding-top: 10px;">
+                                            <strong>Firma del Empleado</strong><br/>
+                                            <span t-field="o.employee_id.name"/><br/>
+                                            C.I.: <span t-field="o.employee_id.identification_id"/>
+                                        </td>
+                                        <td style="width: 50%; text-align: center; border-top: 1px solid #333; padding-top: 10px;">
+                                            <strong>Firma del Empleador</strong><br/>
+                                            <span t-field="o.company_id.name"/><br/>
+                                            RIF: <span t-field="o.company_id.vat"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Pie de página -->
+                            <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 10px; color: #666;">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p style="margin: 0;">
+                                            <strong>Fecha de Emisión:</strong> <span t-esc="datetime.datetime.now().strftime('%d/%m/%Y')"/>
+                                        </p>
+                                        <p style="margin: 0;">
+                                            <strong>Lugar:</strong> Caracas, Venezuela
+                                        </p>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <p style="margin: 0;">
+                                            <strong>Usuario del Sistema:</strong> <span t-esc="user.name"/>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

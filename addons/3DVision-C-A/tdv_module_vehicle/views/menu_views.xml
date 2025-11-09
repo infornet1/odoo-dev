@@ -1,0 +1,10 @@
+<odoo>
+
+       <menuitem 
+        id="menu_vehicle" 
+        name="Vehículos" 
+        action="action_vehicle" 
+        parent="contacts.menu_contacts" 
+        sequence="10"/>
+
+</odoo>

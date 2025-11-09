@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_discount_in_pos_currency.OrderWidget" t-inherit="point_of_sale.OrderWidget" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('order-summary')][1]" position="before">
+            <t t-log="'[XML] props:', props"/>
+            <t t-log="'[DEBUG][XML] hasAnyLineDiscount:', props.hasAnyLineDiscount, 'Descuentos:', props.orderLineDiscounts"/>
+            <t t-set="discounts" t-value="props.lines ? props.lines.filter(line => line and typeof line.get_discount === 'function').map(line => line.get_discount() * 1) : []"/>
+            <t t-log="'[DEBUG][XML] Descuentos (lines):', discounts"/>
+            <t t-if="props.order and props.order.getCurrencyAmountDisplay">
+                <div class="order-currency-amount w-100 py-2 px-3 bg-info text-end fw-bolder fs-5 lh-sm">
+                    <t t-esc="props.order.getCurrencyAmountDisplay()"/>
+                </div>
+            </t>
+            <t t-if="props.enableSpecialDiscount and props.currencyDiscountMode === 'secondary' and discounts.length > 0 and discounts.every(d => d === 0) and props.calculatedRef">
+                <div class="order-summary w-100 py-2 px-3 bg-100 text-end fw-bolder fs-2 lh-sm">
+                    Ref: <span t-esc="props.calculatedRef"/>
+                </div>
+            </t>
+            <t t-elif="props.enableSpecialDiscount and props.currencyDiscountMode === 'main' and discounts.length > 0 and discounts.every(d => d === 0) and props.calculatedRefPrincipal">
+                <div class="order-summary w-100 py-2 px-3 bg-100 text-end fw-bolder fs-2 lh-sm">
+                    Ref: <span t-esc="props.calculatedRefPrincipal"/>
+                </div>
+            </t>
+            <t t-else="">
+                <!-- No mostrar nada si hay descuento o si no hay modo seleccionado -->
+            </t>
+        </xpath>
+    </t>
+        <t t-name="tdv_discount_in_pos_currency.Orderline" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//ul[contains(@class, 'info-list')]" position="inside">
+            <li t-if="line.currency_amount">
+                <span class="badge bg-info ms-2">
+                    <t t-esc="line.currency_amount"/>
+                </span>
+            </li>
+        </xpath>
+    </t>
+</template> 

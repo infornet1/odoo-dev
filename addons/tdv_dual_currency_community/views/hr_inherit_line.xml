@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <!-- Disabled: Community hr.payslip form structure is different from Enterprise -->
+        <!-- The payslip line currency conversion is handled in the model calculation -->
+        <!-- salary_computation page and line_ids structure may not exist in Community -->
+    </data>
+</odoo>

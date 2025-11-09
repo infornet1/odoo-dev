@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="inherited_base_partner_form" model="ir.ui.view">
+    <field name="name">inherited.partner.form</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="tribute_fields.inherited_base_partner_form"/>
+    <field name="arch" type="xml">
+      <field name="taxpayer_license" position="after">
+        <field name="iva_retention_tax_id"/>
+        <field name="islr_retention_tax_id"/>
+        <field name="iae_retention_tax_id"/>
+      </field>
+    </field>
+  </record>
+
+</odoo>

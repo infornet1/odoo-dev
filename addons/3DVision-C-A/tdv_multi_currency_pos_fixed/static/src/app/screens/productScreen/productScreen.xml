@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_multi_currency_pos.ProductScreen" t-inherit="point_of_sale.ProductScreen" t-inherit-mode="extension">
+        <xpath expr="//OrderWidget" position="attributes">
+            <attribute name="secondTotal">env.utils.formatCurrency(currentOrder.get_total_with_tax(), true, pos.secondCurrency)</attribute>
+            <attribute name="secondTax">!env.utils.floatIsZero(currentOrder.get_total_tax()) and env.utils.formatCurrency(currentOrder.get_total_tax(), true, pos.secondCurrency) or ''</attribute>
+        </xpath>
+    </t>
+</template>

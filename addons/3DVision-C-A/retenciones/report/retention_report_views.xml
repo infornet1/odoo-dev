@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="paper_retention_format" model="report.paperformat">
+        <field name="name">Retention Paper Format</field>
+        <field name="default" eval="True"/>
+        <field name="format">Letter</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">55</field>
+        <field name="margin_left">3</field>
+        <field name="margin_right">4</field>
+        <field name="orientation">Landscape</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">30</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_retention" model="ir.actions.report">
+        <field name="name">Comprobante de Retencion</field>
+        <field name="model">retention</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">retenciones.retention_lang_template</field>
+        <field name="report_file">retention.report</field>
+        <field name="multi">True</field>
+        <field name="print_report_name">object.name</field>
+        <field name="paperformat_id" ref="retenciones.paper_retention_format"/>
+    </record>
+
+    <record id="action_report_text_iva_retention" model="ir.actions.report">
+        <field name="name">IVA TXT</field>
+        <field name="model">retention</field>
+        <field name="report_type">qweb-text</field>
+        <field name="report_name">retenciones.report_text_iva_retention</field>
+        <field name="report_file">iva.report</field>
+        <field name="multi">True</field>
+        <field name="print_report_name">object.name</field>
+    </record>
+
+    <record id="action_report_text_islr_retention" model="ir.actions.report">
+        <field name="name">ISLR XML</field>
+        <field name="model">retention</field>
+        <field name="report_type">qweb-xml</field>
+        <field name="report_name">retenciones.report_text_islr_retention</field>
+        <field name="report_file">islr.report</field>
+        <field name="multi">True</field>
+        <field name="print_report_name">object.name</field>
+    </record>
+
+    <record id="action_report_text_iae_retention" model="ir.actions.report">
+        <field name="name">IAE TXT</field>
+        <field name="model">retention</field>
+        <field name="report_type">qweb-text</field>
+        <field name="report_name">retenciones.report_text_iae_retention</field>
+        <field name="report_file">iae.report</field>
+        <field name="multi">True</field>
+        <field name="print_report_name">object.name</field>
+    </record>
+
+</odoo>

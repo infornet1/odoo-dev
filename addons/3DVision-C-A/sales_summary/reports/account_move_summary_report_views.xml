@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<record id="report_action_account_move_summary" model="ir.actions.report">
+		<field name="name">Sales report</field>
+		<field name="model">account.move.summary.wizard</field>
+		<field name="report_type">qweb-pdf</field>
+		<field name="report_name">sales_summary.sales_report_lang_template</field>
+		<field name="report_file">sales_summary.sales_report_lang_template</field>
+		<field name="print_report_name">'Sales report'</field>
+	</record>
+
+</odoo>

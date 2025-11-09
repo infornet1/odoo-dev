@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+    <record id="retention_tax_1" model="retention.tax">
+      <field name="tax_name">RETENCION DE IVA (75%)</field>
+      <field name="tax">75</field>
+      <field name="type">iva</field>
+      <field name="code">075</field>
+    </record>
+
+    <record id="retention_tax_2" model="retention.tax">
+      <field name="tax_name">RETENCION DE IVA (100%)</field>
+      <field name="tax">100</field>
+      <field name="type">iva</field>
+      <field name="code">100</field>
+    </record>
+
+    <record id="retention_tax_3" model="retention.tax">
+      <field name="tax_name">RETENCION DE ISLR (5%)</field>
+      <field name="tax">5</field>
+      <field name="type">islr</field>
+      <field name="code">005</field>
+    </record>
+
+    <record id="retention_tax_4" model="retention.tax">
+      <field name="tax_name">RETENCION DE IAE (3%)</field>
+      <field name="tax">3</field>
+      <field name="type">iae</field>
+      <field name="code">003</field>
+    </record>
+  </data>
+
+</odoo>

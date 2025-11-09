@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+retenciones.access_retention,access_retention,retenciones.model_retention,base.group_user,1,1,1,1
+retenciones.access_retention_line,access_retention_line,retenciones.model_retention_line,base.group_user,1,1,1,1
+retenciones.access_retention_tax,access_retention_tax,retenciones.model_retention_tax,base.group_user,1,1,1,1
+retenciones.access_account_move_retention_wizard,access_account_move_retention_wizard,retenciones.model_account_move_retention_wizard,base.group_user,1,1,1,1

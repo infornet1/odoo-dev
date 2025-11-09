@@ -1,0 +1,42 @@
+/* Fiscal Printer Button Styles */
+
+.o_fiscal_printer_test_button {
+    margin-right: 8px;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.o_fiscal_printer_test_button:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.o_fiscal_printer_connect_button {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.o_fiscal_printer_connect_button:hover {
+    background-color: #1e7e34;
+    border-color: #1e7e34;
+}
+
+/* Loading state for buttons */
+.o_fiscal_printer_test_button.loading,
+.o_fiscal_printer_connect_button.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success state */
+.o_fiscal_printer_test_button.success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* Error state */
+.o_fiscal_printer_test_button.error,
+.o_fiscal_printer_connect_button.error {
+    background-color: #dc3545;
+    border-color: #dc3545;
+} 

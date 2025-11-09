@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="action_report_tdv_sales_book" model="ir.actions.report">
+    <field name="name">Sales book</field>
+    <field name="model">tdv.sale.book</field>
+    <field name="report_type">xlsx</field>
+    <field name="report_name">tdv_sales_book_report.xlsx_report</field>
+    <field name="print_report_name">'%s' % object.name</field>
+    <field name="binding_model_id" ref="tdv_sales_book.model_tdv_sale_book"/>
+  </record>
+
+</odoo>

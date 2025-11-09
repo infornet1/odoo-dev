@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_config_form_inherit_discount" model="ir.ui.view">
+        <field name="name">pos.config.form.inherit.discount</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Currency Discount" name="group_special_discount" class="o_setting_box">
+                    <field name="enable_special_discount"/>
+                    <field name="discount_percentage"/>
+                </group>
+                <group string="Payment Methods for Currency Discount" name="group_special_discount_payment_methods" class="o_setting_box">
+                    <field name="special_discount_payment_method_ids" widget="many2many_tags" options="{'no_create': True}" context="{'show_disabled': True}"/>
+                </group>
+                <group string="Currency options for discount/ref" name="group_currency_discount_options" class="o_setting_box">
+                    <field name="currency_discount_mode"/>
+                    <!-- Este campo se actualiza automáticamente según la opción seleccionada -->
+                    <field name="display_discount_currency_id" string="Currency" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <data>
+        <record id="res_config_settings_view_form_inherit_discount" model="ir.ui.view">
+            <field name="name">res.config.settings.discount.form.view</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//block[@id='pos_interface_section']" position="after">
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-xs-12 col-md-6 o_setting_box" id="enable_special_discount">
+                            <div class="o_setting_left_pane">
+                                <field name="enable_special_discount"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="enable_special_discount" string="Enable currency discount in POS"/>
+                                <div class="content-group mt16">
+                                    <field name="discount_percentage" colspan="4" nolabel="1"/>
+                                    <div style="padding-top: 12px;">
+                                        <label for="special_discount_payment_method_ids">Payment Methods for Currency Discount</label>
+                                        <field name="special_discount_payment_method_ids" class="mt-3" widget="many2many_tags" options="{'no_create': True}" context="{'show_disabled': True}"/>
+                                    </div>
+                                    <div style="padding-top: 12px;">
+                                        <field name="currency_discount_mode"/>
+                                    </div>
+                                    <div style="padding-top: 12px;">
+                                        <!-- Este campo se actualiza automáticamente según la opción seleccionada -->
+                                        <field name="display_discount_currency_id"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo> 

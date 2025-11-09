@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--Template for Payslip Details Report-->
+    <template id="report_payslipdetails">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <t t-set="display_address" t-value="False"/>
+                    <t t-set="company" t-value="o.company_id"/>
+                    <div class="page">
+                        <!-- Company Logo Section -->
+                        <div class="row mb-4">
+                            <div class="col-4">
+                                <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height: 80px;" alt="Company Logo"/>
+                            </div>
+                            <div class="col-8 text-end">
+                                <h2 class="mb-1">[VE] Venezuelan Payslip Details</h2>
+                                <p class="text-muted small">UEIPAB - Universidad Experimental de la Seguridad</p>
+                            </div>
+                        </div>
+
+                        <!-- Payslip Header Information -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="border p-3">
+                                    <h5 class="text-primary">📋 Payslip Information</h5>
+                                    <div><strong>Reference:</strong> <span t-field="o.number"/></div>
+                                    <div><strong>Payslip Name:</strong> <span t-field="o.name"/></div>
+                                    <div><strong>Structure:</strong> <span t-field="o.struct_id.name"/></div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border p-3">
+                                    <h5 class="text-primary">📅 Period Information</h5>
+                                    <div><strong>Date From:</strong> <span t-field="o.date_from"/></div>
+                                    <div><strong>Date To:</strong> <span t-field="o.date_to"/></div>
+                                    <div><strong>Payment Date:</strong> <span t-field="o.date_to"/></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Employee Information Table -->
+                        <h4 class="text-primary">👤 Employee Information</h4>
+                        <table class="table table-sm table-bordered mb-4">
+                            <tr>
+                                <td class="bg-light"><strong>Name</strong></td>
+                                <td><span t-field="o.employee_id.name"/></td>
+                                <td class="bg-light"><strong>Designation</strong></td>
+                                <td><span t-field="o.employee_id.job_id.name" t-if="o.employee_id.job_id"/></td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light"><strong>Email</strong></td>
+                                <td><span t-field="o.employee_id.work_email"/></td>
+                                <td class="bg-light"><strong>Identification No</strong></td>
+                                <td><span t-field="o.employee_id.identification_id"/></td>
+                            </tr>
+                            <tr>
+                                <td class="bg-light"><strong>Department</strong></td>
+                                <td><span t-field="o.employee_id.department_id.name" t-if="o.employee_id.department_id"/></td>
+                                <td class="bg-light"><strong>Bank Account</strong></td>
+                                <td><span t-field="o.employee_id.bank_account_id.acc_number" t-if="o.employee_id.bank_account_id"/></td>
+                            </tr>
+                        </table>
+
+                        <!-- Details by Salary Rule Category -->
+                        <h4 class="text-primary">💰 Details by Salary Rule Category</h4>
+                        <table class="table table-sm table-bordered mb-4">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Salary Rule Category</th>
+                                    <th class="text-end">Total (USD)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="category_totals" t-value="{}"/>
+                                <t t-foreach="o.line_ids" t-as="line">
+                                    <t t-set="cat_id" t-value="line.category_id.id if line.category_id else 0"/>
+                                    <t t-set="cat_code" t-value="line.category_id.code if line.category_id else 'NONE'"/>
+                                    <t t-set="cat_name" t-value="line.category_id.name if line.category_id else 'Uncategorized'"/>
+                                    <t t-if="cat_id not in category_totals">
+                                        <t t-set="category_totals" t-value="category_totals.update({cat_id: {'code': cat_code, 'name': cat_name, 'total': 0}}) or category_totals"/>
+                                    </t>
+                                    <t t-set="current_total" t-value="category_totals[cat_id]['total'] + line.amount"/>
+                                    <t t-set="category_totals" t-value="category_totals.update({cat_id: dict(category_totals[cat_id], total=current_total)}) or category_totals"/>
+                                </t>
+
+                                <tr t-foreach="category_totals.values()" t-as="cat">
+                                    <td><strong><span t-esc="cat['code']"/></strong></td>
+                                    <td><strong><span t-esc="cat['name']"/></strong></td>
+                                    <td class="text-end">
+                                        <strong>$<span t-esc="'{:.2f}'.format(cat['total'])"/></strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Payslip Lines by Contribution Register -->
+                        <h4 class="text-primary">📊 Detailed Payslip Lines</h4>
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th class="text-center">Quantity/Rate</th>
+                                    <th class="text-end">Amount (USD)</th>
+                                    <th class="text-end">Total (USD)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids" t-as="line">
+                                    <td><span t-field="line.code"/></td>
+                                    <td><span t-field="line.name"/></td>
+                                    <td class="text-center">
+                                        <span t-esc="'{:.2f}'.format(line.quantity or 1.0)"/>
+                                    </td>
+                                    <td class="text-end">
+                                        $<span t-esc="'{:.2f}'.format(line.amount or 0.0)"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>$<span t-esc="'{:.2f}'.format(line.total or 0.0)"/></strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-success">
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Net Salary Total:</strong></td>
+                                    <td class="text-end">
+                                        <strong>$<span t-esc="'{:.2f}'.format(sum(o.line_ids.mapped('total')))"/></strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <!-- Footer Section -->
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="border-top border-dark mt-5 pt-2" style="width: 80%;">
+                                        <strong>Employee Signature</strong><br/>
+                                        <small>Date: ____/____/______</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="border-top border-dark mt-5 pt-2" style="width: 80%;">
+                                        <strong>HR Department</strong><br/>
+                                        <small>UEIPAB Authorized Signature</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Legal Footer -->
+                        <div class="mt-4 text-center small text-muted">
+                            <p>[VE] This payslip complies with Venezuelan Labor Law (LOTTT) and includes dual currency calculations as per UEIPAB policies.</p>
+                            <p><strong>Generated on:</strong> <span t-esc="datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')"/> | <strong>Company:</strong> <span t-field="company.name"/></p>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

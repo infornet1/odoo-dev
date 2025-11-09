@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="tdv_journal_report_menu" name="TDV Journal Report" parent="account.menu_finance_reports" sequence="10">
+        <menuitem id="menu_action_tdv_journal_report" name="Journal Report" action="action_tdv_journal_report" groups="account.group_account_readonly"/>
+    </menuitem>
+</odoo>

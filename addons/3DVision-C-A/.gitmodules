@@ -1,0 +1,19 @@
+[submodule "igtf"]
+	path = igtf
+	url = git@github.com:3DVision-CA/igtf.git
+	branch = 17.0
+[submodule "retenciones"]
+	path = retenciones
+	url = git@github.com:3DVision-CA/retenciones.git
+	branch = 17.0
+[submodule "tdv_multi_currency_account"]
+	path = tdv_multi_currency_account
+	url = git@github.com:3DVision-CA/tdv_multi_currency_account.git
+	branch = 17.0
+[submodule "tribute_fields"]
+	path = tribute_fields
+	url = git@github.com:3DVision-CA/tribute_fields.git
+	branch = 17.0
+[submodule "fiscal_printer"]
+	path = fiscal_printer
+	url = git@github.com:3DVision-CA/fiscal_printer.git

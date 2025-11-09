@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Definición del formato de papel personalizado -->
+    <record id="custom_quotation_paperformat" model="report.paperformat">
+        <field name="name">Formato Personalizado</field>
+        <field name="default" eval="True"/>
+        <field name="format">custom</field>
+        <field name="page_height">279</field>
+        <field name="page_width">216</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">40</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Acción de reporte PDF -->
+    <record id="action_custom_quotation_report" model="ir.actions.report">
+        <field name="name">Cotización Personalizada</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">tdv_print_quotation.custom_quotation_template</field>
+        <field name="print_report_name">'Cotización - %s' % object.name</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="tdv_print_quotation.custom_quotation_paperformat"/>
+    </record>
+
+    <!-- Template principal del reporte -->
+    <template id="tdv_print_quotation.custom_quotation_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="article" style="font-family: 'Calibri'; font-size: small; position: relative; min-height: 100%;">
+                    <!-- Encabezado compacto -->
+                    <div class="header mt-2 mb-2" style="position: relative;">
+                        <!-- Contenedor principal: logo - nombre - número -->
+                        <div class="row mt-2 mb-2">
+                            <!-- Logo -->
+                            <div class="col-3" t-if="o.company_id.logo" style="flex: 0 0 auto;">
+                                <img t-att-src="image_data_uri(o.company_id.logo)" style="height: 100px; max-width: 180px; object-fit: contain;"/>
+                            </div>
+
+                            <!-- Información de la compañía -->
+                            <div class="col-6 text-center" style="flex: 1 1 auto;">
+                                <div class="text-left" style="font-size: 0.9em; line-height: 1.1;">
+                                    <t t-foreach="o.company_id.street.split('\n')" t-as="line">
+                                        <div t-esc="line" style="margin: 0; padding: 0;"/>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <!-- Número de cotización -->
+                            <div class="col-3 text-end mt-1 mb-1">
+                                <div style="font-weight: bold; font-size: 1.1em;">COTIZACIÓN</div>
+                                <div style="font-size: 1.0em;">N°: <span t-field="o.name"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos del cliente y cotización -->
+                    <div class="row mt-2 mb-2">
+                        <!-- Columna izquierda: Datos del cliente -->
+                        <div class="col-7">
+                            <div class="mb-1">
+                                <strong>Cliente:</strong>
+                                <span t-field="o.partner_id"/>
+                            </div>
+                            <div class="mb-1">
+                                <strong>RIF:</strong>
+                                <span t-field="o.partner_id.vat"/>
+                            </div>
+                            <div class="mb-1">
+                                <strong>Dirección:</strong>
+                                <span t-out="o.partner_id.street"/>
+                                <span t-out="o.partner_id.street2"/>
+                            </div>
+                            <div class="mb-1">
+                                <strong>Teléfono:</strong>
+                                <span t-out="o.partner_id.phone"/>
+                            </div>
+                            <div class="mb-1">
+                                <strong>Referencia:</strong>
+                                <span t-field="o.client_order_ref"/>
+                            </div>
+                        </div>
+
+                        <!-- Columna derecha: Datos de la cotización -->
+                        <div class="col-5 text-end mt-1 mb-1">
+                            <div class="mb-1">
+                                <strong>Fecha:</strong>
+                                <span t-field="o.date_order" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                            <div class="mb-1">
+                                <strong>Válido hasta:</strong>
+                                <span t-field="o.validity_date" t-options='{"format": "dd/MM/yyyy"}'/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de productos -->
+                    <table class="table table-sm table-borderless mt-4 mb-4" style="font-size: x-small;">
+                        <thead>
+                            <tr>
+                                <th class="text-center">#</th>
+                                <th>Descripción</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">P. Unitario</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm" style="font-size: x-small;">
+                            <t t-set="idx" t-value="0"/>
+                            <tr t-foreach="o.order_line.sorted('sequence')" t-as="line">
+                                <t t-set="idx" t-value="line.display_type not in ['line_section', 'line_note'] and idx + 1 or idx"/>
+                                <td class="text-center">
+                                    <span t-esc="line.display_type not in ['line_section', 'line_note'] and idx or ''"/>
+                                </td>
+                                <td>
+                                    <span t-field="line.name"/>
+                                    <t t-if="line.display_type == 'line_section'">
+                                        <style>
+                                                tr[t-as-line]:has(td span[t-field='line.name'][t-if='line.display_type == line_section']) {
+                                                    font-weight: bold;
+                                                    background-color: #f8f9fa;
+                                                }
+                                        </style>
+                                    </t>
+                                </td>
+                                <td class="text-end">
+                                    <span t-if="not line.display_type" t-field="line.product_uom_qty"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-if="not line.display_type" t-field="line.price_unit" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-if="not line.display_type" t-field="line.price_subtotal" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                    <!-- Pie de página - ahora relativo al contenido -->
+                    <div class="footer" style="font-size: x-small;">
+                        <div class="row mt-2">
+                            <!-- Columna izquierda: términos e instrucciones -->
+                            <div class="col-3">
+                                <!-- Report Footer primero -->
+                                <div style="line-height: 1.1;">
+                                    <div t-field="o.company_id.report_footer"/>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <!-- Términos y condiciones después -->
+                                <div class="text-center">
+                                    <div style="white-space: pre-line; line-height: 1.2;">
+                                        <span t-field="o.note"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Columna derecha: montos -->
+                            <div class="col-3 text-end mt-1 mb-1">
+                                <div>
+                                    <strong style="color: #000000;">Subtotal:</strong>
+                                    <span t-field="o.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                </div>
+                                <div>
+                                    <strong style="color: #000000;">IVA (Impuesto):</strong>
+                                    <span t-field="o.amount_tax" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}" style="color: #000000;"/>
+                                </div>
+                                <div style="font-weight: bold;">
+                                    <strong style="color: #000000;">Total:</strong>
+                                    <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}" style="color: #000000;"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

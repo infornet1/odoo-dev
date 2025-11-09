@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <menuitem
+        id="tdv_sale_commissions.sale_commssion_menu"
+        name="Sale Commission"
+        parent="account_accountant.menu_accounting"
+        groups="tdv_sale_commissions.commission_manager_group"/>
+
+</odoo>

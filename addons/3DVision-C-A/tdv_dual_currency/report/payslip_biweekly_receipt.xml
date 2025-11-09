@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Formato de papel personalizado para recibo quincenal -->
+        <record id="biweekly_receipt_paperformat" model="report.paperformat">
+            <field name="name">Recibo Quincenal</field>
+            <field name="format">A4</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">40</field>
+            <field name="margin_bottom">40</field>
+            <field name="margin_left">20</field>
+            <field name="margin_right">20</field>
+            <field name="header_line">false</field>
+            <field name="header_spacing">30</field>
+        </record>
+
+        <!-- Acción de reporte para recibo quincenal -->
+        <record id="action_report_biweekly_receipt" model="ir.actions.report">
+            <field name="name">Recibo de Pago Quincenal</field>
+            <field name="model">hr.payslip</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">tdv_dual_currency.report_biweekly_receipt_template</field>
+            <field name="print_report_name">'Recibo_Quincenal_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_from.strftime('%Y%m%d'))</field>
+            <field name="paperformat_id" ref="biweekly_receipt_paperformat"/>
+            <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Template para recibo de pago quincenal -->
+        <template id="report_biweekly_receipt_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <div class="article" style="font-family: 'Arial', sans-serif; font-size: 12px;">
+                        <div class="page">
+                            <!-- Encabezado de la empresa -->
+                            <div class="text-center" style="margin-bottom: 30px; border-bottom: 2px solid #003366; padding-bottom: 15px;">
+                                <h3 style="color: #003366; margin: 0; font-weight: bold;">
+                                    <span t-field="o.company_id.name"/>
+                                </h3>
+                                <p style="margin: 5px 0; font-size: 11px;">
+                                    RIF: <span t-field="o.company_id.vat" t-if="o.company_id.vat"/>
+                                </p>
+                                <h4 style="color: #003366; margin: 10px 0; font-weight: bold;">
+                                    RECIBO DE PAGO QUINCENAL
+                                </h4>
+                            </div>
+
+                            <!-- Información del empleado y período -->
+                            <table class="table table-sm" style="margin-bottom: 20px; border: 1px solid #ddd;">
+                                <tr style="background-color: #f8f9fa;">
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 25%;">Empleado:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; width: 25%;">
+                                        <span t-field="o.employee_id.name"/>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 25%;">Cédula:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; width: 25%;">
+                                        <span t-field="o.employee_id.identification_id"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Cargo:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">
+                                        <span t-field="o.employee_id.job_id.name"/>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Período:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">
+                                        <span t-field="o.date_from"/> al <span t-field="o.date_to"/>
+                                    </td>
+                                </tr>
+                                <tr style="background-color: #f8f9fa;">
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Departamento:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">
+                                        <span t-field="o.employee_id.department_id.name" t-if="o.employee_id.department_id"/>
+                                        <span t-if="not o.employee_id.department_id">No especificado</span>
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Tasa de Cambio:</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">
+                                        <span t-field="o.exchange_rate" t-if="o.exchange_rate"/>
+                                        <span t-if="not o.exchange_rate">No aplicable</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Tabla de asignaciones (ingresos) -->
+                            <div style="margin-bottom: 20px;">
+                                <h5 style="background-color: #e8f5e8; padding: 8px; margin: 0; border: 1px solid #28a745; color: #155724;">
+                                    ASIGNACIONES
+                                </h5>
+                                <table class="table table-sm" style="border: 1px solid #ddd;">
+                                    <thead style="background-color: #f8f9fa;">
+                                        <tr>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 60%;">Concepto</th>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 15%;">Cantidad</th>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: right; width: 25%;">Monto (Bs.)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-set="total_asignaciones" t-value="0"/>
+                                        <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total_in_ves > 0 and line.code != 'NET')" t-as="line">
+                                            <td style="padding: 6px; border: 1px solid #ddd;">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                            <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">
+                                                <span t-field="line.quantity" t-if="line.quantity != 0"/>
+                                                <span t-if="line.quantity == 0">-</span>
+                                            </td>
+                                            <td style="padding: 6px; border: 1px solid #ddd; text-align: right;">
+                                                <span t-field="line.total_in_ves" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                            <t t-set="total_asignaciones" t-value="total_asignaciones + line.total_in_ves"/>
+                                        </tr>
+                                        <tr style="background-color: #e8f5e8; font-weight: bold;">
+                                            <td colspan="2" style="padding: 8px; border: 1px solid #28a745; text-align: right;">TOTAL ASIGNACIONES:</td>
+                                            <td style="padding: 8px; border: 1px solid #28a745; text-align: right;">
+                                                <span t-esc="total_asignaciones" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Tabla de deducciones -->
+                            <div style="margin-bottom: 20px;">
+                                <h5 style="background-color: #f8d7da; padding: 8px; margin: 0; border: 1px solid #dc3545; color: #721c24;">
+                                    DEDUCCIONES
+                                </h5>
+                                <table class="table table-sm" style="border: 1px solid #ddd;">
+                                    <thead style="background-color: #f8f9fa;">
+                                        <tr>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left; width: 60%;">Concepto</th>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 15%;">Cantidad</th>
+                                            <th style="padding: 8px; border: 1px solid #ddd; text-align: right; width: 25%;">Monto (Bs.)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-set="total_deducciones" t-value="0"/>
+                                        <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip and line.total_in_ves &lt; 0)" t-as="line">
+                                            <td style="padding: 6px; border: 1px solid #ddd;">
+                                                <span t-field="line.name"/>
+                                            </td>
+                                            <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">
+                                                <span t-field="line.quantity" t-if="line.quantity != 0"/>
+                                                <span t-if="line.quantity == 0">-</span>
+                                            </td>
+                                            <td style="padding: 6px; border: 1px solid #ddd; text-align: right; color: #dc3545;">
+                                                <span t-field="line.total_in_ves" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                            <t t-set="total_deducciones" t-value="total_deducciones + abs(line.total_in_ves)"/>
+                                        </tr>
+                                        <tr style="background-color: #f8d7da; font-weight: bold;">
+                                            <td colspan="2" style="padding: 8px; border: 1px solid #dc3545; text-align: right;">TOTAL DEDUCCIONES:</td>
+                                            <td style="padding: 8px; border: 1px solid #dc3545; text-align: right; color: #dc3545;">
+                                                <span t-esc="'-' + str(total_deducciones)" t-options="{
+                                                    'widget': 'monetary',
+                                                    'display_currency': o.company_id.currency_conversion_id,
+                                                    'currency_format': '¤ #,##0.00'
+                                                }"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Neto a pagar -->
+                            <div style="border: 2px solid #003366; background-color: #e7f3ff; padding: 15px; text-align: center;">
+                                <h4 style="color: #003366; margin: 0; font-weight: bold;">
+                                    NETO A PAGAR
+                                </h4>
+                                <h3 style="color: #003366; margin: 10px 0; font-weight: bold;">
+                                    <span t-field="o.line_ids.filtered(lambda l: l.code == 'NET').total_in_ves" t-options="{
+                                        'widget': 'monetary',
+                                        'display_currency': o.company_id.currency_conversion_id,
+                                        'currency_format': '¤ #,##0.00'
+                                    }"/>
+                                </h3>
+                            </div>
+
+                            <!-- Pie de página -->
+                            <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p style="margin: 0; font-size: 10px;">
+                                            <strong>Fecha de Emisión:</strong> <span t-esc="datetime.datetime.now().strftime('%d/%m/%Y')"/>
+                                        </p>
+                                        <p style="margin: 0; font-size: 10px;">
+                                            <strong>Usuario:</strong> <span t-esc="user.name"/>
+                                        </p>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <p style="margin: 0; font-size: 10px;">
+                                            Firma del Empleado: _____________________
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

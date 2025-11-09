@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <data>
+        <!-- Disabled: Community hr.payslip.worked.days doesn't have 'amount' field -->
+        <!-- The worked days amount conversion is handled in the model calculation -->
+    </data>
+</odoo>

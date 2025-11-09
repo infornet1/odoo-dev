@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Custom Paper Format for Payslip Details Report -->
+    <record id="paper_payslip_details_format" model="report.paperformat">
+        <field name="name">Payslip Details Paper Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="margin_top">5</field>
+        <field name="margin_bottom">5</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="orientation">Portrait</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">30</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!--Report action for Contribution Register Report-->
+    <record id="contribution_register_action" model="ir.actions.report">
+        <field name="name">Contribution Register PDF</field>
+        <field name="model">hr.contribution.register</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hr_payroll_community.report_contributionregister</field>
+        <field name="report_file">hr_payroll_community.report_contributionregister</field>
+    </record>
+<!--  Report action for Payslip Report  -->
+    <record id="hr_payslip_new_report_action" model="ir.actions.report">
+        <field name="name">Payslip Report</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="binding_model_id" ref="model_hr_payslip"/>
+        <field name="report_name">hr_payroll_community.report_payslip</field>
+        <field name="report_file">hr_payroll_community.report_payslip</field>
+        <field name="print_report_name">('Payslip Report - %s' % (object.employee_id.name))</field>
+    </record>
+    <!--Report action for Payslip Details Report-->
+    <record id="hr_payslip_report_action" model="ir.actions.report">
+        <field name="name">Payslip Details Report</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="binding_model_id" ref="model_hr_payslip"/>
+        <field name="report_name">hr_payroll_community.report_payslipdetails</field>
+        <field name="report_file">hr_payroll_community.report_payslipdetails</field>
+        <field name="print_report_name">('Payslip Details - %s' % (object.employee_id.name))</field>
+        <field name="paperformat_id" ref="hr_payroll_community.paper_payslip_details_format"/>
+    </record>
+</odoo>

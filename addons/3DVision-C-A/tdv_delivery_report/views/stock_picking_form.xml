@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_inherit_custom_print" model="ir.ui.view">
+        <field name="name">stock.picking.form.inherit.custom.print</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Campo lógico oculto -->
+            <xpath expr="//field[@name='company_id']" position="after">
+                <field name="enable_custom_delivery_print" invisible="1"/>
+            </xpath>
+            <!-- Botón de impresión personalizada -->
+            <xpath expr="//button" position="after">
+                <button name="action_print_delivery_report" 
+                        type="object" 
+                        string="Impresión Personalizada (E)"
+                        class="btn btn-primary"
+                        invisible="not enable_custom_delivery_print"/>
+            </xpath>
+
+            <xpath expr="//field[@name='location_id'][2]" position="after">
+                <field name="chofer" context="{'is_chofer': True}"/>
+                <field name="vehiculo"></field>
+            </xpath>
+
+        </field>
+    </record> 
+</odoo>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="batch_commission_assign_wizard_action" model="ir.actions.act_window">
+        <field name="name">Batch</field>
+        <field name="res_model">batch.commission.assign.wizard</field>
+        <field name="view_mode">form</field>
+    </record>
+
+    <record id="batch_commissions_assign_wizard_view_form" model="ir.ui.view">
+        <field name="name">batch.commission.assign.wizard.view.form</field>
+        <field name="model">batch.commission.assign.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Commissions Partner">
+                <sheet>
+                    <group>
+                        <field name="partner_to_assign" options="{'no_create':True}"
+                       domain="[('has_commissions', '=', True)]"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="confirm_action" type="object" string="Confirm" class="btn btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

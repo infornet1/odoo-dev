@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Acción de la vista -->
+    <record id="tdv_inventory_resume_action" model="ir.actions.act_window">
+        <field name="name">Inventory Resume</field>
+        <field name="res_model">tdv.inventory.resume</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Vista de formulario -->
+    <record id="tdv_inventory_resume_view_form" model="ir.ui.view">
+        <field name="name">tdv.inventory.resume.view.form</field>
+        <field name="model">tdv.inventory.resume</field>
+        <field name="arch" type="xml">
+            <form string="Inventory resume" create="0">
+                <header>
+                <!-- Barra de estado -->
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancelled"/>
+                <!-- Botón de Confirmar (reemplaza a Refresh) -->
+                    <button name="action_post" string="Confirm" type="object" 
+                    class="oe_highlight" invisible="state != 'draft'"
+                    confirm="Are you sure you want to confirm this record? Inventory information will be generated."/>
+                <!-- Botón de Cancelar -->
+                    <button name="action_cancel" string="Cancel" type="object" 
+                    invisible="state != 'posted'" confirm="Are you sure you want to cancel this record?"/>
+                <!-- Botón de Volver a Borrador -->
+                    <button name="action_draft" string="Reopen" type="object" 
+                    invisible="state != 'cancelled'"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="state != 'draft'"/>
+                            <field name="description" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="start_date" readonly="state != 'draft'"/>
+                            <field name="end_date" readonly="state != 'draft'"/>
+                            <field name="currency_id" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="lines" string="Lines">
+                            <field name="inventory_line_ids" readonly="state != 'draft'"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de árbol -->
+    <record id="tdv_inventory_resume_view_tree" model="ir.ui.view">
+        <field name="name">tdv.inventory.resume.view.tree</field>
+        <field name="model">tdv.inventory.resume</field>
+        <field name="arch" type="xml">
+            <tree string="Inventory Resume" create="1" edit="0" >
+                <field name="name"/>
+                <field name="state"/>
+                <field name="create_uid"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Menú principal -->
+    <menuitem
+        id="tdv_inventory_resume_menu"
+        name="Monthly Inventory resume"
+        action="tdv_inventory_resume_action"
+        parent="stock.menu_warehouse_report"
+        sequence="9999" />
+
+</odoo>

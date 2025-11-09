@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <menuitem id="sales_book_menu" name="Sales Book"
+    action="action_tdv_sales_book_views" parent="tribute_fields.fiscal_reports_root_menu"/>
+
+
+</odoo>

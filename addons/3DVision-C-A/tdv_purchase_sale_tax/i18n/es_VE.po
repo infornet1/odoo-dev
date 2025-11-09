@@ -1,0 +1,137 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_purchase_sale_tax
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-09-16 15:18+0000\n"
+"PO-Revision-Date: 2024-09-16 15:18+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_res_company
+msgid "Companies"
+msgstr "Empresas"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_res_config_settings
+msgid "Config Settings"
+msgstr "Configuración de configuración"
+
+#. module: tdv_purchase_sale_tax
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_sale_tax.view_account_res_config_settings_form
+msgid ""
+"Enable the visualization of supplier retention and controls if tax "
+"withholdings in purchase transactions must be shown."
+msgstr ""
+"Habilite la visualización de la retención de proveedores y los controles si el impuesto"
+"Se deben mostrar retenciones en las transacciones de compra".
+#. module: tdv_purchase_sale_tax
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_sale_tax.view_account_res_config_settings_form
+msgid ""
+"Enable the visualization of the sales tax and control if the sales taxes in "
+"the transactions must be displayed."
+msgstr ""
+"Habilite la visualización del impuesto y el control de las ventas si los impuestos sobre las ventas"
+"Las transacciones deben mostrarse".
+#. module: tdv_purchase_sale_tax
+#: model_terms:ir.ui.view,arch_db:tdv_purchase_sale_tax.view_account_res_config_settings_form
+msgid ""
+"Enabling this option will recalculate the product prices on the customer "
+"invoice excluding the tax. This will adjust the price of each invoice line "
+"to reflect the base amount before applying the selected tax."
+msgstr ""
+"Habilitar esta opción recalculará los precios del producto en el cliente"
+"Factura excluyendo el impuesto. Esto ajustará el precio de cada línea de factura"
+"Para reflejar el monto base antes de aplicar el impuesto seleccionado".
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_account_move
+msgid "Journal Entry"
+msgstr "Entrada de Diario"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_purchase_order
+msgid "Purchase Order"
+msgstr "Orden de Compra"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_tax__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_purchase_order__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_company__enable_purchase_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_config_settings__enable_purchase_tax
+msgid "Purchase Taxes"
+msgstr "Impuestos de Compra"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__recalculate_prices
+msgid "Recalcular Precios sin Impuestos"
+msgstr "Recalcular Precios sin Impuestos"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__enable_recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__enable_recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__enable_recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_company__enable_recalculate_prices
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_config_settings__enable_recalculate_prices
+msgid "Recalculate price without tax customer invoice"
+msgstr "Recalcular el Precio sin Factura de Clientes Fiscales"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__purchase_tax_ids
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__purchase_tax_ids
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__purchase_tax_ids
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_purchase_order__purchase_tax_ids
+msgid "Retention Vendor"
+msgstr "Impuestos de Proveedor"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_sale_order__sale_tax_id
+msgid "Sale Tax"
+msgstr "Impuesto a la Venta"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_tax__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_company__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_res_config_settings__enable_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_sale_order__enable_sale_tax
+msgid "Sale Taxes"
+msgstr "Impuestos de Venta"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_sale_order
+msgid "Sales Order"
+msgstr "Pedido de ventas"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_tax__show_purchase_tax
+msgid "Show Provider Retention"
+msgstr "Mostrar Impuestos de proveedores"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_tax__show_sale_tax
+msgid "Show Sales Tax"
+msgstr "Mostrar Impuesto sobre las ventas"
+
+#. module: tdv_purchase_sale_tax
+#: model:ir.model,name:tdv_purchase_sale_tax.model_account_tax
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_bank_statement_line__sale_tax_ids
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_move__sale_tax_ids
+#: model:ir.model.fields,field_description:tdv_purchase_sale_tax.field_account_payment__sale_tax_ids
+msgid "Tax"
+msgstr "Impuestos"

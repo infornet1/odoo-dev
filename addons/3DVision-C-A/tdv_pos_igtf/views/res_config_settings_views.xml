@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form_inherit_tdv_pos_igtf" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_payment_section']" position="inside">
+                <setting id="pos_igtf_settings" string="IGTF settings" help="Define the parameters for the collection of the IGTF">
+                    <div class="row">
+                        <label string="Percentage" for="pos_igtf_percentage" class="col-lg-3 o_light_label"/>
+                        <field name="pos_igtf_percentage" />
+                    </div>
+                    <div class="row">
+                        <label string="Product" for="pos_igtf_product_id" class="col-lg-3 o_light_label"/>
+                        <field name="pos_igtf_product_id" />
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

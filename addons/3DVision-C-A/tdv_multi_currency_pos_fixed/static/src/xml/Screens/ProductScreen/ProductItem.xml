@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<template id="template" xml:space="preserve">
+
+  <t t-name="TDVProductItem" t-inherit="point_of_sale.ProductItem" t-inherit-mode="extension" owl="1">
+    <xpath expr="//span[@class='price-tag']" position="inside">
+      | <t t-esc="refPrice" />
+    </xpath>
+  </t>
+
+</template>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_journal_form_inherit_homologation" model="ir.ui.view">
+    <field name="name">account.journal.view.form.inherit.homologation</field>
+    <field name="model">account.journal</field>
+    <field name="inherit_id" ref="account.view_account_journal_form" />
+    <field name="arch" type="xml">
+     <xpath expr="//field[@name='currency_id']" position="after">
+      <field name="fiscal_number_sequence" />
+      <field name="fiscal_control_number_sequence"/>
+     </xpath>
+    </field>
+  </record>
+</odoo>

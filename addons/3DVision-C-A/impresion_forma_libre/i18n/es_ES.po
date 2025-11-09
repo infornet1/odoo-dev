@@ -1,0 +1,332 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* impresion_forma_libre
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-11-22 18:23+0000\n"
+"PO-Revision-Date: 2024-11-22 18:23+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"<br/>\n"
+"          <strong>Address:</strong>"
+msgstr ""
+"<br/>\n"
+"          <strong>Dirección:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"<br/>\n"
+"          <strong>Date:</strong>"
+msgstr ""
+"<br/>\n"
+"          <strong>Fecha:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"<br/>\n"
+"          <strong>Due date:</strong>"
+msgstr ""
+"<br/>\n"
+"          <strong>Fecha de Vencimiento:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"<br/>\n"
+"          <strong>Payment condition:</strong>"
+msgstr ""
+"<br/>\n"
+"          <strong>Condición de pago:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"<br/>\n"
+"          <strong>VAT:</strong>"
+msgstr ""
+"<br/>\n"
+"          <strong>RIF:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.res_config_settings_view_form_inherit_impresion_forma_libre
+msgid "<span class=\"o_form_label\">Default freeform format</span>"
+msgstr "<span class=\"o_form_label\">Formato de forma libre predeterminada</span>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "<strong>LAE:</strong>"
+msgstr "<strong>LAE:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "<strong>Municipality</strong>"
+msgstr "<strong>Municipio</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "<strong>Partner:</strong>"
+msgstr "<strong>Cliente:</strong>"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "<strong>RUC:</strong>"
+msgstr "<strong>RUC:</strong>"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "A currency in Bs is required."
+msgstr "Se requiere una moneda en BS."
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Amount Untaxed"
+msgstr "Cantidad libre de Impuesto"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid ""
+"As established in Art. 25 of the Value Added Tax Law, the amounts of the "
+"invoice are expressed in Bs. Calculated at"
+msgstr ""
+"Como se establece en el art.25 de la ley de Impuesto al Valor Agregado, los montos del "
+"La factura se expresa en BS. Calculado en"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_comment
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_comment
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_comment
+msgid "Comments"
+msgstr "Comentario"
+
+#. module: impresion_forma_libre
+#: model:ir.model,name:impresion_forma_libre.model_res_company
+msgid "Companies"
+msgstr "Empresas"
+
+#. module: impresion_forma_libre
+#: model:ir.model,name:impresion_forma_libre.model_res_config_settings
+msgid "Config Settings"
+msgstr "Configuración"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Credit Note"
+msgstr "Nota de crédito"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Credit Note N°:"
+msgstr "Nota de Crédito N°:"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Debit Note"
+msgstr "Nota de Débito"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Debit Note N°:"
+msgstr "Nota de Débito N°:"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.res_config_settings_view_form_inherit_impresion_forma_libre
+msgid "Default freeform invoice format"
+msgstr "Formato de factura de forma libre predeterminada"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Description"
+msgstr "Descripción"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Discount"
+msgstr "Descuento"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_currency_id
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_currency_id
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_currency_id
+msgid "Fiscal Currency"
+msgstr "Moneda Fiscal"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_rate
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_rate
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_rate
+msgid "Fiscal Rate"
+msgstr "Tasa fiscal"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_tax_totals
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_tax_totals
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_tax_totals
+msgid "Fiscal Tax Totals"
+msgstr "Totales de impuestos fiscales"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_res_company__invoice_freeform_selection
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_res_config_settings__invoice_freeform_selection
+msgid "Format of Freeform"
+msgstr "Formato de Freeform"
+
+#. module: impresion_forma_libre
+#: model:ir.actions.report,name:impresion_forma_libre.action_freeform_half_letter_report
+msgid "Freeform Half Letter"
+msgstr "Media carta de forma libre"
+
+#. module: impresion_forma_libre
+#: model:ir.actions.report,name:impresion_forma_libre.action_freeform_letter_report
+msgid "Freeform Letter"
+msgstr "Carta de forma libre"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields.selection,name:impresion_forma_libre.selection__res_company__invoice_freeform_selection__half_letter
+msgid "Half Letter"
+msgstr "Media Carta"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.inherited_account_move_form
+msgid "Informacion Fiscal"
+msgstr "Información Fiscal"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Invoice"
+msgstr "Factura"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Invoice N°:"
+msgstr "Factura N°:"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.inherited_account_move_form
+msgid "Invoice comment"
+msgstr "Comentario de Factura"
+
+#. module: impresion_forma_libre
+#: model:ir.model,name:impresion_forma_libre.model_account_move
+msgid "Journal Entry"
+msgstr "Entrada de Diario"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields.selection,name:impresion_forma_libre.selection__res_company__invoice_freeform_selection__letter
+msgid "Letter"
+msgstr "Carta"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Measure"
+msgstr "Medida"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.inherited_account_move_form
+msgid "Observaciones"
+msgstr "Observaciones"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_payment_condition
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_payment_condition
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_payment_condition
+msgid "Payment Condition"
+msgstr "Condición de pago"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.inherited_account_move_form
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.inherited_account_move_tree
+msgid "Print"
+msgstr "Imprimir"
+
+#. module: impresion_forma_libre
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_bank_statement_line__fiscal_print_date
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_move__fiscal_print_date
+#: model:ir.model.fields,field_description:impresion_forma_libre.field_account_payment__fiscal_print_date
+msgid "Print Date"
+msgstr "Fecha de Impresión"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Quantity"
+msgstr "Cantidad"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Summary in Document Currency"
+msgstr "Resumen en moneda de documentos"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Summary in Fiscal Currency"
+msgstr "Resumen en Moneda Fiscal"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "The Control Number and the Fiscal Correlative are required"
+msgstr "Se requiere el número de control y la correlativo fiscal"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "The control number must be unique"
+msgstr "El número de control debe ser único"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "The invoice %s is not fiscal"
+msgstr "La factura %s no es fiscal"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "The payment condition is required on the invoice %s"
+msgstr "Se requiere la condición de pago en la factura %s"
+
+#. module: impresion_forma_libre
+#. odoo-python
+#: code:addons/impresion_forma_libre/models/account_move.py:0
+#, python-format
+msgid "This invoice exceeds the limit of items valid for printing (40)."
+msgstr "Esta factura excede el límite de los elementos válidos para la impresión (40)."
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Total"
+msgstr "Total"
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "Unit Price"
+msgstr "Precio unitario"
+
+#. module: impresion_forma_libre
+#: model:ir.actions.report,print_report_name:impresion_forma_libre.action_freeform_half_letter_report
+#: model:ir.actions.report,print_report_name:impresion_forma_libre.action_freeform_letter_report
+msgid "object.name"
+msgstr ""
+
+#. module: impresion_forma_libre
+#: model_terms:ir.ui.view,arch_db:impresion_forma_libre.freeform_template
+msgid "the exchange rate established by the BCV"
+msgstr "el tipo de cambio establecido por el BCV"

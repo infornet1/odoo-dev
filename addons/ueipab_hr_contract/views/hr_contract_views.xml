@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extend HR Contract Form View for Venezuelan Payroll -->
+        <record id="hr_contract_view_form_venezuelan" model="ir.ui.view">
+            <field name="name">hr.contract.form.venezuelan</field>
+            <field name="model">hr.contract</field>
+            <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
+            <field name="priority">99</field>
+            <field name="arch" type="xml">
+                <!-- Replace the empty yearly_benefits group with Venezuelan breakdown -->
+                <group name="yearly_benefits" position="replace">
+                    <group name="yearly_benefits" string="🇻🇪 Venezuelan Compensation Breakdown">
+                        <field name="ueipab_salary_base" string="Salary (70%)"/>
+                        <field name="ueipab_bonus_regular" string="Bonus (25%)"/>
+                        <field name="ueipab_extra_bonus" string="Extra Bonus (5%)"/>
+                        <field name="cesta_ticket_usd" string="Cesta Ticket (USD)"/>
+                        <field name="bimonthly_payroll" string="Bi-monthly Payroll"/>
+                        <field name="first_payment_day" string="1st Payment Day"/>
+                        <field name="second_payment_day" string="2nd Payment Day"/>
+                    </group>
+                </group>
+
+                <!-- Hide contract type field to prevent errors -->
+                <field name="contract_type_id" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
+            </field>
+        </record>
+
+        <!-- Extend HR Contract Tree View -->
+        <record id="hr_contract_view_tree_venezuelan" model="ir.ui.view">
+            <field name="name">hr.contract.tree.venezuelan</field>
+            <field name="model">hr.contract</field>
+            <field name="inherit_id" ref="hr_contract.hr_contract_view_tree"/>
+            <field name="priority">99</field>
+            <field name="arch" type="xml">
+                <!-- Add Venezuelan fields to tree view -->
+                <field name="wage" position="after">
+                    <field name="ueipab_salary_base" string="Salary" optional="show"/>
+                    <field name="ueipab_bonus_regular" string="Bonus" optional="show"/>
+                    <field name="cesta_ticket_usd" string="Cesta Ticket" optional="hide"/>
+                </field>
+            </field>
+        </record>
+    </data>
+</odoo>

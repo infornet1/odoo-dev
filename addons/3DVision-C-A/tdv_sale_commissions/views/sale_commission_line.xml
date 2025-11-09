@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="tdv_sale_commission_line_action" model="ir.actions.act_window">
+        <field name="name">Commission Line</field>
+        <field name="res_model">tdv.sale.commission.line</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="tdv_sale_commission_line_view_tree" model="ir.ui.view">
+        <field name="name">tdv.sale.commission.line.view.tree</field>
+        <field name="model">tdv.sale.commission.line</field>
+        <field name="arch" type="xml">
+            <tree string="Commission Line" editable="bottom">
+                <field name="move_line_id"
+                       domain="[('commission_line_id', '=', False), ('commission_partner_id', '!=', False)]"/>
+                <field name="product_id" readonly="1" optional="hide"/>
+                <field name="partner_id"/>
+                <field name="commission_type" optional="hide"/> 
+                <field name="payment_amount" widget="percentage" readonly="1"/>
+                <field name="payment_mode" readonly="1"/>
+                <field name="percentage_applied" widget="percentage" optional="hide"/>
+                <field name="subtotal" optional="hide"/>
+                <field name="total_amount" sum="Total"/>
+            </tree>
+        </field>
+    </record>
+
+</odoo>

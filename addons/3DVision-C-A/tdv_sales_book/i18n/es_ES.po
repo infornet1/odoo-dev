@@ -1,0 +1,299 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* tdv_sales_book
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-11-21 13:09+0000\n"
+"PO-Revision-Date: 2023-11-21 13:09+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: tdv_sales_book
+#: model:ir.actions.report,print_report_name:tdv_sales_book.action_report_tdv_sales_book
+msgid "'%s' % object.name"
+msgstr "'%s' % object.name"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book_line__invoice_type__01
+msgid "01 - Invoice"
+msgstr "01 - Factura"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book_line__invoice_type__02
+msgid "02 - Debit Note"
+msgstr "02 - Nota de débito"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book_line__invoice_type__03
+msgid "03 - Credit Note"
+msgstr "03 - Nota de crédito"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid ""
+"<i class=\"fa fa-long-arrow-right mx-2\" aria-label=\"Arrow icon\" "
+"title=\"Arrow\"/>"
+msgstr ""
+"<i class=\"fa fa-long-arrow-right mx-2\" aria-label=\"Arrow icon\" "
+"title=\"Arrow\"/>"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__reversal_move_reference
+msgid "Affected document"
+msgstr "Documento afectado"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book__sales_type__all
+msgid "All"
+msgstr "Todas"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__amount_total
+msgid "Amount Total"
+msgstr "Total"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__amount_untaxed
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__amount_untaxed
+msgid "Amount Untaxed"
+msgstr "Base Imponible"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__company_id
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__company_id
+msgid "Company"
+msgstr "Compañía"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__control_number
+msgid "Control Number"
+msgstr "Número de control"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book__sales_type__fiscal
+msgid "Control number"
+msgstr "Número de control"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__create_uid
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__create_date
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__create_date
+msgid "Created on"
+msgstr "Creado en"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__currency_id
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__currency_id
+msgid "Currency"
+msgstr "Moneda"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid "Date"
+msgstr "Fecha"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__date_from
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__date_from
+msgid "Date from"
+msgstr "Desde"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__date_to
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__date_to
+msgid "Date to"
+msgstr "Hasta"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__display_name
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid "Do you want to continue with this action?"
+msgstr "¿Quieres continuar con esta acción?"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__invoice_type
+msgid "Document Type"
+msgstr "Tipo de Documento"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__amount_exempt
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__amount_exempt
+msgid "Exempt Amount"
+msgstr "Sin credito fiscal"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__invoice_reference
+msgid "Fiscal Correlative"
+msgstr "Referencia"
+
+#. module: tdv_sales_book
+#: model:ir.model,name:tdv_sales_book.model_tdv_sale_book
+msgid "Fiscal Sales Book Developed by 3Dvision"
+msgstr "Libro de ventas fiscales desarrollado por 3DVision"
+
+#. module: tdv_sales_book
+#: model:ir.model,name:tdv_sales_book.model_tdv_sale_book_line
+msgid "Fiscal Sales Book Lines developed by 3DVision"
+msgstr "Líneas de libros de ventas fiscales desarrolladas por 3dVision"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid "Generate"
+msgstr "Generar"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__id
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__id
+msgid "ID"
+msgstr "IDENTIFICACIÓN"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__invoice_id
+msgid "Invoice"
+msgstr "Factura"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__invoice_date
+msgid "Invoice Date"
+msgstr "Fecha de la factura"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__is_legal_entity
+msgid "Is Legal Entity"
+msgstr "Entidad Juridica"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book____last_update
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line____last_update
+msgid "Last Modified on"
+msgstr "Última modificación"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__write_uid
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__write_date
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__write_date
+msgid "Last Updated on"
+msgstr "Ultima actualización en"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid "Lines"
+msgstr "Líneas"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields.selection,name:tdv_sales_book.selection__tdv_sale_book__sales_type__no_fiscal
+msgid "No control number"
+msgstr "Sin número de control"
+
+#. module: tdv_sales_book
+#: model_terms:ir.actions.act_window,help:tdv_sales_book.action_tdv_sales_book_views
+msgid "No create Reports"
+msgstr "No hay reportes creados"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__partner_id
+msgid "Partner"
+msgstr "Cliente"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__sale_book_id
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_form
+msgid "Sale Book"
+msgstr "Libro de venta"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__line_ids
+msgid "Sale Book Lines"
+msgstr "Venta de líneas de libros"
+
+#. module: tdv_sales_book
+#: model_terms:ir.ui.view,arch_db:tdv_sales_book.tdv_sale_book_view_tree
+msgid "Sale Books"
+msgstr "Libros de venta"
+
+#. module: tdv_sales_book
+#: model:ir.actions.act_window,name:tdv_sales_book.action_tdv_sales_book_views
+#: model:ir.ui.menu,name:tdv_sales_book.sales_book_menu
+msgid "Sales Book"
+msgstr "Libro de ventas"
+
+#. module: tdv_sales_book
+#: model:ir.actions.report,name:tdv_sales_book.action_report_tdv_sales_book
+msgid "Sales book"
+msgstr "Libro de ventas"
+
+#. module: tdv_sales_book
+#: model:ir.model,name:tdv_sales_book.model_report_tdv_sales_book_report_xlsx_report
+msgid "Sales book report"
+msgstr "Informe del libro de ventas"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__sales_type
+msgid "Sales type"
+msgstr "Tipo de ventas"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__amount_tax
+msgid "Tax"
+msgstr "Impuestos"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__tax_totals
+msgid "Tax Totals"
+msgstr "Totales de impuestos"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__amount_tax
+msgid "Taxes"
+msgstr "Impuestos"
+
+#. module: tdv_sales_book
+#. odoo-python
+#: code:addons/tdv_sales_book/models/sales_book_line.py:0
+#, python-format
+msgid "The date on the invoice %s is required"
+msgstr "Se requiere la fecha en la factura %s"
+
+#. module: tdv_sales_book
+#. odoo-python
+#: code:addons/tdv_sales_book/models/sales_book.py:0
+#, python-format
+msgid "The dates are required for registration"
+msgstr "Se requieren las fechas para el registro"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book__amount_total
+msgid "Total"
+msgstr "Total"
+
+#. module: tdv_sales_book
+#: model:ir.model.fields,field_description:tdv_sales_book.field_tdv_sale_book_line__tax_totals
+msgid "Totals"
+msgstr "Totales"

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+	<template id="sales_report_lang_template">
+		<t t-call="web.html_container">
+			<t t-call="web.external_layout">
+				<t t-call="sales_summary.sales_report" t-lang="user.lang"/>
+			</t>
+		</t>
+	</template>
+
+	<template id="sales_report">
+		<div name="summary_info">
+			<h3>Sales Report</h3>
+			<span>From <strong t-field="docs.date_from"/> to <strong t-field="docs.date_to"/></span>
+      <div name="payments_summary">
+        <span class="d-block"><strong>Total:</strong> <t t-out="sum(docs.get_payments().mapped('amount_total_signed'))" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/></span>
+        <span class="d-block"><strong>Total Due:</strong > <t t-out="sum(docs.get_invoices().mapped('amount_residual_signed'))" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/></span>
+        <t t-set="cash_and_charges" t-value="docs.get_cash_and_charges()"/>
+        <span class="d-block"><strong>Total Cash Sales:</strong> <t t-out="cash_and_charges['cash']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/></span>
+        <span class="d-block"><strong>Total Previous Charges:</strong> <t t-out="cash_and_charges['charges']" t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/></span>
+      </div>
+		</div>
+		<div t-if="docs.has_invoices == 'yes'" class="small">
+			<t t-set="invoices" t-value="docs.get_invoices()"/>
+      <t t-if="invoices">
+        <t t-foreach="set(invoices.mapped('payment_state'))" t-as="payment_state">
+          <div class="text-center">
+            <h4>
+              Invoices -
+              <span class="text-danger" t-if="payment_state == 'not_paid'">Unpaid</span>
+              <span class="text-success" t-if="payment_state == 'in_payment'">In payment process</span>
+              <span class="text-success" t-if="payment_state == 'paid'">Paid</span>
+              <span class="text-warning" t-if="payment_state == 'partial'">Partially paid</span>
+              <span class="text-danger" t-if="payment_state == 'reversed'">Reversed</span>
+              <span class="text-warning" t-if="payment_state == 'invoicing_legacy'">Legacy</span>
+            </h4>
+          </div>
+          <table class="table table-sm">
+            <thead>
+              <tr class="text-center">
+                <th scope="col" class="align-middle">N°</th>
+                <th scope="col" class="align-middle">Name</th>
+                <th scope="col" class="align-middle">Partner</th>
+                <th scope="col" class="align-middle">Date</th>
+                <th scope="col" class="align-middle">Payments</th>
+                <th scope="col" class="align-middle">Amount in Currency</th>
+                <th scope="col" class="align-middle">Amount</th>
+                <th t-if="payment_state == 'partial'" scope="col" class="align-middle">Amount Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr t-foreach="invoices.filtered_domain([('payment_state','=',payment_state)])" t-as="invoice">
+                <td class="text-center align-middle"><span t-out="invoice_index + 1"/></td>
+                <td class="align-middle"><span t-field="invoice.name"/></td>
+                <td class="align-middle"><span t-field="invoice.partner_id"/></td>
+                <td class="align-middle text-end"><span t-field="invoice.invoice_date"/></td>
+                <td class="text-center align-middle">
+                  <div t-foreach="docs.get_reconciled_moves(invoice)" t-as="move">
+                    <span t-field="move.journal_id"/> -
+                    <span t-if="move.payment_id" t-field="move.payment_id.amount_signed"/>
+                    <span t-else="" t-field="move.amount_total_in_currency_signed"/>
+                  </div>
+                </td>
+                <td class="text-end align-middle"><span t-field="invoice.amount_total"/></td>
+                <td class="text-end align-middle"><span t-field="invoice.amount_total_signed"/></td>
+                <td t-if="payment_state == 'partial'" class="text-end align-middle"><span t-field="invoice.amount_residual_signed"/></td>
+              </tr>
+              <tr>
+                <td colspan="6" class="text-end">Total</td>
+                <td class="text-end align-middle">
+                  <span t-out="sum(invoices.filtered_domain(
+                    [('payment_state','=',payment_state)]).mapped('amount_total_signed'))"
+                  t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/>
+                </td>
+                <td t-if="payment_state == 'partial'" class="text-end align-middle">
+                  <span t-out="sum(invoices.filtered_domain(
+                    [('payment_state','=',payment_state)]).mapped('amount_residual_signed'))"
+                  t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+				</t>
+			</t>
+		</div>
+    <div t-if="docs.has_payments == 'yes'" class="small">
+      <t t-set="payments" t-value="docs.get_payments()"/>
+      <t t-if="payments">
+        <div class="text-center">
+          <h4>Payments</h4>
+        </div>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th scope="col" class="align-middle">N°</th>
+              <th scope="col" class="align-middle">Name</th>
+              <th scope="col" class="align-middle">Partner</th>
+              <th scope="col" class="align-middle">Journal</th>
+              <th scope="col" class="align-middle">Date</th>
+              <th scope="col" class="align-middle">Reconciled Moves</th>
+              <th scope="col" class="align-middle">Payment Type</th>
+              <th scope="col" class="align-middle">Amount in Currency</th>
+              <th scope="col" class="align-middle">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr t-foreach="payments" t-as="payment">
+              <t t-set="TEXT_COLOR" t-value="'text-success' if payment.payment_id.payment_type == 'inbound' else 'text-danger'"/>
+              <td class="align-middle text-center"><span t-out="payment_index + 1"/></td>
+              <td class="align-middle"><span t-field="payment.name"/></td>
+              <td class="align-middle"><span t-field="payment.partner_id"/></td>
+              <td class="align-middle text-center"><span t-field="payment.journal_id"/></td>
+              <td class="align-middle text-end"><span t-field="payment.date"/></td>
+              <td class="align-middle text-center">
+                <div t-foreach="docs.get_reconciled_moves(payment)" t-as="move">
+                  <span t-field="move.name"/>
+                </div>
+              </td>
+              <td t-attf-class="align-middle text-center {{TEXT_COLOR}}"><span t-field="payment.payment_id.payment_type"/></td>
+              <td t-attf-class="align-middle text-end"><span t-field="payment.payment_id.amount_signed"/></td>
+              <td t-attf-class="align-middle text-end {{TEXT_COLOR if payment.payment_id.payment_type == 'outbound' else ''}}"><span t-field="payment.payment_id.amount_company_currency_signed"/></td>
+            </tr>
+            <tr>
+              <td class="align-middle text-end" colspan="8">Total</td>
+              <td class="align-middle text-end">
+                <span t-out="sum(payments.mapped('payment_id.amount_company_currency_signed'))"
+                t-options="{'widget': 'monetary', 'display_currency': res_company.currency_id}"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </t>
+    </div>
+    <div t-if="docs.has_journals == 'yes'" class="small">
+      <t t-set="payments" t-value="docs.get_payments()"/>
+      <t t-set="journals" t-value="payments.mapped('journal_id')"/>
+      <t t-set="currencies" t-value="payments.mapped('currency_id')"/>
+      <t t-if="journals">
+        <h4 class="text-center">Journals</h4>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <t t-foreach="currencies" t-as="currency">
+                <th t-field="currency.name"/>
+              </t>
+            </tr>
+          </thead>
+          <tbody>
+            <tr t-foreach="journals" t-as="journal">
+              <td class="align-middle"><span t-field="journal.name"/></td>
+              <t t-foreach="currencies" t-as="currency">
+                <td class="align middle text-end">
+                  <t t-set="payments_in_currency" t-value="payments.filtered_domain([
+                    ('journal_id', '=', journal.id),('currency_id', '=', currency.id)
+                  ])"/>
+                  <span t-if="payments_in_currency" t-out="sum(payments_in_currency.mapped('payment_id.amount_signed'))"
+                    t-options="{'widget': 'monetary', 'display_currency': currency}"/>
+                </td>
+              </t>
+            </tr>
+            <tr>
+              <td class="align-middle text-end">Total</td>
+              <td t-foreach="currencies" t-as="currency" class="text-end align-middle">
+                <span t-out="sum(payments.filtered_domain([('currency_id', '=', currency.id)]).mapped('payment_id.amount_signed'))"
+                  t-options="{'widget': 'monetary', 'display_currency': currency}"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </t>
+    </div>
+	</template>
+</odoo>

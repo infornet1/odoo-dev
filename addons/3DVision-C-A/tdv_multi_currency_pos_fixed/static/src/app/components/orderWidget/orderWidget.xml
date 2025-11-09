@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_multi_currency_pos.OrderWidget" t-inherit="point_of_sale.OrderWidget" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('order-summary')]" position="after">
+            <div t-if="props.total or props.tax" class="order-summary w-100 py-2 px-3 bg-100 text-end fw-bolder fs-2 lh-sm">
+                Total:
+                <span t-esc="props.secondTotal" class="total"/>
+                <div t-if="props.secondTax" class="fs-6 text-muted subentry">
+                    Taxes: <span t-esc="props.secondTax" class="tax"/>
+                </div>
+            </div>
+        </xpath>
+    </t>
+</template>

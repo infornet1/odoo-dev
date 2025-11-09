@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_rule_parameter_view_form_inherit_tdv_hr_payroll" model="ir.ui.view">
+        <field name="name">hr.rule.parameter.view.form.inherit</field>
+        <field name="model">hr.rule.parameter</field>
+        <field name="inherit_id" ref="hr_payroll.hr_rule_parameter_view_form"/>
+        <field name="arch" type="xml">
+            <field name="code" position="after">
+                <field name="is_contractual"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

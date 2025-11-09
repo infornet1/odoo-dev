@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Form view -->
+  <record id="view_order_form_inherit_tdv_multi_currency_sale" model="ir.ui.view">
+    <field name="name">sale.order.view.form.inherit</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_order_form" />
+    <field name="arch" type="xml">
+      <xpath expr="//group[@name='order_details']" position="inside">
+        <label for="second_currency_id" string="Second Currency" />
+        <div class="row">
+          <field class="oe_inline col-auto" name="second_currency_id"
+            options="{'no_create': True, 'no_open': True}"
+            readonly="state != 'draft'"/>
+          <field class="oe_inline col-auto" name="rate_string" />
+        </div>
+      </xpath>
+      <xpath expr="//group[@name='note_group']" position="replace">
+        <group name="note_group" col="6" class="mt-2 mt-md-0">
+          <group colspan="2">
+              <field  colspan="2" name="note" nolabel="1" placeholder="Terms and conditions..."/>
+          </group>
+          <group class="oe_subtotal_footer oe_right" col="2" name="sale_total">
+            <field name="second_tax_totals" widget="second-account-tax-totals-field" colspan="2" nolabel="1" readonly="1"/>
+          </group>
+          <group class="oe_subtotal_footer oe_right" col="2" name="sale_total">
+              <field name="tax_totals" widget="account-tax-totals-field" colspan="2" nolabel="1" readonly="1"/>
+          </group>
+          <div class="clearfix"/>
+      </group>
+      </xpath>
+      <xpath expr="//group[@name='sales_person']" position="inside">
+        <field name="show_second_currency_rate" widget="boolean_toggle"/>
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Tree view -->
+  <record id="view_quotation_tree_inherit_tdv_multi_currency_sale" model="ir.ui.view">
+    <field name="name">sale.order.view.form.inherit</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_quotation_tree"/>
+    <field name="arch" type="xml">
+      <field name="amount_total" position="after">
+        <field name="second_amount_untaxed" sum="Total" optional="hide"/>
+        <field name="second_amount_tax" sum="Total" optional="hide"/>
+        <field name="second_amount_total" sum="Total" optional="show"/>
+        <field name="amount_total_in_company_currency" sum="Total in Company Currency" optional="show"/>
+        <field name="second_amount_total_in_company_currency" sum="Total in Second Company Currency" optional="show"/>
+        <field name="second_currency_id" invisible="1"/>
+        <field name="company_currency_id" invisible="1"/>
+        <field name="second_company_currency_id" invisible="1"/>
+      </field>
+    </field>
+  </record>
+</odoo>

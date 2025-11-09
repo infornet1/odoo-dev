@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Heredar la vista de moneda para añadir nuestro botón -->
+        <record id="view_currency_form_inherit" model="ir.ui.view">
+            <field name="name">res.currency.form.inherit</field>
+            <field name="model">res.currency</field>
+            <field name="inherit_id" ref="base.view_currency_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet" position="before">
+                    <header>
+                        <button name="action_open_update_wizard" 
+                                string="Actualizar Salarios" 
+                                type="object" 
+                                class="oe_highlight"
+                                invisible="not is_conversion_currency"
+                                help="Actualizar salarios en moneda secundaria para contratos seleccionados"/>
+                        <button name="action_open_update_payslip_rate_wizard"
+                                string="Actualizar tasa de cambio en recibos de nómina"
+                                type="object"
+                                class="oe_highlight"
+                                help="Actualizar la tasa de cambio en todos los recibos de nómina de los lotes seleccionados para esta moneda"/>
+                    </header>
+                </xpath>
+                
+                <xpath expr="//field[@name='active']" position="after">
+                    <field name="is_conversion_currency" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+        
+        <!-- Vista para el wizard de actualización de tasas en recibos de nómina -->
+        <record id="view_currency_payslip_update_rate_wizard_form" model="ir.ui.view">
+            <field name="name">currency.payslip.update.rate.wizard.form</field>
+            <field name="model">currency.payslip.update.rate.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Actualizar tasa de cambio en recibos de nómina">
+                    <sheet>
+                        <group>
+                            <field name="currency_id" readonly="1"/>
+                            <field name="payslip_run_ids" widget="many2many_tags"/>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_update_rates" string="Actualizar" type="object" class="btn-primary"/>
+                        <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vista para el wizard de selección de estados -->
+        <record id="view_currency_salary_update_wizard_form" model="ir.ui.view">
+            <field name="name">currency.salary.update.wizard.form</field>
+            <field name="model">currency.salary.update.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Actualizar salarios en moneda secundaria">
+                    <sheet>
+                        <group>
+                            <field name="currency_id" invisible="1"/>
+                            <group string="Seleccionar estados de contratos a actualizar">
+                                <field name="update_draft" string="Nuevo"/>
+                                <field name="update_open" string="En proceso"/>
+                                <field name="update_close" string="Vencido"/>
+                                <field name="update_cancel" string="Cancelado"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_update_salaries" string="Actualizar" type="object" class="btn-primary"/>
+                        <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

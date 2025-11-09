@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="pos_ref_payment_view" model="ir.ui.view">
+    <field name="name">pos.ref.payment.view.form.inherit</field>
+    <field name="model">res.config.settings</field>
+    <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//block[@id='pos_interface_section']" position="inside">
+        <setting help="Mostrar Referencia para el pago">
+          <field name="is_ref_payment" /> 
+          <div invisible="not is_ref_payment">
+            <field name="pos_payment_method_ids" widget="many2many_tags" />
+          </div>
+
+        </setting>
+      </xpath>
+
+    </field>
+  </record>
+
+</odoo>

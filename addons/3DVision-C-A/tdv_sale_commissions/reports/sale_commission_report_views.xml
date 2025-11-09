@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_sales_commission_report" model="ir.actions.report">
+        <field name="name">Comisiones de Ventas</field>
+        <field name="model">tdv.sale.commission</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">tdv_sale_commissions.sales_commission_template</field>
+        <field name="print_report_name">'Comisiones de Ventas'</field>
+        <field name="binding_model_id" ref="tdv_sale_commissions.model_tdv_sale_commission"/>
+    </record>
+
+    <record id="action_services_commission_report" model="ir.actions.report">
+        <field name="name">Comisiones de Servicios</field>
+        <field name="model">tdv.sale.commission</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">tdv_sale_commissions.services_commission_template</field>
+        <field name="print_report_name">'Comisiones de Servicios'</field>
+        <field name="binding_model_id" ref="tdv_sale_commissions.model_tdv_sale_commission"/>
+    </record>
+
+</odoo>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_order_view_form_inherit" model="ir.ui.view">
+        <field name="name">pos_order_view_form_inherit fiscal</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <field name="pos_reference" position="after">
+                <field name="num_factura" />
+            </field>
+        </field>
+    </record>
+    <record id="pos_session_view_form_inherit" model="ir.ui.view">
+        <field name="name">pos.session.view.form.inherit</field>
+        <field name="model">pos.session</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+        <field name="arch" type="xml">
+            <field name="stop_at" position="after">
+                <field name="pos_report_z_id" />
+                <field name="x_pos_z_report_number" />
+            </field>
+        </field>
+    </record>
+    <record id="res_config_settings_view_form_inherit" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <block id="pos_accounting_section" position="inside">
+                <setting class="col-12 col-lg-6 o_setting_box" title="Impresora por defecto de la caja">
+                    <group>
+                        <field name="pos_x_fiscal_printer_id" options="{'no_create': True}" />
+                        <field name="flag_21" />
+                        <field name="connection_type" />
+                        <field name="api_url"/>
+                        <field name="pos_x_fiscal_command_baudrate" />
+                        <field name="pos_x_fiscal_commands_time" />
+                        <field name="x_fiscal_printer_currency_id" />
+                    </group>
+                </setting>
+            </block>
+        </field>
+    </record>
+    <record id="res_config_settings_view_form_inherit" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <block id="pos_accounting_section" position="inside">
+                <setting class="col-12 col-lg-6 o_setting_box" title="Impresora por defecto de la caja">
+                    <group>
+                        <field name="pos_x_fiscal_printer_id" options="{'no_create': True}" />
+                        <field name="flag_21" />
+                        <field name="connection_type" />
+                        <field name="api_url"/>
+                        <field name="pos_x_fiscal_command_baudrate" />
+                        <field name="pos_x_fiscal_commands_time" />
+                        <field name="x_fiscal_printer_currency_id" />
+                    </group>
+                </setting>
+            </block>
+        </field>
+    </record>
+    <record id="pos_payment_method_view_form_inherit" model="ir.ui.view">
+        <field name="name">pos.payment.method.view.form.inherit</field>
+        <field name="model">pos.payment.method</field>
+        <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+        <field name="arch" type="xml">
+            <field name="company_id" position="after">
+                <field name="x_printer_code" required="1" />
+            </field>
+        </field>
+    </record>
+    <record id="account_tax_view_form_inherit" model="ir.ui.view">
+        <field name="name">account.tax.view.form.inherit</field>
+        <field name="model">account.tax</field>
+        <field name="inherit_id" ref="account.view_tax_form"/>
+        <field name="arch" type="xml">
+            <field name="amount" position="after">
+                <field name="x_tipo_alicuota" required="1" />
+            </field>
+        </field>
+    </record>
+</odoo>

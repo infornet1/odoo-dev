@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<template id="template" xml:space="preserve">
+    <t t-name="tdv_discount_in_pos_currency.ProductScreen" t-inherit="point_of_sale.ProductScreen" t-inherit-mode="extension">
+        <xpath expr="//OrderWidget" position="attributes">
+            <attribute name="calculatedRef">
+                env.utils.formatCurrency(currentOrder.get_total_with_tax() * (100 / (100 + (pos.config.discount_percentage || 0))), true, pos.secondCurrency)
+            </attribute>
+            <attribute name="calculatedRefPrincipal">
+                env.utils.formatCurrency(currentOrder.get_total_with_tax() * (100 / (100 + (pos.config.discount_percentage || 0))))
+            </attribute>
+            <attribute name="currencyDiscountMode">
+                pos.config.currency_discount_mode
+            </attribute>
+            <attribute name="enableSpecialDiscount">
+                pos.config.enable_special_discount
+            </attribute>
+        </xpath>
+    </t>
+</template> 

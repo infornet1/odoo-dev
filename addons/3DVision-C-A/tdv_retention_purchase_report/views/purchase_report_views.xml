@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_purchase_report_form_inherit" model="ir.ui.view">
+    <field name="name">tdv.purchase.report.view.form.inherit</field>
+    <field name="model">tdv.purchase.report</field>
+    <field name="inherit_id" ref="tdv_purchase_report.tdv_purchase_report_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='line_ids']/tree" position="inside">
+        <field name="retention_id" optional="hide"/>
+        <field name="amount_detained" />
+      </xpath>
+    </field>
+  </record>
+
+  <record id="tdv_purchase_report_line_form_inherit_retention" model="ir.ui.view">
+    <field name="name">tdv.purchase.report.line.form.inherit.retention</field>
+    <field name="model">tdv.purchase.report.line</field>
+    <field name="inherit_id" ref="tdv_purchase_report.tdv_purchase_report_line_form"/>
+    <field name="arch" type="xml">
+        <xpath expr="//group" position="inside">
+            <field name="retention_line_id"/>
+            <field name="amount_detained"/>
+        </xpath>
+    </field>
+  </record>
+
+</odoo>
