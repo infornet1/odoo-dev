@@ -109,17 +109,24 @@ dmypy.json
 .DS_Store
 ._.DS_Store
 
-# Database backups and dumps
-*.sql
+# Database backups and dumps (in backups directory)
+backups/*
+!backups/README.md
 *.dump
-*.tar.gz
-*.zip
 *.bak
+testing_db_restore.sql
+*_backup.sql
+*_backup_*.sql
 
 # Filestore backups
 filestore/
 filestore.tar.gz
 testing_filestore.tar.gz
+*.tar.gz
+
+# Schema exports are tracked in git
+!schema/
+!schema/*.sql
 
 # IDE settings
 .vscode/
