@@ -216,6 +216,7 @@ class ContractUpdater:
                 cur.execute("""
                     SELECT
                         e.name,
+                        c.wage,
                         c.ueipab_salary_base,
                         c.ueipab_bonus_regular,
                         c.ueipab_extra_bonus,
@@ -230,12 +231,14 @@ class ContractUpdater:
                 result = cur.fetchone()
 
                 if result:
-                    name, curr_base, curr_bonus, curr_extra, curr_total = result
+                    name, curr_wage, curr_base, curr_bonus, curr_extra, curr_total = result
                     print(f"\n{name}:")
-                    print(f"  CURRENT: Base=${float(curr_base):>8.2f} + Bonus=${float(curr_bonus):>8.2f} + Extra=${float(curr_extra):>8.2f} = Total=${float(curr_total):>8.2f}")
-                    print(f"  NEW:     Base=${expected['base']:>8.2f} + Bonus=${expected['bonus']:>8.2f} + Extra=${expected['extra']:>8.2f} = Total=${expected['total']:>8.2f}")
-                    change = expected['total'] - float(curr_total)
-                    print(f"  CHANGE:  ${change:>+9.2f} ({(change/float(curr_total)*100):+.1f}%)" if curr_total > 0 else f"  CHANGE:  ${change:>+9.2f}")
+                    print(f"  CURRENT wage:  ${float(curr_wage):>8.2f}")
+                    print(f"  CURRENT parts: Base=${float(curr_base):>8.2f} + Bonus=${float(curr_bonus):>8.2f} + Extra=${float(curr_extra):>8.2f} = ${float(curr_total):>8.2f}")
+                    print(f"  NEW wage:      ${expected['total']:>8.2f}")
+                    print(f"  NEW parts:     Base=${expected['base']:>8.2f} + Bonus=${expected['bonus']:>8.2f} + Extra=${expected['extra']:>8.2f} = ${expected['total']:>8.2f}")
+                    wage_change = expected['total'] - float(curr_wage)
+                    print(f"  WAGE CHANGE:   ${wage_change:>+9.2f} ({(wage_change/float(curr_wage)*100):+.1f}%)" if curr_wage > 0 else f"  WAGE CHANGE:   ${wage_change:>+9.2f}")
 
         except Exception as e:
             print(f"✗ Comparison failed: {e}")
@@ -283,16 +286,16 @@ class ContractUpdater:
                     # Update contract with CORRECT VALUES
                     cur.execute("""
                         UPDATE hr_contract SET
+                            wage = %s,
                             ueipab_salary_base = %s,
                             ueipab_bonus_regular = %s,
-                            ueipab_extra_bonus = %s,
-                            ueipab_monthly_salary = %s
+                            ueipab_extra_bonus = %s
                         WHERE id = %s;
                     """, (
-                        salary_data['base'],        # K + L
-                        salary_data['bonus'],       # M
-                        salary_data['extra'],       # N
-                        salary_data['total'],       # K + L + M + N
+                        salary_data['total'],       # wage = K + L + M (GROSS)
+                        salary_data['base'],        # K (Basic Salary)
+                        salary_data['bonus'],       # M (Major Bonus)
+                        salary_data['extra'],       # L (Other Bonus)
                         contract_id
                     ))
 
@@ -370,6 +373,7 @@ class ContractUpdater:
                 cur.execute("""
                     SELECT
                         e.name,
+                        c.wage,
                         c.ueipab_salary_base,
                         c.ueipab_bonus_regular,
                         c.ueipab_extra_bonus
@@ -385,31 +389,33 @@ class ContractUpdater:
                 if not result:
                     continue
 
-                name, actual_base, actual_bonus, actual_extra = result
+                name, actual_wage, actual_base, actual_bonus, actual_extra = result
                 verified_count += 1
 
                 # Check with small tolerance (0.01)
-                if (abs(float(actual_base) - expected['base']) > 0.01 or
+                if (abs(float(actual_wage) - expected['total']) > 0.01 or
+                    abs(float(actual_base) - expected['base']) > 0.01 or
                     abs(float(actual_bonus) - expected['bonus']) > 0.01 or
                     abs(float(actual_extra) - expected['extra']) > 0.01):
                     mismatches.append({
                         'name': name,
                         'expected': expected,
                         'actual': {
+                            'wage': float(actual_wage),
                             'base': float(actual_base),
                             'bonus': float(actual_bonus),
                             'extra': float(actual_extra)
                         }
                     })
                 else:
-                    print(f"  ✓ {name}: Verified")
+                    print(f"  ✓ {name}: wage=${float(actual_wage):.2f} (K=${float(actual_base):.2f} + M=${float(actual_bonus):.2f} + L=${float(actual_extra):.2f})")
 
             if mismatches:
                 print(f"\n⚠️  Found {len(mismatches)} mismatches:")
                 for m in mismatches:
                     print(f"  {m['name']}:")
-                    print(f"    Expected: Base=${m['expected']['base']:.2f}, Bonus=${m['expected']['bonus']:.2f}, Extra=${m['expected']['extra']:.2f}")
-                    print(f"    Actual:   Base=${m['actual']['base']:.2f}, Bonus=${m['actual']['bonus']:.2f}, Extra=${m['actual']['extra']:.2f}")
+                    print(f"    Expected: wage=${m['expected']['total']:.2f} (Base=${m['expected']['base']:.2f} + Bonus=${m['expected']['bonus']:.2f} + Extra=${m['expected']['extra']:.2f})")
+                    print(f"    Actual:   wage=${m['actual']['wage']:.2f} (Base=${m['actual']['base']:.2f} + Bonus=${m['actual']['bonus']:.2f} + Extra=${m['actual']['extra']:.2f})")
                 return False
             else:
                 print(f"\n✓ All {verified_count} contracts verified successfully!")
