@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit and extend the payslip generation wizard -->
+    <record id="hr_payslip_employees_view_form_inherit" model="ir.ui.view">
+        <field name="name">hr.payslip.employees.view.form.inherit</field>
+        <field name="model">hr.payslip.employees</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_employees_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Add structure selector before employee list -->
+            <xpath expr="//field[@name='employee_ids']" position="before">
+
+                <!-- Info banner explaining the feature -->
+                <div class="alert alert-info" role="alert" style="margin-bottom: 10px;">
+                    <strong>Salary Structure Override:</strong>
+                    <p style="margin-bottom: 5px;">
+                        By default, each payslip uses the structure from the employee's contract.
+                        Select a structure below to override this for all payslips in this batch.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <em>Common use cases: Aguinaldos, bonuses, liquidations, or any special payroll.</em>
+                    </p>
+                </div>
+
+                <!-- Structure selector -->
+                <group>
+                    <group>
+                        <field name="structure_id"
+                               options="{'no_create': True, 'no_open': True}"
+                               placeholder="Leave empty to use contract structure"/>
+                    </group>
+                    <group>
+                        <field name="use_contract_structure" invisible="1"/>
+                    </group>
+                </group>
+
+                <!-- Visual indicator when override is active -->
+                <div class="alert alert-success" role="alert"
+                     invisible="structure_id == False"
+                     style="margin-bottom: 10px;">
+                    <i class="fa fa-check-circle" title="Success"/>
+                    <strong>Structure Override Active:</strong>
+                    All payslips will use the selected structure above.
+                </div>
+
+            </xpath>
+
+        </field>
+    </record>
+</odoo>
