@@ -55,7 +55,7 @@ class ContractUpdater:
             return False
 
     def get_spreadsheet_salaries(self):
-        """Get salaries from spreadsheet - READS ALL FOUR COLUMNS: K, L, M, N"""
+        """Get salaries from spreadsheet - READS THREE SALARY COLUMNS: K, L, M"""
         worksheet = self.spreadsheet.worksheet(self.target_sheet)
 
         # Get exchange rate from cell O2
@@ -69,10 +69,9 @@ class ContractUpdater:
 
         # Column indices (0-based)
         COL_NAME = 3   # D: Employee Name
-        COL_K = 10     # K: Monthly Salary VEB
-        COL_L = 11     # L: Salary 70% VEB (additional salary)
-        COL_M = 12     # M: Bonus 25% VEB
-        COL_N = 13     # N: Extra 5% VEB
+        COL_K = 10     # K: Basic Salary Component (deductions apply)
+        COL_L = 11     # L: Other Bonus (no deductions)
+        COL_M = 12     # M: Major Bonus Component (no deductions)
 
         employee_salaries = {}
         skipped_count = 0
@@ -90,14 +89,13 @@ class ContractUpdater:
                 continue
 
             try:
-                # *** CRITICAL FIX: Read ALL FOUR columns ***
-                k_veb = self.parse_veb(row[COL_K])  # Base Salary
-                l_veb = self.parse_veb(row[COL_L])  # Additional Salary (often 0)
-                m_veb = self.parse_veb(row[COL_M])  # Regular Bonus
-                n_veb = self.parse_veb(row[COL_N])  # Extra Bonus
+                # *** CRITICAL FIX: Read THREE salary columns ***
+                k_veb = self.parse_veb(row[COL_K])  # Basic Salary
+                l_veb = self.parse_veb(row[COL_L])  # Other Bonus
+                m_veb = self.parse_veb(row[COL_M])  # Major Bonus
 
                 # Skip if all values are zero
-                if k_veb == 0 and l_veb == 0 and m_veb == 0 and n_veb == 0:
+                if k_veb == 0 and l_veb == 0 and m_veb == 0:
                     skipped_count += 1
                     continue
 
@@ -105,23 +103,23 @@ class ContractUpdater:
                 k_usd = k_veb / exchange_rate
                 l_usd = l_veb / exchange_rate
                 m_usd = m_veb / exchange_rate
-                n_usd = n_veb / exchange_rate
 
-                # *** CORRECT MAPPING: K+L → base, M → bonus, N → extra ***
-                salary_base = k_usd + l_usd      # Base + Additional
-                bonus_regular = m_usd             # Regular Bonus
-                extra_bonus = n_usd               # Extra Bonus
-                total_usd = salary_base + bonus_regular + extra_bonus
+                # *** CORRECT MAPPING: Direct from spreadsheet ***
+                # K = Basic Salary (deductions apply)
+                # L = Other Bonus (no deductions)
+                # M = Major Bonus (no deductions)
+                salary_base = k_usd       # K: Basic Salary
+                bonus_regular = m_usd     # M: Major Bonus
+                extra_bonus = l_usd       # L: Other Bonus
+                total_usd = k_usd + l_usd + m_usd  # wage = GROSS
 
                 employee_salaries[employee_name] = {
                     'k_veb': k_veb,
                     'l_veb': l_veb,
                     'm_veb': m_veb,
-                    'n_veb': n_veb,
                     'k_usd': k_usd,
                     'l_usd': l_usd,
                     'm_usd': m_usd,
-                    'n_usd': n_usd,
                     'base': round(salary_base, 2),
                     'bonus': round(bonus_regular, 2),
                     'extra': round(extra_bonus, 2),
@@ -300,8 +298,8 @@ class ContractUpdater:
 
                     updated_count += 1
 
-                    print(f"  ✓ {actual_name:<35} Total=${salary_data['total']:>8.2f} "
-                          f"(K+L=${salary_data['base']:.2f}, M=${salary_data['bonus']:.2f}, N=${salary_data['extra']:.2f})")
+                    print(f"  ✓ {actual_name:<35} wage=${salary_data['total']:>8.2f} "
+                          f"(K=${salary_data['base']:.2f}, M=${salary_data['bonus']:.2f}, L=${salary_data['extra']:.2f})")
 
                     # In test mode, only update first employee
                     if test_mode:
@@ -446,10 +444,11 @@ class ContractUpdater:
         print(f"Spreadsheet: {self.payroll_sheet_id}")
         print(f"Sheet: {self.target_sheet}")
         print("="*80)
-        print("\n✓ CRITICAL FIX: Now reading ALL FOUR columns (K, L, M, N)")
-        print("  - K + L → ueipab_salary_base (base + additional)")
-        print("  - M → ueipab_bonus_regular (bonus)")
-        print("  - N → ueipab_extra_bonus (extra)")
+        print("\n✓ CRITICAL FIX: Now reading THREE salary columns (K, L, M)")
+        print("  - wage = K + L + M (GROSS, no deductions)")
+        print("  - K → ueipab_salary_base (Basic Salary - deductions apply)")
+        print("  - M → ueipab_bonus_regular (Major Bonus - no deductions)")
+        print("  - L → ueipab_extra_bonus (Other Bonus - no deductions)")
         print("="*80)
 
         # Connect to spreadsheet
