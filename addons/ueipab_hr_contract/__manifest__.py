@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB HR Contract Extensions',
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'category': 'Human Resources',
     'summary': 'Venezuelan payroll fields for UEIPAB contracts',
     'description': """
@@ -11,6 +11,7 @@ This module extends the HR contract model with Venezuelan payroll fields:
 - Bi-monthly payroll schedule
 - Prestaciones sociales tracking
 - Cesta Ticket management
+- Aguinaldos (Christmas Bonus) tracking with audit trail
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',
