@@ -68,18 +68,28 @@ class HrPayslip(models.Model):
                 self.default_get(['journal_id'])['journal_id'])
 
     def action_payslip_cancel(self):
-        """Cancel the payroll slip and associated accounting entries.This
-        method cancels the current payroll slip by canceling its associated
+        """Cancel the payroll slip and associated accounting entries.
+
+        This method cancels the current payroll slip by canceling its associated
         accounting entries (moves). If a move is in the 'posted' state, it is
-        first uncanceled, then all moves are unlinked. Finally, the method
-        calls the parent class's action_payslip_cancel method."""
+        canceled to maintain audit trail.
+
+        BUSINESS POLICY:
+        - NEVER delete journal entries (audit trail requirement)
+        - Only CANCEL journal entries to preserve history
+        - Journal entries remain visible with state='cancel'
+
+        Note: Original code deleted journal entries, which violated audit trail policy.
+        """
         moves = self.mapped('move_id')
+        # Cancel posted journal entries (preserves audit trail)
         moves.filtered(lambda x: x.state == 'posted').button_cancel()
-        moves.unlink()
+        # Business policy: Do NOT delete journal entries
+        # moves.unlink()  # ← DISABLED per business policy
         return super(HrPayslip, self).action_payslip_cancel()
 
     def unlink(self):
-        """Override unlink to delete associated journal entries before deleting payslips.
+        """Override unlink to cancel associated journal entries before deleting payslips.
 
         CRITICAL FIX: Without this, deleting payslips leaves orphaned journal entries
         that remain posted in accounting, causing data integrity issues:
@@ -88,10 +98,15 @@ class HrPayslip(models.Model):
         - Cannot be reconciled or traced back to payslip
         - Violates accounting best practices
 
+        BUSINESS POLICY:
+        - NEVER delete journal entries (audit trail requirement)
+        - Only CANCEL journal entries to preserve history
+        - Maintains complete audit trail for tracking and compliance
+
         This method:
         1. Collects all journal entries (move_id) for payslips being deleted
         2. Cancels posted journal entries (button_cancel)
-        3. Deletes the journal entries (unlink)
+        3. Does NOT delete journal entries (preserved for audit trail)
         4. Then calls parent unlink to delete the payslips
 
         Note: Parent unlink() already checks that payslips are in draft/cancel state
@@ -99,11 +114,12 @@ class HrPayslip(models.Model):
         # Collect all journal entries associated with these payslips
         moves = self.mapped('move_id').filtered(lambda m: m.id)
 
-        # Cancel posted journal entries first (required before deletion)
+        # Cancel posted journal entries (preserves audit trail - NO deletion)
         moves.filtered(lambda x: x.state == 'posted').button_cancel()
 
-        # Delete the journal entries to prevent orphans
-        moves.unlink()
+        # Business policy: Do NOT delete journal entries
+        # They remain in system with state='cancel' for audit trail
+        # moves.unlink()  # ← DISABLED per business policy
 
         # Now delete the payslips (parent will check state)
         return super(HrPayslip, self).unlink()
