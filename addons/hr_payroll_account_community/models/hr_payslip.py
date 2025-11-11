@@ -78,6 +78,36 @@ class HrPayslip(models.Model):
         moves.unlink()
         return super(HrPayslip, self).action_payslip_cancel()
 
+    def unlink(self):
+        """Override unlink to delete associated journal entries before deleting payslips.
+
+        CRITICAL FIX: Without this, deleting payslips leaves orphaned journal entries
+        that remain posted in accounting, causing data integrity issues:
+        - Journal entries stay in general ledger
+        - Inflates expenses and payables
+        - Cannot be reconciled or traced back to payslip
+        - Violates accounting best practices
+
+        This method:
+        1. Collects all journal entries (move_id) for payslips being deleted
+        2. Cancels posted journal entries (button_cancel)
+        3. Deletes the journal entries (unlink)
+        4. Then calls parent unlink to delete the payslips
+
+        Note: Parent unlink() already checks that payslips are in draft/cancel state
+        """
+        # Collect all journal entries associated with these payslips
+        moves = self.mapped('move_id').filtered(lambda m: m.id)
+
+        # Cancel posted journal entries first (required before deletion)
+        moves.filtered(lambda x: x.state == 'posted').button_cancel()
+
+        # Delete the journal entries to prevent orphans
+        moves.unlink()
+
+        # Now delete the payslips (parent will check state)
+        return super(HrPayslip, self).unlink()
+
     def action_payslip_done(self):
         """Finalize and post the payroll slip, creating accounting entries.This
          method is called when marking a payroll slip as done. It calculates
