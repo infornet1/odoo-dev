@@ -94,15 +94,19 @@ class HrPayslipRun(models.Model):
             - Never delete records, only cancel them for audit trail
             - Cancelled batches can be reopened with action_draft
             - All associated payslips are also cancelled
-            - Only draft or closed batches can be cancelled
+            - All associated journal entries are also cancelled
 
         Technical Implementation:
             - Sets batch state to 'cancel'
             - Calls action_payslip_cancel on all associated payslips
-            - Prevents cancellation if batch has confirmed journal entries
+            - Payslip cancellation automatically handles journal entries:
+              * Posted entries are reset to draft via button_draft()
+              * Then cancelled via button_cancel()
+              * Batch operation handles multiple entries efficiently
+              * Preserves audit trail (no deletion)
 
         Raises:
-            UserError: If batch cannot be cancelled
+            UserError: If batch is already cancelled
         """
         for batch in self:
             # Validate batch can be cancelled
@@ -111,17 +115,9 @@ class HrPayslipRun(models.Model):
                     _('This batch is already cancelled.')
                 )
 
-            # Check for confirmed journal entries
-            confirmed_moves = batch.slip_ids.mapped('move_id').filtered(
-                lambda m: m.state == 'posted'
-            )
-            if confirmed_moves:
-                raise UserError(
-                    _('Cannot cancel batch with posted journal entries. '
-                      'Please cancel the journal entries first.')
-                )
-
             # Cancel all associated payslips
+            # Note: action_payslip_cancel() automatically handles posted journal entries
+            # via button_cancel(), which resets them to draft then cancels them.
             payslips_to_cancel = batch.slip_ids.filtered(
                 lambda s: s.state not in ('cancel', 'draft')
             )
