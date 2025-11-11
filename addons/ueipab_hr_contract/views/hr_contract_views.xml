@@ -20,7 +20,7 @@
                         <field name="second_payment_day" string="2nd Payment Day"/>
                     </group>
                     <group name="venezuelan_withholding_tax" string="💰 Venezuelan Withhold Income Tax (ARI)">
-                        <field name="ueipab_ari_withholding_rate" string="ARI Rate (%)" widget="percentage"/>
+                        <field name="ueipab_ari_withholding_rate" string="ARI Rate (%)"/>
                         <field name="ueipab_ari_last_update" string="Last Updated"/>
                     </group>
                 </group>

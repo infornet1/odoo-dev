@@ -96,9 +96,14 @@ class ContractUpdater:
                 m_veb = self.parse_veb(row[COL_M])  # Major Bonus
 
                 # Read ARI withholding tax rate (Column AA)
-                ari_rate_str = row[COL_AA].strip() if len(row) > COL_AA else '0.5'
+                # Default to 1.0% (lower tax bracket) if not specified
+                # Can be 0% for employees without ARI withholding
+                ari_rate_str = row[COL_AA].strip() if len(row) > COL_AA else '1.0'
                 # Remove % sign if present and convert to float
-                ari_rate = float(ari_rate_str.replace('%', '').strip()) if ari_rate_str else 0.5
+                if ari_rate_str and ari_rate_str.replace('%', '').strip():
+                    ari_rate = float(ari_rate_str.replace('%', '').strip())
+                else:
+                    ari_rate = 1.0  # Default to 1% if empty
 
                 # Skip if all values are zero
                 if k_veb == 0 and l_veb == 0 and m_veb == 0:

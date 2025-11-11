@@ -21,21 +21,18 @@ db_config = {
 
 # New ARI formula using contract-specific rate
 NEW_ARI_FORMULA = """# Venezuelan ARI (Withholding Income Tax): Variable rate on K (Basic Salary) ONLY
-# Rate varies by employee (0.5% or 1%) based on tax bracket - stored in contract
-# DOUBLED from monthly rate to apply FULL MONTHLY withholding in bi-weekly payslip
-# Spreadsheet applies monthly deductions to each bi-weekly payment
+# Rate varies by employee (1% or 2%) based on tax bracket - stored in contract
+# Contract field stores the BI-WEEKLY rate directly from spreadsheet Column AA
+# Spreadsheet applies bi-weekly deductions to each bi-weekly payment
 
 # Get base salary (K component, bi-weekly)
 salary_base = VE_SALARY_70 if VE_SALARY_70 else 0.0
 
-# Get ARI rate from contract (as decimal: 0.5% = 0.005, 1% = 0.01)
-# Default to 0.5% if not set
-ari_rate_monthly = (contract.ueipab_ari_withholding_rate / 100.0) if contract.ueipab_ari_withholding_rate else 0.005
+# Get ARI rate from contract (as decimal: 1% = 0.01, 2% = 0.02)
+# Default to 1% if not set (lower tax bracket)
+ari_rate_biweekly = (contract.ueipab_ari_withholding_rate / 100.0) if contract.ueipab_ari_withholding_rate else 0.01
 
-# DOUBLE the monthly rate for bi-weekly application
-ari_rate_biweekly = ari_rate_monthly * 2
-
-# Calculate deduction
+# Calculate deduction - apply bi-weekly rate directly
 result = -(salary_base * ari_rate_biweekly)"""
 
 def main():
@@ -128,23 +125,23 @@ def main():
         print("EXPECTED IMPACT")
         print("=" * 80)
 
-        print("\n📊 NELCI BRITO (Contract rate: 0.5%):")
+        print("\n📊 NELCI BRITO (Contract rate: 1% bi-weekly):")
         nelci_k_biweekly = 70.18
         nelci_ari_old = nelci_k_biweekly * 0.01
-        nelci_ari_new = nelci_k_biweekly * 0.01  # 0.5% * 2 = 1%
+        nelci_ari_new = nelci_k_biweekly * 0.01
         print(f"  K bi-weekly: ${nelci_k_biweekly:.2f}")
         print(f"  Old ARI (fixed 1%): ${nelci_ari_old:.2f}")
-        print(f"  New ARI (0.5% × 2): ${nelci_ari_new:.2f}")
+        print(f"  New ARI (contract 1%): ${nelci_ari_new:.2f}")
         print(f"  Difference: ${abs(nelci_ari_new - nelci_ari_old):.2f}")
         print(f"  NET Impact: $0.00 ✓ (no change for NELCI)")
 
-        print("\n📊 RAFAEL PEREZ (Contract rate: 1.0%):")
+        print("\n📊 RAFAEL PEREZ (Contract rate: 2% bi-weekly):")
         rafael_k_biweekly = 59.55
         rafael_ari_old = rafael_k_biweekly * 0.01
-        rafael_ari_new = rafael_k_biweekly * 0.02  # 1.0% * 2 = 2%
+        rafael_ari_new = rafael_k_biweekly * 0.02
         print(f"  K bi-weekly: ${rafael_k_biweekly:.2f}")
         print(f"  Old ARI (fixed 1%): ${rafael_ari_old:.2f}")
-        print(f"  New ARI (1.0% × 2): ${rafael_ari_new:.2f}")
+        print(f"  New ARI (contract 2%): ${rafael_ari_new:.2f}")
         print(f"  Difference: ${abs(rafael_ari_new - rafael_ari_old):.2f}")
         print(f"  NET Impact: -${rafael_ari_new - rafael_ari_old:.2f} (correctly increases deduction)")
 
