@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Payslip State Control
+         Maintain batch-payslip state integrity
+         ======================================== -->
+
+    <!-- Extend payslip form to control button visibility based on batch state -->
+    <record id="hr_payslip_form_batch_state_control" model="ir.ui.view">
+        <field name="name">hr.payslip.form.batch.state.control</field>
+        <field name="model">hr.payslip</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Add payslip_run_state field (hidden, for visibility control) -->
+            <field name="state" position="before">
+                <field name="payslip_run_state" invisible="1"/>
+            </field>
+
+            <!-- Modify "Set to Draft" button visibility to check batch state -->
+            <button name="action_payslip_draft" position="attributes">
+                <attribute name="invisible">state != 'cancel' or payslip_run_state == 'cancel'</attribute>
+            </button>
+
+            <!-- Add warning banner when payslip belongs to cancelled batch -->
+            <header position="inside">
+                <div class="alert alert-warning mb-0"
+                     role="alert"
+                     invisible="payslip_run_state != 'cancel'">
+                    <strong>Cancelled Batch:</strong> This payslip belongs to a cancelled batch and cannot be modified.
+                    To reopen, first set the batch to draft.
+                </div>
+            </header>
+
+        </field>
+    </record>
+
+</odoo>
