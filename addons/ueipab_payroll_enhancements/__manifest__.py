@@ -33,9 +33,9 @@ Use Cases:
     ],
     'data': [
         'views/hr_payslip_employees_views.xml',
-        'views/hr_payslip_run_view.xml',
         'reports/report_actions.xml',
         'reports/disbursement_list_report.xml',
+        'views/hr_payslip_run_view.xml',
     ],
     'installable': True,
     'application': False,
