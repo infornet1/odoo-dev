@@ -40,35 +40,43 @@ class HrPayslipLine(models.Model):
 
         # For liquidation rules (LIQUID_*), always use employee's partner
         if self.salary_rule_id.code and self.salary_rule_id.code.startswith('LIQUID_'):
-            # Try to get individual employee partner first
+            # Use employee's work contact (individual partner)
             if self.slip_id.employee_id:
-                # Check if there's a partner with the employee's name
-                employee_partner = self.env['res.partner'].search([
-                    ('name', '=', self.slip_id.employee_id.name),
-                    ('is_company', '=', True)
-                ], limit=1)
-                if employee_partner:
-                    return employee_partner.id
+                if self.slip_id.employee_id.work_contact_id:
+                    return self.slip_id.employee_id.work_contact_id.id
                 # Fallback to employee's address_id
                 if self.slip_id.employee_id.address_id:
                     return self.slip_id.employee_id.address_id.id
 
-        # Original logic for receivable/payable accounts
+        # For receivable/payable accounts, use EMPLOYEE's individual partner
+        # This ensures journal entries show employee as partner (not company)
+        # Critical for: partner ledger, aging reports, payment reconciliation
         if credit_account:
             if self.salary_rule_id.account_credit_id.account_type in (
                     'asset_receivable', 'liability_payable'):
-                # Try employee's address as fallback
-                if self.slip_id.employee_id.address_id:
-                    return self.slip_id.employee_id.address_id.id
+                if self.slip_id.employee_id:
+                    # Use work_contact_id (employee's individual partner record)
+                    if self.slip_id.employee_id.work_contact_id:
+                        return self.slip_id.employee_id.work_contact_id.id
+                    # Fallback to address_id (company) only if work_contact missing
+                    if self.slip_id.employee_id.address_id:
+                        return self.slip_id.employee_id.address_id.id
         else:
             if self.salary_rule_id.account_debit_id.account_type in (
                     'asset_receivable', 'liability_payable'):
-                # Try employee's address as fallback
-                if self.slip_id.employee_id.address_id:
-                    return self.slip_id.employee_id.address_id.id
+                if self.slip_id.employee_id:
+                    # Use work_contact_id (employee's individual partner record)
+                    if self.slip_id.employee_id.work_contact_id:
+                        return self.slip_id.employee_id.work_contact_id.id
+                    # Fallback to address_id (company) only if work_contact missing
+                    if self.slip_id.employee_id.address_id:
+                        return self.slip_id.employee_id.address_id.id
 
-        # For all other payroll entries, use employee's partner
-        if self.slip_id.employee_id and self.slip_id.employee_id.address_id:
-            return self.slip_id.employee_id.address_id.id
+        # For all other payroll entries, use employee's individual partner
+        if self.slip_id.employee_id:
+            if self.slip_id.employee_id.work_contact_id:
+                return self.slip_id.employee_id.work_contact_id.id
+            if self.slip_id.employee_id.address_id:
+                return self.slip_id.employee_id.address_id.id
 
         return False
