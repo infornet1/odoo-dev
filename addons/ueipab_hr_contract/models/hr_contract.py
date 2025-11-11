@@ -27,6 +27,15 @@ class HrContract(models.Model):
         help="Total wage amount in Venezuelan Bolivars"
     )
 
+    # Venezuelan Deduction Base
+    ueipab_deduction_base = fields.Monetary(
+        'Deduction Base (K+L)',
+        help="Original Column K + L value used for calculating monthly deductions. "
+             "This is the base amount BEFORE 70/25/5 distribution and BEFORE extracting Cesta Ticket. "
+             "Deductions (IVSS, FAOV, INCES, ARI) are calculated on this amount per spreadsheet logic. "
+             "Formula: deduction_base = Column K + Column L (from payroll spreadsheet)"
+    )
+
     # Venezuelan Payroll Schedule
     bimonthly_payroll = fields.Boolean(
         'Bi-monthly Payroll',
