@@ -1,1 +1,2 @@
 - "Always remember that we should works locally never in production env"
+- "Always memorize this script for sync btw env scripts/sync-veb-rates-from-production.sql and also keep in mind NEVER TOUCH DB_UEIPAB without proper authorization from me"

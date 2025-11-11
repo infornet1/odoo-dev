@@ -272,17 +272,43 @@ def action_apply_exchange_rate(self):
 - ✅ No breaking changes
 - ✅ Future extensibility
 
+## Implementation Status
+
+### ✅ COMPLETED - Version 17.0.1.5.0
+
+**Implementation Date:** 2025-11-11
+
+All features successfully implemented:
+
+1. **Exchange Rate Field** ✅
+   - Added to hr.payslip.run model
+   - Float field with (12, 6) digits precision
+   - Computed from first payslip's exchange_rate_used
+   - Store=True, readonly=False (user editable)
+   - Displayed next to Total Net Payable in form view
+
+2. **Apply to Payslips Button** ✅ **CRITICAL FEATURE**
+   - One-click bulk update of all payslips in batch
+   - Updates exchange_rate_used and exchange_rate_date
+   - Success notification with count of updated payslips
+   - Button visibility: only when exchange_rate set and payslips exist
+
+**Business Impact:**
+- Users can now see exchange rate at batch level
+- Easy override when market rate changes
+- Bulk update replaces manual editing of 44+ individual payslips
+- Maintains awareness of currency conversion for financial planning
+
 ## Conclusion
 
-**Recommended:** Implement simple approach (Phase 1)
+**Status:** COMPLETED ✅
 
-This provides exactly what user requested:
+This implementation provides exactly what user requested:
 - Cosmetic UI enhancement ✅
 - Keeps rate in mind ✅
 - Allows adjustment ✅
 - No complex computation ✅
 - Simple implementation ✅
+- **BONUS:** Bulk apply feature for critical business need ✅
 
-Can enhance later with Phase 2 features if needed.
-
-**Version:** 17.0.1.5.0 (minor feature)
+**Version:** 17.0.1.5.0 (deployed)
