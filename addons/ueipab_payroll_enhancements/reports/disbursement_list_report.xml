@@ -51,23 +51,28 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
-                                <th style="width: 15%;">Employee ID</th>
-                                <th style="width: 35%;">Employee Name</th>
-                                <th style="width: 20%;">Department</th>
-                                <th class="text-end" style="width: 15%;">Net Amount</th>
-                                <th class="text-center" style="width: 10%;">Signature</th>
+                                <th style="width: 12%;">Employee ID</th>
+                                <th style="width: 28%;">Employee Name</th>
+                                <th style="width: 18%;">Department</th>
+                                <th class="text-end" style="width: 12%;">Net USD</th>
+                                <th class="text-center" style="width: 8%;">Rate</th>
+                                <th class="text-end" style="width: 17%;">Net VEB (Bs.)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <t t-set="sequence" t-value="1"/>
-                            <t t-set="total_amount" t-value="0"/>
+                            <t t-set="total_amount_usd" t-value="0"/>
+                            <t t-set="total_amount_veb" t-value="0"/>
 
                             <!-- Loop through payslips (only done/paid) -->
                             <t t-foreach="batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')).sorted(lambda s: s.employee_id.name)" t-as="slip">
                                 <!-- Calculate net amount for this payslip -->
                                 <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
-                                <t t-set="net_amount" t-value="net_line[0].total if net_line else 0.0"/>
-                                <t t-set="total_amount" t-value="total_amount + net_amount"/>
+                                <t t-set="net_amount_usd" t-value="net_line[0].total if net_line else 0.0"/>
+                                <t t-set="exchange_rate" t-value="slip.exchange_rate_used or 1.0"/>
+                                <t t-set="net_amount_veb" t-value="net_amount_usd * exchange_rate"/>
+                                <t t-set="total_amount_usd" t-value="total_amount_usd + net_amount_usd"/>
+                                <t t-set="total_amount_veb" t-value="total_amount_veb + net_amount_veb"/>
 
                                 <tr>
                                     <td class="text-center">
@@ -83,13 +88,13 @@
                                         <span t-field="slip.employee_id.department_id.name"/>
                                     </td>
                                     <td class="text-end">
-                                        <span t-esc="'{:,.2f}'.format(net_amount)"/>
-                                        <t t-if="batch.currency_id">
-                                            <span t-field="batch.currency_id.symbol"/>
-                                        </t>
+                                        <span t-esc="'{:,.2f}'.format(net_amount_usd)"/>
                                     </td>
-                                    <td class="text-center">
-                                        _____________
+                                    <td class="text-center small">
+                                        <span t-esc="'{:,.2f}'.format(exchange_rate)"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong><span t-esc="'{:,.2f}'.format(net_amount_veb)"/></strong>
                                     </td>
                                 </tr>
 
@@ -105,13 +110,17 @@
                                 </td>
                                 <td class="text-end">
                                     <strong>
-                                        <span t-esc="'{:,.2f}'.format(total_amount)"/>
-                                        <t t-if="batch.currency_id">
-                                            <span t-field="batch.currency_id.symbol"/>
-                                        </t>
+                                        <span t-esc="'{:,.2f}'.format(total_amount_usd)"/> $
                                     </strong>
                                 </td>
-                                <td></td>
+                                <td class="text-center">
+                                    <small class="text-muted">Dual Curr.</small>
+                                </td>
+                                <td class="text-end">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(total_amount_veb)"/> Bs.
+                                    </strong>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
@@ -151,7 +160,9 @@
                         <div class="col-12">
                             <p class="text-muted small">
                                 <strong>Note:</strong> This disbursement list shows only confirmed payslips (done/paid status).
-                                All amounts are in the company's base currency. Employee signatures confirm receipt of payment.
+                                Amounts are displayed in dual currency: USD (company base currency) and VEB (Venezuelan Bolívar).
+                                VEB amounts are calculated using the exchange rate captured when each payslip was processed.
+                                Exchange rates may vary between employees based on their payslip computation date.
                             </p>
                         </div>
                     </div>
