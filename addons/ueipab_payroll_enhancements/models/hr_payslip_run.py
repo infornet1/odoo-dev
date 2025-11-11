@@ -49,6 +49,18 @@ class HrPayslipRun(models.Model):
         help='Currency for total net amount display'
     )
 
+    exchange_rate = fields.Float(
+        string='Exchange Rate (VEB/USD)',
+        digits=(12, 6),
+        compute='_compute_exchange_rate',
+        store=True,
+        readonly=False,
+        help='Exchange rate (VEB per USD) used for payslips in this batch. '
+             'This rate is used to convert USD amounts to Venezuelan Bolívares in reports. '
+             'You can manually adjust this rate and apply it to all payslips using the '
+             '"Apply to Payslips" button.'
+    )
+
     @api.depends('slip_ids', 'slip_ids.state', 'slip_ids.line_ids', 'slip_ids.line_ids.total')
     def _compute_total_net_amount(self):
         """Calculate total net payable for all payslips in batch.
@@ -82,6 +94,30 @@ class HrPayslipRun(models.Model):
                     total += net_line[0].total
 
             batch.total_net_amount = total
+
+    @api.depends('slip_ids.exchange_rate_used')
+    def _compute_exchange_rate(self):
+        """Compute exchange rate from payslips.
+
+        Business Logic:
+            - Auto-populates from first payslip's exchange_rate_used
+            - If all payslips have same rate, shows that rate
+            - If no payslips, shows 0.0
+            - User can manually override this value
+
+        Technical Implementation:
+            - Computed field with store=True
+            - readonly=False allows manual override
+            - Used for batch-level awareness and bulk updates
+        """
+        for batch in self:
+            if batch.slip_ids:
+                # Get exchange rate from first payslip
+                first_slip = batch.slip_ids.sorted(lambda s: s.id)[0]
+                batch.exchange_rate = first_slip.exchange_rate_used or 0.0
+            else:
+                # No payslips yet
+                batch.exchange_rate = 0.0
 
     # ========================================
     # BUSINESS METHODS
@@ -154,3 +190,62 @@ class HrPayslipRun(models.Model):
             batch.state = 'draft'
 
         return True
+
+    def action_apply_exchange_rate(self):
+        """Apply batch exchange rate to all payslips.
+
+        Business Use Case:
+            - Market exchange rate changes after payslips are calculated
+            - User updates batch exchange_rate field
+            - Clicks "Apply to Payslips" button
+            - All payslips in batch get updated with new rate
+            - Batch operation (one click instead of 44 individual edits)
+
+        Business Logic:
+            - Updates exchange_rate_used on all payslips in batch
+            - Works on payslips in any state (draft, done, paid, cancel)
+            - Does NOT automatically recalculate payslips
+            - User must manually recalculate if needed
+
+        Technical Implementation:
+            - Batch write operation (efficient)
+            - Shows confirmation with count of updated payslips
+            - Returns action to refresh view
+
+        Returns:
+            dict: Action to show success message and refresh view
+        """
+        for batch in self:
+            if not batch.exchange_rate:
+                raise UserError(
+                    _('Please enter an exchange rate before applying to payslips.')
+                )
+
+            if not batch.slip_ids:
+                raise UserError(
+                    _('No payslips found in this batch.')
+                )
+
+            # Count payslips to update
+            payslip_count = len(batch.slip_ids)
+
+            # Update all payslips with batch exchange rate
+            batch.slip_ids.write({
+                'exchange_rate_used': batch.exchange_rate,
+                'exchange_rate_date': fields.Datetime.now(),
+            })
+
+            # Show success message
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Exchange Rate Applied'),
+                    'message': _('%d payslip(s) updated with exchange rate %.6f VEB/USD') % (
+                        payslip_count,
+                        batch.exchange_rate
+                    ),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }

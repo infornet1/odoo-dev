@@ -21,7 +21,7 @@
         </field>
     </record>
 
-    <!-- Extend form view to add Total Net Payable field -->
+    <!-- Extend form view to add Total Net Payable and Exchange Rate fields -->
     <record id="hr_payslip_run_form_total_net" model="ir.ui.view">
         <field name="name">hr.payslip.run.form.total.net</field>
         <field name="model">hr.payslip.run</field>
@@ -33,6 +33,16 @@
                        widget="monetary"
                        options="{'currency_field': 'currency_id'}"/>
                 <field name="currency_id" invisible="1"/>
+                <field name="exchange_rate"
+                       widget="float"
+                       options="{'digits': [12, 6]}"/>
+                <button name="action_apply_exchange_rate"
+                        type="object"
+                        string="Apply to Payslips"
+                        class="oe_link"
+                        icon="fa-refresh"
+                        help="Apply this exchange rate to all payslips in the batch"
+                        invisible="not exchange_rate or not slip_ids"/>
             </field>
         </field>
     </record>
