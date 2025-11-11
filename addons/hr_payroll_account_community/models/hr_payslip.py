@@ -93,13 +93,11 @@ class HrPayslip(models.Model):
             # Get employee's partner for the journal entry
             partner_id = False
             if slip.employee_id:
-                # Try to find individual partner record for employee
-                employee_partner = self.env['res.partner'].search([
-                    ('name', '=', slip.employee_id.name),
-                    ('is_company', '=', True)
-                ], limit=1)
-                if employee_partner:
-                    partner_id = employee_partner.id
+                # Use employee's work contact (individual partner record)
+                # This ensures journal entries show the EMPLOYEE as partner, not the company
+                # Important for: partner ledger, aging reports, payment reconciliation
+                if slip.employee_id.work_contact_id:
+                    partner_id = slip.employee_id.work_contact_id.id
                 elif slip.employee_id.address_id:
                     partner_id = slip.employee_id.address_id.id
 
