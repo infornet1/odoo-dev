@@ -11,11 +11,12 @@ BUSINESS CONTEXT:
 - Total compensation remains unchanged: Old (K+L+M) = New (70% + 25% + 5% + M)
 
 REBALANCING FORMULA:
-  New Base = Column K + Column L
+  Fixed Cesta Ticket = $40 USD (monthly)
+  New Base = Column K + Column L + (Column M - $40)
   ueipab_salary_base = New Base × 70%
   ueipab_bonus_regular = New Base × 25%
   ueipab_extra_bonus = New Base × 5%
-  cesta_ticket_usd = Column M (from spreadsheet)
+  cesta_ticket_usd = $40 USD (fixed amount)
 
 IMPORTANT SAFETY:
 - Creates backup table before any changes
@@ -146,15 +147,23 @@ class CestaTicketRebalancer:
                 m_usd = m_veb / exchange_rate if exchange_rate > 0 else 0.0
 
                 # Calculate rebalanced values
-                new_base = k_usd + l_usd
+                # Extract $40 from M as fixed Cesta Ticket
+                cesta_fixed = 40.0
+                m_remaining = m_usd - cesta_fixed
+
+                # New base = K + L + (M - $40)
+                new_base = k_usd + l_usd + m_remaining
                 new_salary_base = new_base * 0.70
                 new_bonus_regular = new_base * 0.25
                 new_extra_bonus = new_base * 0.05
-                new_cesta_ticket = m_usd
+                new_cesta_ticket = cesta_fixed
 
                 # Verification
                 old_total = k_usd + l_usd + m_usd
                 new_total = new_salary_base + new_bonus_regular + new_extra_bonus + new_cesta_ticket
+
+                # Store original K+L for deduction calculations
+                deduction_base = k_usd + l_usd
 
                 employees.append({
                     'name': employee_name,
@@ -167,6 +176,7 @@ class CestaTicketRebalancer:
                     'new_bonus_regular': new_bonus_regular,
                     'new_extra_bonus': new_extra_bonus,
                     'new_cesta_ticket': new_cesta_ticket,
+                    'deduction_base': deduction_base,
                     'old_total': old_total,
                     'new_total': new_total,
                     'difference': abs(old_total - new_total)
@@ -192,6 +202,7 @@ class CestaTicketRebalancer:
                     ueipab_bonus_regular,
                     ueipab_extra_bonus,
                     cesta_ticket_usd,
+                    ueipab_deduction_base,
                     wage,
                     state
                 FROM hr_contract
@@ -247,13 +258,15 @@ class CestaTicketRebalancer:
                         ueipab_salary_base = %s,
                         ueipab_bonus_regular = %s,
                         ueipab_extra_bonus = %s,
-                        cesta_ticket_usd = %s
+                        cesta_ticket_usd = %s,
+                        ueipab_deduction_base = %s
                     WHERE id = %s;
                 """, (
                     emp['new_salary_base'],
                     emp['new_bonus_regular'],
                     emp['new_extra_bonus'],
                     emp['new_cesta_ticket'],
+                    emp['deduction_base'],
                     contract_id
                 ))
 
@@ -276,6 +289,7 @@ class CestaTicketRebalancer:
                 c.ueipab_bonus_regular,
                 c.ueipab_extra_bonus,
                 c.cesta_ticket_usd,
+                c.ueipab_deduction_base,
                 (c.ueipab_salary_base + c.ueipab_bonus_regular + c.ueipab_extra_bonus + c.cesta_ticket_usd) as total
             FROM hr_contract c
             JOIN hr_employee e ON c.employee_id = e.id
@@ -285,12 +299,12 @@ class CestaTicketRebalancer:
         """)
 
         print(f"\n📋 Sample Verification (First 5 contracts):")
-        print(f"  {'Employee':<30} | {'70%':>10} | {'25%':>10} | {'5%':>10} | {'Cesta':>10} | {'Total':>10}")
-        print(f"  {'-'*30}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}")
+        print(f"  {'Employee':<30} | {'70%':>10} | {'25%':>10} | {'5%':>10} | {'Cesta':>10} | {'DedBase':>10} | {'Total':>10}")
+        print(f"  {'-'*30}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}-+-{'-'*10}")
 
         for row in self.cursor.fetchall():
-            name, base, bonus, extra, cesta, total = row
-            print(f"  {name:<30} | ${base:>9.2f} | ${bonus:>9.2f} | ${extra:>9.2f} | ${cesta:>9.2f} | ${total:>9.2f}")
+            name, base, bonus, extra, cesta, ded_base, total = row
+            print(f"  {name:<30} | ${base:>9.2f} | ${bonus:>9.2f} | ${extra:>9.2f} | ${cesta:>9.2f} | ${ded_base:>9.2f} | ${total:>9.2f}")
 
     def run(self):
         """Execute rebalancing process"""
