@@ -47,8 +47,8 @@
         <field name="model">hr.payslip.run</field>
         <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_form"/>
         <field name="arch" type="xml">
-            <!-- Add Print button in header, before edit button -->
-            <button name="action_validate" position="before">
+            <!-- Add Print button in header, before Close button -->
+            <button name="close_payslip_run" position="before">
                 <button name="%(ueipab_payroll_enhancements.action_report_disbursement_list)d"
                         type="action"
                         string="Print Disbursement List"
