@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'category': 'Human Resources/Payroll',
-    'summary': 'Enhanced payroll batch generation with structure selector',
+    'summary': 'Enhanced payroll batch with total net, disbursement reports, and cancel workflow',
     'description': """
 UEIPAB Payroll Enhancements
 ============================
@@ -12,6 +12,7 @@ Enhancements to HR Payroll Community for UEIPAB-specific requirements.
 Features:
 ---------
 * Salary structure selector in batch payslip generation wizard
+* Total Net Payable field in batch list and form views
 * Smart defaults based on batch name/context
 * Support for special payroll structures (Aguinaldos, bonuses, etc.)
 * Maintains backward compatibility with standard flow
@@ -21,6 +22,7 @@ Use Cases:
 * Generate Aguinaldos batch with correct structure
 * Generate bonus payslips without manual correction
 * Generate liquidation payslips with appropriate structure
+* View total net payable for disbursement planning
 * Flexible override for any special payroll scenario
     """,
     'author': 'UEIPAB',
@@ -31,6 +33,7 @@ Use Cases:
     ],
     'data': [
         'views/hr_payslip_employees_views.xml',
+        'views/hr_payslip_run_view.xml',
     ],
     'installable': True,
     'application': False,

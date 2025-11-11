@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Enhancement 1: Total Net Balance Field
+         ======================================== -->
+
+    <!-- Extend tree view to add Total Net Payable column -->
+    <record id="hr_payslip_run_tree_total_net" model="ir.ui.view">
+        <field name="name">hr.payslip.run.tree.total.net</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_tree"/>
+        <field name="arch" type="xml">
+            <!-- Add Total Net Payable column after Credit Note field -->
+            <field name="credit_note" position="after">
+                <field name="total_net_amount"
+                       string="Total Net Payable"
+                       sum="Total Net Payable"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Extend form view to add Total Net Payable field -->
+    <record id="hr_payslip_run_form_total_net" model="ir.ui.view">
+        <field name="name">hr.payslip.run.form.total.net</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_form"/>
+        <field name="arch" type="xml">
+            <!-- Add Total Net Payable field in header area, after Credit Note -->
+            <field name="credit_note" position="after">
+                <field name="total_net_amount"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"/>
+                <field name="currency_id" invisible="1"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>
