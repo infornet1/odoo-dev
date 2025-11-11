@@ -7,15 +7,30 @@ for better financial control and visibility.
 
 Enhancements:
     1. Total Net Amount: Computed field showing sum of all employee net pay
+    2. Print Disbursement List: ICF-compliant PDF report for finance approval
+    3. Cancel Workflow: Cancel batches instead of deleting (audit trail policy)
 """
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 
 class HrPayslipRun(models.Model):
-    """Extend hr.payslip.run with total net amount calculation."""
+    """Extend hr.payslip.run with total net amount calculation and cancel workflow."""
 
     _inherit = 'hr.payslip.run'
+
+    # ========================================
+    # FIELDS
+    # ========================================
+
+    # Extend state selection to add 'cancel'
+    state = fields.Selection(
+        selection_add=[('cancel', 'Cancelled')],
+        ondelete={'cancel': 'set default'},
+        help="Status for Payslip Batches. "
+             "Cancelled batches preserve audit trail without deletion."
+    )
 
     total_net_amount = fields.Monetary(
         string='Total Net Payable',
@@ -67,3 +82,79 @@ class HrPayslipRun(models.Model):
                     total += net_line[0].total
 
             batch.total_net_amount = total
+
+    # ========================================
+    # BUSINESS METHODS
+    # ========================================
+
+    def action_cancel(self):
+        """Cancel the payslip batch and all associated payslips.
+
+        Business Policy:
+            - Never delete records, only cancel them for audit trail
+            - Cancelled batches can be reopened with action_draft
+            - All associated payslips are also cancelled
+            - Only draft or closed batches can be cancelled
+
+        Technical Implementation:
+            - Sets batch state to 'cancel'
+            - Calls action_payslip_cancel on all associated payslips
+            - Prevents cancellation if batch has confirmed journal entries
+
+        Raises:
+            UserError: If batch cannot be cancelled
+        """
+        for batch in self:
+            # Validate batch can be cancelled
+            if batch.state == 'cancel':
+                raise UserError(
+                    _('This batch is already cancelled.')
+                )
+
+            # Check for confirmed journal entries
+            confirmed_moves = batch.slip_ids.mapped('move_id').filtered(
+                lambda m: m.state == 'posted'
+            )
+            if confirmed_moves:
+                raise UserError(
+                    _('Cannot cancel batch with posted journal entries. '
+                      'Please cancel the journal entries first.')
+                )
+
+            # Cancel all associated payslips
+            payslips_to_cancel = batch.slip_ids.filtered(
+                lambda s: s.state not in ('cancel', 'draft')
+            )
+            if payslips_to_cancel:
+                payslips_to_cancel.action_payslip_cancel()
+
+            # Cancel the batch
+            batch.state = 'cancel'
+
+        return True
+
+    def action_draft(self):
+        """Set cancelled batch back to draft state.
+
+        Business Logic:
+            - Allows reopening cancelled batches
+            - Does NOT automatically reopen cancelled payslips
+            - User must manually reopen payslips if needed
+
+        Technical Implementation:
+            - Sets batch state to 'draft'
+            - Only works on cancelled batches
+
+        Raises:
+            UserError: If batch is not cancelled
+        """
+        for batch in self:
+            if batch.state != 'cancel':
+                raise UserError(
+                    _('Only cancelled batches can be set to draft. '
+                      'Current state: %s') % dict(batch._fields['state'].selection).get(batch.state)
+                )
+
+            batch.state = 'draft'
+
+        return True

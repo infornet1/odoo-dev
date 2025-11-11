@@ -59,4 +59,46 @@
         </field>
     </record>
 
+    <!-- ========================================
+         Enhancement 3: Cancel Workflow
+         ======================================== -->
+
+    <!-- Add Cancel and Set to Draft buttons to form view -->
+    <record id="hr_payslip_run_form_cancel_buttons" model="ir.ui.view">
+        <field name="name">hr.payslip.run.form.cancel.buttons</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add Cancel button after Set to Draft button -->
+            <button name="action_payslip_run" position="after">
+                <button name="action_cancel"
+                        type="object"
+                        string="Cancel"
+                        class="btn-warning"
+                        icon="fa-ban"
+                        invisible="state == 'cancel'"
+                        confirm="Are you sure you want to cancel this batch? All associated payslips will also be cancelled."
+                        help="Cancel this batch and all payslips (preserves audit trail)"/>
+                <button name="action_draft"
+                        type="object"
+                        string="Set to Draft"
+                        invisible="state != 'cancel'"
+                        help="Reopen cancelled batch"/>
+            </button>
+        </field>
+    </record>
+
+    <!-- Add visual indicator for cancelled state in tree view -->
+    <record id="hr_payslip_run_tree_cancel_decoration" model="ir.ui.view">
+        <field name="name">hr.payslip.run.tree.cancel.decoration</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_tree"/>
+        <field name="arch" type="xml">
+            <!-- Add text decoration for cancelled records -->
+            <tree position="attributes">
+                <attribute name="decoration-muted">state == 'cancel'</attribute>
+            </tree>
+        </field>
+    </record>
+
 </odoo>
