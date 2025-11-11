@@ -304,6 +304,13 @@ class CestaTicketRebalancer:
 
         for row in self.cursor.fetchall():
             name, base, bonus, extra, cesta, ded_base, total = row
+            # Handle None values
+            base = float(base or 0.0)
+            bonus = float(bonus or 0.0)
+            extra = float(extra or 0.0)
+            cesta = float(cesta or 0.0)
+            ded_base = float(ded_base or 0.0)
+            total = float(total or 0.0)
             print(f"  {name:<30} | ${base:>9.2f} | ${bonus:>9.2f} | ${extra:>9.2f} | ${cesta:>9.2f} | ${ded_base:>9.2f} | ${total:>9.2f}")
 
     def run(self):
