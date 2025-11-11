@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Disbursement List Report Template
+         ICF Compliant Payroll Disbursement Report
+         ======================================== -->
+
+    <template id="report_disbursement_list_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="batch">
+                <div class="page">
+                    <!-- Report Header -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <h2>
+                                <strong>Payroll Disbursement List</strong>
+                            </h2>
+                            <h4 class="text-muted">
+                                <span t-field="batch.name"/>
+                            </h4>
+                        </div>
+                    </div>
+
+                    <!-- Batch Information -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <strong>Payroll Batch:</strong>
+                            <span t-field="batch.name"/>
+                        </div>
+                        <div class="col-6 text-end">
+                            <strong>Date:</strong>
+                            <span t-field="batch.date_start"/> - <span t-field="batch.date_end"/>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <strong>Status:</strong>
+                            <span t-if="batch.state == 'draft'" class="badge bg-secondary">Draft</span>
+                            <span t-if="batch.state == 'verify'" class="badge bg-warning">Verify</span>
+                            <span t-if="batch.state == 'close'" class="badge bg-success">Closed</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <strong>Total Employees:</strong>
+                            <span t-esc="len(batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')))"/>
+                        </div>
+                    </div>
+
+                    <!-- Employee Disbursement Table -->
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 5%;">#</th>
+                                <th style="width: 15%;">Employee ID</th>
+                                <th style="width: 35%;">Employee Name</th>
+                                <th style="width: 20%;">Department</th>
+                                <th class="text-end" style="width: 15%;">Net Amount</th>
+                                <th class="text-center" style="width: 10%;">Signature</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="sequence" t-value="1"/>
+                            <t t-set="total_amount" t-value="0"/>
+
+                            <!-- Loop through payslips (only done/paid) -->
+                            <t t-foreach="batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')).sorted(lambda s: s.employee_id.name)" t-as="slip">
+                                <!-- Calculate net amount for this payslip -->
+                                <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                <t t-set="net_amount" t-value="net_line[0].total if net_line else 0.0"/>
+                                <t t-set="total_amount" t-value="total_amount + net_amount"/>
+
+                                <tr>
+                                    <td class="text-center">
+                                        <span t-esc="sequence"/>
+                                    </td>
+                                    <td>
+                                        <span t-field="slip.employee_id.identification_id"/>
+                                    </td>
+                                    <td>
+                                        <strong><span t-field="slip.employee_id.name"/></strong>
+                                    </td>
+                                    <td>
+                                        <span t-field="slip.employee_id.department_id.name"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="'{:,.2f}'.format(net_amount)"/>
+                                        <t t-if="batch.currency_id">
+                                            <span t-field="batch.currency_id.symbol"/>
+                                        </t>
+                                    </td>
+                                    <td class="text-center">
+                                        _____________
+                                    </td>
+                                </tr>
+
+                                <t t-set="sequence" t-value="sequence + 1"/>
+                            </t>
+                        </tbody>
+
+                        <!-- Total Row -->
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <td colspan="4" class="text-end">
+                                    <strong>TOTAL NET PAYABLE:</strong>
+                                </td>
+                                <td class="text-end">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(total_amount)"/>
+                                        <t t-if="batch.currency_id">
+                                            <span t-field="batch.currency_id.symbol"/>
+                                        </t>
+                                    </strong>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <!-- ICF Signature Section -->
+                    <div class="row mt-5 pt-4">
+                        <div class="col-12">
+                            <h5 class="text-muted mb-4">
+                                <strong>Internal Control Framework - Authorization</strong>
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-4 text-center">
+                            <div class="mb-5">_______________________________</div>
+                            <div><strong>Prepared By</strong></div>
+                            <div class="text-muted small">Payroll Department</div>
+                            <div class="mt-2">Date: ______________</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="mb-5">_______________________________</div>
+                            <div><strong>Reviewed By</strong></div>
+                            <div class="text-muted small">Human Resources Manager</div>
+                            <div class="mt-2">Date: ______________</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="mb-5">_______________________________</div>
+                            <div><strong>Approved By</strong></div>
+                            <div class="text-muted small">Finance Director</div>
+                            <div class="mt-2">Date: ______________</div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Notes -->
+                    <div class="row mt-5">
+                        <div class="col-12">
+                            <p class="text-muted small">
+                                <strong>Note:</strong> This disbursement list shows only confirmed payslips (done/paid status).
+                                All amounts are in the company's base currency. Employee signatures confirm receipt of payment.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Main Report Template -->
+    <template id="report_disbursement_list">
+        <t t-call="web.html_container">
+            <t t-call="ueipab_payroll_enhancements.report_disbursement_list_document"/>
+        </t>
+    </template>
+
+</odoo>

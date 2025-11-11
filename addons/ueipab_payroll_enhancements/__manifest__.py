@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.1.0',
+    'version': '17.0.1.2.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, and cancel workflow',
     'description': """
@@ -34,6 +34,8 @@ Use Cases:
     'data': [
         'views/hr_payslip_employees_views.xml',
         'views/hr_payslip_run_view.xml',
+        'reports/report_actions.xml',
+        'reports/disbursement_list_report.xml',
     ],
     'installable': True,
     'application': False,
