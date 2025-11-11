@@ -75,3 +75,24 @@ class HrContract(models.Model):
              "Example: 'From payroll sheet 31oct2025, Column K (62,748.90 VEB) @ 219.87 VEB/USD'\n\n"
              "This provides complete traceability and allows verification of calculations at any time.",
     )
+
+    # Venezuelan Withhold Income Tax (ARI)
+    ueipab_ari_withholding_rate = fields.Float(
+        'ARI Withholding Rate (%)',
+        default=0.5,
+        help="Venezuelan Income Tax Withholding Rate (ARI - Anticipos de Retenciones del Impuesto sobre la Renta).\n\n"
+             "This is the mandatory income tax withholding percentage applied to the base salary (K component). "
+             "The rate varies by employee based on their tax bracket and salary level.\n\n"
+             "Common rates:\n"
+             "- 0.5% (lower tax bracket)\n"
+             "- 1.0% (higher tax bracket)\n\n"
+             "This rate is reviewed and updated approximately every 90 days (quarterly) by Venezuelan tax authorities. "
+             "Synced from payroll spreadsheet Column AA.\n\n"
+             "For bi-monthly payroll, this rate is DOUBLED when calculating deductions to apply the full monthly "
+             "withholding amount in each bi-weekly payslip.",
+    )
+    ueipab_ari_last_update = fields.Date(
+        'ARI Rate Last Updated',
+        help="Date when the ARI withholding rate was last reviewed/updated. "
+             "Should be updated approximately every 90 days per Venezuelan tax regulations."
+    )

@@ -72,6 +72,7 @@ class ContractUpdater:
         COL_K = 10     # K: Basic Salary Component (deductions apply)
         COL_L = 11     # L: Other Bonus (no deductions)
         COL_M = 12     # M: Major Bonus Component (no deductions)
+        COL_AA = 26    # AA: ARI Withholding Tax Rate (percentage)
 
         employee_salaries = {}
         skipped_count = 0
@@ -93,6 +94,11 @@ class ContractUpdater:
                 k_veb = self.parse_veb(row[COL_K])  # Basic Salary
                 l_veb = self.parse_veb(row[COL_L])  # Other Bonus
                 m_veb = self.parse_veb(row[COL_M])  # Major Bonus
+
+                # Read ARI withholding tax rate (Column AA)
+                ari_rate_str = row[COL_AA].strip() if len(row) > COL_AA else '0.5'
+                # Remove % sign if present and convert to float
+                ari_rate = float(ari_rate_str.replace('%', '').strip()) if ari_rate_str else 0.5
 
                 # Skip if all values are zero
                 if k_veb == 0 and l_veb == 0 and m_veb == 0:
@@ -123,7 +129,8 @@ class ContractUpdater:
                     'base': round(salary_base, 2),
                     'bonus': round(bonus_regular, 2),
                     'extra': round(extra_bonus, 2),
-                    'total': round(total_usd, 2)
+                    'total': round(total_usd, 2),
+                    'ari_rate': ari_rate  # ARI withholding tax rate (%)
                 }
 
             except Exception as e:
@@ -289,20 +296,23 @@ class ContractUpdater:
                             wage = %s,
                             ueipab_salary_base = %s,
                             ueipab_bonus_regular = %s,
-                            ueipab_extra_bonus = %s
+                            ueipab_extra_bonus = %s,
+                            ueipab_ari_withholding_rate = %s,
+                            ueipab_ari_last_update = CURRENT_DATE
                         WHERE id = %s;
                     """, (
                         salary_data['total'],       # wage = K + L + M (GROSS)
                         salary_data['base'],        # K (Basic Salary)
                         salary_data['bonus'],       # M (Major Bonus)
                         salary_data['extra'],       # L (Other Bonus)
+                        salary_data['ari_rate'],    # ARI withholding tax rate (%)
                         contract_id
                     ))
 
                     updated_count += 1
 
                     print(f"  ✓ {actual_name:<35} wage=${salary_data['total']:>8.2f} "
-                          f"(K=${salary_data['base']:.2f}, M=${salary_data['bonus']:.2f}, L=${salary_data['extra']:.2f})")
+                          f"(K=${salary_data['base']:.2f}, M=${salary_data['bonus']:.2f}, L=${salary_data['extra']:.2f}, ARI={salary_data['ari_rate']:.1f}%)")
 
                     # In test mode, only update first employee
                     if test_mode:

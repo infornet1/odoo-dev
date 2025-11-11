@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB HR Contract Extensions',
-    'version': '17.0.1.1.0',
+    'version': '17.0.1.2.0',
     'category': 'Human Resources',
     'summary': 'Venezuelan payroll fields for UEIPAB contracts',
     'description': """
@@ -12,6 +12,10 @@ This module extends the HR contract model with Venezuelan payroll fields:
 - Prestaciones sociales tracking
 - Cesta Ticket management
 - Aguinaldos (Christmas Bonus) tracking with audit trail
+- Venezuelan Withhold Income Tax (ARI) rate management
+  * Employee-specific ARI withholding rate (0.5% or 1%)
+  * Quarterly tax bracket update tracking
+  * Synced from payroll spreadsheet Column AA
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',
