@@ -33,18 +33,18 @@
                             <strong>PAYROLL DISBURSEMENT DETAIL REPORT</strong>
                         </h3>
                         <p style="margin: 2px 0; font-size: 8pt;">
-                            <t t-if="docs.env.context.get('data', {}).get('batch_name')">
-                                Batch: <strong><t t-esc="docs.env.context.get('data', {}).get('batch_name')"/></strong>
+                            <t t-if="data and data.get('batch_name')">
+                                Batch: <strong><t t-esc="data.get('batch_name')"/></strong>
                             </t>
-                            <t t-if="docs.env.context.get('data', {}).get('date_from')">
+                            <t t-if="data and data.get('date_from')">
                                 Period: <strong>
-                                    <t t-esc="docs.env.context.get('data', {}).get('date_from')"/> -
-                                    <t t-esc="docs.env.context.get('data', {}).get('date_to')"/>
+                                    <t t-esc="data.get('date_from')"/> -
+                                    <t t-esc="data.get('date_to')"/>
                                 </strong>
                             </t>
                         </p>
                         <p style="margin: 2px 0; font-size: 8pt;">
-                            Report Date: <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')"/>
+                            Report Date: <span t-esc="time.strftime('%Y-%m-%d %H:%M')"/>
                         </p>
                     </div>
                 </div>
@@ -162,11 +162,11 @@
                     <div class="col-6">
                         <p style="margin: 2px 0;">
                             <strong>Employees:</strong>
-                            <t t-esc="docs.env.context.get('data', {}).get('employee_count', len(docs.mapped('employee_id')))"/>
+                            <t t-esc="data.get('employee_count', len(docs.mapped('employee_id'))) if data else len(docs.mapped('employee_id'))"/>
                         </p>
                         <p style="margin: 2px 0;">
                             <strong>Payslips:</strong>
-                            <t t-esc="docs.env.context.get('data', {}).get('payslip_count', len(docs))"/>
+                            <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
                         </p>
                     </div>
                     <div class="col-6 text-end">
@@ -204,7 +204,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">ueipab_payroll_enhancements.report_payroll_disbursement_detail_document</field>
         <field name="report_file">ueipab_payroll_enhancements.report_payroll_disbursement_detail_document</field>
-        <field name="print_report_name">'Payroll Disbursement Detail - %s' % (object.env.context.get('data', {}).get('batch_name', 'Report'))</field>
+        <field name="print_report_name">'Payroll Disbursement Detail'</field>
         <field name="paperformat_id" ref="paperformat_payroll_disbursement_detail"/>
     </record>
 
