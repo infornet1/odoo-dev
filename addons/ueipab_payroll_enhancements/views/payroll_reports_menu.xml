@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Payroll Reports Menu Structure
+         ======================================== -->
+
+    <!-- Parent Reports Menu -->
+    <menuitem id="menu_payroll_reports"
+              name="Reports"
+              parent="hr_payroll_community.menu_hr_payroll_community_root"
+              sequence="50"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- Report 1: Payroll Disbursement Detail (FULLY WORKING) -->
+    <menuitem id="menu_payroll_disbursement_detail"
+              name="Payroll Disbursement Detail"
+              parent="menu_payroll_reports"
+              action="action_payroll_disbursement_wizard"
+              sequence="10"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- Report 2: Payroll Taxes (PLACEHOLDER) -->
+    <menuitem id="menu_payroll_taxes"
+              name="Payroll Taxes"
+              parent="menu_payroll_reports"
+              action="action_payroll_taxes_wizard"
+              sequence="20"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- Report 3: Payroll Accounting (PLACEHOLDER) -->
+    <menuitem id="menu_payroll_accounting"
+              name="Payroll Accounting"
+              parent="menu_payroll_reports"
+              action="action_payroll_accounting_wizard"
+              sequence="30"
+              groups="hr_payroll_community.group_hr_payroll_community_manager"/>
+
+    <!-- Report 4: Liquidation Forms (PLACEHOLDER) -->
+    <menuitem id="menu_liquidation_forms"
+              name="Liquidation Forms"
+              parent="menu_payroll_reports"
+              action="action_liquidation_wizard"
+              sequence="40"
+              groups="hr_payroll_community.group_hr_payroll_community_manager"/>
+
+</odoo>

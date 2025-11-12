@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Liquidation Wizard View (PLACEHOLDER) -->
+
+    <record id="liquidation_wizard_view_form" model="ir.ui.view">
+        <field name="name">liquidation.wizard.form</field>
+        <field name="model">liquidation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Liquidation Forms">
+                <div class="alert alert-info" role="alert">
+                    <strong>Report Under Development</strong><br/>
+                    This report will calculate final settlement and severance pay for departing employees.
+                </div>
+                <group>
+                    <group>
+                        <field name="employee_id"/>
+                        <field name="departure_date"/>
+                    </group>
+                    <group>
+                        <field name="departure_reason"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report" string="Generate Liquidation" type="object" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_liquidation_wizard" model="ir.actions.act_window">
+        <field name="name">Liquidation Forms</field>
+        <field name="res_model">liquidation.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

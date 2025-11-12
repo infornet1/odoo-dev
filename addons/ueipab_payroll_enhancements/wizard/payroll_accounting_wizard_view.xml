@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Payroll Accounting Wizard View (PLACEHOLDER) -->
+
+    <record id="payroll_accounting_wizard_view_form" model="ir.ui.view">
+        <field name="name">payroll.accounting.wizard.form</field>
+        <field name="model">payroll.accounting.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Payroll Accounting Report">
+                <div class="alert alert-info" role="alert">
+                    <strong>Report Under Development</strong><br/>
+                    This report will show journal entries and accounting details from payslips.
+                </div>
+                <group>
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group>
+                        <field name="batch_id"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report" string="Print Report" type="object" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_payroll_accounting_wizard" model="ir.actions.act_window">
+        <field name="name">Payroll Accounting</field>
+        <field name="res_model">payroll.accounting.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
