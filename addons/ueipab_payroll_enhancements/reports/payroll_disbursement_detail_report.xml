@@ -24,30 +24,31 @@
 
     <!-- Report Template -->
     <template id="report_payroll_disbursement_detail_document">
-        <t t-call="web.external_layout">
-            <div class="page" style="font-family: 'Courier New', monospace; font-size: 9pt;">
-                <!-- Report Header -->
-                <div class="row mb-2">
-                    <div class="col-12 text-center">
-                        <h3 style="font-family: 'Courier New', monospace; margin-bottom: 5px;">
-                            <strong>PAYROLL DISBURSEMENT DETAIL REPORT</strong>
-                        </h3>
-                        <p style="margin: 2px 0; font-size: 8pt;">
-                            <t t-if="data and data.get('batch_name')">
-                                Batch: <strong><t t-esc="data.get('batch_name')"/></strong>
-                            </t>
-                            <t t-if="data and data.get('date_from')">
-                                Period: <strong>
-                                    <t t-esc="data.get('date_from')"/> -
-                                    <t t-esc="data.get('date_to')"/>
-                                </strong>
-                            </t>
-                        </p>
-                        <p style="margin: 2px 0; font-size: 8pt;">
-                            Report Date: <span t-esc="time.strftime('%Y-%m-%d %H:%M')"/>
-                        </p>
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page" style="font-family: 'Courier New', monospace; font-size: 9pt;">
+                    <!-- Report Header -->
+                    <div class="row mb-2">
+                        <div class="col-12 text-center">
+                            <h3 style="font-family: 'Courier New', monospace; margin-bottom: 5px;">
+                                <strong>PAYROLL DISBURSEMENT DETAIL REPORT</strong>
+                            </h3>
+                            <p style="margin: 2px 0; font-size: 8pt;">
+                                <t t-if="data and data.get('batch_name')">
+                                    Batch: <strong><t t-esc="data.get('batch_name')"/></strong>
+                                </t>
+                                <t t-if="data and data.get('date_from')">
+                                    Period: <strong>
+                                        <t t-esc="data.get('date_from')"/> -
+                                        <t t-esc="data.get('date_to')"/>
+                                    </strong>
+                                </t>
+                            </p>
+                            <p style="margin: 2px 0; font-size: 8pt;">
+                                Report Date: <span t-esc="time.strftime('%Y-%m-%d %H:%M')"/>
+                            </p>
+                        </div>
                     </div>
-                </div>
 
                 <!-- Initialize totals -->
                 <t t-set="total_gross" t-value="0.0"/>
@@ -193,7 +194,7 @@
                         </p>
                     </div>
                 </div>
-            </div>
+            </t>
         </t>
     </template>
 
