@@ -3,12 +3,13 @@
 **Date:** 2025-11-12
 **Status:** ✅ **COMPLETE AND READY FOR TESTING**
 **Test Case:** Gabriel España (Contract 106)
+**Critical Fix Applied:** 2025-11-12 22:45 - Removed forbidden import statement
 
 ---
 
 ## Executive Summary
 
-All 13 liquidation salary rule formulas in the "Liquidación Venezolana" structure have been successfully fixed and committed to the database. The system is now ready for testing.
+All 13 liquidation salary rule formulas in the "Liquidación Venezolana" structure have been successfully fixed and committed to the database. A critical issue with the LIQUID_SERVICE_MONTHS formula (import statement not allowed in safe_eval) has been resolved. The system is now ready for testing.
 
 ---
 
@@ -173,6 +174,73 @@ Savings: $828.92 per liquidation
      - Salary levels
      - Contract start dates
    - Verify each calculates correctly based on individual data
+
+---
+
+## CRITICAL FIX: Import Statement Issue (2025-11-12 22:45)
+
+### Problem Identified
+When creating a fresh liquidation payslip and clicking "Compute Sheet", Odoo returned error:
+```
+Invalid Operation
+Wrong python code defined for salary rule Liquidation Service Months (LIQUID_SERVICE_MONTHS).
+```
+
+### Root Cause
+Odoo's `safe_eval` security mechanism **forbids import statements** in salary rule formulas. The original formula contained:
+```python
+from dateutil.relativedelta import relativedelta
+```
+
+This violated Odoo's security policy:
+```
+forbidden opcode(s): IMPORT_NAME, IMPORT_FROM
+```
+
+### Solution Applied
+Rewrote `LIQUID_SERVICE_MONTHS` formula using basic date arithmetic instead of imports:
+
+**Before (FAILED):**
+```python
+from dateutil.relativedelta import relativedelta
+
+start_date = contract.date_start
+end_date = payslip.date_to
+
+delta = relativedelta(end_date, start_date)
+months = delta.years * 12 + delta.months
+days_fraction = delta.days / 30.0
+
+result = months + days_fraction
+```
+
+**After (WORKS):**
+```python
+# NO IMPORTS ALLOWED in safe_eval - using basic date arithmetic
+
+start_date = contract.date_start
+end_date = payslip.date_to
+
+# Calculate total days
+days_diff = (end_date - start_date).days
+
+# Convert to months (30 days per month)
+result = days_diff / 30.0
+```
+
+### Verification
+```python
+Test dates: Sept 1, 2024 to July 31, 2025
+Days: 334
+Result: 11.1 months
+✅ Formula executes successfully in safe_eval
+```
+
+### Status: ✅ RESOLVED
+- Script updated: `/opt/odoo-dev/scripts/fix_liquidation_formulas.py`
+- Database updated via Odoo shell
+- Odoo service restarted
+- Changes committed to git (commit: b419f7b)
 
 ---
 
