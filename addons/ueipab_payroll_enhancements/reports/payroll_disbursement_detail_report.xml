@@ -13,12 +13,12 @@
         <field name="page_height">0</field>
         <field name="page_width">0</field>
         <field name="orientation">Landscape</field>
-        <field name="margin_top">10</field>
-        <field name="margin_bottom">10</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">25</field>
         <field name="margin_left">7</field>
         <field name="margin_right">7</field>
         <field name="header_line" eval="False"/>
-        <field name="header_spacing">5</field>
+        <field name="header_spacing">35</field>
         <field name="dpi">90</field>
     </record>
 
@@ -27,20 +27,23 @@
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
                 <div class="page" style="font-family: 'Courier New', monospace; font-size: 9pt;">
-                    <!-- Report Header -->
-                    <div class="row mb-2">
+                    <!-- Calculate actual period from payslips BEFORE using in header -->
+                    <t t-set="period_start" t-value="min(docs.mapped('date_from')) if docs else None"/>
+                    <t t-set="period_end" t-value="max(docs.mapped('date_to')) if docs else None"/>
+
+                    <!-- Custom Report Header (appears on every page) -->
+                    <div class="row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid #333;">
                         <div class="col-12 text-center">
-                            <h3 style="font-family: 'Courier New', monospace; margin-bottom: 5px;">
+                            <h3 style="font-family: 'Courier New', monospace; margin-bottom: 5px; margin-top: 0;">
                                 <strong>PAYROLL DISBURSEMENT DETAIL REPORT</strong>
                             </h3>
                             <p style="margin: 2px 0; font-size: 8pt;">
                                 <t t-if="data and data.get('batch_name')">
                                     Batch: <strong><t t-esc="data.get('batch_name')"/></strong>
                                 </t>
-                                <t t-if="data and data.get('date_from')">
-                                    Period: <strong>
-                                        <t t-esc="data.get('date_from')"/> -
-                                        <t t-esc="data.get('date_to')"/>
+                                <t t-if="period_start and period_end">
+                                    | Period: <strong>
+                                        <t t-esc="period_start"/> - <t t-esc="period_end"/>
                                     </strong>
                                 </t>
                             </p>
@@ -50,153 +53,178 @@
                         </div>
                     </div>
 
-                <!-- Initialize totals -->
-                <t t-set="total_gross" t-value="0.0"/>
-                <t t-set="total_ari" t-value="0.0"/>
-                <t t-set="total_social_security" t-value="0.0"/>
-                <t t-set="total_other_deductions" t-value="0.0"/>
-                <t t-set="total_net_usd" t-value="0.0"/>
-                <t t-set="total_net_veb" t-value="0.0"/>
+                    <!-- Initialize totals ONCE for the entire report -->
+                    <t t-set="total_gross" t-value="0.0"/>
+                    <t t-set="total_ari" t-value="0.0"/>
+                    <t t-set="total_sso" t-value="0.0"/>
+                    <t t-set="total_faov" t-value="0.0"/>
+                    <t t-set="total_paro" t-value="0.0"/>
+                    <t t-set="total_other_deductions" t-value="0.0"/>
+                    <t t-set="total_net_usd" t-value="0.0"/>
+                    <t t-set="total_net_veb" t-value="0.0"/>
 
-                <!-- Payslip Details Table -->
-                <table class="table table-sm table-bordered" style="font-family: 'Courier New', monospace; font-size: 8pt; margin-top: 10px;">
-                    <thead style="background-color: #e9ecef;">
-                        <tr>
-                            <th style="width: 3%; text-align: center; padding: 3px;">#</th>
-                            <th style="width: 18%; padding: 3px;">Employee</th>
-                            <th style="width: 10%; text-align: center; padding: 3px;">VAT ID</th>
-                            <th style="width: 13%; padding: 3px;">Department</th>
-                            <th style="width: 9%; text-align: right; padding: 3px;">Gross USD</th>
-                            <th style="width: 9%; text-align: right; padding: 3px;">ARI Tax</th>
-                            <th style="width: 9%; text-align: right; padding: 3px;">Soc. Sec.</th>
-                            <th style="width: 8%; text-align: right; padding: 3px;">Other Ded.</th>
-                            <th style="width: 9%; text-align: right; padding: 3px;">Net USD</th>
-                            <th style="width: 6%; text-align: center; padding: 3px;">Rate</th>
-                            <th style="width: 11%; text-align: right; padding: 3px;">Net VEB (Bs.)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <t t-set="sequence" t-value="1"/>
-                        <t t-foreach="docs" t-as="payslip">
-                            <!-- Calculate amounts for this payslip -->
-                            <t t-set="gross_amount" t-value="0.0"/>
-                            <t t-set="ari_amount" t-value="0.0"/>
-                            <t t-set="social_security_amount" t-value="0.0"/>
-                            <t t-set="other_deductions_amount" t-value="0.0"/>
-                            <t t-set="net_amount" t-value="0.0"/>
+                    <!-- Payslip Details Table -->
+                    <table class="table table-sm table-bordered" style="font-family: 'Courier New', monospace; font-size: 8pt; margin-top: 10px; width: 100%;">
+                            <thead style="background-color: #e9ecef;">
+                                <tr>
+                                    <th style="width: 2%; text-align: center; padding: 3px; font-size: 7pt;">#</th>
+                                    <th style="width: 8%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
+                                    <th style="width: 15%; padding: 3px; font-size: 7pt;">Employee</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Gross USD</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
+                                    <th style="width: 9%; text-align: right; padding: 3px; font-size: 7pt;">Net USD</th>
+                                    <th style="width: 6%; text-align: center; padding: 3px; font-size: 7pt;">Rate</th>
+                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Net VEB (Bs)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="sequence" t-value="1"/>
+                                <t t-foreach="docs" t-as="payslip">
+                                    <!-- Calculate amounts for this payslip -->
+                                    <t t-set="gross_amount" t-value="0.0"/>
+                                    <t t-set="ari_amount" t-value="0.0"/>
+                                    <t t-set="sso_amount" t-value="0.0"/>
+                                    <t t-set="faov_amount" t-value="0.0"/>
+                                    <t t-set="paro_amount" t-value="0.0"/>
+                                    <t t-set="other_deductions_amount" t-value="0.0"/>
+                                    <t t-set="net_amount" t-value="0.0"/>
 
-                            <!-- Calculate GROSS (all positive amounts - benefits/earnings) -->
-                            <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET',))" t-as="line">
-                                <t t-set="gross_amount" t-value="gross_amount + line.total"/>
-                            </t>
+                                    <!-- Calculate GROSS (all positive amounts - benefits/earnings) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET',))" t-as="line">
+                                        <t t-set="gross_amount" t-value="gross_amount + line.total"/>
+                                    </t>
 
-                            <!-- Calculate ARI (income tax withholding) -->
-                            <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI')"/>
-                            <t t-if="ari_line">
-                                <t t-set="ari_amount" t-value="abs(ari_line[0].total)"/>
-                            </t>
+                                    <!-- Calculate ARI (income tax withholding) -->
+                                    <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED')"/>
+                                    <t t-if="ari_line">
+                                        <t t-set="ari_amount" t-value="abs(ari_line[0].total)"/>
+                                    </t>
 
-                            <!-- Calculate Social Security (IVSS, BANAVIH, INCES, etc.) -->
-                            <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code in ('VE_IVSS', 'VE_IVSS_EMP', 'VE_SSO', 'VE_BANAVIH', 'VE_INCES'))" t-as="line">
-                                <t t-set="social_security_amount" t-value="social_security_amount + abs(line.total)"/>
-                            </t>
+                                    <!-- Calculate SSO (4%) -->
+                                    <t t-set="sso_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_SSO_DED')"/>
+                                    <t t-if="sso_line">
+                                        <t t-set="sso_amount" t-value="abs(sso_line[0].total)"/>
+                                    </t>
 
-                            <!-- Calculate Other Deductions (everything else negative except ARI and Social Security) -->
-                            <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI', 'VE_IVSS', 'VE_IVSS_EMP', 'VE_SSO', 'VE_BANAVIH', 'VE_INCES'))" t-as="line">
-                                <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
-                            </t>
+                                    <!-- Calculate FAOV (1%) -->
+                                    <t t-set="faov_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_FAOV_DED')"/>
+                                    <t t-if="faov_line">
+                                        <t t-set="faov_amount" t-value="abs(faov_line[0].total)"/>
+                                    </t>
 
-                            <!-- Get NET amount -->
-                            <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
-                            <t t-if="net_line">
-                                <t t-set="net_amount" t-value="net_line[0].total"/>
-                            </t>
+                                    <!-- Calculate PARO (0.5%) -->
+                                    <t t-set="paro_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_PARO_DED')"/>
+                                    <t t-if="paro_line">
+                                        <t t-set="paro_amount" t-value="abs(paro_line[0].total)"/>
+                                    </t>
 
-                            <!-- Get exchange rate -->
-                            <t t-set="exchange_rate" t-value="payslip.exchange_rate_used or 1.0"/>
-                            <t t-set="net_veb" t-value="net_amount * exchange_rate"/>
+                                    <!-- Calculate Other Deductions (everything else negative except ARI and Social Security) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI_DED', 'VE_SSO_DED', 'VE_FAOV_DED', 'VE_PARO_DED', 'LIQUID_INCES'))" t-as="line">
+                                        <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
+                                    </t>
 
-                            <!-- Accumulate totals -->
-                            <t t-set="total_gross" t-value="total_gross + gross_amount"/>
-                            <t t-set="total_ari" t-value="total_ari + ari_amount"/>
-                            <t t-set="total_social_security" t-value="total_social_security + social_security_amount"/>
-                            <t t-set="total_other_deductions" t-value="total_other_deductions + other_deductions_amount"/>
-                            <t t-set="total_net_usd" t-value="total_net_usd + net_amount"/>
-                            <t t-set="total_net_veb" t-value="total_net_veb + net_veb"/>
+                                    <!-- Get NET amount -->
+                                    <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                    <t t-if="net_line">
+                                        <t t-set="net_amount" t-value="net_line[0].total"/>
+                                    </t>
 
-                            <!-- Employee Row -->
-                            <tr>
-                                <td style="text-align: center; padding: 2px;"><t t-esc="sequence"/></td>
-                                <td style="padding: 2px;"><t t-esc="payslip.employee_id.name"/></td>
-                                <td style="text-align: center; padding: 2px;"><t t-esc="payslip.employee_id.identification_id or 'N/A'"/></td>
-                                <td style="padding: 2px;"><t t-esc="payslip.employee_id.department_id.name or 'N/A'"/></td>
-                                <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(gross_amount)"/></td>
-                                <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(ari_amount)"/></td>
-                                <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(social_security_amount)"/></td>
-                                <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(other_deductions_amount)"/></td>
-                                <td style="text-align: right; padding: 2px;"><strong><t t-esc="'{:,.2f}'.format(net_amount)"/></strong></td>
-                                <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(exchange_rate)"/></td>
-                                <td style="text-align: right; padding: 2px;"><strong><t t-esc="'{:,.2f}'.format(net_veb)"/></strong></td>
-                            </tr>
+                                    <!-- Get exchange rate -->
+                                    <t t-set="exchange_rate" t-value="payslip.exchange_rate_used or 1.0"/>
+                                    <t t-set="net_veb" t-value="net_amount * exchange_rate"/>
 
-                            <t t-set="sequence" t-value="sequence + 1"/>
-                        </t>
-                    </tbody>
+                                    <!-- Accumulate totals -->
+                                    <t t-set="total_gross" t-value="total_gross + gross_amount"/>
+                                    <t t-set="total_ari" t-value="total_ari + ari_amount"/>
+                                    <t t-set="total_sso" t-value="total_sso + sso_amount"/>
+                                    <t t-set="total_faov" t-value="total_faov + faov_amount"/>
+                                    <t t-set="total_paro" t-value="total_paro + paro_amount"/>
+                                    <t t-set="total_other_deductions" t-value="total_other_deductions + other_deductions_amount"/>
+                                    <t t-set="total_net_usd" t-value="total_net_usd + net_amount"/>
+                                    <t t-set="total_net_veb" t-value="total_net_veb + net_veb"/>
 
-                    <!-- Totals Row -->
-                    <tfoot style="background-color: #d6d8db; font-weight: bold;">
-                        <tr>
-                            <td colspan="4" style="text-align: right; padding: 3px;">TOTAL:</td>
-                            <td style="text-align: right; padding: 3px;"><t t-esc="'{:,.2f}'.format(total_gross)"/></td>
-                            <td style="text-align: right; padding: 3px;"><t t-esc="'{:,.2f}'.format(total_ari)"/></td>
-                            <td style="text-align: right; padding: 3px;"><t t-esc="'{:,.2f}'.format(total_social_security)"/></td>
-                            <td style="text-align: right; padding: 3px;"><t t-esc="'{:,.2f}'.format(total_other_deductions)"/></td>
-                            <td style="text-align: right; padding: 3px;"><strong><t t-esc="'{:,.2f}'.format(total_net_usd)"/> $</strong></td>
-                            <td style="text-align: center; padding: 3px; font-size: 7pt;">Avg</td>
-                            <td style="text-align: right; padding: 3px;"><strong><t t-esc="'{:,.2f}'.format(total_net_veb)"/> Bs.</strong></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                                    <!-- Employee Row -->
+                                    <tr>
+                                        <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="sequence"/></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.identification_id or 'N/A'"/></td>
+                                        <td style="padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.name"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(gross_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(ari_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(sso_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(faov_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(paro_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(other_deductions_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_amount)"/></strong></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="'{:,.2f}'.format(exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_veb)"/></strong></td>
+                                    </tr>
 
-                <!-- Summary Section -->
-                <div class="row mt-2" style="font-size: 8pt;">
-                    <div class="col-6">
-                        <p style="margin: 2px 0;">
-                            <strong>Employees:</strong>
-                            <t t-esc="data.get('employee_count', len(docs.mapped('employee_id'))) if data else len(docs.mapped('employee_id'))"/>
-                        </p>
-                        <p style="margin: 2px 0;">
-                            <strong>Payslips:</strong>
-                            <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
-                        </p>
+                                    <t t-set="sequence" t-value="sequence + 1"/>
+                                </t>
+                            </tbody>
+                    </table>
+
+                    <!-- Calculate 9% Tax on Net Payable -->
+                    <t t-set="tax_9_percent_usd" t-value="total_net_usd * 0.09"/>
+                    <t t-set="tax_9_percent_veb" t-value="total_net_veb * 0.09"/>
+
+                    <!-- Summary Section with Totals -->
+                    <div class="row mt-3" style="font-size: 9pt; border-top: 2px solid #333; padding-top: 10px;">
+                        <div class="col-6">
+                            <p style="margin: 3px 0;">
+                                <strong>Employees:</strong>
+                                <t t-esc="data.get('employee_count', len(docs.mapped('employee_id'))) if data else len(docs.mapped('employee_id'))"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Payslips:</strong>
+                                <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Gross:</strong> $ <t t-esc="'{:,.2f}'.format(total_gross)"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Deductions:</strong> $ <t t-esc="'{:,.2f}'.format(total_ari + total_sso + total_faov + total_paro + total_other_deductions)"/>
+                            </p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p style="margin: 3px 0; font-size: 10pt;">
+                                <strong>Total Net Payable (USD):</strong> <span style="font-size: 11pt; color: #0066cc;">$ <t t-esc="'{:,.2f}'.format(total_net_usd)"/></span>
+                            </p>
+                            <p style="margin: 3px 0; font-size: 10pt;">
+                                <strong>Total Net Payable (VEB):</strong> <span style="font-size: 11pt; color: #0066cc;">Bs. <t t-esc="'{:,.2f}'.format(total_net_veb)"/></span>
+                            </p>
+                            <p style="margin: 8px 0 3px 0; padding-top: 5px; border-top: 1px solid #ccc;">
+                                <strong>9% Tax Payable (USD):</strong> <span style="color: #cc6600;">$ <t t-esc="'{:,.2f}'.format(tax_9_percent_usd)"/></span>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>9% Tax Payable (VEB):</strong> <span style="color: #cc6600;">Bs. <t t-esc="'{:,.2f}'.format(tax_9_percent_veb)"/></span>
+                            </p>
+                        </div>
                     </div>
-                    <div class="col-6 text-end">
-                        <p style="margin: 2px 0;">
-                            <strong>Total Net Payable (USD):</strong> $ <t t-esc="'{:,.2f}'.format(total_net_usd)"/>
-                        </p>
-                        <p style="margin: 2px 0;">
-                            <strong>Total Net Payable (VEB):</strong> Bs. <t t-esc="'{:,.2f}'.format(total_net_veb)"/>
-                        </p>
-                    </div>
-                </div>
 
-                <!-- Footer Note -->
-                <div class="row mt-3" style="font-size: 7pt; color: #666;">
-                    <div class="col-12">
-                        <p style="margin: 0;">
-                            <strong>Notes:</strong>
-                            This report shows only confirmed payslips (Done/Paid status).
-                            Gross includes all earnings and benefits.
-                            ARI = Income tax withholding.
-                            Soc. Sec. = Social security contributions (IVSS, BANAVIH, INCES).
-                            Other Ded. = All other deductions.
-                            VEB amounts calculated using exchange rate from each payslip computation date.
-                        </p>
+                    <!-- Footer Note -->
+                    <div class="row mt-3" style="font-size: 7pt; color: #666;">
+                        <div class="col-12">
+                            <p style="margin: 0;">
+                                <strong>Notes:</strong>
+                                This report shows only confirmed payslips (Done/Paid status).
+                                Gross includes all earnings and benefits.
+                                ARI = Income tax withholding (SENIAT).
+                                SSO = Seguro Social Obligatorio (4%).
+                                FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
+                                PARO = Paro Forzoso (0.5%).
+                                Other Ded. = All other deductions not listed above.
+                                VEB amounts calculated using exchange rate from each payslip computation date.
+                            </p>
+                        </div>
                     </div>
-                </div>
-                </div>
-            </t>
-        </t>
+                </div><!-- close page -->
+            </t><!-- close external_layout -->
+        </t><!-- close html_container -->
     </template>
 
     <!-- Report Action -->
