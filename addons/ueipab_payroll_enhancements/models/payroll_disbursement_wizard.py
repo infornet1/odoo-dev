@@ -150,6 +150,10 @@ class PayrollDisbursementWizard(models.TransientModel):
                 '- Selected batch/date range contains payslips'
             ))
 
+        # Get payslip IDs and ensure we have a fresh recordset
+        # This is necessary because wizard is a TransientModel
+        payslip_ids = payslips.ids
+
         # Prepare report data context
         data = {
             'wizard_id': self.id,
@@ -159,13 +163,14 @@ class PayrollDisbursementWizard(models.TransientModel):
             'date_to': self.date_to,
             'employee_count': len(payslips.mapped('employee_id')),
             'payslip_count': len(payslips),
+            'payslip_ids': payslip_ids,  # Store IDs in data for debugging
         }
 
-        # Generate PDF report
-        # Pass payslip IDs to the report (not recordset, as wizard is transient)
-        return self.env.ref(
-            'ueipab_payroll_enhancements.action_report_payroll_disbursement_detail'
-        ).report_action(payslips.ids, data=data)
+        # Generate PDF report using the report's _render method directly
+        report = self.env.ref('ueipab_payroll_enhancements.action_report_payroll_disbursement_detail')
+
+        # Use report_action with explicit docids parameter
+        return report.report_action(docids=payslip_ids, data=data)
 
     def action_preview(self):
         """Preview payslips that will be included in the report.
