@@ -109,10 +109,11 @@ class PayrollDisbursementWizard(models.TransientModel):
         if self.department_ids:
             domain.append(('employee_id.department_id', 'in', self.department_ids.ids))
 
-        # Find matching payslips, sorted by employee name
-        payslips = self.env['hr.payslip'].search(domain, order='employee_id.name')
+        # Find matching payslips
+        payslips = self.env['hr.payslip'].search(domain)
 
-        return payslips
+        # Sort by employee name (can't use order='employee_id.name' in Odoo 17)
+        return payslips.sorted(lambda p: p.employee_id.name or '')
 
     def action_print_report(self):
         """Generate and print the Payroll Disbursement Detail report.
