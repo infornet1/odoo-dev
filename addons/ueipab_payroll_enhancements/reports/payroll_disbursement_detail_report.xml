@@ -50,13 +50,6 @@
                         </div>
                     </div>
 
-                <!-- Debug: Show payslip count -->
-                <div class="row mb-2" style="font-size: 8pt;">
-                    <div class="col-12">
-                        <strong>Debug - Payslips in report: <t t-esc="len(docs)"/></strong>
-                    </div>
-                </div>
-
                 <!-- Initialize totals -->
                 <t t-set="total_gross" t-value="0.0"/>
                 <t t-set="total_ari" t-value="0.0"/>
