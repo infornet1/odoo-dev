@@ -325,6 +325,10 @@ def update_liquidation_formulas():
             print(f"WARNING: Rule {rule_code} not found in database")
         print()
 
+    # IMPORTANT: Commit the changes to database
+    env.cr.commit()
+    print("✓ Changes committed to database")
+
     print("="*80)
     print(f"COMPLETED: Updated {updated_count} salary rules")
     print("="*80)
