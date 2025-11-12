@@ -12,7 +12,7 @@ from odoo import models
 class PayrollDisbursementReport(models.AbstractModel):
     """Custom report parser for Payroll Disbursement Detail report."""
 
-    _name = 'report.ueipab_payroll_enhancements.report_payroll_disbursement_detail_document'
+    _name = 'report.ueipab_payroll.disbursement_detail'
     _description = 'Payroll Disbursement Detail Report Parser'
 
     def _get_report_values(self, docids, data=None):
