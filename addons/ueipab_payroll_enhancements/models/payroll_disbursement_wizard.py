@@ -162,9 +162,10 @@ class PayrollDisbursementWizard(models.TransientModel):
         }
 
         # Generate PDF report
+        # Pass payslip IDs to the report (not recordset, as wizard is transient)
         return self.env.ref(
             'ueipab_payroll_enhancements.action_report_payroll_disbursement_detail'
-        ).report_action(payslips, data=data)
+        ).report_action(payslips.ids, data=data)
 
     def action_preview(self):
         """Preview payslips that will be included in the report.
