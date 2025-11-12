@@ -23,7 +23,7 @@
     </record>
 
     <!-- Report Template -->
-    <template id="report_payroll_disbursement_detail_document">
+    <template id="disbursement_detail_doc">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
                 <div class="page" style="font-family: 'Courier New', monospace; font-size: 9pt;">
@@ -211,8 +211,8 @@
         <field name="name">Payroll Disbursement Detail</field>
         <field name="model">hr.payslip</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">ueipab_payroll_enhancements.report_payroll_disbursement_detail_document</field>
-        <field name="report_file">ueipab_payroll_enhancements.report_payroll_disbursement_detail_document</field>
+        <field name="report_name">ueipab_payroll_enhancements.disbursement_detail_doc</field>
+        <field name="report_file">ueipab_payroll_enhancements.disbursement_detail_doc</field>
         <field name="print_report_name">'Payroll Disbursement Detail'</field>
         <field name="paperformat_id" ref="paperformat_payroll_disbursement_detail"/>
     </record>
