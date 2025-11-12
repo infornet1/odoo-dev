@@ -66,7 +66,7 @@ class PayrollDisbursementWizard(models.TransientModel):
     payslip_count = fields.Integer(
         string='Payslips Found',
         compute='_compute_payslip_count',
-        help='Number of payslips matching current filter criteria'
+        help='Number of payslips matching current filter criteria (excludes cancelled payslips)'
     )
 
     @api.depends('filter_type', 'batch_id', 'date_from', 'date_to',
@@ -89,7 +89,9 @@ class PayrollDisbursementWizard(models.TransientModel):
         """
         self.ensure_one()
 
-        domain = [('state', 'in', ('done', 'paid'))]
+        # Include all payslips except cancelled ones
+        # This allows reporting on draft, verify, done, and paid payslips
+        domain = [('state', '!=', 'cancel')]
 
         # Filter by batch or date range
         if self.filter_type == 'batch':
@@ -141,9 +143,9 @@ class PayrollDisbursementWizard(models.TransientModel):
 
         if not payslips:
             raise UserError(_(
-                'No confirmed payslips found matching the selected criteria.\n\n'
+                'No payslips found matching the selected criteria.\n\n'
                 'Please ensure:\n'
-                '- Payslips are in "Done" or "Paid" state\n'
+                '- Payslips are not cancelled\n'
                 '- Filter criteria are correct\n'
                 '- Selected batch/date range contains payslips'
             ))
