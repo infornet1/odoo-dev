@@ -17,20 +17,18 @@ LIQUIDATION_FORMULAS = {
     'LIQUID_SERVICE_MONTHS': {
         'name': 'Service Months for Liquidation',
         'code': '''# Calculate service months from contract start to termination
-from dateutil.relativedelta import relativedelta
+# NO IMPORTS ALLOWED in safe_eval - using basic date arithmetic
 
-# Get dates
 start_date = contract.date_start
 end_date = payslip.date_to
 
-# Calculate difference
-delta = relativedelta(end_date, start_date)
-months = delta.years * 12 + delta.months
-days_fraction = delta.days / 30.0
+# Calculate total days
+days_diff = (end_date - start_date).days
 
-result = months + days_fraction
+# Convert to months (30 days per month)
+result = days_diff / 30.0
 
-# Example: Sept 1, 2024 to July 31, 2025 = 10.97 months
+# Example: Sept 1, 2024 to July 31, 2025 = 334 days = 11.13 months
 '''
     },
 
