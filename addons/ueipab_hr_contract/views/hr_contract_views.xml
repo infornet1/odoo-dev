@@ -23,6 +23,11 @@
                         <field name="ueipab_ari_withholding_rate" string="ARI Rate (%)"/>
                         <field name="ueipab_ari_last_update" string="Last Updated"/>
                     </group>
+                    <group name="venezuelan_liquidation_tracking" string="📋 Liquidation Historical Tracking">
+                        <field name="ueipab_original_hire_date" string="Original Hire Date"/>
+                        <field name="ueipab_previous_liquidation_date" string="Previous Liquidation"/>
+                        <field name="ueipab_vacation_paid_until" string="Vacation Paid Until"/>
+                    </group>
                 </group>
 
                 <!-- Hide contract type field to prevent errors -->

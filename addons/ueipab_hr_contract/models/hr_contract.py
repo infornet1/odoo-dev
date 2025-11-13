@@ -103,3 +103,53 @@ class HrContract(models.Model):
         help="Date when the ARI withholding rate was last reviewed/updated. "
              "Should be updated approximately every 90 days per Venezuelan tax regulations."
     )
+
+    # Liquidation Historical Tracking Fields (Added 2025-11-12)
+    ueipab_original_hire_date = fields.Date(
+        'Original Hire Date',
+        help="Original employment start date - first day employee began labor relationship.\n\n"
+             "Used for Antiguedad (seniority) calculation with continuity per Venezuelan law. "
+             "This date represents when the employee's total seniority period began, even if "
+             "there were gaps, rehires, or previous liquidations.\n\n"
+             "Example: Virginia Verde hired Oct 1, 2019, liquidated Jul 31, 2023, rehired Sep 1, 2023.\n"
+             "- contract.date_start = Sep 1, 2023 (company liability start)\n"
+             "- ueipab_original_hire_date = Oct 1, 2019 (for antiguedad continuity)\n\n"
+             "Data source: Spreadsheet 19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s, "
+             "Sheet 'Incremento2526', Range C5:D48 (44 employees)",
+    )
+    ueipab_previous_liquidation_date = fields.Date(
+        'Previous Liquidation Date',
+        help="Date of last full liquidation settlement (if any).\n\n"
+             "Used to subtract already-paid antiguedad from total owed. When an employee is rehired "
+             "after receiving full liquidation, we must not pay the same antiguedad twice.\n\n"
+             "Calculation Logic:\n"
+             "- Total antiguedad period: ueipab_original_hire_date to liquidation_date\n"
+             "- Already paid period: ueipab_original_hire_date to ueipab_previous_liquidation_date\n"
+             "- Net antiguedad owed: Total period - Already paid period\n\n"
+             "Example: Virginia Verde\n"
+             "- Original hire: Oct 1, 2019\n"
+             "- Previous liquidation: Jul 31, 2023 (this field)\n"
+             "- Current liquidation: Jul 31, 2025\n"
+             "- Total seniority: 71 months (Oct 2019 - Jul 2025)\n"
+             "- Already paid: 46 months (Oct 2019 - Jul 2023)\n"
+             "- Net owed: 25 months\n\n"
+             "Leave blank for employees who have never been liquidated.",
+    )
+    ueipab_vacation_paid_until = fields.Date(
+        'Vacation Paid Until',
+        help="Last date through which vacation and bono vacacional benefits were paid.\n\n"
+             "Used to calculate accrued but unpaid vacation benefits at liquidation. The school "
+             "pays all employees vacation/bono vacacional on August 1st each year for the previous "
+             "12-month period (Sep 1 - Aug 31 fiscal year).\n\n"
+             "Typical values:\n"
+             "- Aug 1, 2024: For most employees (last annual vacation payment)\n"
+             "- Aug 1, 2023: For employees who missed 2024 payment\n"
+             "- Blank: For new employees hired after last Aug 1 payment\n\n"
+             "Liquidation calculation:\n"
+             "- Period owed: (ueipab_vacation_paid_until + 1 day) to liquidation_date\n"
+             "- Days owed: (period_days / 365) * 15 days vacation + bono days based on seniority\n\n"
+             "Example: Employee liquidated Jul 31, 2025, last paid Aug 1, 2024\n"
+             "- Period: Aug 2, 2024 to Jul 31, 2025 = 364 days ≈ 1 year\n"
+             "- Vacation owed: 15 days (1 year * 15 days/year)\n"
+             "- Bono owed: 14 days (1 year * 14 days/year for 5+ years seniority)",
+    )
