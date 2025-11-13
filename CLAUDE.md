@@ -145,3 +145,106 @@ Complete technical documentation: `/opt/odoo-dev/documentation/LIQUIDATION_FORMU
 - NO changes needed to `contract.wage` field
 - Liquidation now independent and correctly calculated
 - Test with Gabriel España validated all formulas work correctly
+
+---
+
+## Liquidation Formula Enhancement - Historical Tracking (2025-11-12)
+
+### Phase 2: Adding Historical Tracking Fields
+
+After fixing the basic formulas, we identified that complex employee scenarios require additional tracking:
+
+**Problem:** Some employees (e.g., Virginia Verde) were:
+- Fully liquidated on Jul 31, 2023 (received 100% prestaciones + antiguedad)
+- Rehired Sep 1, 2023 (company liability period starts)
+- But original hire date was Oct 1, 2019 (antiguedad continuity maintained)
+
+**Solution:** Add 3 new optional fields to `ueipab_hr_contract` module:
+
+#### New Contract Fields
+
+1. **`ueipab_original_hire_date`** (Date)
+   - Purpose: Track original employment start date for antiguedad continuity
+   - Usage: Calculate total seniority regardless of gaps/rehires
+   - Example: Virginia Verde hired Oct 1, 2019 (even though rehired Sep 1, 2023)
+   - Data Source: Spreadsheet `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`, Sheet "Incremento2526", Range C5:D48 (44 employees)
+
+2. **`ueipab_previous_liquidation_date`** (Date)
+   - Purpose: Track when employee received last full liquidation settlement
+   - Usage: Subtract already-paid antiguedad from total owed
+   - Example: Virginia Verde fully paid until Jul 31, 2023
+   - Logic: Total antiguedad (Oct 2019 - Jul 2025) MINUS already paid (Oct 2019 - Jul 2023)
+
+3. **`ueipab_vacation_paid_until`** (Date)
+   - Purpose: Track last vacation/bono vacacional payment date
+   - Usage: Calculate accrued vacation benefits from this date forward
+   - Default: Aug 1, 2024 (for all employees per school fiscal calendar)
+   - Rationale: School pays all vacation benefits on Aug 1 each year
+
+#### Key Configuration Values Confirmed
+
+From spreadsheet analysis and user clarification:
+
+- **Interest Rate:** 13% annual (not 3%!) - Verified from "INTERESES DE PRESTACIONES SOCIALES PERIODO ESCOLAR 2024-2025" spreadsheet
+- **Bono Vacacional:** 14 days/year for employees with 5+ years seniority
+- **Utilidades:** 15 days minimum per year (legal baseline)
+- **Vacation Payment Date:** Aug 1 (fixed date for all employees)
+- **Company Liability Start:** Sep 1, 2023 (for all employees)
+
+#### Critical Contract Date Fix
+
+**Issue:** ALL employee contracts incorrectly showed `date_start = Sep 1, 2024`
+**Fix:** Update all contracts to `date_start = Sep 1, 2023` (1 year correction!)
+**Impact:** Currently underpaying 12 months of service on ALL liquidations
+
+#### Implementation Phases
+
+**Phase 1:** Fix contract dates (Sep 2024 → Sep 2023) - CRITICAL & URGENT
+**Phase 2:** Add 3 new fields to ueipab_hr_contract module
+**Phase 3:** Import original hire dates from spreadsheet (44 employees)
+**Phase 4:** Set previous liquidation dates for rehired employees (Virginia Verde: Jul 31, 2023)
+**Phase 5:** Set vacation paid until dates (Aug 1, 2024 for all employees)
+**Phase 6:** Update liquidation formulas:
+  - LIQUID_INTERESES: Change interest rate 0.03 → 0.13 (13% annual)
+  - LIQUID_ANTIGUEDAD: Use `ueipab_original_hire_date` if set, subtract previous liquidation period
+  - LIQUID_VACACIONES: Calculate from `ueipab_vacation_paid_until` date
+  - LIQUID_BONO_VACACIONAL: Calculate from `ueipab_vacation_paid_until` date, apply seniority-based rate
+**Phase 7:** Test Gabriel España liquidation (simple new hire case)
+**Phase 8:** Test Virginia Verde liquidation (complex rehired case with history)
+**Phase 9:** Update documentation
+
+#### Test Cases
+
+**Gabriel España (Simple Case):**
+- Hire date: Jul 27, 2022
+- No previous liquidation
+- No special history
+- Expected: Straightforward calculation from hire date to liquidation date
+
+**Virginia Verde (Complex Case):**
+- Original hire: Oct 1, 2019
+- Previous liquidation: Jul 31, 2023 (fully paid)
+- Company liability start: Sep 1, 2023
+- Liquidation date: Jul 31, 2025
+- Expected:
+  - Prestaciones: Sep 2023 - Jul 2025 (23 months)
+  - Antiguedad: Oct 2019 - Jul 2025 (71 months) MINUS Oct 2019 - Jul 2023 (46 months) = 25 months
+  - Vacaciones/Bono: Aug 2024 - Jul 2025 (12 months)
+
+#### Module Structure
+
+**ueipab_hr_contract:** Contract field extensions (new fields)
+**ueipab_payroll_enhancements:** No changes needed (inherits fields automatically)
+**Database script:** Update liquidation formulas via `/opt/odoo-dev/scripts/fix_liquidation_formulas.py`
+
+#### Documentation Files
+
+- `/opt/odoo-dev/documentation/LIQUIDATION_CLARIFICATIONS.md` - All confirmed values and decisions
+- `/opt/odoo-dev/documentation/LIQUIDATION_APPROACH_ANALYSIS.md` - Complete approach analysis (480 lines)
+- `/opt/odoo-dev/documentation/LIQUIDATION_FORMULA_FIX_2025-11-12.md` - Original formula definitions
+
+#### Status
+
+**Current Status:** All clarifications confirmed ✅ - Ready for implementation
+**Date:** 2025-11-12
+**Estimated Time:** ~6 hours total
