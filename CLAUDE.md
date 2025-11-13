@@ -272,3 +272,128 @@ From spreadsheet analysis and user clarification:
 - All commits documented with detailed messages
 
 **Production Ready:** System tested and ready for deployment to production database.
+
+---
+
+## Liquidation Formula Refinement - Fix Forbidden Imports (2025-11-13)
+
+### Issue: Odoo safe_eval Security Error
+
+When testing liquidation computation from UI, encountered critical errors:
+1. **Formula Error:** "Wrong python code defined for salary rule Vacaciones (LIQUID_VACACIONES)"
+2. **Field Error:** `"hr.contract"."ueipab_original_hire_date" field is undefined`
+
+### Root Cause Analysis
+
+**Problem 1: Forbidden Import Statement**
+Odoo's `safe_eval` security system forbids ALL import statements in Python formulas. Our formulas used:
+```python
+from datetime import timedelta  # ❌ FORBIDDEN!
+start_date = contract.ueipab_vacation_paid_until + timedelta(days=1)
+```
+
+**Problem 2: Web Assets Cache**
+- Backend: All fields exist in database ✅
+- Frontend: JavaScript cache doesn't know about new fields ❌
+- Module v1.3.0 installed but UI serving old cached assets
+
+### Solution Implemented
+
+#### Fix Script: `/opt/odoo-dev/scripts/phase6_fix_formulas_no_import.py`
+
+**Before (FORBIDDEN):**
+```python
+from datetime import timedelta
+start_date = contract.ueipab_vacation_paid_until + timedelta(days=1)
+days_in_period = (end_date - start_date).days
+```
+
+**After (ALLOWED):**
+```python
+# Direct date subtraction - no import needed!
+days_from_last_payment = (end_date - contract.ueipab_vacation_paid_until).days
+months_in_period = days_from_last_payment / 30.0
+```
+
+#### Formulas Fixed (2 Rules)
+
+1. **LIQUID_VACACIONES (Vacation Payment)**
+   - Removed: `from datetime import timedelta`
+   - Uses: Direct date arithmetic with `.days` attribute
+   - Calculates vacation accrued AFTER `ueipab_vacation_paid_until` date
+
+2. **LIQUID_BONO_VACACIONAL (Vacation Bonus)**
+   - Removed: `from datetime import timedelta`
+   - Uses: Direct date arithmetic with `.days` attribute
+   - Applies 14 days/year rate for 5+ years seniority
+   - Calculates only unpaid period
+
+#### Cache Clear Actions
+
+1. Deleted 21 cached web assets from `ir.attachment`
+2. Updated 7 contract view timestamps to force reload
+3. Restarted Odoo service
+4. User must hard-reload browser (Ctrl+Shift+R)
+
+### Execution Results
+
+```bash
+# Testing database - Formula fix
+docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
+  < /opt/odoo-dev/scripts/phase6_fix_formulas_no_import.py
+```
+
+**Output:**
+```
+✅ LIQUID_VACACIONES: Vacation Payment - FIXED (no imports)
+✅ LIQUID_BONO_VACACIONAL: Vacation Bonus - FIXED (no imports)
+📊 Fixed: 2 formulas
+```
+
+### Verification Status
+
+**Backend (Database):**
+- ✅ Module v1.3.0 installed
+- ✅ All 3 fields exist: `ueipab_original_hire_date`, `ueipab_previous_liquidation_date`, `ueipab_vacation_paid_until`
+- ✅ Database columns created in `hr_contract` table
+- ✅ Formulas contain NO forbidden imports
+
+**Frontend (Web UI):**
+- ✅ Web assets cache cleared (21 files deleted)
+- ✅ Contract views updated
+- ⚠️  User must hard-reload browser to see new fields
+
+### Database Status
+
+**Available Databases:**
+- `testing` - ✅ Working development database with all fixes
+- `ueipab` - ⚠️  Not initialized (empty database)
+
+**Active Database:** `testing` (all work performed here per user's CLAUDE.md: "always work locally never in production")
+
+### Next Steps for Further Testing
+
+**Formula Accuracy Concerns:**
+User reported formulas may still need refinement based on actual employee scenarios. Pending additional testing with various employee cases to validate:
+- Antiguedad calculations for different seniority ranges
+- Vacation accrual edge cases
+- Bono vacacional rate transitions (< 5 years vs ≥ 5 years)
+- Interest calculations on prestaciones
+- Deduction percentages (FAOV, INCES)
+
+**Status:** ⏸️ PAUSED - Awaiting additional employee scenario testing (resuming 2025-11-14)
+
+### Files Modified/Created
+
+**Created:**
+- `/opt/odoo-dev/scripts/phase6_fix_formulas_no_import.py` - Import removal fix script
+
+**Modified:**
+- Database salary rules: LIQUID_VACACIONES, LIQUID_BONO_VACACIONAL (testing database)
+
+### Key Learnings
+
+1. **Odoo Security:** `safe_eval` forbids ALL imports - use Python date arithmetic directly
+2. **Web Assets:** Module upgrades require cache clearing for UI to reflect changes
+3. **Browser Cache:** Users must hard-reload (Ctrl+Shift+R) after backend changes
+4. **Date Math:** `(date1 - date2).days` works in safe_eval, `timedelta` does not
