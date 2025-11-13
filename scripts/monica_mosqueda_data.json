@@ -1,0 +1,644 @@
+{
+  "liquidation": [
+    [],
+    [
+      "UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO - RIF J080086171"
+    ],
+    [
+      "",
+      "Recibo de Liquidacion de renuncia al cargo expresado en bolivares"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "31 de julio 2025"
+    ],
+    [
+      "DATOS DEL TRABAJADOR"
+    ],
+    [],
+    [
+      "Nombres y Apellidos:",
+      "",
+      "Monica del Valle Mosqueda Marcano"
+    ],
+    [
+      "Cedula de Identidad:",
+      "",
+      "14.818.966",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,91",
+      "0,91"
+    ],
+    [
+      "Cargo:",
+      "",
+      "Prof. De A/H"
+    ],
+    [
+      "Motivo de Egreso:",
+      "",
+      "RENUNCIA"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "300"
+    ],
+    [
+      "Tiempo de Servicio",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "328"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "A\u00f1os",
+      "Meses",
+      "Dias"
+    ],
+    [
+      "Fecha de Ingreso:",
+      "",
+      "1/9/2024",
+      "Antig\u00fcedad Total:",
+      "",
+      "0",
+      "10",
+      "28"
+    ],
+    [
+      "Fecha de Egreso:",
+      "",
+      "31/7/2025"
+    ],
+    [],
+    [
+      "Sueldos / Salarios"
+    ],
+    [],
+    [
+      "Salario Mensual:",
+      "",
+      "17.011,01"
+    ],
+    [
+      "Salario Basico Diario:",
+      "",
+      "567,03"
+    ],
+    [
+      "Salario Integral:",
+      "",
+      "642,37"
+    ],
+    [],
+    [
+      "Devengado",
+      "",
+      "",
+      "Desde",
+      "Hasta ",
+      "Dias",
+      "Diario",
+      "Total"
+    ],
+    [
+      "Vacaciones Anuales Vencidas",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Bono Vacacional Vencido",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Vacaciones Fracciones ",
+      "",
+      "",
+      "1/9/2024",
+      "31/7/2025",
+      "13,75",
+      "567,03",
+      "7.796,71"
+    ],
+    [
+      "Bono Vacacional fraccionado",
+      "",
+      "",
+      "1/9/2024",
+      "31/7/2025",
+      "13,75",
+      "567,03",
+      "7.796,71"
+    ],
+    [
+      "Utilidad / Bonif. Fin de a\u00f1o",
+      "",
+      "",
+      "1/9/2024",
+      "31/7/2025",
+      "27,50",
+      "567,03",
+      "15.593,43"
+    ],
+    [
+      "Indemnizacion Art. 92",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00"
+    ],
+    [
+      "Prestaciones en garantia",
+      "",
+      "",
+      "1/9/2024",
+      "31/7/2025",
+      "55,00",
+      "642,37",
+      "35.330,29"
+    ],
+    [
+      "Retroactivo Art. 142",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00"
+    ],
+    [
+      "Intereses sobre prestaciones sociales",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "117,89"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Total Devengado",
+      "",
+      "66.635,04"
+    ],
+    [],
+    [
+      "Deducciones",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Unidad",
+      "Total"
+    ],
+    [
+      "Prestamos",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Anticipo de Utilidades",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Dias de vacaciones tomadas por adelantado",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00"
+    ],
+    [
+      "Impusto sobre la renta (Porcentaje)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Seguro Social (N\u00ba de semanas)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Regimen Prestacional de Empleo (N\u00ba de semanas)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Regimen Prestacional de Vivienda y Habitat (Porcentaje)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "1,00",
+      "155,93"
+    ],
+    [
+      "I.N.C.E.S. (Porcentaje)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,50",
+      "77,97"
+    ],
+    [
+      "Deposito de Fideicomiso",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "Anticipo sobre Prestaciones Sociales",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "0,00",
+      "0,00"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Total Deducciones",
+      "",
+      "233,90"
+    ],
+    [],
+    [
+      "",
+      "",
+      "Total Neto a Pagar\u2026.",
+      "",
+      "66.401,13"
+    ],
+    [
+      "",
+      "",
+      "Vacaciones, Bono Vacacional y Utilidades pagadas",
+      "",
+      "15.593,43"
+    ],
+    [
+      "",
+      "",
+      "Total Neto a Pagar\u2026.",
+      "",
+      "50.807,71",
+      "USD",
+      "339,92"
+    ],
+    [
+      "El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de Cuarenta y dos mil doscientos un bolivares Con 91/100 Ctms. (42.201,91)   a su entera satisfacci\u00f3n por concepto de pago de prestaciones sociales hasta la fecha de la presente liquidaci\u00f3n, deduciendo de estas el monto cancelado por concepto de: vacaciones, bono vacacional y utilidades correspondientes a este periodo."
+    ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "Monica del Valle Mosqueda Marcano",
+      "",
+      "",
+      "",
+      "",
+      "Testigo:"
+    ],
+    [
+      "C.I.:",
+      "14.818.966",
+      "",
+      "",
+      "",
+      "C.I.:"
+    ]
+  ],
+  "interest": [
+    [],
+    [
+      "",
+      "UEIP ANDRES BELLO, C.A - RIF: J-08008617-1"
+    ],
+    [],
+    [
+      "",
+      "",
+      "Informe Antig\u00fcedad de Prestaciones Sociales e Intereses"
+    ],
+    [],
+    [
+      "  Trabajador:",
+      "Monica Mosqueda",
+      "",
+      "CI:",
+      "14.818.966",
+      "",
+      "Cargo:",
+      "Pof. p/h",
+      "Ficha:",
+      "0019"
+    ],
+    [
+      "Salario Mensual",
+      "17.011",
+      "",
+      "Fecha de Ing:",
+      "1/9/2024",
+      "",
+      "",
+      "",
+      "Fecha de Eg:",
+      "31/7/2025"
+    ],
+    [
+      "Mes  a             Calcular",
+      "Ingreso Mesual",
+      "Salario Integral",
+      "Dias x Mes",
+      "Prestaciones del Mes",
+      "Adelanto de Prestaciones",
+      "Acumulado de Prestaciones",
+      "Tasa         del Mes",
+      "Intereses Del Mes",
+      "Interese Cancelados",
+      "Intereses Ganados"
+    ],
+    [
+      "sept.-24",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,23",
+      "0,00",
+      "",
+      "0,00"
+    ],
+    [
+      "oct.-24",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,30",
+      "0,00",
+      "",
+      "0,00"
+    ],
+    [
+      "nov.-24",
+      "130,00",
+      "53,03",
+      "15",
+      "795,46",
+      "0,00",
+      "795,46",
+      "59,29",
+      "0,00",
+      "",
+      "0,00"
+    ],
+    [
+      "dic.-24",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,12",
+      "39,19",
+      "",
+      "39,19"
+    ],
+    [
+      "ene.-25",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,38",
+      "0,00",
+      "",
+      "39,19"
+    ],
+    [
+      "feb.-25",
+      "130,00",
+      "53,03",
+      "15",
+      "795,46",
+      "0,00",
+      "795,46",
+      "59,39",
+      "0,00",
+      "",
+      "39,19"
+    ],
+    [
+      "mar.-25",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,36",
+      "39,35",
+      "",
+      "78,54"
+    ],
+    [
+      "abr.-25",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,36",
+      "0,00",
+      "",
+      "78,54"
+    ],
+    [
+      "may.-25",
+      "130,00",
+      "53,03",
+      "15",
+      "795,46",
+      "0,00",
+      "795,46",
+      "59,36",
+      "0,00",
+      "",
+      "78,54"
+    ],
+    [
+      "jun.-25",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,36",
+      "39,35",
+      "",
+      "117,89"
+    ],
+    [
+      "jun.-25",
+      "130,00",
+      "53,03",
+      "0",
+      "0,00",
+      "0,00",
+      "0,00",
+      "59,36",
+      "0,00",
+      "",
+      "117,89"
+    ],
+    [
+      "Total por Emp.:",
+      "",
+      "",
+      "30",
+      "",
+      "0,00",
+      "795,46",
+      "",
+      "",
+      "",
+      "117,89"
+    ],
+    [],
+    [
+      "Prestaciones Generadas:",
+      "",
+      "",
+      "795,46"
+    ],
+    [
+      "Anticipo de Prestaciones",
+      "",
+      "",
+      "0,00"
+    ],
+    [
+      "Intereses ganados",
+      "",
+      "",
+      "117,89"
+    ],
+    [
+      "Total General",
+      "",
+      "",
+      "913,35"
+    ],
+    [
+      "Ultimo deposito de prestaciones ",
+      "",
+      "",
+      "795,46"
+    ],
+    [
+      "Recibi Conforme Informacion de lo Acreditado : ______________________________________________________________"
+    ]
+  ]
+}

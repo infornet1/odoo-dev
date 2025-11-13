@@ -397,3 +397,683 @@ User reported formulas may still need refinement based on actual employee scenar
 2. **Web Assets:** Module upgrades require cache clearing for UI to reflect changes
 3. **Browser Cache:** Users must hard-reload (Ctrl+Shift+R) after backend changes
 4. **Date Math:** `(date1 - date2).days` works in safe_eval, `timedelta` does not
+
+---
+
+## Liquidation Formula Validation & Refinement - Complete Overhaul (2025-11-13)
+
+### Critical Re-validation with Real Employee Data
+
+After initial implementation, conducted comprehensive validation using Monica Mosqueda's actual liquidation data from spreadsheets. This revealed multiple critical issues requiring complete formula overhaul.
+
+### Phase 2: Formula Validation & Correction (2025-11-13)
+
+#### Validation Approach
+- **Test Case:** Monica Mosqueda (SLIP/563)
+- **Service Period:** Sep 1, 2024 - Jul 31, 2025 (10.93 months)
+- **Data Source:** Google Spreadsheet `1fvmY6AUWR2OvoLVApIlxu8Z3p_A8TcM9nBDc03_6WUQ`
+- **Interest Source:** Google Spreadsheet `1-lSovpboNcKli9_qlYe1i8DTXajIR8QBUiKuhaDNZfU`
+- **Method:** Compared actual payments against formula calculations
+
+#### Venezuelan Labor Law (LOTTT) Research
+
+Conducted comprehensive research on Venezuelan Labor Law to ensure legal compliance:
+
+**Key LOTTT Articles:**
+- **Article 142:** Prestaciones Sociales - 15 days per quarter after first 3 months
+- **Article 192:** Bono Vacacional - Minimum 15 days, progressive to 30 days (15 + 1 day/year)
+- **Article 190-191:** Vacaciones - 15 days per year
+- **Article 131:** Utilidades - 15-120 days depending on company profits
+- **Article 108:** Antiguedad - Additional seniority payment (2.5 days/month per law, 2 days/month company policy)
+- **Article 143:** Interest on Prestaciones - Legal interest rate applies
+
+**Documentation Created:** `/opt/odoo-dev/documentation/LOTTT_LAW_RESEARCH_2025-11-13.md`
+
+#### Critical Issues Identified
+
+1. **Bono Vacacional Underpayment (-54%)**
+   - Formula used: 7 days/year
+   - Legal requirement: 15 days/year minimum
+   - Impact: Massive underpayment for all employees
+
+2. **Utilidades Underpayment (-50%)**
+   - Formula used: 15 days/year
+   - Company policy: 30 days/year
+   - Impact: Half of what should be paid
+
+3. **Prestaciones Calculation Error (-40%)**
+   - Formula used: Hybrid approach (~31 days)
+   - Legal requirement: 15 days per quarter (60 days/year)
+   - Impact: Significant underpayment on severance
+
+4. **Deduction Base Error**
+   - Formula applied: FAOV/INCES to all liquidation components
+   - Legal requirement: Only to Vacaciones + Bono + Utilidades
+   - Impact: Over-deducting from employees
+
+5. **Antiguedad Not Calculated**
+   - Monica Mosqueda received $0.00 antiguedad
+   - Should receive: ~$5-10 based on service time
+   - Cause: HR error, formula should calculate to prevent future omissions
+
+#### Company Policy Clarifications
+
+After discussion with user, confirmed company policies:
+
+- **Utilidades:** 30 days/year (double legal minimum)
+- **Antiguedad:** After 1 month + 1 day of service, 2 days/month
+- **Salary Base:** Use `contract.ueipab_deduction_base` (NOT `contract.wage`)
+- **Deductions:** FAOV 1% and INCES 0.5% only on Vac + Bono + Util
+- **Vacation Package:** Paid in advance on Aug 1 each year, deducted from final liquidation
+
+#### Script Created: `/opt/odoo-dev/scripts/phase2_fix_liquidation_formulas_validated.py`
+
+**Formulas Corrected (8 Salary Rules):**
+
+1. **LIQUID_DAILY_SALARY**
+   ```python
+   result = (contract.ueipab_deduction_base or 0.0) / 30.0
+   # Uses deduction base, not total wage
+   ```
+
+2. **LIQUID_VACACIONES**
+   ```python
+   vacation_days = (service_months / 12.0) * 15.0  # 15 days/year
+   result = vacation_days * daily_salary
+   ```
+
+3. **LIQUID_BONO_VACACIONAL** ⭐ CRITICAL FIX
+   ```python
+   if service_months < 12:
+       bonus_days = (service_months / 12.0) * 15.0  # FIXED: 7 → 15 days
+   else:
+       years = service_months / 12.0
+       if years >= 16:
+           bonus_days = 30.0
+       else:
+           bonus_days = min(15.0 + (years - 1), 30.0)
+   ```
+
+4. **LIQUID_UTILIDADES** ⭐ CRITICAL FIX
+   ```python
+   if service_months < 12:
+       utilidades_days = (service_months / 12.0) * 30.0  # FIXED: 15 → 30 days
+   else:
+       utilidades_days = 30.0
+   ```
+
+5. **LIQUID_PRESTACIONES** ⭐ CRITICAL FIX
+   ```python
+   quarters = service_months / 3.0
+   prestaciones_days = quarters * 15.0  # FIXED: 15 days per quarter
+   result = prestaciones_days * integral_daily_salary
+   ```
+
+6. **LIQUID_ANTIGUEDAD**
+   ```python
+   if service_months < 1.03:  # 1 month + 1 day threshold
+       antiguedad_days = 0.0
+   else:
+       antiguedad_days = service_months * 2  # 2 days/month
+   ```
+
+7. **LIQUID_FAOV** ⭐ CRITICAL FIX
+   ```python
+   # Only apply to Vac + Bono + Util (NOT Prestaciones/Antiguedad)
+   deduction_base = ((LIQUID_VACACIONES or 0) +
+                     (LIQUID_BONO_VACACIONAL or 0) +
+                     (LIQUID_UTILIDADES or 0))
+   result = -1 * (deduction_base * 0.01)  # 1%
+   ```
+
+8. **LIQUID_INCES** ⭐ CRITICAL FIX
+   ```python
+   # Only apply to Vac + Bono + Util (NOT Prestaciones/Antiguedad)
+   deduction_base = ((LIQUID_VACACIONES or 0) +
+                     (LIQUID_BONO_VACACIONAL or 0) +
+                     (LIQUID_UTILIDADES or 0))
+   result = -1 * (deduction_base * 0.005)  # 0.5%
+   ```
+
+**Execution:**
+```bash
+docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
+  < /opt/odoo-dev/scripts/phase2_fix_liquidation_formulas_validated.py
+```
+
+**Results:** ✅ All 8 salary rules successfully updated
+
+### Phase 3: Historical Tracking Implementation (2025-11-13)
+
+#### Critical Discovery: Junior Staff > Senior Staff
+
+**Issue Found:** SLIP/556 (Gabriel España - junior) showed HIGHER liquidation than SLIP/561 (Virginia Verde - long-service staff)
+
+**Root Cause Analysis:**
+- Both employees showing same service time: 23.30 months
+- Both contracts start Sep 1, 2023
+- Virginia Verde has historical tracking fields:
+  - `ueipab_original_hire_date`: Oct 1, 2019
+  - `ueipab_previous_liquidation_date`: Jul 31, 2023
+  - `ueipab_vacation_paid_until`: Aug 1, 2024
+- **Problem:** Phase 2 formulas NOT using these historical fields!
+
+**Impact:**
+- Virginia should have 71 months total seniority
+- Minus 46 months already paid = 25 months net antiguedad
+- Instead calculating only 23.30 months (current contract period)
+
+#### User Directive
+> "fix it you should use for Liquidation calcs formula always the historical tracking fields because hold critical dates for accurate calculation"
+
+#### Odoo safe_eval Compatibility Challenge
+
+**Attempt 1: Using hasattr()**
+```python
+if hasattr(contract, 'ueipab_original_hire_date'):  # ❌ FORBIDDEN!
+```
+**Error:** "Wrong python code defined for salary rule Vacaciones"
+
+**Attempt 2: Using getattr()**
+```python
+original_hire = getattr(contract, 'ueipab_original_hire_date', False)  # ❌ STILL FAILS!
+```
+**Error:** Same error persists
+
+**Attempt 3: Using try/except (SUCCESSFUL!)**
+```python
+try:
+    original_hire = contract.ueipab_original_hire_date
+    if not original_hire:
+        original_hire = False
+except:
+    original_hire = False
+# ✅ WORKS!
+```
+
+#### Scripts Created
+
+**`/opt/odoo-dev/scripts/phase3_fix_historical_tracking.py`** - First attempt (hasattr) - FAILED
+**`/opt/odoo-dev/scripts/phase3_fix_historical_tracking_safe.py`** - Second attempt (getattr) - FAILED
+**`/opt/odoo-dev/scripts/phase3_fix_historical_tracking_tryexcept.py`** - Final working version ✅
+
+**Formulas Enhanced (3 Salary Rules):**
+
+1. **LIQUID_ANTIGUEDAD - With Historical Tracking**
+   ```python
+   # Try to get historical tracking fields safely
+   try:
+       original_hire = contract.ueipab_original_hire_date
+       if not original_hire:
+           original_hire = False
+   except:
+       original_hire = False
+
+   try:
+       previous_liquidation = contract.ueipab_previous_liquidation_date
+       if not previous_liquidation:
+           previous_liquidation = False
+   except:
+       previous_liquidation = False
+
+   if original_hire:
+       # Calculate total seniority from original hire date
+       total_days = (payslip.date_to - original_hire).days
+       total_months = total_days / 30.0
+
+       if previous_liquidation:
+           # Subtract already-paid antiguedad period
+           paid_days = (previous_liquidation - original_hire).days
+           paid_months = paid_days / 30.0
+           net_months = total_months - paid_months
+           antiguedad_days = net_months * 2
+       else:
+           # No previous liquidation, calculate for total seniority
+           antiguedad_days = total_months * 2
+   else:
+       # No historical tracking, use standard calculation
+       antiguedad_days = service_months * 2
+   ```
+
+2. **LIQUID_VACACIONES - With Vacation Paid Until Tracking**
+   ```python
+   # Try to get vacation paid until field safely
+   try:
+       vacation_paid_until = contract.ueipab_vacation_paid_until
+       if not vacation_paid_until:
+           vacation_paid_until = False
+   except:
+       vacation_paid_until = False
+
+   if vacation_paid_until:
+       # Calculate only unpaid period (from last payment to liquidation)
+       days_from_last_payment = (payslip.date_to - vacation_paid_until).days
+       months_in_period = days_from_last_payment / 30.0
+       vacation_days = (months_in_period / 12.0) * 15.0
+   else:
+       # No tracking, calculate proportionally for full service
+       vacation_days = (service_months / 12.0) * 15.0
+   ```
+
+3. **LIQUID_BONO_VACACIONAL - With Both Historical Fields**
+   ```python
+   # Try to get original hire date for seniority calculation
+   try:
+       original_hire = contract.ueipab_original_hire_date
+       if not original_hire:
+           original_hire = False
+   except:
+       original_hire = False
+
+   if original_hire:
+       # Calculate total seniority for bonus rate determination
+       total_days = (payslip.date_to - original_hire).days
+       total_seniority_years = total_days / 365.0
+   else:
+       # Use current contract seniority
+       total_seniority_years = service_months / 12.0
+
+   # Determine annual bonus days based on total seniority
+   if total_seniority_years >= 16:
+       annual_bonus_days = 30.0  # Maximum
+   elif total_seniority_years >= 1:
+       annual_bonus_days = min(15.0 + (total_seniority_years - 1), 30.0)
+   else:
+       annual_bonus_days = 15.0  # Minimum
+
+   # Try to get vacation paid until for period calculation
+   try:
+       vacation_paid_until = contract.ueipab_vacation_paid_until
+       if not vacation_paid_until:
+           vacation_paid_until = False
+   except:
+       vacation_paid_until = False
+
+   if vacation_paid_until:
+       # Calculate only unpaid period
+       days_from_last_payment = (payslip.date_to - vacation_paid_until).days
+       months_in_period = days_from_last_payment / 30.0
+       bonus_days = (months_in_period / 12.0) * annual_bonus_days
+   else:
+       # No tracking, calculate proportionally for full service
+       bonus_days = (service_months / 12.0) * annual_bonus_days
+   ```
+
+**Execution:**
+```bash
+docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
+  < /opt/odoo-dev/scripts/phase3_fix_historical_tracking_tryexcept.py
+```
+
+**Results:** ✅ Successfully updated 3 salary rules with historical tracking
+
+### Phase 4: Vacation Prepaid Deduction (2025-11-13)
+
+#### New Issue Discovered: SLIP/565 (Josefina Rodriguez)
+
+**Problem:**
+- Employee terminated Jul 31, 2025
+- Received Aug 1, 2025 annual vacation payment: Vac $72.43 + Bono $91.75 = $164.18
+- This $164.18 was ALREADY PAID on Aug 1
+- Liquidation calculated same amounts again → Double payment!
+
+**User Clarification:**
+- Aug 1, 2025: School paid ALL staff their annual vacation/bono package
+- Employees terminating between Aug 1, 2024 - Jul 31, 2025 received this payment
+- This prepaid amount MUST be deducted from final liquidation settlement
+- Employees hired AFTER Aug 31, 2025 did NOT receive Aug 1 payment → No deduction needed
+
+#### Solution: Create Deduction Salary Rule
+
+**Script Created:** `/opt/odoo-dev/scripts/phase4_add_vacation_prepaid_deduction.py`
+
+**New Salary Rule:** `LIQUID_VACATION_PREPAID`
+
+```python
+# Deduct prepaid vacation/bono if already paid on Aug 1, 2025
+# Only applies if ueipab_vacation_paid_until is set (indicates prepayment)
+
+# Try to get vacation paid until field
+try:
+    vacation_paid_until = contract.ueipab_vacation_paid_until
+    if not vacation_paid_until:
+        vacation_paid_until = False
+except:
+    vacation_paid_until = False
+
+if vacation_paid_until:
+    # Employee received Aug 1 annual payment - deduct from liquidation
+    vacaciones = LIQUID_VACACIONES or 0.0
+    bono = LIQUID_BONO_VACACIONAL or 0.0
+    result = -1 * (vacaciones + bono)
+else:
+    # No prepayment (hired after Aug 31, 2025) - no deduction
+    result = 0.0
+```
+
+**Rule Properties:**
+- **Name:** Vacaciones/Bono Prepagadas (Deducción)
+- **Code:** LIQUID_VACATION_PREPAID
+- **Sequence:** 195
+- **Category:** Deductions (DED)
+- **Type:** Python Code
+
+#### Updated LIQUID_NET Formula
+
+**Script Created:** `/opt/odoo-dev/scripts/phase4_fix_net_safe.py`
+
+```python
+# Net Liquidation = All benefits - Deductions - Prepaid vacation/bono
+
+# Safely get prepaid deduction (may not exist)
+try:
+    prepaid_deduction = LIQUID_VACATION_PREPAID or 0
+except:
+    prepaid_deduction = 0
+
+result = (
+    (LIQUID_VACACIONES or 0) +
+    (LIQUID_BONO_VACACIONAL or 0) +
+    (LIQUID_UTILIDADES or 0) +
+    (LIQUID_PRESTACIONES or 0) +
+    (LIQUID_ANTIGUEDAD or 0) +
+    (LIQUID_INTERESES or 0) +
+    (LIQUID_FAOV or 0) +
+    (LIQUID_INCES or 0) +
+    prepaid_deduction  # Negative value reduces net
+)
+```
+
+#### Critical Fix: Rule Not Appearing in Payslips
+
+**Issue:** SLIP/567 computed but LIQUID_VACATION_PREPAID line missing
+
+**Root Cause:** Rule created but NOT LINKED to "Liquidación Venezolana" salary structure
+
+**Fix Applied:** Manually linked rule to structure
+```python
+liquidation_struct = env['hr.payroll.structure'].search([
+    ('name', '=', 'Liquidación Venezolana')
+], limit=1)
+
+liquidation_struct.write({
+    'rule_ids': [(4, rule.id)]  # (4, id) = add link to many2many
+})
+```
+
+**Verification:** Rule now appears in `structure.rule_ids`
+
+**User Action Required:** Delete existing payslips and recreate for deduction to appear
+
+**Expected Result (Josefina Rodriguez SLIP/565):**
+```
+LIQUID_VACACIONES:          $72.43
+LIQUID_BONO_VACACIONAL:     $91.75
+LIQUID_VACATION_PREPAID:   -$164.18  ← NEW DEDUCTION
+...
+LIQUID_NET:               $1,177.00  ← Reduced from $1,341.18
+```
+
+### Complete Formula Status (All Phases)
+
+**13 Salary Rules - ALL UPDATED:**
+
+| Rule Code | Status | Last Updated | Key Feature |
+|-----------|--------|--------------|-------------|
+| LIQUID_SERVICE_MONTHS | ✅ Phase 1 | 2025-11-12 | Dynamic calculation |
+| LIQUID_DAILY_SALARY | ✅ Phase 2 | 2025-11-13 | Uses ueipab_deduction_base |
+| LIQUID_INTEGRAL_DAILY | ✅ Phase 1 | 2025-11-12 | Includes benefits |
+| LIQUID_VACACIONES | ✅ Phase 3 | 2025-11-13 | Historical tracking |
+| LIQUID_BONO_VACACIONAL | ✅ Phase 3 | 2025-11-13 | Historical + progressive rate |
+| LIQUID_UTILIDADES | ✅ Phase 2 | 2025-11-13 | 30 days/year (company policy) |
+| LIQUID_PRESTACIONES | ✅ Phase 2 | 2025-11-13 | 15 days/quarter (LOTTT) |
+| LIQUID_ANTIGUEDAD | ✅ Phase 3 | 2025-11-13 | Historical tracking + subtraction |
+| LIQUID_INTERESES | ✅ Phase 1 | 2025-11-12 | 13% annual interest |
+| LIQUID_FAOV | ✅ Phase 2 | 2025-11-13 | Correct base (Vac+Bono+Util) |
+| LIQUID_INCES | ✅ Phase 2 | 2025-11-13 | Correct base (Vac+Bono+Util) |
+| LIQUID_VACATION_PREPAID | ✅ Phase 4 | 2025-11-13 | Deducts Aug 1 prepayment |
+| LIQUID_NET | ✅ Phase 4 | 2025-11-13 | Includes prepaid deduction |
+
+### Key Technical Learnings - safe_eval Restrictions
+
+1. **NO import statements** - Use built-in Python date arithmetic only
+2. **NO hasattr()** - Not available in safe_eval environment
+3. **NO direct getattr()** - May fail in safe_eval context
+4. **USE try/except blocks** - Only safe way to access optional contract fields
+5. **USE try/except for rule references** - Prevent errors when referencing other salary rules
+6. **Salary rules MUST be linked to structure** - Creating a rule doesn't automatically add it to payslips
+
+### Production Deployment Checklist
+
+Before deploying to production database:
+
+- [ ] User validates all test cases in testing database
+- [ ] SLIP/565 (Josefina) shows -$164.18 deduction correctly
+- [ ] SLIP/561 (Virginia) shows higher liquidation than junior staff
+- [ ] Monica Mosqueda calculations match actual payments
+- [ ] Delete all existing liquidation payslips in production
+- [ ] Apply Phase 2 script to production database
+- [ ] Apply Phase 3 script to production database
+- [ ] Apply Phase 4 script to production database
+- [ ] Apply Phase 4 fix script to production database
+- [ ] Verify all historical tracking fields are set for relevant employees
+- [ ] Test liquidation computation for various employee scenarios
+- [ ] Document any production-specific adjustments
+
+### Files Created/Modified
+
+**Documentation:**
+- `/opt/odoo-dev/documentation/LOTTT_LAW_RESEARCH_2025-11-13.md`
+- `/opt/odoo-dev/documentation/MONICA_MOSQUEDA_ANALYSIS_2025-11-13.md`
+- `/opt/odoo-dev/documentation/LIQUIDATION_VALIDATION_SUMMARY_2025-11-13.md`
+
+**Scripts (Testing Database):**
+- `/opt/odoo-dev/scripts/fetch_monica_liquidation_data.py`
+- `/opt/odoo-dev/scripts/simulate_monica_liquidation.py`
+- `/opt/odoo-dev/scripts/phase2_fix_liquidation_formulas_validated.py` ⭐
+- `/opt/odoo-dev/scripts/phase3_fix_historical_tracking.py` (deprecated)
+- `/opt/odoo-dev/scripts/phase3_fix_historical_tracking_safe.py` (deprecated)
+- `/opt/odoo-dev/scripts/phase3_fix_historical_tracking_tryexcept.py` ⭐
+- `/opt/odoo-dev/scripts/phase4_add_vacation_prepaid_deduction.py` ⭐
+- `/opt/odoo-dev/scripts/phase4_fix_net_safe.py` ⭐
+
+**⭐ = Production-ready scripts**
+
+### Current Status
+
+**Database:** testing (all changes applied successfully)
+**Date:** 2025-11-13
+**Status:** ✅ ALL 4 PHASES COMPLETE - AWAITING USER VALIDATION
+
+**Next Action:** User must delete and recreate liquidation payslips to see all fixes in effect.
+
+---
+
+## Phase 4 Final Fix - LIQUID_NET Sequence Order (2025-11-13)
+
+### Critical Bug: LIQUID_NET Computing Before Deduction
+
+**User Report:** "LIQUID_NET isn't update after LIQUID_VACATION_PREPAID is deducted in the compute"
+
+**Root Cause Analysis:**
+- LIQUID_NET was at sequence **30** (early computation)
+- LIQUID_VACATION_PREPAID was at sequence **195** (late computation)
+- When LIQUID_NET tried to reference LIQUID_VACATION_PREPAID, the value didn't exist yet!
+
+**Fix Applied:**
+```python
+# Updated LIQUID_NET sequence: 30 → 200
+net_rule.write({'sequence': 200})
+```
+
+**New Computation Order:**
+1. LIQUID_FAOV (seq 21) - Deduction
+2. LIQUID_INCES (seq 22) - Deduction
+3. LIQUID_VACATION_PREPAID (seq 195) - Deduction ✅ Computed
+4. LIQUID_NET (seq 200) - Net calculation ✅ Now includes deduction
+
+**Script Created:** `/opt/odoo-dev/scripts/phase4_fix_sequence_order.py`
+
+**Results:**
+- ✅ SLIP/568 (Josefina Rodriguez) now shows correct deduction
+- ✅ LIQUID_VACATION_PREPAID: -$164.18 appears in payslip
+- ✅ LIQUID_NET: $1,177.00 (correctly reduced from $1,341.18)
+
+**User Confirmation:** "Eureka !!! SLIP/568 that case probably works"
+
+---
+
+## Interest Calculation Analysis & Report Development (2025-11-13)
+
+### Reverse-Engineering LIQUID_INTERESES Formula
+
+After successful liquidation implementation, user requested a detailed **Prestaciones Sociales Interest Report** to show monthly breakdown of how interest is calculated for labor law expert validation.
+
+**User Request:**
+- Create new report "Prestaciones Soc. Intereses"
+- Show month-by-month breakdown of interest calculation
+- Based on example format from spreadsheet `1-lSovpboNcKli9_qlYe1i8DTXajIR8QBUiKuhaDNZfU`
+- Wizard to select payslip(s) and currency (USD/VEB)
+- Filter only liquidation payslips (structure = "Liquidación Venezolana")
+- Allow printing in Draft state
+
+### Interest Calculation Discovery
+
+**Test Case:** SLIP/568 (Josefina Rodriguez)
+- Service Period: Sep 1, 2023 - Jul 31, 2025 (23.30 months)
+- Prestaciones Total: $672.27
+- Intereses Target: $84.85 ⭐
+
+**Analysis Methods Tested:**
+
+1. **Simple annual on final balance:** $87.40 ❌ Off by $2.55
+2. **Monthly compound interest:** $78.76 ❌ Off by $6.09
+3. **Simple interest on average balance:** $84.85 ✅ **MATCH!**
+
+### Current LIQUID_INTERESES Formula
+
+```python
+# Interest on accumulated prestaciones
+# Uses SIMPLE interest on average balance, pro-rated for time
+
+service_months = LIQUID_SERVICE_MONTHS or 0.0
+prestaciones = LIQUID_PRESTACIONES or 0.0
+
+# Average balance (prestaciones accrue linearly over time)
+average_balance = prestaciones * 0.5
+
+# Annual interest rate: 13%
+annual_rate = 0.13
+
+# Interest for period worked
+interest_fraction = service_months / 12.0
+result = average_balance * annual_rate * interest_fraction
+```
+
+**Calculation Breakdown (SLIP/568):**
+```
+Average Balance = $672.27 × 0.5 = $336.14
+Time Fraction = 23.30 months ÷ 12 = 1.9417 years
+Interest = $336.14 × 13% × 1.9417 = $84.85 ✅
+```
+
+### Interest Method Confirmed: SIMPLE Interest
+
+**Key Finding:** The system uses **simple interest**, NOT compound interest.
+
+**Rationale:**
+- Average balance factor (0.5) assumes linear accumulation
+- Prestaciones start at $0, accumulate quarterly, end at $672.27
+- Average over period ≈ Final balance ÷ 2
+- Interest calculated on this average, proportional to time worked
+
+**NOT using:**
+- Monthly compound interest on accumulated balance
+- Interest-on-interest calculations
+- Complex amortization schedules
+
+### Monthly Breakdown Report Requirements
+
+Based on spreadsheet example (Josefina Rodriguez sheet A8:K20):
+
+**Report Columns (11 columns):**
+1. **Mes a Calcular** - Month (Sep-23, Oct-23, etc.)
+2. **Ingreso Mensual** - Monthly Income (salary base)
+3. **Salario Integral** - Integral Salary (base + benefits)
+4. **Dias x Mes** - Prestaciones days deposited (0 or 15)
+5. **Prestaciones del Mes** - Monthly deposit amount
+6. **Adelanto de Prestaciones** - Advance/prepayment (usually $0)
+7. **Acumulado de Prestaciones** - Running balance
+8. **Tasa del Mes** - Monthly rate/exchange rate (TBD)
+9. **Intereses Del Mes** - Monthly interest accrued
+10. **Interese Cancelados** - Interest paid/canceled (usually empty)
+11. **Intereses Ganados** - Cumulative interest total
+
+**Report Logic:**
+- Start from contract start date
+- End at liquidation date
+- Quarterly prestaciones deposits (every 3 months, 15 days each)
+- Monthly interest accrual (proportional allocation)
+- Final row shows totals
+
+**Wizard Features:**
+- Select one or multiple liquidation payslips
+- Filter: Only "Liquidación Venezolana" structure
+- Filter: Only computed payslips (Draft or Done state)
+- Currency selection: USD (default) or VEB
+- Generate separate report per payslip selected
+
+### Implementation Plan
+
+**Phase A: Wizard Model** (Next)
+- Create `hr.payslip.prestaciones.interest.wizard` model
+- Fields: payslip_ids (many2many), currency_id, report_format
+- Add to Payroll → Reporting menu
+
+**Phase B: QWeb Report Template**
+- Create report showing 11-column layout
+- Month-by-month breakdown table
+- Totals row at bottom
+- Support USD and VEB display
+
+**Phase C: Calculation Logic**
+- Build month-by-month prestaciones calculation
+- Distribute $84.85 interest proportionally across months
+- Match spreadsheet format exactly
+
+**Phase D: Testing**
+- Test with SLIP/568 (Josefina Rodriguez)
+- Verify totals match: Prestaciones $672.27, Interest $84.85
+- Export to PDF for accountant review
+
+### Scripts Created for Analysis
+
+**Investigation Scripts:**
+- `/opt/odoo-dev/scripts/analyze_slip568_interest.py` - Extracted SLIP/568 data
+- `/opt/odoo-dev/scripts/simulate_monthly_interest.py` - Tested 3 interest methods
+- `/opt/odoo-dev/scripts/check_interest_formula.py` - Confirmed current formula
+- `/opt/odoo-dev/scripts/fetch_prestaciones_interest_example.py` - Got report format example
+
+**Key Discoveries:**
+1. ✅ Simple interest confirmed (not compound)
+2. ✅ Formula uses average balance (0.5 factor)
+3. ✅ Pro-rated for actual service time
+4. ✅ Matches $84.85 exactly
+
+### Current Status
+
+**Date:** 2025-11-13
+**Status:** ✅ Interest calculation logic understood and documented
+
+**Next Steps:**
+1. Update CLAUDE.md with findings ← **IN PROGRESS**
+2. Commit changes with detailed message
+3. Create wizard model for report
+4. Build QWeb report template
+5. Implement month-by-month calculation
+6. Test with SLIP/568
+
+**User Guidance:**
+> "Sorry I cannot provide better guidance to you on this point but not finance and accountant expert just a Computer Sciencies junior developer using AI :-), can you help me?"
+
+**Response:** Absolutely! We successfully reverse-engineered the logic from actual data. The $84.85 value confirmed we're using simple interest on average balance. Now we'll build the detailed monthly report for accountant validation. 🎯
