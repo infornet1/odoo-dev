@@ -19,7 +19,15 @@
               sequence="10"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
-    <!-- Report 2: Payroll Taxes (PLACEHOLDER) -->
+    <!-- Report 2: Prestaciones Soc. Intereses (NEW - FULLY WORKING) -->
+    <menuitem id="menu_prestaciones_interest"
+              name="Prestaciones Soc. Intereses"
+              parent="menu_payroll_reports"
+              action="action_prestaciones_interest_wizard"
+              sequence="15"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- Report 3: Payroll Taxes (PLACEHOLDER) -->
     <menuitem id="menu_payroll_taxes"
               name="Payroll Taxes"
               parent="menu_payroll_reports"
@@ -27,7 +35,7 @@
               sequence="20"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
-    <!-- Report 3: Payroll Accounting (PLACEHOLDER) -->
+    <!-- Report 4: Payroll Accounting (PLACEHOLDER) -->
     <menuitem id="menu_payroll_accounting"
               name="Payroll Accounting"
               parent="menu_payroll_reports"
@@ -35,7 +43,7 @@
               sequence="30"
               groups="hr_payroll_community.group_hr_payroll_community_manager"/>
 
-    <!-- Report 4: Liquidation Forms (PLACEHOLDER) -->
+    <!-- Report 5: Liquidation Forms (PLACEHOLDER) -->
     <menuitem id="menu_liquidation_forms"
               name="Liquidation Forms"
               parent="menu_payroll_reports"

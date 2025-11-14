@@ -32,4 +32,30 @@
         <field name="print_report_name">'Disbursement_List_%s' % (object.name.replace('/', '_'))</field>
     </record>
 
+    <!-- Paper Format for Prestaciones Interest Report -->
+    <record id="paperformat_prestaciones_interest" model="report.paperformat">
+        <field name="name">Prestaciones Interest Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">25</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Report Action for Prestaciones Interest -->
+    <record id="action_report_prestaciones_interest" model="ir.actions.report">
+        <field name="name">Prestaciones Soc. Intereses</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.prestaciones_interest</field>
+        <field name="report_file">ueipab_payroll_enhancements.prestaciones_interest</field>
+        <field name="paperformat_id" ref="paperformat_prestaciones_interest"/>
+        <field name="print_report_name">'Prestaciones_Interest_%s' % (object.employee_id.name.replace(' ', '_'))</field>
+    </record>
+
 </odoo>

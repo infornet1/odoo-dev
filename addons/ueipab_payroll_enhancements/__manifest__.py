@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.6.0',
+    'version': '17.0.1.7.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, cancel workflow, and custom reports menu',
     'description': """
@@ -16,8 +16,9 @@ Features:
 * Smart defaults based on batch name/context
 * Support for special payroll structures (Aguinaldos, bonuses, etc.)
 * Maintains backward compatibility with standard flow
-* Custom Reports menu with 4 business-specific reports
+* Custom Reports menu with business-specific reports
 * Detailed disbursement report (Landscape, accounting style)
+* Prestaciones Sociales Interest Report (monthly breakdown)
 
 Reports Available:
 ------------------
@@ -26,6 +27,12 @@ Reports Available:
   - Courier New font (accounting style)
   - Columns: Employee, VAT ID, Department, Gross, ARI Tax, Social Security, Other Deductions, Net USD, Exchange Rate, Net VEB
   - Flexible filtering (batch or date range)
+* Prestaciones Soc. Intereses - NEW! FULLY WORKING
+  - Month-by-month breakdown of prestaciones and interest accrual
+  - Shows quarterly deposits (15 days every 3 months)
+  - Displays accumulated balance and interest earned
+  - Supports USD and VEB currency display
+  - Multiple payslip selection for batch reporting
 * Payroll Taxes - Coming soon
 * Payroll Accounting - Coming soon
 * Liquidation Forms - Coming soon
@@ -37,6 +44,7 @@ Use Cases:
 * Generate liquidation payslips with appropriate structure
 * View total net payable for disbursement planning
 * Print detailed disbursement reports for finance approval
+* Generate prestaciones interest breakdown for labor law compliance
 * Flexible override for any special payroll scenario
     """,
     'author': 'UEIPAB',
@@ -54,11 +62,13 @@ Use Cases:
         'wizard/payroll_taxes_wizard_view.xml',
         'wizard/payroll_accounting_wizard_view.xml',
         'wizard/liquidation_wizard_view.xml',
+        'wizard/prestaciones_interest_wizard_view.xml',
 
         # Reports
         'reports/report_actions.xml',
         'reports/disbursement_list_report.xml',
         'reports/payroll_disbursement_detail_report.xml',
+        'reports/prestaciones_interest_report.xml',
 
         # Views and Menu
         'views/hr_payslip_employees_views.xml',

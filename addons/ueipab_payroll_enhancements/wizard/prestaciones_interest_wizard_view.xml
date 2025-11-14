@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Prestaciones Sociales Interest Report Wizard -->
+
+    <record id="prestaciones_interest_wizard_view_form" model="ir.ui.view">
+        <field name="name">prestaciones.interest.wizard.form</field>
+        <field name="model">prestaciones.interest.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Prestaciones Sociales Interest Report">
+                <div class="alert alert-info" role="alert">
+                    <strong>Monthly Interest Breakdown Report</strong><br/>
+                    Generates a detailed month-by-month breakdown showing how prestaciones sociales
+                    and interest accumulate over the employment period.
+                </div>
+                <group>
+                    <group>
+                        <field name="payslip_ids" widget="many2many_tags"/>
+                        <field name="payslip_count" invisible="1"/>
+                    </group>
+                    <group>
+                        <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
+                    </group>
+                </group>
+                <div class="alert alert-success" role="alert" invisible="payslip_count == 0">
+                    <strong><field name="payslip_count"/> payslip(s) selected</strong><br/>
+                    A separate report will be generated for each selected payslip.
+                </div>
+                <footer>
+                    <button name="action_print_report" string="Generate Report" type="object" class="btn-primary"
+                            invisible="payslip_count == 0"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_prestaciones_interest_wizard" model="ir.actions.act_window">
+        <field name="name">Prestaciones Soc. Intereses</field>
+        <field name="res_model">prestaciones.interest.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="prestaciones_interest_wizard_view_form"/>
+    </record>
+
+</odoo>

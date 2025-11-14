@@ -8,3 +8,5 @@ from . import payroll_disbursement_report
 from . import payroll_taxes_wizard
 from . import payroll_accounting_wizard
 from . import liquidation_wizard
+from . import prestaciones_interest_wizard
+from . import prestaciones_interest_report
