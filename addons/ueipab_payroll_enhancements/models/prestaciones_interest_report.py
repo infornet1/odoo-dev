@@ -77,7 +77,10 @@ class PrestacionesInterestReport(models.AbstractModel):
         if not contract:
             return {'monthly_data': [], 'totals': {}}
 
-        # Get key values from payslip
+        # Get USD currency (payslip amounts are always in USD)
+        usd = self.env.ref('base.USD')
+
+        # Get key values from payslip (all in USD)
         prestaciones_total = self._get_line_value(payslip, 'LIQUID_PRESTACIONES')
         intereses_total = self._get_line_value(payslip, 'LIQUID_INTERESES')
         integral_daily = self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY')
@@ -128,25 +131,45 @@ class PrestacionesInterestReport(models.AbstractModel):
             month_interest = interest_per_month if month_num > 0 else 0.0
             accumulated_interest += month_interest
 
-            # Exchange rate placeholder (would need actual historical rates)
+            # Get exchange rate for this month
             exchange_rate = self._get_exchange_rate(current_date, currency)
 
             # Month name
             month_name = current_date.strftime("%b-%y")
 
+            # Convert all monetary values to selected currency
+            monthly_income_converted = self._convert_currency(
+                monthly_income, usd, currency, current_date
+            )
+            integral_daily_converted = self._convert_currency(
+                integral_daily, usd, currency, current_date
+            )
+            deposit_amount_converted = self._convert_currency(
+                deposit_amount, usd, currency, current_date
+            )
+            accumulated_prestaciones_converted = self._convert_currency(
+                accumulated_prestaciones, usd, currency, current_date
+            )
+            month_interest_converted = self._convert_currency(
+                month_interest, usd, currency, current_date
+            )
+            accumulated_interest_converted = self._convert_currency(
+                accumulated_interest, usd, currency, current_date
+            )
+
             monthly_data.append({
                 'month_name': month_name,
                 'month_date': current_date,
-                'monthly_income': monthly_income,
-                'integral_salary': integral_daily,
+                'monthly_income': monthly_income_converted,
+                'integral_salary': integral_daily_converted,
                 'deposit_days': deposit_days,
-                'deposit_amount': deposit_amount,
+                'deposit_amount': deposit_amount_converted,
                 'advance': 0.0,  # Adelanto - usually 0
-                'accumulated_prestaciones': accumulated_prestaciones,
+                'accumulated_prestaciones': accumulated_prestaciones_converted,
                 'exchange_rate': exchange_rate,
-                'month_interest': month_interest,
+                'month_interest': month_interest_converted,
                 'interest_canceled': 0.0,  # Usually empty
-                'accumulated_interest': accumulated_interest,
+                'accumulated_interest': accumulated_interest_converted,
             })
 
             # Move to next month
@@ -154,11 +177,18 @@ class PrestacionesInterestReport(models.AbstractModel):
             if current_date > end_date:
                 break
 
-        # Calculate totals
+        # Calculate totals (convert to selected currency)
+        total_prestaciones_converted = self._convert_currency(
+            accumulated_prestaciones, usd, currency, end_date
+        )
+        total_interest_converted = self._convert_currency(
+            accumulated_interest, usd, currency, end_date
+        )
+
         totals = {
             'total_days': total_days_deposited,
-            'total_prestaciones': accumulated_prestaciones,
-            'total_interest': accumulated_interest,
+            'total_prestaciones': total_prestaciones_converted,
+            'total_interest': total_interest_converted,
             'total_advance': 0.0,
         }
 
@@ -166,6 +196,28 @@ class PrestacionesInterestReport(models.AbstractModel):
             'monthly_data': monthly_data,
             'totals': totals,
         }
+
+    def _convert_currency(self, amount, from_currency, to_currency, date_ref):
+        """Convert amount from one currency to another.
+
+        Args:
+            amount: Amount to convert
+            from_currency: Source currency (res.currency)
+            to_currency: Target currency (res.currency)
+            date_ref: Date for exchange rate lookup
+
+        Returns:
+            float: Converted amount
+        """
+        if from_currency == to_currency:
+            return amount
+
+        return from_currency._convert(
+            from_amount=amount,
+            to_currency=to_currency,
+            company=self.env.company,
+            date=date_ref
+        )
 
     def _get_line_value(self, payslip, code):
         """Get value from payslip line by code.
@@ -188,13 +240,37 @@ class PrestacionesInterestReport(models.AbstractModel):
             currency: res.currency record
 
         Returns:
-            float: Exchange rate or 1.0 for USD
+            float: Exchange rate (VEB/USD) for display, or 1.0 for USD
+
+        Note:
+            For dates before the earliest rate in database, returns the
+            earliest available rate (matching Odoo's _convert() behavior)
         """
         # For USD, always return 1.0
         if currency.name == 'USD':
             return 1.0
 
-        # For VEB, would need to query actual historical rates
-        # Placeholder implementation - return 1.0 for now
-        # TODO: Implement actual historical VEB rate lookup
+        # For VEB, get actual historical rate
+        if currency.name == 'VEB':
+            # Try to get rate for the specific date (or latest before it)
+            rate_record = self.env['res.currency.rate'].search([
+                ('currency_id', '=', currency.id),
+                ('name', '<=', date_ref)
+            ], limit=1, order='name desc')
+
+            # If no rate found for date, use earliest available rate
+            # (matches Odoo's _convert() logic)
+            if not rate_record:
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name asc')
+
+            if rate_record and hasattr(rate_record, 'company_rate'):
+                # company_rate is VEB/USD (e.g., 231.09)
+                return rate_record.company_rate
+            elif rate_record and rate_record.rate > 0:
+                # Fallback: calculate from rate field (1/rate gives VEB/USD)
+                return 1.0 / rate_record.rate
+
+        # Default fallback
         return 1.0

@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Prestaciones Sociales Interest Report Template -->
+    <!-- Prestaciones Sociales Interest Report Template - FIXED VERSION -->
 
     <template id="prestaciones_interest">
         <t t-call="web.html_container">
-            <t t-foreach="reports" t-as="report_data">
-                <t t-call="web.external_layout">
+            <t t-call="web.external_layout">
+                <!-- Iterate over reports list returned by _get_report_values() -->
+                <t t-foreach="reports" t-as="report_data">
                     <div class="page">
                         <!-- Report Header -->
                         <div class="row mt-4 mb-3">
@@ -15,17 +16,17 @@
                             </div>
                         </div>
 
-                        <!-- Employee Information -->
+                        <!-- Employee Information - Access recordsets using .get() for safety -->
                         <div class="row mb-3">
                             <div class="col-6">
-                                <strong>Empleado:</strong> <span t-esc="report_data.get('employee').name"/><br/>
-                                <strong>Cédula:</strong> <span t-esc="report_data.get('employee').identification_id"/><br/>
-                                <strong>Departamento:</strong> <span t-esc="report_data.get('employee').department_id.name"/>
+                                <strong>Empleado:</strong> <span t-esc="report_data.get('employee').name if report_data.get('employee') else 'N/A'"/><br/>
+                                <strong>Cédula:</strong> <span t-esc="report_data.get('employee').identification_id if report_data.get('employee') else 'N/A'"/><br/>
+                                <strong>Departamento:</strong> <span t-esc="report_data.get('employee').department_id.name if report_data.get('employee') and report_data.get('employee').department_id else 'N/A'"/>
                             </div>
                             <div class="col-6">
-                                <strong>Inicio Contrato:</strong> <span t-esc="report_data.get('contract').date_start"/><br/>
-                                <strong>Fecha Liquidación:</strong> <span t-esc="report_data.get('payslip').date_to"/><br/>
-                                <strong>Moneda:</strong> <span t-esc="report_data.get('currency').name"/>
+                                <strong>Inicio Contrato:</strong> <span t-esc="report_data.get('contract').date_start if report_data.get('contract') else 'N/A'"/><br/>
+                                <strong>Fecha Liquidación:</strong> <span t-esc="report_data.get('payslip').date_to if report_data.get('payslip') else 'N/A'"/><br/>
+                                <strong>Moneda:</strong> <span t-esc="report_data.get('currency').name if report_data.get('currency') else 'USD'"/>
                             </div>
                         </div>
 
@@ -49,19 +50,20 @@
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <!-- Access monthly_data safely with .get() -->
                                         <t t-foreach="report_data.get('monthly_data', [])" t-as="month">
                                             <tr>
                                                 <!-- Month -->
-                                                <td class="text-left"><span t-esc="month.get('month_name')"/></td>
+                                                <td class="text-left"><span t-esc="month.get('month_name', '')"/></td>
 
                                                 <!-- Monthly Income -->
                                                 <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('monthly_income', 0))"/>
+                                                    $<span t-esc="'{:,.2f}'.format(month.get('monthly_income', 0))"/>
                                                 </td>
 
                                                 <!-- Integral Salary (daily) -->
                                                 <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('integral_salary', 0))"/>
+                                                    $<span t-esc="'{:,.2f}'.format(month.get('integral_salary', 0))"/>
                                                 </td>
 
                                                 <!-- Days deposited -->
@@ -71,17 +73,17 @@
 
                                                 <!-- Prestaciones del Mes -->
                                                 <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('deposit_amount', 0))"/>
+                                                    $<span t-esc="'{:,.2f}'.format(month.get('deposit_amount', 0))"/>
                                                 </td>
 
                                                 <!-- Adelanto -->
                                                 <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('advance', 0))"/>
+                                                    $<span t-esc="'{:,.2f}'.format(month.get('advance', 0))"/>
                                                 </td>
 
                                                 <!-- Accumulated Prestaciones -->
                                                 <td class="text-right">
-                                                    <strong><span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('accumulated_prestaciones', 0))"/></strong>
+                                                    <strong>$<span t-esc="'{:,.2f}'.format(month.get('accumulated_prestaciones', 0))"/></strong>
                                                 </td>
 
                                                 <!-- Exchange Rate -->
@@ -91,22 +93,22 @@
 
                                                 <!-- Monthly Interest -->
                                                 <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('month_interest', 0))"/>
+                                                    $<span t-esc="'{:,.2f}'.format(month.get('month_interest', 0))"/>
                                                 </td>
 
                                                 <!-- Interest Canceled -->
                                                 <td class="text-right">
-                                                    <span t-if="month.get('interest_canceled', 0) &gt; 0"><span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('interest_canceled', 0))"/></span>
+                                                    <span t-if="month.get('interest_canceled', 0) &gt; 0">$<span t-esc="'{:,.2f}'.format(month.get('interest_canceled', 0))"/></span>
                                                 </td>
 
                                                 <!-- Accumulated Interest -->
                                                 <td class="text-right">
-                                                    <strong><span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('accumulated_interest', 0))"/></strong>
+                                                    <strong>$<span t-esc="'{:,.2f}'.format(month.get('accumulated_interest', 0))"/></strong>
                                                 </td>
                                             </tr>
                                         </t>
 
-                                        <!-- Totals Row -->
+                                        <!-- Totals Row - Access totals safely with .get() -->
                                         <tr style="background-color: #f8f9fa; font-weight: bold;">
                                             <td class="text-left">Total por Emp.:</td>
                                             <td></td>
@@ -116,16 +118,16 @@
                                             </td>
                                             <td></td>
                                             <td class="text-right">
-                                                <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_advance', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_advance', 0))"/>
                                             </td>
                                             <td class="text-right">
-                                                <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_prestaciones', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_prestaciones', 0))"/>
                                             </td>
                                             <td></td>
                                             <td></td>
                                             <td></td>
                                             <td class="text-right">
-                                                <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_interest', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_interest', 0))"/>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -148,7 +150,7 @@
 
                     </div>
 
-                    <!-- Page break between reports -->
+                    <!-- Page break between reports (only if not last report) -->
                     <t t-if="not report_data_last">
                         <p style="page-break-after: always;"/>
                     </t>

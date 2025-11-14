@@ -78,7 +78,7 @@ contract.ueipab_vacation_paid_until    # Last vacation payment date (Aug 1)
 
 ### 3. Prestaciones Sociales Interest Report
 
-**Status:** ✅ Production Ready - Issue Resolved!
+**Status:** ✅ Production Ready - All Issues Resolved!
 **Last Updated:** 2025-11-14
 **Module:** `ueipab_payroll_enhancements` v1.7.0
 
@@ -88,6 +88,7 @@ contract.ueipab_vacation_paid_until    # Last vacation payment date (Aug 1)
 - Wizard-based report with currency selection (USD/VEB)
 - 11-column landscape report format
 - Shows quarterly prestaciones deposits and monthly interest accrual
+- **Full VEB currency support with historical exchange rates**
 
 **Interest Calculation Method:**
 ```python
@@ -98,14 +99,24 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 
 **Test Case:** SLIP/568 (Josefina Rodriguez)
 - 23 months of service (Sep 2023 - Jul 2025)
-- Prestaciones: $605.85
-- Interest: $83.76
-- Net Liquidation: $1,177.00
+- **USD Report:** Prestaciones $605.85, Interest $83.76
+- **VEB Report:** Prestaciones Bs.75,434.50, Interest Bs.10,428.66
+- Exchange rates: 36.14 - 231.09 VEB/USD (varies by month)
 
-**Issue Fixed (2025-11-14):**
-- Root Cause: AbstractModel reading from `docids` instead of `data.get('payslip_ids')`
-- Fix Applied: Changed to read from wizard data first (same pattern as working Disbursement report)
-- Result: ✅ Report now generates correctly with all 23 rows of data
+**Issues Fixed (2025-11-14):**
+
+1. **Blank PDF Issue:**
+   - Root Cause: AbstractModel reading from `docids` instead of `data.get('payslip_ids')`
+   - Fix Applied: Changed to read from wizard data first (same pattern as working Disbursement report)
+   - Result: ✅ Report generates correctly with all 23 rows of data
+
+2. **VEB Currency Support:**
+   - Root Cause: Exchange rate lookup returning 1.0, values not converted, hardcoded "$" symbol
+   - Fix Applied:
+     - Implemented Odoo's `_convert()` method for currency conversion
+     - Updated `_get_exchange_rate()` to use historical rates (fallback to earliest for old dates)
+     - Changed template to use dynamic currency symbol
+   - Result: ✅ Report displays correctly in both USD and VEB with proper exchange rates
 
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
 📖 **[Wizard-Based Report Pattern Guide](documentation/WIZARD_BASED_REPORT_PATTERN.md)** ⭐ NEW!
