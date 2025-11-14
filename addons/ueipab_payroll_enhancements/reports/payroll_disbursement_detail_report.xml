@@ -102,11 +102,12 @@
                                     <t t-set="other_deductions_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Calculate SALARY from contract deduction base (base salary for SS/tax calculations) -->
-                                    <t t-set="salary_amount" t-value="payslip.contract_id.ueipab_deduction_base or 0.0"/>
+                                    <!-- Calculate SALARY = 70% of deduction_base (reportable salary for accounting) -->
+                                    <t t-set="salary_amount" t-value="(payslip.contract_id.ueipab_deduction_base or 0.0) * 0.70"/>
 
-                                    <!-- Calculate BONUS from contract (total wage minus deduction base = all bonuses/benefits) -->
-                                    <t t-set="bonus_amount" t-value="(payslip.contract_id.wage or 0.0) - (payslip.contract_id.ueipab_deduction_base or 0.0)"/>
+                                    <!-- Calculate BONUS = 30% of deduction_base + (wage - deduction_base) -->
+                                    <!-- This ensures: Salary + Bonus = wage, and follows 70/30 accounting split -->
+                                    <t t-set="bonus_amount" t-value="((payslip.contract_id.ueipab_deduction_base or 0.0) * 0.30) + ((payslip.contract_id.wage or 0.0) - (payslip.contract_id.ueipab_deduction_base or 0.0))"/>
 
                                     <!-- Calculate ARI (income tax withholding) -->
                                     <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED')"/>
