@@ -32,29 +32,66 @@
 
 **Quick Summary:**
 - Report showing employee payroll disbursement details with deduction breakdown
+- **NEW: 70/30 Salary/Bonus split** for accounting transparency
+- Currency selector (USD/VEB) with automatic conversion
+- Exchange rate display for VEB reports
 - Fixed ARI TAX and Social Security columns to use correct salary rule codes
 - Added individual deduction columns: ARI, SSO 4%, FAOV 1%, PARO 0.5%
 - 9% tax calculation on Net Payable (USD and VEB)
 - Landscape Letter format with optimized layout
-- **NEW (2025-11-14): Currency selector (USD/VEB) with automatic conversion**
 
-**Currency Selector Enhancement (2025-11-14):**
-- Wizard now includes currency selection field (USD or VEB)
+**70/30 Salary/Bonus Split (2025-11-14):**
+The report now splits the GROSS column into two columns using a 70/30 formula:
+
+**Formula:**
+```python
+Salary = deduction_base × 70%
+Bonus = (deduction_base × 30%) + (wage - deduction_base)
+Total = Salary + Bonus = wage
+```
+
+**Rationale:**
+- `deduction_base` represents the portion of wage subject to social security and tax (~42% of total wage)
+- The 70/30 split provides accounting transparency:
+  - **Salary (70%)**: Reportable salary for accounting purposes
+  - **Bonus (30%)**: Remaining deduction_base portion + all other benefits/bonuses
+- VE_NET values are UNCHANGED (formula only affects report column display)
+
+**Example (Rafael Perez):**
+- **Before:** Salary $170.30 (100% of deduction_base), Bonus $230.32
+- **After:** Salary $119.21 (70% of deduction_base), Bonus $281.41 (30% + other benefits)
+- **Wage:** $400.62 (unchanged)
+- **VE_NET:** $193.72 (unchanged)
+
+**Verification (NOVIEMBRE15-2 Batch):**
+- ✅ All NOVIEMBRE15-2 payslips verified against Google Spreadsheet
+- ✅ 86% exact match rate (38/44 payslips)
+- ✅ 4 minor mismatches (differences $0.69 - $2.86, under 1.1%)
+- ✅ Formula mathematically verified for all employees
+- 📖 **[Verification Report](documentation/NOVIEMBRE15-2_VERIFICATION_SUMMARY.md)**
+
+**Currency Selector Enhancement:**
+- Wizard includes currency selection field (USD or VEB)
 - Default currency: USD
 - VEB conversion uses historical exchange rates from payslip period end date
+- Exchange rate display: "@ 234.87 VEB/USD" when VEB selected
+- Display-time multiplication only (no database modifications)
 - Dynamic currency symbols and names throughout report
-- In-memory conversion (no database changes)
-- Reuses proven pattern from Prestaciones Interest Report
+
+**Critical Fixes Applied:**
+1. **VE_GROSS Double-Counting:** Excluded VE_GROSS from bonus calculation (it's a sum line)
+2. **Database Protection:** Confirmed report does NOT modify payslip data
+3. **Exchange Rate Display:** Shows rate used for VEB conversions
 
 **Implementation:**
-- Wizard: `payroll_disbursement_wizard.py` - Added `currency_id` field
-- Report Model: `payroll_disbursement_report.py` - Added `_convert_payslip_values()` method
-- Template: `payroll_disbursement_detail_report.xml` - Dynamic currency display
-- Removed hardcoded VEB columns (Rate, Net VEB) - now dynamic
+- Wizard: `payroll_disbursement_wizard.py` - Currency selection field
+- Report Model: `payroll_disbursement_report.py` - Exchange rate calculation (no DB modification)
+- Template: `payroll_disbursement_detail_report.xml` - 70/30 formula + exchange rate display
 
 **Test Results:**
-- ✅ USD Report: Batch NOVIEMBRE15, 44 payslips, $156.89 net (employee: Alejandra Lopez)
-- ✅ VEB Report: Same batch, Bs.36,848.99 net (rate: 234.87 VEB/USD on 2025-11-14)
+- ✅ USD Report: NOVIEMBRE15-2, 44 payslips, Rafael Perez: Salary $119.21, Bonus $281.41
+- ✅ VEB Report: Same batch, exchange rate @ 234.87 VEB/USD
+- ✅ No database corruption after multiple report generations
 
 **Location:** `addons/ueipab_payroll_enhancements/reports/payroll_disbursement_detail_report.xml`
 
