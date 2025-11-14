@@ -153,19 +153,19 @@
                                     <t t-set="total_other_deductions" t-value="total_other_deductions + other_deductions_amount"/>
                                     <t t-set="total_net" t-value="total_net + net_amount"/>
 
-                                    <!-- Employee Row -->
+                                    <!-- Employee Row (multiply USD values by exchange_rate for display) -->
                                     <tr>
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="sequence"/></td>
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.identification_id or 'N/A'"/></td>
                                         <td style="padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.name"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(salary_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(bonus_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(ari_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(sso_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(faov_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(paro_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(other_deductions_amount)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_amount)"/></strong></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(salary_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(bonus_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(ari_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(sso_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(faov_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(paro_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(other_deductions_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_amount * exchange_rate)"/></strong></td>
                                     </tr>
 
                                     <t t-set="sequence" t-value="sequence + 1"/>
@@ -188,21 +188,21 @@
                                 <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Salary:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_salary)"/>
+                                <strong>Total Salary:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_salary * exchange_rate)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Bonus:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_bonus)"/>
+                                <strong>Total Bonus:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_bonus * exchange_rate)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_ari + total_sso + total_faov + total_paro + total_other_deductions)"/>
+                                <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format((total_ari + total_sso + total_faov + total_paro + total_other_deductions) * exchange_rate)"/>
                             </p>
                         </div>
                         <div class="col-6 text-end">
                             <p style="margin: 3px 0; font-size: 10pt;">
-                                <strong>Total Net Payable (<t t-esc="currency.name"/>):</strong> <span style="font-size: 11pt; color: #0066cc;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_net)"/></span>
+                                <strong>Total Net Payable (<t t-esc="currency.name"/>):</strong> <span style="font-size: 11pt; color: #0066cc;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_net * exchange_rate)"/></span>
                             </p>
                             <p style="margin: 8px 0 3px 0; padding-top: 5px; border-top: 1px solid #ccc;">
-                                <strong>9% Tax Payable (<t t-esc="currency.name"/>):</strong> <span style="color: #cc6600;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(tax_9_percent)"/></span>
+                                <strong>9% Tax Payable (<t t-esc="currency.name"/>):</strong> <span style="color: #cc6600;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(tax_9_percent * exchange_rate)"/></span>
                             </p>
                         </div>
                     </div>
@@ -220,7 +220,7 @@
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
                                 PARO = Paro Forzoso (0.5%).
                                 Other Ded. = All other deductions not listed above.
-                                Currency conversion (if applicable) uses exchange rate from each payslip's period end date.
+                                Currency conversion: All payslip data remains in USD in database. When displaying in VEB, USD amounts are multiplied by exchange rate at report generation time only (no database modification).
                             </p>
                         </div>
                     </div>

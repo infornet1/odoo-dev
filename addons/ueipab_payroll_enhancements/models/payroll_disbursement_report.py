@@ -47,17 +47,27 @@ class PayrollDisbursementReport(models.AbstractModel):
         currency_id = data.get('currency_id') if data else usd.id
         currency = self.env['res.currency'].browse(currency_id)
 
-        # Convert payslip values if currency is not USD
-        if currency != usd:
-            payslips = self._convert_payslip_values(payslips, currency)
+        # Calculate exchange rate for VEB (if applicable)
+        # DO NOT MODIFY PAYSLIP DATA - just pass the rate to template
+        exchange_rate = 1.0
+        if currency != usd and payslips:
+            # Use latest payslip date for exchange rate lookup
+            latest_date = max(payslips.mapped('date_to'))
+            rate_record = self.env['res.currency.rate'].search([
+                ('currency_id', '=', currency.id),
+                ('name', '<=', latest_date)
+            ], limit=1, order='name desc')
+            if rate_record:
+                exchange_rate = rate_record.company_rate
 
         # Return context for QWeb template
         return {
             'doc_ids': payslip_ids,
             'doc_model': 'hr.payslip',
-            'docs': payslips,  # This is what the template uses!
+            'docs': payslips,  # UNCHANGED - keeps USD values from database
             'data': data,      # Additional wizard data
             'currency': currency,  # Pass currency for dynamic symbol display
+            'exchange_rate': exchange_rate,  # Pass rate for template to multiply
         }
 
     def _convert_payslip_values(self, payslips, target_currency):
