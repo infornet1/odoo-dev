@@ -95,8 +95,6 @@
                                 <t t-set="sequence" t-value="1"/>
                                 <t t-foreach="docs" t-as="payslip">
                                     <!-- Calculate amounts for this payslip -->
-                                    <t t-set="salary_amount" t-value="0.0"/>
-                                    <t t-set="bonus_amount" t-value="0.0"/>
                                     <t t-set="ari_amount" t-value="0.0"/>
                                     <t t-set="sso_amount" t-value="0.0"/>
                                     <t t-set="faov_amount" t-value="0.0"/>
@@ -104,15 +102,11 @@
                                     <t t-set="other_deductions_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Calculate SALARY (VE_SALARY_70 - base salary) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code == 'VE_SALARY_70')" t-as="line">
-                                        <t t-set="salary_amount" t-value="salary_amount + line.total"/>
-                                    </t>
+                                    <!-- Calculate SALARY from contract deduction base (base salary for SS/tax calculations) -->
+                                    <t t-set="salary_amount" t-value="payslip.contract_id.ueipab_deduction_base or 0.0"/>
 
-                                    <!-- Calculate BONUS (all other positive amounts except VE_NET, VE_SALARY_70, and VE_GROSS which is a total line) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET', 'VE_SALARY_70', 'VE_GROSS'))" t-as="line">
-                                        <t t-set="bonus_amount" t-value="bonus_amount + line.total"/>
-                                    </t>
+                                    <!-- Calculate BONUS from contract (total wage minus deduction base = all bonuses/benefits) -->
+                                    <t t-set="bonus_amount" t-value="(payslip.contract_id.wage or 0.0) - (payslip.contract_id.ueipab_deduction_base or 0.0)"/>
 
                                     <!-- Calculate ARI (income tax withholding) -->
                                     <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED')"/>
@@ -219,8 +213,8 @@
                             <p style="margin: 0;">
                                 <strong>Notes:</strong>
                                 This report shows only confirmed payslips (Done/Paid status).
-                                Salary = Base salary (VE_SALARY_70).
-                                Bonus = All other earnings (bonuses, benefits, cesta ticket, etc.).
+                                Salary = Contract deduction base (base salary for social security/tax calculations).
+                                Bonus = Total wage minus deduction base (all bonuses, benefits, cesta ticket, etc.).
                                 ARI = Income tax withholding (SENIAT).
                                 SSO = Seguro Social Obligatorio (4%).
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
