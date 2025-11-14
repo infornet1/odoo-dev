@@ -109,8 +109,8 @@
                                         <t t-set="salary_amount" t-value="salary_amount + line.total"/>
                                     </t>
 
-                                    <!-- Calculate BONUS (all other positive amounts except VE_NET and VE_SALARY_70) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET', 'VE_SALARY_70'))" t-as="line">
+                                    <!-- Calculate BONUS (all other positive amounts except VE_NET, VE_SALARY_70, and VE_GROSS which is a total line) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET', 'VE_SALARY_70', 'VE_GROSS'))" t-as="line">
                                         <t t-set="bonus_amount" t-value="bonus_amount + line.total"/>
                                     </t>
 
