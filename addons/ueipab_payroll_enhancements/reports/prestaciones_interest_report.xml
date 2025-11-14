@@ -4,7 +4,7 @@
 
     <template id="prestaciones_interest">
         <t t-call="web.html_container">
-            <t t-foreach="reports" t-as="report">
+            <t t-foreach="reports" t-as="report_data">
                 <t t-call="web.external_layout">
                     <div class="page">
                         <!-- Report Header -->
@@ -18,14 +18,14 @@
                         <!-- Employee Information -->
                         <div class="row mb-3">
                             <div class="col-6">
-                                <strong>Empleado:</strong> <span t-esc="report['employee'].name"/><br/>
-                                <strong>Cédula:</strong> <span t-esc="report['employee'].identification_id"/><br/>
-                                <strong>Departamento:</strong> <span t-esc="report['employee'].department_id.name"/>
+                                <strong>Empleado:</strong> <span t-esc="report_data.get('employee').name"/><br/>
+                                <strong>Cédula:</strong> <span t-esc="report_data.get('employee').identification_id"/><br/>
+                                <strong>Departamento:</strong> <span t-esc="report_data.get('employee').department_id.name"/>
                             </div>
                             <div class="col-6">
-                                <strong>Inicio Contrato:</strong> <span t-esc="report['contract'].date_start"/><br/>
-                                <strong>Fecha Liquidación:</strong> <span t-esc="report['payslip'].date_to"/><br/>
-                                <strong>Moneda:</strong> <span t-esc="report['currency'].name"/>
+                                <strong>Inicio Contrato:</strong> <span t-esc="report_data.get('contract').date_start"/><br/>
+                                <strong>Fecha Liquidación:</strong> <span t-esc="report_data.get('payslip').date_to"/><br/>
+                                <strong>Moneda:</strong> <span t-esc="report_data.get('currency').name"/>
                             </div>
                         </div>
 
@@ -49,7 +49,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <t t-foreach="report['monthly_data']" t-as="month">
+                                        <t t-foreach="report_data.get('monthly_data', [])" t-as="month">
                                             <tr>
                                                 <!-- Month -->
                                                 <td class="text-left"><span t-esc="month.get('month_name')"/></td>
@@ -112,20 +112,20 @@
                                             <td></td>
                                             <td></td>
                                             <td class="text-center">
-                                                <span t-esc="report['totals'].get('total_days', 0)"/>
+                                                <span t-esc="report_data.get('totals', {}).get('total_days', 0)"/>
                                             </td>
                                             <td></td>
                                             <td class="text-right">
-                                                $<span t-esc="'{:,.2f}'.format(report['totals'].get('total_advance', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_advance', 0))"/>
                                             </td>
                                             <td class="text-right">
-                                                $<span t-esc="'{:,.2f}'.format(report['totals'].get('total_prestaciones', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_prestaciones', 0))"/>
                                             </td>
                                             <td></td>
                                             <td></td>
                                             <td></td>
                                             <td class="text-right">
-                                                $<span t-esc="'{:,.2f}'.format(report['totals'].get('total_interest', 0))"/>
+                                                $<span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_interest', 0))"/>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -149,7 +149,7 @@
                     </div>
 
                     <!-- Page break between reports -->
-                    <t t-if="not report_last">
+                    <t t-if="not report_data_last">
                         <p style="page-break-after: always;"/>
                     </t>
                 </t>

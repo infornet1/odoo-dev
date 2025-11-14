@@ -21,13 +21,23 @@ class PrestacionesInterestReport(models.AbstractModel):
         """Generate report data with monthly breakdown.
 
         Args:
-            docids: List of hr.payslip IDs
-            data: Additional data from wizard
+            docids: List of hr.payslip IDs (usually None from wizard)
+            data: Data dict from wizard containing payslip_ids
 
         Returns:
             dict: Report data
         """
-        payslips = self.env['hr.payslip'].browse(docids)
+        # Get payslip IDs from data dict (passed by wizard) - SAME AS WORKING REPORT
+        payslip_ids = data.get('payslip_ids', []) if data else []
+
+        # If no IDs in data, try to use docids parameter
+        if not payslip_ids and docids:
+            payslip_ids = docids
+
+        # Build payslip recordset from IDs
+        payslips = self.env['hr.payslip'].browse(payslip_ids)
+
+        # Get currency
         currency_id = data.get('currency_id') if data else self.env.ref('base.USD').id
         currency = self.env['res.currency'].browse(currency_id)
 
@@ -45,9 +55,10 @@ class PrestacionesInterestReport(models.AbstractModel):
             })
 
         return {
-            'doc_ids': docids,
+            'doc_ids': payslip_ids,  # Use the IDs we actually got from data
             'doc_model': 'hr.payslip',
             'docs': payslips,
+            'data': data,  # Pass through wizard data
             'currency': currency,
             'reports': reports,
         }

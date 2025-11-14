@@ -83,8 +83,8 @@ class PrestacionesInterestWizard(models.TransientModel):
         # Generate PDF report
         report = self.env.ref('ueipab_payroll_enhancements.action_report_prestaciones_interest')
 
-        # Call report_action with payslips recordset (first positional arg, not keyword)
-        return report.report_action(self.payslip_ids, data=data)
+        # Call report_action with docids keyword (same pattern as working Payroll Disbursement wizard)
+        return report.report_action(docids=self.payslip_ids.ids, data=data)
 
     @api.onchange('currency_id')
     def _onchange_currency(self):
