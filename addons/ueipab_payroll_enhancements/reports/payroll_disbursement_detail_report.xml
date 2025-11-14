@@ -31,6 +31,16 @@
                     <t t-set="period_start" t-value="min(docs.mapped('date_from')) if docs else None"/>
                     <t t-set="period_end" t-value="max(docs.mapped('date_to')) if docs else None"/>
 
+                    <!-- Get exchange rate for VEB currency (if applicable) -->
+                    <t t-set="exchange_rate_display" t-value="''"/>
+                    <t t-if="currency.name == 'VEB' and period_end">
+                        <t t-set="rate_record" t-value="request.env['res.currency.rate'].search([('currency_id', '=', currency.id), ('name', '&lt;=', period_end)], limit=1, order='name desc')"/>
+                        <t t-if="rate_record">
+                            <t t-set="veb_per_usd" t-value="rate_record.company_rate"/>
+                            <t t-set="exchange_rate_display" t-value="' @ %.2f VEB/USD' % veb_per_usd"/>
+                        </t>
+                    </t>
+
                     <!-- Custom Report Header (appears on every page) -->
                     <div class="row" style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid #333;">
                         <div class="col-12 text-center">
@@ -46,7 +56,7 @@
                                         <t t-esc="period_start"/> - <t t-esc="period_end"/>
                                     </strong>
                                 </t>
-                                | Currency: <strong><t t-esc="currency.name"/> (<t t-esc="currency.symbol"/>)</strong>
+                                | Currency: <strong><t t-esc="currency.name"/> (<t t-esc="currency.symbol"/>)<t t-esc="exchange_rate_display"/></strong>
                             </p>
                             <p style="margin: 2px 0; font-size: 8pt;">
                                 Report Date: <span t-esc="time.strftime('%Y-%m-%d %H:%M')"/>
@@ -55,7 +65,8 @@
                     </div>
 
                     <!-- Initialize totals ONCE for the entire report -->
-                    <t t-set="total_gross" t-value="0.0"/>
+                    <t t-set="total_salary" t-value="0.0"/>
+                    <t t-set="total_bonus" t-value="0.0"/>
                     <t t-set="total_ari" t-value="0.0"/>
                     <t t-set="total_sso" t-value="0.0"/>
                     <t t-set="total_faov" t-value="0.0"/>
@@ -69,21 +80,23 @@
                                 <tr>
                                     <th style="width: 2%; text-align: center; padding: 3px; font-size: 7pt;">#</th>
                                     <th style="width: 8%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
-                                    <th style="width: 18%; padding: 3px; font-size: 7pt;">Employee</th>
-                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Gross <t t-esc="currency.name"/></th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
-                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
-                                    <th style="width: 12%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
+                                    <th style="width: 15%; padding: 3px; font-size: 7pt;">Employee</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Salary</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Bonus</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
+                                    <th style="width: 9%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
+                                    <th style="width: 11%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-set="sequence" t-value="1"/>
                                 <t t-foreach="docs" t-as="payslip">
                                     <!-- Calculate amounts for this payslip -->
-                                    <t t-set="gross_amount" t-value="0.0"/>
+                                    <t t-set="salary_amount" t-value="0.0"/>
+                                    <t t-set="bonus_amount" t-value="0.0"/>
                                     <t t-set="ari_amount" t-value="0.0"/>
                                     <t t-set="sso_amount" t-value="0.0"/>
                                     <t t-set="faov_amount" t-value="0.0"/>
@@ -91,9 +104,14 @@
                                     <t t-set="other_deductions_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Calculate GROSS (all positive amounts - benefits/earnings) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET',))" t-as="line">
-                                        <t t-set="gross_amount" t-value="gross_amount + line.total"/>
+                                    <!-- Calculate SALARY (VE_SALARY_70 - base salary) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code == 'VE_SALARY_70')" t-as="line">
+                                        <t t-set="salary_amount" t-value="salary_amount + line.total"/>
+                                    </t>
+
+                                    <!-- Calculate BONUS (all other positive amounts except VE_NET and VE_SALARY_70) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total > 0 and l.salary_rule_id.code not in ('VE_NET', 'VE_SALARY_70'))" t-as="line">
+                                        <t t-set="bonus_amount" t-value="bonus_amount + line.total"/>
                                     </t>
 
                                     <!-- Calculate ARI (income tax withholding) -->
@@ -132,7 +150,8 @@
                                     </t>
 
                                     <!-- Accumulate totals -->
-                                    <t t-set="total_gross" t-value="total_gross + gross_amount"/>
+                                    <t t-set="total_salary" t-value="total_salary + salary_amount"/>
+                                    <t t-set="total_bonus" t-value="total_bonus + bonus_amount"/>
                                     <t t-set="total_ari" t-value="total_ari + ari_amount"/>
                                     <t t-set="total_sso" t-value="total_sso + sso_amount"/>
                                     <t t-set="total_faov" t-value="total_faov + faov_amount"/>
@@ -145,7 +164,8 @@
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="sequence"/></td>
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.identification_id or 'N/A'"/></td>
                                         <td style="padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.name"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(gross_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(salary_amount)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(bonus_amount)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(ari_amount)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(sso_amount)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(faov_amount)"/></td>
@@ -174,7 +194,10 @@
                                 <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Gross:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_gross)"/>
+                                <strong>Total Salary:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_salary)"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Bonus:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_bonus)"/>
                             </p>
                             <p style="margin: 3px 0;">
                                 <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_ari + total_sso + total_faov + total_paro + total_other_deductions)"/>
@@ -196,7 +219,8 @@
                             <p style="margin: 0;">
                                 <strong>Notes:</strong>
                                 This report shows only confirmed payslips (Done/Paid status).
-                                Gross includes all earnings and benefits.
+                                Salary = Base salary (VE_SALARY_70).
+                                Bonus = All other earnings (bonuses, benefits, cesta ticket, etc.).
                                 ARI = Income tax withholding (SENIAT).
                                 SSO = Seguro Social Obligatorio (4%).
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
