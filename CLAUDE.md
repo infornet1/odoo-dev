@@ -27,7 +27,7 @@
 ### 1. Payroll Disbursement Detail Report
 
 **Status:** ✅ Production Ready
-**Last Updated:** 2025-11-12
+**Last Updated:** 2025-11-14
 **Module:** `ueipab_payroll_enhancements`
 
 **Quick Summary:**
@@ -36,6 +36,25 @@
 - Added individual deduction columns: ARI, SSO 4%, FAOV 1%, PARO 0.5%
 - 9% tax calculation on Net Payable (USD and VEB)
 - Landscape Letter format with optimized layout
+- **NEW (2025-11-14): Currency selector (USD/VEB) with automatic conversion**
+
+**Currency Selector Enhancement (2025-11-14):**
+- Wizard now includes currency selection field (USD or VEB)
+- Default currency: USD
+- VEB conversion uses historical exchange rates from payslip period end date
+- Dynamic currency symbols and names throughout report
+- In-memory conversion (no database changes)
+- Reuses proven pattern from Prestaciones Interest Report
+
+**Implementation:**
+- Wizard: `payroll_disbursement_wizard.py` - Added `currency_id` field
+- Report Model: `payroll_disbursement_report.py` - Added `_convert_payslip_values()` method
+- Template: `payroll_disbursement_detail_report.xml` - Dynamic currency display
+- Removed hardcoded VEB columns (Rate, Net VEB) - now dynamic
+
+**Test Results:**
+- ✅ USD Report: Batch NOVIEMBRE15, 44 payslips, $156.89 net (employee: Alejandra Lopez)
+- ✅ VEB Report: Same batch, Bs.36,848.99 net (rate: 234.87 VEB/USD on 2025-11-14)
 
 **Location:** `addons/ueipab_payroll_enhancements/reports/payroll_disbursement_detail_report.xml`
 

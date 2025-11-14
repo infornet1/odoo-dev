@@ -59,6 +59,15 @@ class PayrollDisbursementWizard(models.TransientModel):
         help='Filter specific departments (leave empty for all departments)'
     )
 
+    # Currency selection
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Display Currency',
+        required=True,
+        default=lambda self: self.env.ref('base.USD'),
+        help='Currency for report display (USD or VEB)'
+    )
+
     # ========================================
     # COMPUTED FIELDS
     # ========================================
@@ -164,6 +173,8 @@ class PayrollDisbursementWizard(models.TransientModel):
             'employee_count': len(payslips.mapped('employee_id')),
             'payslip_count': len(payslips),
             'payslip_ids': payslip_ids,  # Store IDs in data for debugging
+            'currency_id': self.currency_id.id,
+            'currency_name': self.currency_id.name,
         }
 
         # Generate PDF report using the report's _render method directly

@@ -46,6 +46,7 @@
                                         <t t-esc="period_start"/> - <t t-esc="period_end"/>
                                     </strong>
                                 </t>
+                                | Currency: <strong><t t-esc="currency.name"/> (<t t-esc="currency.symbol"/>)</strong>
                             </p>
                             <p style="margin: 2px 0; font-size: 8pt;">
                                 Report Date: <span t-esc="time.strftime('%Y-%m-%d %H:%M')"/>
@@ -60,8 +61,7 @@
                     <t t-set="total_faov" t-value="0.0"/>
                     <t t-set="total_paro" t-value="0.0"/>
                     <t t-set="total_other_deductions" t-value="0.0"/>
-                    <t t-set="total_net_usd" t-value="0.0"/>
-                    <t t-set="total_net_veb" t-value="0.0"/>
+                    <t t-set="total_net" t-value="0.0"/>
 
                     <!-- Payslip Details Table -->
                     <table class="table table-sm table-bordered" style="font-family: 'Courier New', monospace; font-size: 8pt; margin-top: 10px; width: 100%;">
@@ -69,16 +69,14 @@
                                 <tr>
                                     <th style="width: 2%; text-align: center; padding: 3px; font-size: 7pt;">#</th>
                                     <th style="width: 8%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
-                                    <th style="width: 15%; padding: 3px; font-size: 7pt;">Employee</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Gross USD</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
-                                    <th style="width: 9%; text-align: right; padding: 3px; font-size: 7pt;">Net USD</th>
-                                    <th style="width: 6%; text-align: center; padding: 3px; font-size: 7pt;">Rate</th>
-                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Net VEB (Bs)</th>
+                                    <th style="width: 18%; padding: 3px; font-size: 7pt;">Employee</th>
+                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Gross <t t-esc="currency.name"/></th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
+                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
+                                    <th style="width: 12%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -133,10 +131,6 @@
                                         <t t-set="net_amount" t-value="net_line[0].total"/>
                                     </t>
 
-                                    <!-- Get exchange rate -->
-                                    <t t-set="exchange_rate" t-value="payslip.exchange_rate_used or 1.0"/>
-                                    <t t-set="net_veb" t-value="net_amount * exchange_rate"/>
-
                                     <!-- Accumulate totals -->
                                     <t t-set="total_gross" t-value="total_gross + gross_amount"/>
                                     <t t-set="total_ari" t-value="total_ari + ari_amount"/>
@@ -144,8 +138,7 @@
                                     <t t-set="total_faov" t-value="total_faov + faov_amount"/>
                                     <t t-set="total_paro" t-value="total_paro + paro_amount"/>
                                     <t t-set="total_other_deductions" t-value="total_other_deductions + other_deductions_amount"/>
-                                    <t t-set="total_net_usd" t-value="total_net_usd + net_amount"/>
-                                    <t t-set="total_net_veb" t-value="total_net_veb + net_veb"/>
+                                    <t t-set="total_net" t-value="total_net + net_amount"/>
 
                                     <!-- Employee Row -->
                                     <tr>
@@ -159,8 +152,6 @@
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(paro_amount)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(other_deductions_amount)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_amount)"/></strong></td>
-                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="'{:,.2f}'.format(exchange_rate)"/></td>
-                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_veb)"/></strong></td>
                                     </tr>
 
                                     <t t-set="sequence" t-value="sequence + 1"/>
@@ -169,8 +160,7 @@
                     </table>
 
                     <!-- Calculate 9% Tax on Net Payable -->
-                    <t t-set="tax_9_percent_usd" t-value="total_net_usd * 0.09"/>
-                    <t t-set="tax_9_percent_veb" t-value="total_net_veb * 0.09"/>
+                    <t t-set="tax_9_percent" t-value="total_net * 0.09"/>
 
                     <!-- Summary Section with Totals -->
                     <div class="row mt-3" style="font-size: 9pt; border-top: 2px solid #333; padding-top: 10px;">
@@ -184,24 +174,18 @@
                                 <t t-esc="data.get('payslip_count', len(docs)) if data else len(docs)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Gross:</strong> $ <t t-esc="'{:,.2f}'.format(total_gross)"/>
+                                <strong>Total Gross:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_gross)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Deductions:</strong> $ <t t-esc="'{:,.2f}'.format(total_ari + total_sso + total_faov + total_paro + total_other_deductions)"/>
+                                <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_ari + total_sso + total_faov + total_paro + total_other_deductions)"/>
                             </p>
                         </div>
                         <div class="col-6 text-end">
                             <p style="margin: 3px 0; font-size: 10pt;">
-                                <strong>Total Net Payable (USD):</strong> <span style="font-size: 11pt; color: #0066cc;">$ <t t-esc="'{:,.2f}'.format(total_net_usd)"/></span>
-                            </p>
-                            <p style="margin: 3px 0; font-size: 10pt;">
-                                <strong>Total Net Payable (VEB):</strong> <span style="font-size: 11pt; color: #0066cc;">Bs. <t t-esc="'{:,.2f}'.format(total_net_veb)"/></span>
+                                <strong>Total Net Payable (<t t-esc="currency.name"/>):</strong> <span style="font-size: 11pt; color: #0066cc;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_net)"/></span>
                             </p>
                             <p style="margin: 8px 0 3px 0; padding-top: 5px; border-top: 1px solid #ccc;">
-                                <strong>9% Tax Payable (USD):</strong> <span style="color: #cc6600;">$ <t t-esc="'{:,.2f}'.format(tax_9_percent_usd)"/></span>
-                            </p>
-                            <p style="margin: 3px 0;">
-                                <strong>9% Tax Payable (VEB):</strong> <span style="color: #cc6600;">Bs. <t t-esc="'{:,.2f}'.format(tax_9_percent_veb)"/></span>
+                                <strong>9% Tax Payable (<t t-esc="currency.name"/>):</strong> <span style="color: #cc6600;"><t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(tax_9_percent)"/></span>
                             </p>
                         </div>
                     </div>
@@ -218,7 +202,7 @@
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
                                 PARO = Paro Forzoso (0.5%).
                                 Other Ded. = All other deductions not listed above.
-                                VEB amounts calculated using exchange rate from each payslip computation date.
+                                Currency conversion (if applicable) uses exchange rate from each payslip's period end date.
                             </p>
                         </div>
                     </div>

@@ -30,6 +30,9 @@
                         <field name="employee_ids"
                                widget="many2many_tags"
                                options="{'no_create': True}"/>
+                        <field name="currency_id"
+                               options="{'no_create': True, 'no_open': True}"
+                               domain="[('name', 'in', ['USD', 'VEB'])]"/>
                     </group>
                 </group>
 

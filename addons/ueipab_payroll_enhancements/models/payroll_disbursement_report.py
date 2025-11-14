@@ -42,10 +42,71 @@ class PayrollDisbursementReport(models.AbstractModel):
         # Sort payslips by employee name
         payslips = payslips.sorted(lambda p: p.employee_id.name or '')
 
+        # Get currency from wizard data
+        usd = self.env.ref('base.USD')
+        currency_id = data.get('currency_id') if data else usd.id
+        currency = self.env['res.currency'].browse(currency_id)
+
+        # Convert payslip values if currency is not USD
+        if currency != usd:
+            payslips = self._convert_payslip_values(payslips, currency)
+
         # Return context for QWeb template
         return {
             'doc_ids': payslip_ids,
             'doc_model': 'hr.payslip',
             'docs': payslips,  # This is what the template uses!
             'data': data,      # Additional wizard data
+            'currency': currency,  # Pass currency for dynamic symbol display
         }
+
+    def _convert_payslip_values(self, payslips, target_currency):
+        """Convert all payslip line amounts to target currency.
+
+        Note: This modifies the in-memory values only, not the database.
+        Each payslip line total is converted using the exchange rate
+        in effect on the payslip's end date.
+
+        Args:
+            payslips: hr.payslip recordset
+            target_currency: res.currency record
+
+        Returns:
+            recordset: Same payslips with converted line amounts
+        """
+        usd = self.env.ref('base.USD')
+
+        for payslip in payslips:
+            # Get conversion date from payslip (use date_to as per user requirement)
+            conversion_date = payslip.date_to or payslip.date_from
+
+            # Convert each payslip line amount
+            for line in payslip.line_ids:
+                if line.total != 0:
+                    line.total = self._convert_currency(
+                        line.total, usd, target_currency, conversion_date
+                    )
+
+        return payslips
+
+    def _convert_currency(self, amount, from_currency, to_currency, date_ref):
+        """Convert amount from one currency to another.
+
+        Args:
+            amount: Amount to convert
+            from_currency: Source currency (res.currency)
+            to_currency: Target currency (res.currency)
+            date_ref: Date for exchange rate lookup
+
+        Returns:
+            float: Converted amount
+        """
+        if from_currency == to_currency:
+            return amount
+
+        return from_currency._convert(
+            from_amount=amount,
+            to_currency=to_currency,
+            company=self.env.company,
+            date=date_ref
+        )
