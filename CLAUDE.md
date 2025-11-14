@@ -13,8 +13,12 @@
 ## Environment Synchronization
 
 **VEB Exchange Rate Sync Script:** `scripts/sync-veb-rates-from-production.sql`
-- Use this script to sync exchange rates between environments
+- Syncs VEB rates from production to testing database
+- **Production Source:** `ueipab17_postgres_1` container @ 10.124.0.3, DB: DB_UEIPAB
+- **Last Sync:** 2025-11-14 (added 3 rates: 2025-11-12 to 2025-11-14)
+- **Current Status:** 622 VEB rates synchronized (2024-01-30 to 2025-11-14)
 - Always verify before executing
+- Alternative execution: Use `scripts/run_veb_sync.py` via Odoo shell
 
 ---
 
