@@ -28,7 +28,8 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 - **Salary:** Direct amount subject to ALL social security deductions (IVSS, FAOV, INCES, ARI)
 - **ExtraBonus:** Direct amount NOT subject to deductions
 - **Bonus:** Direct amount NOT subject to deductions
-- **Wage = Salary + ExtraBonus + Bonus** (total compensation)
+- **Cesta Ticket:** Fixed food allowance (~$40 for all employees) NOT subject to deductions
+- **Wage = Salary + ExtraBonus + Bonus + Cesta Ticket** (total compensation)
 
 **This is a MODEL DESIGN IMPROVEMENT**, not a legal compliance change. All Venezuelan labor regulations are already being followed.
 
@@ -81,7 +82,8 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 - `ueipab_salary_v2` - Amount subject to deductions
 - `ueipab_extrabonus_v2` - Extra bonus (NOT subject to deductions)
 - `ueipab_bonus_v2` - Regular bonus (NOT subject to deductions)
-- `wage` - Remains as total (= salary + extrabonus + bonus)
+- `ueipab_cesta_ticket_v2` - Food allowance (fixed ~$40 for all employees, NOT subject to deductions)
+- `wage` - Remains as total (= salary + extrabonus + bonus + cesta_ticket)
 
 ---
 
@@ -118,10 +120,10 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 - **Type:** Employee payroll structure
 
 **New Salary Rules (V2):**
-1. `VE_SALARY_V2` - Base salary (subject to deductions)
-2. `VE_EXTRABONUS_V2` - Extra bonus (NOT subject to deductions)
-3. `VE_BONUS_V2` - Regular bonus (NOT subject to deductions)
-4. `VE_CESTA_TICKET_V2` - Food allowance (same as current)
+1. `VE_SALARY_V2` - Base salary from contract field (subject to deductions)
+2. `VE_EXTRABONUS_V2` - Extra bonus from contract field (NOT subject to deductions)
+3. `VE_BONUS_V2` - Regular bonus from contract field (NOT subject to deductions)
+4. `VE_CESTA_TICKET_V2` - Food allowance from contract field (~$40 fixed, NOT subject to deductions)
 5. `VE_GROSS_V2` - Total gross (sum of all earnings)
 6. `VE_SSO_DED_V2` - SSO 4.5%/2 on SALARY only
 7. `VE_FAOV_DED_V2` - FAOV 1%/2 on SALARY only
@@ -157,13 +159,19 @@ class HrContract(models.Model):
         string='Regular Bonus V2 (Deduction Exempt)',
         help='Regular bonus NOT subject to social security deductions'
     )
+    ueipab_cesta_ticket_v2 = fields.Monetary(
+        string='Cesta Ticket V2 (Food Allowance)',
+        help='Fixed food allowance (~$40 for all employees) NOT subject to deductions',
+        default=40.0
+    )
 
-    @api.onchange('ueipab_salary_v2', 'ueipab_extrabonus_v2', 'ueipab_bonus_v2')
+    @api.onchange('ueipab_salary_v2', 'ueipab_extrabonus_v2', 'ueipab_bonus_v2', 'ueipab_cesta_ticket_v2')
     def _onchange_salary_breakdown_v2(self):
         """Auto-calculate wage from V2 components"""
         self.wage = (self.ueipab_salary_v2 or 0.0) + \
                     (self.ueipab_extrabonus_v2 or 0.0) + \
-                    (self.ueipab_bonus_v2 or 0.0)
+                    (self.ueipab_bonus_v2 or 0.0) + \
+                    (self.ueipab_cesta_ticket_v2 or 0.0)
 ```
 
 **Step 3.3: Create Salary Rules**
@@ -193,11 +201,13 @@ result = -(monthly_sso * proportion)
 **Test Cases:**
 
 **TC1: Rafael Perez (Mismatch Case)**
-- **Current:** deduction_base = $170.30, deductions on 100%
+- **Current:** deduction_base = $170.30, deductions on 100%, wage = $400.62
 - **V2 Setup:**
   - `ueipab_salary_v2` = $119.21 (70% of $170.30)
   - `ueipab_bonus_v2` = $51.09 (30% of $170.30)
-  - `ueipab_extrabonus_v2` = $230.32 (rest to reach $400.62)
+  - `ueipab_extrabonus_v2` = $190.32 (remaining amount)
+  - `ueipab_cesta_ticket_v2` = $40.00 (fixed food allowance)
+  - **Total wage:** $119.21 + $51.09 + $190.32 + $40.00 = $400.62 ✓
 - **Expected Result:** SSO = $2.68 (matches spreadsheet!)
 - **Expected NET:** $195.70 (matches spreadsheet!)
 
@@ -247,6 +257,34 @@ result = -(monthly_sso * proportion)
 
 ### Phase 6: Data Migration (1 week)
 
+**Google Spreadsheet "SalaryStructureV2" Tab:**
+
+A new tab called **"SalaryStructureV2"** will be created in the Google Spreadsheet for better importing, testing, and validation:
+- **Spreadsheet ID:** `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`
+- **Tab Name:** "SalaryStructureV2"
+- **Purpose:** Pre-calculate all V2 field values for all 44 employees before Odoo import
+
+**Column Structure (SalaryStructureV2 Tab):**
+```
+A: Employee Name
+B: Employee ID (VAT)
+C: Current Wage (from V1)
+D: Current Deduction Base (from V1)
+E: NEW Salary V2 (= D × 70%)
+F: NEW Bonus V2 (= D × 30%)
+G: NEW ExtraBonus V2 (= C - D)
+H: NEW Cesta Ticket V2 (fixed $40.00)
+I: Verification Total (= E + F + G + H, should equal C)
+J: Difference (= I - C, should be $0.00)
+```
+
+**Benefits:**
+- Pre-validate calculations in familiar spreadsheet environment
+- HR/Accounting can review before importing
+- Easy to spot any discrepancies
+- Can export to CSV for bulk import to Odoo
+- Serves as documentation of V1 → V2 mapping
+
 **Contract Field Mapping:**
 
 For each employee contract, calculate:
@@ -259,13 +297,15 @@ current_deduction_base = contract.ueipab_deduction_base
 new_salary_v2 = current_deduction_base * 0.70
 new_bonus_v2 = current_deduction_base * 0.30
 new_extrabonus_v2 = current_wage - current_deduction_base
+new_cesta_ticket_v2 = 40.00  # Fixed for all employees
 
-# Verify: new_salary_v2 + new_bonus_v2 + new_extrabonus_v2 == current_wage
+# Verify: new_salary_v2 + new_bonus_v2 + new_extrabonus_v2 + new_cesta_ticket_v2 == current_wage
 ```
 
 **Migration Script:**
 ```python
 # /opt/odoo-dev/scripts/migrate_contracts_to_v2.py
+# OPTION 1: Direct calculation (simple, no spreadsheet)
 for contract in active_contracts:
     deduction_base = contract.ueipab_deduction_base
 
@@ -273,7 +313,47 @@ for contract in active_contracts:
         'ueipab_salary_v2': deduction_base * 0.70,
         'ueipab_bonus_v2': deduction_base * 0.30,
         'ueipab_extrabonus_v2': contract.wage - deduction_base,
+        'ueipab_cesta_ticket_v2': 40.00,
     })
+
+# OPTION 2: Import from SalaryStructureV2 spreadsheet tab (recommended)
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Connect to spreadsheet
+credentials = ServiceAccountCredentials.from_json_keyfile_name(
+    '/tmp/gsheet_credentials.json',
+    ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+)
+gc = gspread.authorize(credentials)
+spreadsheet_id = '19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s'
+sheet = gc.open_by_key(spreadsheet_id)
+worksheet = sheet.worksheet('SalaryStructureV2')
+
+# Get all data from SalaryStructureV2 tab (rows 2-45, columns A-H)
+data_rows = worksheet.get('A2:H45')
+
+for row in data_rows:
+    emp_name, emp_vat, wage, deduction_base, salary_v2, bonus_v2, extrabonus_v2, cesta_v2 = row
+
+    # Find employee contract by name or VAT
+    employee = env['hr.employee'].search([('name', '=', emp_name)], limit=1)
+    if not employee:
+        continue
+
+    contract = env['hr.contract'].search([
+        ('employee_id', '=', employee.id),
+        ('state', '=', 'open')
+    ], limit=1)
+
+    if contract:
+        contract.write({
+            'ueipab_salary_v2': float(salary_v2),
+            'ueipab_bonus_v2': float(bonus_v2),
+            'ueipab_extrabonus_v2': float(extrabonus_v2),
+            'ueipab_cesta_ticket_v2': float(cesta_v2),
+        })
+        print(f"✓ {emp_name}: Salary={salary_v2}, Bonus={bonus_v2}, ExtraBonus={extrabonus_v2}, Cesta={cesta_v2}")
 ```
 
 **Backup Plan:**

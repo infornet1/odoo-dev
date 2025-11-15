@@ -219,10 +219,11 @@ VE_SSO_DED = deduction_base × 2.25%  # Applied to $170.30
 **Proposed V2 Design (Clear):**
 ```python
 # Store direct amounts in contract (no percentages!)
-contract.ueipab_salary_v2      = $119.21  # Subject to deductions
-contract.ueipab_extrabonus_v2  = $42.58   # NOT subject to deductions
-contract.ueipab_bonus_v2       = $238.83  # NOT subject to deductions
-contract.wage = Salary + ExtraBonus + Bonus = $400.62
+contract.ueipab_salary_v2       = $119.21  # Subject to deductions
+contract.ueipab_extrabonus_v2   = $42.58   # NOT subject to deductions
+contract.ueipab_bonus_v2        = $198.83  # NOT subject to deductions
+contract.ueipab_cesta_ticket_v2 = $40.00   # Food allowance (fixed ~$40 for all employees)
+contract.wage = Salary + ExtraBonus + Bonus + Cesta = $400.62
 
 # Deductions applied ONLY to Salary field
 VE_SSO_DED = ueipab_salary_v2 × 2.25%  # Applied to $119.21
@@ -245,6 +246,11 @@ All deductions apply **ONLY to Salary field** in V2 (NOT to ExtraBonus or Bonus)
 - 8-phase implementation plan with parallel V1/V2 operation
 - Keep V1 operational during V2 testing and validation
 - Eventually decommission V1 after full migration
+- **New:** "SalaryStructureV2" spreadsheet tab for pre-calculation and validation
+  - Spreadsheet: `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`
+  - Pre-calculate all V2 field values for all 44 employees
+  - HR/Accounting review before Odoo import
+  - Can export to CSV for bulk import
 
 **Implementation Status:**
 - ✅ Phase 1: Root cause analysis complete
