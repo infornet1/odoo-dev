@@ -183,6 +183,91 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 
 ---
 
+### 4. Venezuelan Payroll V2 Revision Plan
+
+**Status:** ⏸️ PLANNING COMPLETE - AWAITING APPROVAL
+**Created:** 2025-11-14
+**Type:** System Redesign
+
+**Purpose:**
+Migrate from percentage-based V1 salary structure to direct-amount V2 model for improved clarity and maintainability.
+
+**Root Cause (Why V2 is Needed):**
+
+After verifying NOVIEMBRE15-2 payslips against Google Spreadsheet:
+- ✅ 40/44 employees (91%) matched exactly
+- ❌ 4/44 employees showed $0.69-$2.86 differences
+- **Cause:** V1 design uses confusing percentage calculations (70%, 25%, 5% of deduction_base)
+- **Result:** Deductions applied to 100% of deduction_base instead of Salary portion only
+
+**This is NOT a legal compliance issue** - All Venezuelan labor regulations are followed correctly. This is a **MODEL DESIGN IMPROVEMENT** to eliminate confusion and simplify payroll administration.
+
+**Current V1 Design (Confusing):**
+```python
+# Stored in contract
+contract.ueipab_deduction_base = $170.30  # ~42% of wage
+
+# Calculated via salary rules (percentages)
+VE_SALARY_70 = deduction_base × 70%  # $119.21
+VE_BONUS_25  = deduction_base × 25%  # $42.58
+VE_EXTRA_5   = deduction_base × 5%   # $8.52
+
+# Deductions applied to 100% of deduction_base
+VE_SSO_DED = deduction_base × 2.25%  # Applied to $170.30
+```
+
+**Proposed V2 Design (Clear):**
+```python
+# Store direct amounts in contract (no percentages!)
+contract.ueipab_salary_v2      = $119.21  # Subject to deductions
+contract.ueipab_extrabonus_v2  = $42.58   # NOT subject to deductions
+contract.ueipab_bonus_v2       = $238.83  # NOT subject to deductions
+contract.wage = Salary + ExtraBonus + Bonus = $400.62
+
+# Deductions applied ONLY to Salary field
+VE_SSO_DED = ueipab_salary_v2 × 2.25%  # Applied to $119.21
+```
+
+**Deduction Rates (Semi-Monthly) - CONFIRMED:**
+1. **IVSS (SSO):** 4.5% monthly ÷ 2 = 2.25% semi-monthly
+2. **FAOV:** 1% monthly ÷ 2 = 0.5% semi-monthly
+3. **INCES (PARO):** 0.25% monthly ÷ 2 = 0.125% semi-monthly
+4. **ARI:** Dynamic % (from `ueipab_ari_withholding_rate` field) ÷ 2 semi-monthly
+
+All deductions apply **ONLY to Salary field** in V2 (NOT to ExtraBonus or Bonus).
+
+**Systems Affected:**
+1. **[VE] UEIPAB Venezuelan Payroll** - Regular bi-weekly payroll (44 employees, 24x/year)
+2. **Liquidación Venezolana** - Employee termination settlements
+3. **Aguinaldos Diciembre 2025** - Christmas bonus payments
+
+**Migration Strategy:**
+- 8-phase implementation plan with parallel V1/V2 operation
+- Keep V1 operational during V2 testing and validation
+- Eventually decommission V1 after full migration
+
+**Implementation Status:**
+- ✅ Phase 1: Root cause analysis complete
+- ✅ Phase 1: Impact analysis complete
+- ✅ Phase 1: V2 plan documented (480 lines)
+- ⏸️ Phase 1: Awaiting legal review and HR confirmation
+- ⏳ Phases 2-8: Not started (awaiting user approval)
+
+**Diagnostic Scripts Created:**
+- `scripts/verify_70_percent_pattern.py` - Confirmed 40 employees use 100% base
+- `scripts/detailed_comparison.py` - Component-by-component analysis
+- `scripts/diagnose_4_mismatches.py` - Deep dive on 4 mismatched employees
+- `scripts/analyze_spreadsheet_formulas.py` - Verified spreadsheet calculations
+- `scripts/analyze_period_scaling.py` - Confirmed semi-monthly logic
+- `scripts/check_deduction_formulas.py` - Validated formula percentages
+
+📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)** (480 lines)
+
+**User Directive:**
+> "DO NOT TOUCH NOTHING YET" - No implementation until plan approved
+
+---
+
 ## Additional Documentation
 
 ### Legal & Compliance
