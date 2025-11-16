@@ -102,44 +102,64 @@
                                     <t t-set="other_deductions_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Calculate SALARY = 70% of deduction_base (reportable salary for accounting) -->
-                                    <t t-set="salary_amount" t-value="(payslip.contract_id.ueipab_deduction_base or 0.0) * 0.70"/>
+                                    <!-- Calculate SALARY and BONUS (V2 first, then V1 fallback) -->
+                                    <t t-if="payslip.contract_id.ueipab_salary_v2 and payslip.contract_id.ueipab_salary_v2 > 0">
+                                        <!-- V2: Use direct contract field values -->
+                                        <t t-set="salary_amount" t-value="payslip.contract_id.ueipab_salary_v2 or 0.0"/>
+                                        <t t-set="bonus_amount" t-value="(payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + (payslip.contract_id.ueipab_bonus_v2 or 0.0) + (payslip.contract_id.cesta_ticket_usd or 0.0)"/>
+                                    </t>
+                                    <t t-else="">
+                                        <!-- V1: Calculate from deduction_base using 70/30 split -->
+                                        <t t-set="salary_amount" t-value="(payslip.contract_id.ueipab_deduction_base or 0.0) * 0.70"/>
+                                        <t t-set="bonus_amount" t-value="((payslip.contract_id.ueipab_deduction_base or 0.0) * 0.30) + ((payslip.contract_id.wage or 0.0) - (payslip.contract_id.ueipab_deduction_base or 0.0))"/>
+                                    </t>
 
-                                    <!-- Calculate BONUS = 30% of deduction_base + (wage - deduction_base) -->
-                                    <!-- This ensures: Salary + Bonus = wage, and follows 70/30 accounting split -->
-                                    <t t-set="bonus_amount" t-value="((payslip.contract_id.ueipab_deduction_base or 0.0) * 0.30) + ((payslip.contract_id.wage or 0.0) - (payslip.contract_id.ueipab_deduction_base or 0.0))"/>
-
-                                    <!-- Calculate ARI (income tax withholding) -->
-                                    <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED')"/>
+                                    <!-- Calculate ARI (income tax withholding) - V2 first, then V1 -->
+                                    <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED_V2')"/>
+                                    <t t-if="not ari_line">
+                                        <t t-set="ari_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED')"/>
+                                    </t>
                                     <t t-if="ari_line">
                                         <t t-set="ari_amount" t-value="abs(ari_line[0].total)"/>
                                     </t>
 
-                                    <!-- Calculate SSO (4%) -->
-                                    <t t-set="sso_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_SSO_DED')"/>
+                                    <!-- Calculate SSO (4%) - V2 first, then V1 -->
+                                    <t t-set="sso_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_SSO_DED_V2')"/>
+                                    <t t-if="not sso_line">
+                                        <t t-set="sso_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_SSO_DED')"/>
+                                    </t>
                                     <t t-if="sso_line">
                                         <t t-set="sso_amount" t-value="abs(sso_line[0].total)"/>
                                     </t>
 
-                                    <!-- Calculate FAOV (1%) -->
-                                    <t t-set="faov_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_FAOV_DED')"/>
+                                    <!-- Calculate FAOV (1%) - V2 first, then V1 -->
+                                    <t t-set="faov_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_FAOV_DED_V2')"/>
+                                    <t t-if="not faov_line">
+                                        <t t-set="faov_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_FAOV_DED')"/>
+                                    </t>
                                     <t t-if="faov_line">
                                         <t t-set="faov_amount" t-value="abs(faov_line[0].total)"/>
                                     </t>
 
-                                    <!-- Calculate PARO (0.5%) -->
-                                    <t t-set="paro_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_PARO_DED')"/>
+                                    <!-- Calculate PARO (0.5%) - V2 first, then V1 -->
+                                    <t t-set="paro_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_PARO_DED_V2')"/>
+                                    <t t-if="not paro_line">
+                                        <t t-set="paro_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_PARO_DED')"/>
+                                    </t>
                                     <t t-if="paro_line">
                                         <t t-set="paro_amount" t-value="abs(paro_line[0].total)"/>
                                     </t>
 
                                     <!-- Calculate Other Deductions (everything else negative except ARI and Social Security) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI_DED', 'VE_SSO_DED', 'VE_FAOV_DED', 'VE_PARO_DED', 'LIQUID_INCES'))" t-as="line">
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI_DED', 'VE_ARI_DED_V2', 'VE_SSO_DED', 'VE_SSO_DED_V2', 'VE_FAOV_DED', 'VE_FAOV_DED_V2', 'VE_PARO_DED', 'VE_PARO_DED_V2', 'LIQUID_INCES'))" t-as="line">
                                         <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
                                     </t>
 
-                                    <!-- Get NET amount -->
-                                    <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                    <!-- Get NET amount - V2 first, then V1 -->
+                                    <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')"/>
+                                    <t t-if="not net_line">
+                                        <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                    </t>
                                     <t t-if="net_line">
                                         <t t-set="net_amount" t-value="net_line[0].total"/>
                                     </t>
@@ -214,8 +234,8 @@
                             <p style="margin: 0;">
                                 <strong>Notes:</strong>
                                 This report shows only confirmed payslips (Done/Paid status).
-                                Salary = Contract deduction base (base salary for social security/tax calculations).
-                                Bonus = Total wage minus deduction base (all bonuses, benefits, cesta ticket, etc.).
+                                <strong>V2 payrolls:</strong> Salary = Salary V2 field (subject to deductions), Bonus = ExtraBonus V2 + Bonus V2 + Cesta Ticket (exempt from deductions).
+                                <strong>V1 payrolls:</strong> Salary = 70% of deduction base, Bonus = 30% of deduction base + other benefits.
                                 ARI = Income tax withholding (SENIAT).
                                 SSO = Seguro Social Obligatorio (4%).
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).

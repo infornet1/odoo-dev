@@ -66,8 +66,11 @@
 
                             <!-- Loop through payslips (only done/paid) -->
                             <t t-foreach="batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')).sorted(lambda s: s.employee_id.name)" t-as="slip">
-                                <!-- Calculate net amount for this payslip -->
-                                <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                <!-- Calculate net amount for this payslip (V2 first, then V1 fallback) -->
+                                <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')"/>
+                                <t t-if="not net_line">
+                                    <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                </t>
                                 <t t-set="net_amount_usd" t-value="net_line[0].total if net_line else 0.0"/>
                                 <t t-set="exchange_rate" t-value="slip.exchange_rate_used or 1.0"/>
                                 <t t-set="net_amount_veb" t-value="net_amount_usd * exchange_rate"/>

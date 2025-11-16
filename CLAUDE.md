@@ -317,6 +317,18 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
   - **Scripts:**
     - `/opt/odoo-dev/scripts/phase5_test_v2_payroll.py` (payroll simulation)
     - `/opt/odoo-dev/scripts/verify_data_consistency_all_employees.py` (consistency check)
+- ✅ **REPORTS UPDATED (2025-11-16):** Both payroll reports now support V2 with backward compatibility
+  - **Disbursement List Report:** Updated to check for `VE_NET_V2` first, fallback to `VE_NET`
+  - **Disbursement Detail Report:** Full V2 support with intelligent detection
+    - Salary/Bonus calculation: Uses V2 fields (`ueipab_salary_v2`, `ueipab_extrabonus_v2`, `ueipab_bonus_v2`, `cesta_ticket_usd`) when available
+    - All deduction lookups: Check V2 rules first (`VE_ARI_DED_V2`, `VE_SSO_DED_V2`, `VE_FAOV_DED_V2`, `VE_PARO_DED_V2`), fallback to V1
+    - NET calculation: Check `VE_NET_V2` first, fallback to `VE_NET`
+    - Footer notes: Explain V2 vs V1 calculation differences
+  - **Backward Compatibility:** Both reports work seamlessly with existing V1 batches (NOVIEMBRE15-2) and new V2 batches
+  - **Implementation Pattern:** Try V2 rule code → If not found, try V1 rule code → Display result
+  - **Files Updated:**
+    - `addons/ueipab_payroll_enhancements/reports/disbursement_list_report.xml`
+    - `addons/ueipab_payroll_enhancements/reports/payroll_disbursement_detail_report.xml`
 - ⏳ **Phases 6-8:** Optional (parallel operation, cutover, V1 decommission)
 
 **Spreadsheet Validation Results (2025-11-15):**
