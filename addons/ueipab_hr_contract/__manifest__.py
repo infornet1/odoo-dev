@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB HR Contract Extensions',
-    'version': '17.0.1.3.0',
+    'version': '17.0.1.4.0',
     'category': 'Human Resources',
     'summary': 'Venezuelan payroll fields for UEIPAB contracts',
     'description': """
@@ -22,6 +22,16 @@ Liquidation Historical Tracking (v1.3.0 - Added 2025-11-12):
 - Previous Liquidation Date: Subtract already-paid antiguedad for rehires
 - Vacation Paid Until: Calculate accrued vacation from last Aug 1 payment
 - Supports complex scenarios: rehires, gaps, multiple liquidations
+
+V2 Compensation Breakdown (v1.4.0 - Added 2025-11-16 - CEO APPROVED):
+- ueipab_salary_v2: Salary subject to mandatory deductions (SSO, FAOV, PARO, ARI)
+- ueipab_extrabonus_v2: Extra bonus exempt from deductions
+- ueipab_bonus_v2: Regular bonus exempt from deductions
+- Parallel V1/V2 operation: Both structures coexist during migration
+- Transparent deduction base: Eliminates confusing percentage calculations
+- Option A proration: Deductions calculated by actual payslip period days/30
+- Data source: Google Spreadsheet columns K, L, M (100% validated)
+- Legal compliance: CEO confirmed full Venezuelan labor law compliance
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',

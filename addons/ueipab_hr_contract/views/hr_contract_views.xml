@@ -28,6 +28,11 @@
                         <field name="ueipab_previous_liquidation_date" string="Previous Liquidation"/>
                         <field name="ueipab_vacation_paid_until" string="Vacation Paid Until"/>
                     </group>
+                    <group name="venezuelan_compensation_v2" string="🆕 V2 Compensation Breakdown (CEO Approved 2025-11-16)">
+                        <field name="ueipab_salary_v2" string="Salary V2 (Deductible)"/>
+                        <field name="ueipab_extrabonus_v2" string="Extra Bonus V2 (Non-Deductible)"/>
+                        <field name="ueipab_bonus_v2" string="Bonus V2 (Non-Deductible)"/>
+                    </group>
                 </group>
 
                 <!-- Hide contract type field to prevent errors -->

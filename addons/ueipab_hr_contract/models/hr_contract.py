@@ -1,8 +1,10 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class HrContract(models.Model):
+    _name = 'hr.contract'
     _inherit = 'hr.contract'
+    _description = 'Employee Contract'
 
     # Venezuelan Compensation Fields
     ueipab_salary_base = fields.Monetary(
@@ -34,6 +36,88 @@ class HrContract(models.Model):
              "This is the base amount BEFORE 70/25/5 distribution and BEFORE extracting Cesta Ticket. "
              "Deductions (IVSS, FAOV, INCES, ARI) are calculated on this amount per spreadsheet logic. "
              "Formula: deduction_base = Column K + Column L (from payroll spreadsheet)"
+    )
+
+    # ==========================================================================
+    # V2 COMPENSATION BREAKDOWN - VENEZUELAN PAYROLL
+    # ==========================================================================
+    # Purpose: Transparent salary structure with clear deduction base
+    # Replaces: Confusing V1 percentage calculations (70%, 25%, 5%)
+    # Legal: CEO confirmed full compliance with Venezuelan labor law (2025-11-16)
+    # Strategy: Parallel V1/V2 operation (V1 fields remain untouched)
+    # Data Source: Google Spreadsheet columns K, L, M (100% validated)
+    # ==========================================================================
+
+    ueipab_salary_v2 = fields.Monetary(
+        string='Salary V2 (Deductible)',
+        currency_field='currency_id',
+        tracking=True,              # Track field changes in chatter
+        copy=False,                 # Don't copy when duplicating contract
+        groups='hr.group_hr_user',  # Require HR user access
+        index=True,                 # Database index for faster queries
+        required=False,             # Optional (supports V1/V2 parallel operation)
+        help='Monthly base salary subject to mandatory Venezuelan social security '
+             'deductions (SSO 4%%, FAOV 1%%, PARO 0.5%%, ARI variable%%).\n\n'
+             'This is the ONLY component subject to payroll deductions per Venezuelan labor law.\n\n'
+             '🔹 SOURCE: Imported from Google Spreadsheet Column K (SALARIO MENSUAL MAS BONO)\n'
+             '🔹 SPREADSHEET: 19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s, Tab "15nov2025"\n'
+             '🔹 APPLIES TO: Salary Structure "Salarios Venezuela UEIPAB V2"\n'
+             '🔹 DEDUCTIONS: SSO, FAOV, PARO, ARI (prorated by actual payslip period days/30)\n'
+             '🔹 LEGAL BASIS: LOTTT, IVSS, BANAVIH, INCES regulations\n'
+             '🔹 CEO APPROVED: 2025-11-16 (Option A deduction approach with proration)\n\n'
+             'PRORATION FORMULA:\n'
+             '  Monthly deduction = salary_v2 × rate (e.g., 4%% SSO)\n'
+             '  Payslip deduction = monthly_deduction × (period_days / 30.0)\n\n'
+             'EXAMPLE (Rafael Perez, 15-day payslip):\n'
+             '  salary_v2 = $119.09 monthly\n'
+             '  SSO = $119.09 × 4%% × (15/30) = $2.38'
+    )
+
+    ueipab_extrabonus_v2 = fields.Monetary(
+        string='Extra Bonus V2 (Non-Deductible)',
+        currency_field='currency_id',
+        tracking=True,
+        copy=False,
+        groups='hr.group_hr_user',
+        index=True,
+        required=False,
+        help='Monthly extra bonus NOT subject to mandatory social security deductions.\n\n'
+             'This component is exempt from SSO, FAOV, PARO, and ARI deductions per Venezuelan labor law.\n\n'
+             '🔹 SOURCE: Imported from Google Spreadsheet Column L (OTROS BONOS)\n'
+             '🔹 SPREADSHEET: 19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s, Tab "15nov2025"\n'
+             '🔹 APPLIES TO: Salary Structure "Salarios Venezuela UEIPAB V2"\n'
+             '🔹 DEDUCTIONS: None (exempt from all mandatory deductions)\n'
+             '🔹 PRORATION: Yes (by actual payslip period days/30)\n'
+             '🔹 CEO APPROVED: 2025-11-16\n\n'
+             'NOTE: Only 4 employees have ExtraBonus values:\n'
+             '  - SERGIO MANEIRO, ANDRES MORALES, PABLO NAVARRO, RAFAEL PEREZ\n'
+             '  All other employees have $0.00 in this field.'
+    )
+
+    ueipab_bonus_v2 = fields.Monetary(
+        string='Bonus V2 (Non-Deductible)',
+        currency_field='currency_id',
+        tracking=True,
+        copy=False,
+        groups='hr.group_hr_user',
+        index=True,
+        required=False,
+        help='Monthly regular bonus NOT subject to mandatory social security deductions.\n\n'
+             'This component is exempt from SSO, FAOV, PARO, and ARI deductions per Venezuelan labor law.\n\n'
+             '🔹 SOURCE: Imported from Google Spreadsheet Column M (CESTA TICKET MENSUAL PTR) minus Cesta Ticket ($40)\n'
+             '🔹 SPREADSHEET: 19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s, Tab "15nov2025"\n'
+             '🔹 APPLIES TO: Salary Structure "Salarios Venezuela UEIPAB V2"\n'
+             '🔹 DEDUCTIONS: None (exempt from all mandatory deductions)\n'
+             '🔹 PRORATION: Yes (by actual payslip period days/30)\n'
+             '🔹 FORMULA: Column M value - $40.00 Cesta Ticket = Bonus V2\n'
+             '🔹 CEO APPROVED: 2025-11-16\n\n'
+             'CALCULATION EXAMPLE (Rafael Perez):\n'
+             '  Column M (VEB): 54,095.99 VEB\n'
+             '  Column M (USD): 54,095.99 / 234.8715 = $230.32\n'
+             '  Cesta Ticket: $40.00 (fixed)\n'
+             '  Bonus V2: $230.32 - $40.00 = $190.32\n\n'
+             'WAGE FORMULA:\n'
+             '  wage = salary_v2 + extrabonus_v2 + bonus_v2 + cesta_ticket_usd'
     )
 
     # Venezuelan Payroll Schedule
@@ -153,3 +237,49 @@ class HrContract(models.Model):
              "- Vacation owed: 15 days (1 year * 15 days/year)\n"
              "- Bono owed: 14 days (1 year * 14 days/year for 5+ years seniority)",
     )
+
+    # ==========================================================================
+    # V2 COMPENSATION METHODS
+    # ==========================================================================
+
+    @api.onchange('ueipab_salary_v2', 'ueipab_extrabonus_v2', 'ueipab_bonus_v2', 'cesta_ticket_usd')
+    def _onchange_salary_breakdown_v2(self):
+        """Auto-calculate total wage from V2 compensation components
+
+        FORMULA:
+            wage = salary_v2 + extrabonus_v2 + bonus_v2 + cesta_ticket_usd
+
+        DEDUCTION RULES (CEO Approved 2025-11-16):
+            - salary_v2: Subject to SSO 4%, FAOV 1%, PARO 0.5%, ARI variable%
+            - extrabonus_v2: Exempt from all deductions
+            - bonus_v2: Exempt from all deductions
+            - cesta_ticket_usd: Exempt from all deductions (mandatory benefit)
+
+        LEGAL BASIS:
+            CEO confirmed full compliance with Venezuelan labor law (2025-11-16)
+
+        PRORATION (Option A - CEO Approved):
+            All components prorated by actual payslip period (days / 30)
+            Handles standard bi-weekly (15 days), terminations, and partial periods
+
+        EXAMPLE (Rafael Perez):
+            salary_v2 = $119.09
+            extrabonus_v2 = $51.21
+            bonus_v2 = $190.32
+            cesta_ticket_usd = $40.00
+            ────────────────────
+            wage = $400.62
+
+        PARALLEL V1/V2 OPERATION:
+            This method ONLY updates wage if V2 fields are populated.
+            V1 fields (ueipab_deduction_base, etc.) remain untouched.
+            Both structures can coexist during migration period.
+        """
+        # Only calculate if at least one V2 field is populated
+        if self.ueipab_salary_v2 or self.ueipab_extrabonus_v2 or self.ueipab_bonus_v2:
+            self.wage = (
+                (self.ueipab_salary_v2 or 0.0) +
+                (self.ueipab_extrabonus_v2 or 0.0) +
+                (self.ueipab_bonus_v2 or 0.0) +
+                (self.cesta_ticket_usd or 0.0)
+            )
