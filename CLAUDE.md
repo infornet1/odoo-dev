@@ -268,9 +268,14 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
 - ✅ **Phase 2 COMPLETE (2025-11-16):** V2 contract fields added to `ueipab_hr_contract` v1.4.0
   - `ueipab_salary_v2`, `ueipab_extrabonus_v2`, `ueipab_bonus_v2` fields created
   - Database columns and indexes created
-  - Form view updated with V2 fields group
+  - **Contract form view redesigned with 4 new dedicated notebook pages:**
+    - 💼 **Salary Breakdown** - V2 compensation fields + Cesta Ticket + auto-calculated wage
+    - 💰 **Salary Tax Breakdown** - ARI withholding rate and update tracking
+    - 📋 **Salary Liquidation** - Historical tracking (hire date, previous liquidation, vacation)
+    - ⚙️ **Salary Parameters** - Payroll schedule configuration (bi-monthly, payment days)
   - Auto-calculation onchange method implemented
   - Full Odoo conventions (tracking, copy, groups, index, comprehensive help text)
+  - Improved UX: Fields logically organized, cleaner layout, helpful explanatory labels
 - ⏳ **Phases 3-8:** Pending (awaiting user approval to proceed)
 
 **Spreadsheet Validation Results (2025-11-15):**
@@ -383,6 +388,46 @@ except:
 <!-- ✅ CURRENT (Odoo 17) -->
 <div invisible="field == 0">
 ```
+
+### Form View UX Design - Notebook Pages
+
+**Best Practice:** Organize complex forms into logical notebook pages for better UX
+
+**Pattern:** Add pages after existing notebook pages using XPath position
+```xml
+<page name="information" position="after">
+    <page string="💼 Category Name" name="category_slug">
+        <group string="Section Title">
+            <group>
+                <field name="field1"/>
+                <field name="field2"/>
+            </group>
+            <group>
+                <separator string="Help Section"/>
+                <div class="o_form_label">Helpful explanation text</div>
+            </group>
+        </group>
+    </page>
+</page>
+```
+
+**View Validation Rules:**
+- Labels without `for` attribute must use `class="o_form_label"`
+- Use `<div class="o_form_label">` for explanatory text (not `<label>`)
+- Each page needs unique `name` and descriptive `string` attributes
+- Use emojis in page titles for visual clarity (💼 💰 📋 ⚙️)
+
+**Contract Form Example (ueipab_hr_contract):**
+- 💼 Salary Breakdown - V2 compensation fields
+- 💰 Salary Tax Breakdown - Tax withholding configuration
+- 📋 Salary Liquidation - Historical tracking fields
+- ⚙️ Salary Parameters - Payroll schedule settings
+
+**Benefits:**
+- Clean, uncluttered UI
+- Logical field grouping
+- Easy navigation between categories
+- Contextual help text in each section
 
 ### Report Development
 
