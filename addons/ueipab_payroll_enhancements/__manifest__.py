@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.7.0',
+    'version': '17.0.1.8.0',
     'category': 'Human Resources/Payroll',
-    'summary': 'Enhanced payroll batch with total net, disbursement reports, cancel workflow, and custom reports menu',
+    'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), cancel workflow, and custom reports menu',
     'description': """
 UEIPAB Payroll Enhancements
 ============================
@@ -23,8 +23,10 @@ Features:
 Reports Available:
 ------------------
 * Payroll Disbursement Detail - FULLY WORKING
+  - Export formats: PDF or Excel (.xlsx)
   - Landscape Letter format (8.5"x11")
-  - Courier New font (accounting style)
+  - Courier New font for PDF (accounting style)
+  - Excel export with formatted columns and totals
   - Columns: Employee, VAT ID, Department, Gross, ARI Tax, Social Security, Other Deductions, Net USD, Exchange Rate, Net VEB
   - Flexible filtering (batch or date range)
 * Prestaciones Soc. Intereses - NEW! FULLY WORKING

@@ -33,6 +33,7 @@
                         <field name="currency_id"
                                options="{'no_create': True, 'no_open': True}"
                                domain="[('name', 'in', ['USD', 'VEB'])]"/>
+                        <field name="output_format" widget="radio"/>
                     </group>
                 </group>
 
@@ -48,10 +49,10 @@
 
                 <footer>
                     <button name="action_print_report"
-                            string="Print Report"
+                            string="Generate Report"
                             type="object"
                             class="btn-primary"
-                            icon="fa-print"/>
+                            icon="fa-download"/>
                     <button name="action_preview"
                             string="Preview Payslips"
                             type="object"
