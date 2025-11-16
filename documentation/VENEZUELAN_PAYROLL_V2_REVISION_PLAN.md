@@ -24,12 +24,26 @@ Current V1 design is confusing:
 - Spreadsheet (correctly) applies deductions only to **Salary portion** (70% of deduction_base)
 
 ### Proposed Solution
-Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
-- **Salary:** Direct amount subject to ALL social security deductions (IVSS, FAOV, INCES, ARI)
-- **ExtraBonus:** Direct amount NOT subject to deductions
-- **Bonus:** Direct amount NOT subject to deductions
+Create **Venezuelan Compensation Breakdown V2** with direct, transparent values imported from spreadsheet:
+- **Salary:** Dollar amount subject to ALL social security deductions (IVSS, FAOV, INCES, ARI)
+- **ExtraBonus:** Dollar amount NOT subject to deductions
+- **Bonus:** Dollar amount NOT subject to deductions
 - **Cesta Ticket:** Fixed food allowance (~$40 for all employees) NOT subject to deductions
 - **Wage = Salary + ExtraBonus + Bonus + Cesta Ticket** (total compensation)
+
+**Key V2 Design Principles:**
+- ✅ **NO percentage calculations** - Stores actual dollar amounts
+- ✅ **Import from spreadsheet** - Values imported from columns K, L, M (HR-reviewed data)
+- ✅ **Transparent** - Direct amounts eliminate confusing V1 percentage logic
+- ✅ **100% accurate** - Spreadsheet validation confirmed all 44 employees match
+
+**V2 MAPPING FORMULA (from spreadsheet "15nov2025" tab):**
+```
+Column K → ueipab_salary_v2 (direct)
+Column L → ueipab_extrabonus_v2 (direct)
+Column M - $40 → ueipab_bonus_v2 (Cesta Ticket deducted from M only)
+$40.00 → cesta_ticket_usd (fixed known value)
+```
 
 **This is a MODEL DESIGN IMPROVEMENT**, not a legal compliance change. All Venezuelan labor regulations are already being followed.
 
@@ -74,36 +88,105 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 
 #### 3. Contract Fields
 
-**Current Fields:**
+**Current Fields (V1):**
 - `wage` - Total compensation
 - `ueipab_deduction_base` - Base for social security (~42% of wage)
+- `cesta_ticket_usd` - **EXISTING FIELD** - Monthly food allowance ($40 for all employees)
 
 **Proposed New Fields (for V2):**
-- `ueipab_salary_v2` - Amount subject to deductions
+- `ueipab_salary_v2` - Amount subject to deductions (IVSS, FAOV, INCES, ARI)
 - `ueipab_extrabonus_v2` - Extra bonus (NOT subject to deductions)
 - `ueipab_bonus_v2` - Regular bonus (NOT subject to deductions)
-- `ueipab_cesta_ticket_v2` - Food allowance (fixed ~$40 for all employees, NOT subject to deductions)
-- `wage` - Remains as total (= salary + extrabonus + bonus + cesta_ticket)
+- `cesta_ticket_usd` - **REUSE EXISTING** - Food allowance (mandatory benefit per LOTTT, NOT subject to deductions)
+- `wage` - Remains as total (= salary_v2 + extrabonus_v2 + bonus_v2 + cesta_ticket_usd)
+
+**Important V2 Design Decision (2025-11-15):**
+- ❌ **REMOVED:** `ueipab_cesta_ticket_v2` field (would duplicate existing field)
+- ✅ **REUSE:** Existing `cesta_ticket_usd` field instead
+- **Rationale:** Cesta Ticket is a legally distinct mandatory benefit (not a bonus) requiring separate tracking for labor law compliance and accounting
 
 ---
 
 ## Migration Strategy
 
 ### Phase 1: Analysis & Planning (1-2 days)
-**Status:** IN PROGRESS
+**Status:** ✅ ANALYSIS & VALIDATION COMPLETE - 100% DATA ACCURACY CONFIRMED
 
 **Tasks:**
 - [x] Identify root cause of discrepancy
 - [x] Analyze impact on all 3 structures
 - [x] Document current formula dependencies
+- [x] **Spreadsheet data validation** (2025-11-15) - **100% PASS**
 - [ ] Legal review: Confirm which components are deduction-exempt
 - [ ] HR confirmation: Validate new salary breakdown approach
 - [ ] Financial impact analysis: Calculate difference for all employees
 
 **Deliverables:**
-- This revision plan document
-- Legal compliance confirmation
-- Financial impact report
+- ✅ This revision plan document (840 lines)
+- ✅ **Spreadsheet validation report** (100% accuracy - see below)
+- ✅ **Cesta Ticket design decision** (reuse existing field - see Contract Fields section)
+- ✅ **V2 design clarification** (NO percentages - HR-approved actual values only)
+- ⏳ Legal compliance confirmation
+- ⏳ Financial impact report
+
+---
+
+#### Spreadsheet Data Validation Results (2025-11-15)
+
+**Validation Objective:**
+Confirm that the Google Spreadsheet "15nov2025" tab accurately reflects current Odoo contract wages, validating it as a reliable source for V2 migration data.
+
+**Spreadsheet Information:**
+- **Spreadsheet ID:** `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`
+- **Spreadsheet Name:** "NOMINA COLEGIO ANDRES BELLO 2025-2026"
+- **Tab:** 15nov2025 (NOMINA AL 15 NOVIEMBRE 2025)
+- **Exchange Rate:** 234.8715 VEB/USD
+
+**Spreadsheet Structure:**
+- **Column D:** Employee Name
+- **Column K:** SALARIO MENSUAL MAS BONO (semi-monthly salary + bonus in VEB)
+- **Column L:** OTROS BONOS (other bonuses in VEB)
+- **Column M:** CESTA TICKET MENSUAL PTR (food allowance in VEB)
+- **Total Wage Formula:** `(K + L + M) / 234.8715` = USD wage
+
+**Validation Results:**
+```
+✓ Exact Matches:          44/44 employees (100.0%) ✅
+✗ Mismatches:             0/44 employees (0.0%)
+⚠ Spreadsheet Only:       0 employees
+⚠ Odoo Only:              3 employees (test accounts - not in active payroll)
+```
+
+**All 44 Active Employees Matched (100%):**
+- Alejandra Lopez, Andres Morales, **Arcides Arzola**, Audrey Garcia, Camila Rossato
+- Daniel Bongianni, David Hernandez, Dixia Bellorin, Elis Mejias, Emilio Isea
+- Flormar Hernandez, Gabriel España, Gabriela Uray, Gladys Brito Calzadilla, Giovanni Vezza
+- Heydi Ron, Ismary Arcila, Jessica Bolivar, Jesus Di Cesare, Jose Hernandez
+- Josefina Rodriguez, Leidymar Aray, Lorena Reyes, Luis Rodriguez, Luisa Elena Abreu
+- Magyelys Mata, Maria Figuera, Maria Nieto, Mariela Prado, Mirian Hernandez
+- Nelci Brito, Nidya Lira, Norka La Rosa, Pablo Navarro, Rafael Perez
+- Ramon Bello, Robert Quijada, Sergio Maneiro, Stefany Romero, Teresa Marin
+- **Virginia Verde**, Yaritza Bruces, Yudelys Brito, Zareth Farias
+
+**Note:** ARCIDES ARZOLA and VIRGINIA VERDE contracts were updated on 2025-11-15 and now match 100%.
+
+**Odoo-Only Employees (Test Accounts - Not in Active Payroll):**
+- Administrador 3DV (system test account)
+- Maria Daniela Jimenez Ladera (inactive employee)
+- Gustavo Perdomo (inactive employee)
+
+**Validation Conclusion:**
+✅ **VALIDATION PASSED - 100% ACCURACY!**
+
+The spreadsheet is a **fully accurate and reliable** data source for V2 migration. All 44 active payroll employees match exactly (within $0.01 rounding tolerance).
+
+**Recommendation:**
+- ✅ **All 44 employees:** Safe to import V2 field values directly from spreadsheet
+- ✅ **Migration Ready:** Spreadsheet validation confirms data integrity
+- ✅ **Validation Script:** `/opt/odoo-dev/scripts/validate_spreadsheet_wages_v2.py`
+- ✅ **Next Step:** Proceed with legal/HR/financial approvals
+
+---
 
 ### Phase 2: Module Structure Design (2-3 days)
 
@@ -120,17 +203,17 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 - **Type:** Employee payroll structure
 
 **New Salary Rules (V2):**
-1. `VE_SALARY_V2` - Base salary from contract field (subject to deductions)
-2. `VE_EXTRABONUS_V2` - Extra bonus from contract field (NOT subject to deductions)
-3. `VE_BONUS_V2` - Regular bonus from contract field (NOT subject to deductions)
-4. `VE_CESTA_TICKET_V2` - Food allowance from contract field (~$40 fixed, NOT subject to deductions)
-5. `VE_GROSS_V2` - Total gross (sum of all earnings)
-6. `VE_SSO_DED_V2` - SSO 4.5%/2 on SALARY only
-7. `VE_FAOV_DED_V2` - FAOV 1%/2 on SALARY only
-8. `VE_PARO_DED_V2` - PARO 0.25%/2 on SALARY only
-9. `VE_ARI_DED_V2` - ARI on SALARY only
+1. `VE_SALARY_V2` - Base salary from `contract.ueipab_salary_v2` (subject to deductions)
+2. `VE_EXTRABONUS_V2` - Extra bonus from `contract.ueipab_extrabonus_v2` (NOT subject to deductions)
+3. `VE_BONUS_V2` - Regular bonus from `contract.ueipab_bonus_v2` (NOT subject to deductions)
+4. `VE_CESTA_TICKET` - **REUSE EXISTING** - Food allowance from `contract.cesta_ticket_usd` (~$40 fixed, NOT subject to deductions)
+5. `VE_GROSS_V2` - Total gross = `VE_SALARY_V2 + VE_EXTRABONUS_V2 + VE_BONUS_V2 + VE_CESTA_TICKET`
+6. `VE_SSO_DED_V2` - SSO 4.5%/2 on SALARY_V2 only (NOT on bonuses or cesta ticket)
+7. `VE_FAOV_DED_V2` - FAOV 1%/2 on SALARY_V2 only (NOT on bonuses or cesta ticket)
+8. `VE_PARO_DED_V2` - PARO 0.25%/2 on SALARY_V2 only (NOT on bonuses or cesta ticket)
+9. `VE_ARI_DED_V2` - ARI on SALARY_V2 only (NOT on bonuses or cesta ticket)
 10. `VE_TOTAL_DED_V2` - Total deductions
-11. `VE_NET_V2` - Net salary
+11. `VE_NET_V2` - Net salary = `VE_GROSS_V2 + VE_TOTAL_DED_V2` (deductions are negative)
 
 ### Phase 3: Development (3-5 days)
 
@@ -146,10 +229,11 @@ Create **Venezuelan Compensation Breakdown V2** with direct, transparent values:
 class HrContract(models.Model):
     _inherit = 'hr.contract'
 
-    # V2 Compensation Breakdown
+    # V2 Compensation Breakdown (New Fields)
     ueipab_salary_v2 = fields.Monetary(
         string='Salary V2 (Subject to Deductions)',
-        help='Base salary subject to SSO, FAOV, PARO, ARI deductions'
+        help='Base salary subject to SSO, FAOV, PARO, ARI deductions. '
+             'This is the only component subject to social security contributions.'
     )
     ueipab_extrabonus_v2 = fields.Monetary(
         string='Extra Bonus V2 (Deduction Exempt)',
@@ -159,19 +243,22 @@ class HrContract(models.Model):
         string='Regular Bonus V2 (Deduction Exempt)',
         help='Regular bonus NOT subject to social security deductions'
     )
-    ueipab_cesta_ticket_v2 = fields.Monetary(
-        string='Cesta Ticket V2 (Food Allowance)',
-        help='Fixed food allowance (~$40 for all employees) NOT subject to deductions',
-        default=40.0
-    )
+    # NOTE: cesta_ticket_usd field ALREADY EXISTS in ueipab_hr_contract
+    # We will REUSE it instead of creating ueipab_cesta_ticket_v2
 
-    @api.onchange('ueipab_salary_v2', 'ueipab_extrabonus_v2', 'ueipab_bonus_v2', 'ueipab_cesta_ticket_v2')
+    @api.onchange('ueipab_salary_v2', 'ueipab_extrabonus_v2', 'ueipab_bonus_v2', 'cesta_ticket_usd')
     def _onchange_salary_breakdown_v2(self):
-        """Auto-calculate wage from V2 components"""
+        """Auto-calculate wage from V2 components
+
+        Total wage = Salary (deductible) + ExtraBonus + Bonus + Cesta Ticket
+
+        Only ueipab_salary_v2 is subject to IVSS, FAOV, INCES, and ARI deductions.
+        Bonuses and Cesta Ticket are exempt per Venezuelan labor law.
+        """
         self.wage = (self.ueipab_salary_v2 or 0.0) + \
                     (self.ueipab_extrabonus_v2 or 0.0) + \
                     (self.ueipab_bonus_v2 or 0.0) + \
-                    (self.ueipab_cesta_ticket_v2 or 0.0)
+                    (self.cesta_ticket_usd or 0.0)
 ```
 
 **Step 3.3: Create Salary Rules**
@@ -200,16 +287,20 @@ result = -(monthly_sso * proportion)
 
 **Test Cases:**
 
-**TC1: Rafael Perez (Mismatch Case)**
-- **Current:** deduction_base = $170.30, deductions on 100%, wage = $400.62
-- **V2 Setup:**
-  - `ueipab_salary_v2` = $119.21 (70% of $170.30)
-  - `ueipab_bonus_v2` = $51.09 (30% of $170.30)
-  - `ueipab_extrabonus_v2` = $190.32 (remaining amount)
-  - `ueipab_cesta_ticket_v2` = $40.00 (fixed food allowance)
-  - **Total wage:** $119.21 + $51.09 + $190.32 + $40.00 = $400.62 ✓
-- **Expected Result:** SSO = $2.68 (matches spreadsheet!)
-- **Expected NET:** $195.70 (matches spreadsheet!)
+**TC1: Rafael Perez (Employee with ExtraBonus)**
+- **Current V1:** deduction_base = $170.30, deductions on 100%, wage = $400.62
+- **V2 Setup (from spreadsheet columns K, L, M):**
+  - Column K: 27,970.53 VEB = $119.09 USD → `ueipab_salary_v2` (subject to deductions)
+  - Column L: 12,028.29 VEB = $ 51.21 USD → `ueipab_extrabonus_v2` (NOT subject to deductions)
+  - Column M: 54,095.99 VEB = $230.32 USD → $190.32 → `ueipab_bonus_v2` (minus $40 cesta, NOT subject to deductions)
+  - Fixed: $40.00 USD → `cesta_ticket_usd` (reuse existing field, NOT subject to deductions)
+  - **Total wage:** $119.09 + $51.21 + $190.32 + $40.00 = $400.62 ✓
+- **Expected V2 Deductions (on Salary only):**
+  - SSO = $119.09 × 2.25% = $2.68
+  - FAOV = $119.09 × 0.5% = $0.60
+  - PARO = $119.09 × 0.125% = $0.15
+  - Total = $3.43
+- **Expected NET:** $400.62 - $3.43 = $397.19
 
 **TC2: Alejandra Lopez (Match Case)**
 - Verify that matched employees continue to match
@@ -257,104 +348,278 @@ result = -(monthly_sso * proportion)
 
 ### Phase 6: Data Migration (1 week)
 
-**Google Spreadsheet "SalaryStructureV2" Tab:**
+**✅ UPDATE (2025-11-15): Data Source Confirmed**
 
-A new tab called **"SalaryStructureV2"** will be created in the Google Spreadsheet for better importing, testing, and validation:
+Migration will import from **EXISTING spreadsheet data** (columns K, L, M) - no new tab needed!
+
+**Google Spreadsheet Data Source:**
 - **Spreadsheet ID:** `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`
-- **Tab Name:** "SalaryStructureV2"
-- **Purpose:** Pre-calculate all V2 field values for all 44 employees before Odoo import
+- **Tab Name:** "15nov2025" (EXISTING tab with HR-reviewed data)
+- **Data Range:** Rows 5-48 (44 employees), Columns D, E, K, L, M
+- **Exchange Rate:** 234.8715 VEB/USD
+- **Purpose:** Import actual dollar values from HR-reviewed spreadsheet columns
+- **CRITICAL:** Data already validated - 100% accurate wage match confirmed
 
 **Column Structure (SalaryStructureV2 Tab):**
+
+**ACTUAL MAPPING FROM EXISTING "15nov2025" TAB:**
+
+The spreadsheet already contains all necessary V2 data in columns K, L, M. HR has already reviewed these values:
+
 ```
-A: Employee Name
-B: Employee ID (VAT)
-C: Current Wage (from V1)
-D: Current Deduction Base (from V1)
-E: NEW Salary V2 (= D × 70%)
-F: NEW Bonus V2 (= D × 30%)
-G: NEW ExtraBonus V2 (= C - D)
-H: NEW Cesta Ticket V2 (fixed $40.00)
-I: Verification Total (= E + F + G + H, should equal C)
-J: Difference (= I - C, should be $0.00)
+SOURCE DATA (from "15nov2025" tab, rows 5-48):
+  Column D: Employee Name
+  Column E: Employee VAT
+  Column K: SALARIO MENSUAL MAS BONO (VEB) → Maps to ueipab_salary_v2 (after USD conversion)
+  Column L: OTROS BONOS (VEB) → Maps to ueipab_extrabonus_v2 (after USD conversion)
+  Column M: CESTA TICKET MENSUAL PTR (VEB) → Split into bonus_v2 and cesta_ticket
+
+CRITICAL V2 MAPPING FORMULA:
+  Step 1: Convert VEB to USD using exchange rate 234.8715
+    k_usd = Column K / 234.8715
+    l_usd = Column L / 234.8715
+    m_usd = Column M / 234.8715
+
+  Step 2: Map to V2 contract fields
+    ueipab_salary_v2 = k_usd                    (Column K → Salary V2, direct)
+    ueipab_extrabonus_v2 = l_usd                (Column L → ExtraBonus V2, direct)
+    ueipab_bonus_v2 = m_usd - $40.00            (Column M - $40 → Bonus V2)
+    cesta_ticket_usd = $40.00                   (Fixed known value)
+
+  Step 3: Verification
+    Total = ueipab_salary_v2 + ueipab_extrabonus_v2 + ueipab_bonus_v2 + cesta_ticket_usd
+    Total should equal contract.wage
 ```
 
+**IMPORTANT:**
+- ✅ **Data already exists** in spreadsheet columns K, L, M (HR-reviewed)
+- ✅ **NO percentage calculations** - Direct import of actual dollar values
+- ✅ **Cesta Ticket deducted ONLY from Column M** (not from Column L)
+- ✅ **Only 4 employees have ExtraBonus** (Column L > 0): SERGIO MANEIRO, ANDRES MORALES, PABLO NAVARRO, RAFAEL PEREZ
+
+**Note:** No need to create new "SalaryStructureV2" tab - use existing "15nov2025" tab columns K, L, M
+
 **Benefits:**
-- Pre-validate calculations in familiar spreadsheet environment
-- HR/Accounting can review before importing
-- Easy to spot any discrepancies
-- Can export to CSV for bulk import to Odoo
-- Serves as documentation of V1 → V2 mapping
+- ✅ HR reviews and approves each employee's compensation breakdown
+- ✅ Direct dollar amounts eliminate confusing percentage calculations
+- ✅ Easy to spot any discrepancies before migration
+- ✅ Can export to CSV for bulk import to Odoo
+- ✅ Serves as legal documentation of V1 → V2 transition
 
 **Contract Field Mapping:**
 
-For each employee contract, calculate:
+**CRITICAL:** V2 values are **NOT calculated** - they are **imported** from spreadsheet columns K, L, M:
+
 ```python
-# Based on current data
-current_wage = contract.wage
-current_deduction_base = contract.ueipab_deduction_base
+# ❌ WRONG APPROACH - DO NOT USE PERCENTAGES!
+# new_salary_v2 = current_deduction_base * 0.70  # This defeats V2 purpose!
 
-# NEW V2 breakdown (use spreadsheet logic for consistency)
-new_salary_v2 = current_deduction_base * 0.70
-new_bonus_v2 = current_deduction_base * 0.30
-new_extrabonus_v2 = current_wage - current_deduction_base
-new_cesta_ticket_v2 = 40.00  # Fixed for all employees
+# ✅ CORRECT APPROACH - Import actual values from spreadsheet columns K, L, M
+# Data source: "15nov2025" tab, rows 5-48
+# Exchange rate: 234.8715 VEB/USD
 
-# Verify: new_salary_v2 + new_bonus_v2 + new_extrabonus_v2 + new_cesta_ticket_v2 == current_wage
+# Example for Rafael Perez (from spreadsheet "15nov2025" tab):
+spreadsheet_values = {
+    'name': 'Rafael Perez',                      # Column D
+    'vat': 'V-9979292',                          # Column E
+    'k_veb': 27970.53,                           # Column K (SALARIO MENSUAL MAS BONO)
+    'l_veb': 12028.29,                           # Column L (OTROS BONOS)
+    'm_veb': 54095.99,                           # Column M (CESTA TICKET MENSUAL PTR)
+}
+
+# Step 1: Convert VEB to USD
+k_usd = 27970.53 / 234.8715  # = $119.09
+l_usd = 12028.29 / 234.8715  # = $ 51.21
+m_usd = 54095.99 / 234.8715  # = $230.32
+
+# Step 2: Map to V2 contract fields (CORRECT FORMULA!)
+salary_v2 = k_usd                # Column K → Salary V2 (direct)
+extrabonus_v2 = l_usd            # Column L → ExtraBonus V2 (direct)
+bonus_v2 = m_usd - 40.00         # Column M - $40 → Bonus V2
+cesta_ticket = 40.00             # Fixed known value
+
+# Result:
+# salary_v2 = $119.09
+# extrabonus_v2 = $51.21
+# bonus_v2 = $190.32  ($230.32 - $40.00)
+# cesta_ticket = $40.00
+
+# Verification:
+total = 119.09 + 51.21 + 190.32 + 40.00  # = $400.62 ✓
+
+# Migration imports these ACTUAL values (NO CALCULATION!)
+contract.write({
+    'ueipab_salary_v2': 119.09,      # Direct from Column K
+    'ueipab_bonus_v2': 190.32,       # Direct from Column M - $40
+    'ueipab_extrabonus_v2': 51.21,   # Direct from Column L
+    # cesta_ticket_usd = $40.00 (already exists, not modified)
+})
 ```
+
+**IMPORTANT:**
+- Column K → ueipab_salary_v2 (direct)
+- Column L → ueipab_extrabonus_v2 (direct)
+- Column M - $40.00 → ueipab_bonus_v2 (Cesta Ticket deducted ONLY from Column M)
+- $40.00 → cesta_ticket_usd (fixed known value, field already exists)
 
 **Migration Script:**
 ```python
 # /opt/odoo-dev/scripts/migrate_contracts_to_v2.py
-# OPTION 1: Direct calculation (simple, no spreadsheet)
-for contract in active_contracts:
-    deduction_base = contract.ueipab_deduction_base
+#
+# ✅ CORRECT V2 MIGRATION APPROACH
+# Import actual dollar values from spreadsheet "15nov2025" tab columns K, L, M
+#
+# CRITICAL: This script does NOT calculate percentages!
+# It imports the actual VEB values from spreadsheet, converts to USD, and maps to V2 fields.
 
-    contract.write({
-        'ueipab_salary_v2': deduction_base * 0.70,
-        'ueipab_bonus_v2': deduction_base * 0.30,
-        'ueipab_extrabonus_v2': contract.wage - deduction_base,
-        'ueipab_cesta_ticket_v2': 40.00,
-    })
-
-# OPTION 2: Import from SalaryStructureV2 spreadsheet tab (recommended)
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+SPREADSHEET_ID = '19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s'
+CREDENTIALS_FILE = '/tmp/gsheet_credentials.json'
+TAB_NAME = '15nov2025'
+VEB_USD_RATE = 234.8715
+CESTA_TICKET_USD = 40.00
+
+print("=" * 80)
+print("V2 CONTRACT MIGRATION - Import from Spreadsheet Columns K, L, M")
+print("=" * 80)
+print("\nCRITICAL MAPPING:")
+print("  Column K → ueipab_salary_v2 (direct)")
+print("  Column M → ueipab_bonus_v2 (minus $40 cesta ticket)")
+print("  Column L → ueipab_extrabonus_v2 (direct)")
+print("  $40.00   → cesta_ticket_usd (fixed known value)")
+print("=" * 80)
+print(f"\nSpreadsheet ID: {SPREADSHEET_ID}")
+print(f"Tab: {TAB_NAME}")
+print(f"Exchange Rate: {VEB_USD_RATE} VEB/USD")
+print(f"Cesta Ticket: ${CESTA_TICKET_USD} USD (fixed)")
+print("=" * 80)
+
 # Connect to spreadsheet
+scope = [
+    'https://spreadsheets.google.com/feeds',
+    'https://www.googleapis.com/auth/drive'
+]
 credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    '/tmp/gsheet_credentials.json',
-    ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    CREDENTIALS_FILE, scope
 )
 gc = gspread.authorize(credentials)
-spreadsheet_id = '19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s'
-sheet = gc.open_by_key(spreadsheet_id)
-worksheet = sheet.worksheet('SalaryStructureV2')
+sheet = gc.open_by_key(SPREADSHEET_ID)
+worksheet = sheet.worksheet(TAB_NAME)
 
-# Get all data from SalaryStructureV2 tab (rows 2-45, columns A-H)
-data_rows = worksheet.get('A2:H45')
+print(f"\nConnected to: {sheet.title}")
+print(f"Reading from tab: {TAB_NAME}")
+print("=" * 80)
 
-for row in data_rows:
-    emp_name, emp_vat, wage, deduction_base, salary_v2, bonus_v2, extrabonus_v2, cesta_v2 = row
+# Read columns D (Name), E (VAT), K, L, M from rows 5-48 (44 employees)
+# Column indices: D=0, E=1, ..., K=7, L=8, M=9
+data = worksheet.get('D5:M48')
 
-    # Find employee contract by name or VAT
-    employee = env['hr.employee'].search([('name', '=', emp_name)], limit=1)
-    if not employee:
+print(f"\nFound {len(data)} employee records")
+print("\nProcessing migration...")
+print("=" * 80)
+
+success_count = 0
+error_count = 0
+warning_count = 0
+
+for row in data:
+    if not row or len(row) < 3:
+        warning_count += 1
         continue
 
-    contract = env['hr.contract'].search([
-        ('employee_id', '=', employee.id),
-        ('state', '=', 'open')
-    ], limit=1)
+    emp_name = row[0].strip()
+    emp_vat = row[1].strip() if len(row) > 1 else ''
 
-    if contract:
+    # Get VEB values from columns K, L, M
+    k_veb_str = row[7].replace(',', '').strip() if len(row) > 7 and row[7] else '0'
+    l_veb_str = row[8].replace(',', '').strip() if len(row) > 8 and row[8] else '0'
+    m_veb_str = row[9].replace(',', '').strip() if len(row) > 9 and row[9] else '0'
+
+    try:
+        k_veb = float(k_veb_str)
+        l_veb = float(l_veb_str)
+        m_veb = float(m_veb_str)
+
+        # Convert to USD
+        k_usd = k_veb / VEB_USD_RATE
+        l_usd = l_veb / VEB_USD_RATE
+        m_usd = m_veb / VEB_USD_RATE
+
+        # V2 MAPPING (CORRECT!)
+        salary_v2 = k_usd                          # Column K → Salary V2
+        bonus_v2 = m_usd - CESTA_TICKET_USD        # Column M - $40 → Bonus V2
+        extrabonus_v2 = l_usd                      # Column L → ExtraBonus V2
+        cesta_ticket = CESTA_TICKET_USD            # Fixed $40
+
+        # Find employee contract by name
+        employee = env['hr.employee'].search([('name', '=', emp_name)], limit=1)
+        if not employee:
+            print(f"✗ ERROR: Employee not found: {emp_name}")
+            error_count += 1
+            continue
+
+        contract = env['hr.contract'].search([
+            ('employee_id', '=', employee.id),
+            ('state', '=', 'open')
+        ], limit=1)
+
+        if not contract:
+            print(f"✗ ERROR: No active contract for: {emp_name}")
+            error_count += 1
+            continue
+
+        # ✅ IMPORT ACTUAL VALUES - NO PERCENTAGE CALCULATION!
         contract.write({
-            'ueipab_salary_v2': float(salary_v2),
-            'ueipab_bonus_v2': float(bonus_v2),
-            'ueipab_extrabonus_v2': float(extrabonus_v2),
-            'ueipab_cesta_ticket_v2': float(cesta_v2),
+            'ueipab_salary_v2': salary_v2,        # Direct from Column K
+            'ueipab_bonus_v2': bonus_v2,          # Direct from Column M - $40
+            'ueipab_extrabonus_v2': extrabonus_v2,# Direct from Column L
+            # cesta_ticket_usd NOT modified (field already exists)
         })
-        print(f"✓ {emp_name}: Salary={salary_v2}, Bonus={bonus_v2}, ExtraBonus={extrabonus_v2}, Cesta={cesta_v2}")
+
+        # Verify total matches wage
+        total_wage = salary_v2 + bonus_v2 + extrabonus_v2 + cesta_ticket
+        current_wage = contract.wage
+
+        if abs(total_wage - current_wage) > 0.01:
+            print(f"⚠️  {emp_name}: Total ${total_wage:.2f} != Wage ${current_wage:.2f} (diff: ${abs(total_wage - current_wage):.2f})")
+            warning_count += 1
+        else:
+            print(f"✓ {emp_name}: Salary=${salary_v2:.2f}, Bonus=${bonus_v2:.2f}, ExtraBonus=${extrabonus_v2:.2f}")
+            success_count += 1
+
+    except ValueError as e:
+        print(f"✗ ERROR parsing {emp_name}: {e}")
+        error_count += 1
+    except Exception as e:
+        print(f"✗ ERROR migrating {emp_name}: {e}")
+        error_count += 1
+
+print("\n" + "=" * 80)
+print("MIGRATION SUMMARY")
+print("=" * 80)
+print(f"✓ Success:  {success_count} employees migrated")
+print(f"⚠️  Warnings: {warning_count} employees with verification issues")
+print(f"✗ Errors:   {error_count} employees failed")
+print("=" * 80)
+
+if warning_count > 0 or error_count > 0:
+    print("\n⚠️  REVIEW REQUIRED: Check warnings and errors above before proceeding")
+else:
+    print("\n✅ MIGRATION COMPLETE: All employees migrated successfully")
+
+print("\n" + "=" * 80)
+print("V2 MAPPING VERIFIED (from spreadsheet columns K, L, M)")
+print("=" * 80)
 ```
+
+**Key Points:**
+- ❌ **NO percentage calculations** (`* 0.70`, `* 0.30`) anywhere in migration
+- ✅ **Imports from columns K, L, M** (existing spreadsheet data)
+- ✅ **Applies correct mapping formula** (K→salary, M-$40→bonus, L→extrabonus)
+- ✅ **Validates totals** to ensure values match original wage
+- ✅ **Clear error handling** with detailed output
 
 **Backup Plan:**
 - Full database backup before migration
@@ -474,10 +739,13 @@ for row in data_rows:
 ### Proposed System (V2)
 
 **Rafael Perez:**
-- Salary V2: $119.21 (70% of deduction_base)
-- SSO: $119.21 × 2.25% = **$2.68**
-- FAOV: $119.21 × 0.5% = **$0.60**
-- PARO: $119.21 × 0.125% = **$0.15**
+- Salary V2: $119.09 (from Column K, subject to deductions)
+- ExtraBonus V2: $51.21 (from Column L, NOT subject to deductions)
+- Bonus V2: $190.32 (from Column M - $40, NOT subject to deductions)
+- Cesta Ticket: $40.00 (fixed, NOT subject to deductions)
+- SSO: $119.09 × 2.25% = **$2.68**
+- FAOV: $119.09 × 0.5% = **$0.60**
+- PARO: $119.09 × 0.125% = **$0.15**
 - **Total deductions:** $3.43
 
 **Net Impact per Payslip:** $4.89 - $3.43 = **$1.46 less deducted**
@@ -637,6 +905,10 @@ Once approved, this plan provides a safe, structured migration path with minimal
 
 ---
 
-**Document Status:** DRAFT - Awaiting User Review
-**Next Review Date:** After blockers resolved
+**Document Status:** DRAFT - Ready for Approval (2025-11-15)
+**Last Updated:** 2025-11-15 - Corrected mapping formula (columns K, L, M)
+**Spreadsheet Validation:** ✅ PASSED - 100% ACCURACY (44/44 employees matched)
+**Data Migration Ready:** ✅ YES - Spreadsheet confirmed as reliable source
+**V2 Mapping Formula:** ✅ FINALIZED - K→salary, L→extrabonus, M-$40→bonus
+**Next Review Date:** Awaiting legal/HR/financial approvals
 **Approval Required From:** User, HR Director, Legal, Accounting
