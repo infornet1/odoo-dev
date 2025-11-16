@@ -185,7 +185,7 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 
 ### 4. Venezuelan Payroll V2 Revision Plan
 
-**Status:** 🚧 PHASE 2 IN PROGRESS - CEO APPROVED
+**Status:** ✅ PHASE 2 COMPLETE - READY FOR PHASE 3
 **Created:** 2025-11-14
 **Updated:** 2025-11-16
 **Type:** System Redesign
@@ -265,8 +265,13 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
 - ✅ **CEO APPROVED (2025-11-16):** Legal compliance confirmed, all blockers removed
 - ✅ **CEO APPROVED (2025-11-16):** Option A deduction approach (proration by days/30)
 - ✅ **CEO APPROVED (2025-11-16):** Bulk UPDATE strategy (V1 fields untouched)
-- 🚧 **Phase 2 IN PROGRESS (2025-11-16):** Adding V2 contract fields
-- ⏳ **Phases 3-8:** Pending (Phase 2 completion)
+- ✅ **Phase 2 COMPLETE (2025-11-16):** V2 contract fields added to `ueipab_hr_contract` v1.4.0
+  - `ueipab_salary_v2`, `ueipab_extrabonus_v2`, `ueipab_bonus_v2` fields created
+  - Database columns and indexes created
+  - Form view updated with V2 fields group
+  - Auto-calculation onchange method implemented
+  - Full Odoo conventions (tracking, copy, groups, index, comprehensive help text)
+- ⏳ **Phases 3-8:** Pending (awaiting user approval to proceed)
 
 **Spreadsheet Validation Results (2025-11-15):**
 - ✅ **44/44 employees (100.0%)** - Perfect wage match! 🎯
@@ -394,12 +399,40 @@ except:
 - Example: `LIQUID_NET` (seq 200) references `LIQUID_VACATION_PREPAID` (seq 195)
 - Creating a rule doesn't automatically link it to structure - must be linked manually
 
+### Module Upgrades and View Loading
+
+**Problem:** Module upgrade doesn't always reload view changes from XML files
+**Symptom:** New fields added to view XML file don't appear in UI after upgrade
+**Diagnosis:**
+- Check if view exists in database: `env.ref('module.view_id')` or search `ir.ui.view`
+- Verify view arch_db contains your changes: `view.arch_db`
+- If view exists but missing new fields → database view is stale
+
+**Solution:** Force update view in database via Odoo shell
+```python
+# Update view arch_db directly
+view = env['ir.ui.view'].browse(VIEW_ID)
+correct_arch = '''<data>
+    <!-- Your view inheritance XML here -->
+</data>'''
+view.write({'arch_db': correct_arch})
+env.cr.commit()
+```
+
+**Important Notes:**
+- View arch must have single root element (use `<data>` wrapper)
+- Do NOT include XML declaration (`<?xml version...?>`)
+- Must restart Odoo after updating: `docker restart odoo-dev-web`
+- Users must hard-refresh browser: `Ctrl+Shift+R`
+
+**Alternative:** Uninstall/reinstall module (more drastic, loses data)
+
 ---
 
 ## Module Versions
 
 - **ueipab_payroll_enhancements:** v1.7.0
-- **ueipab_hr_contract:** v1.3.0
+- **ueipab_hr_contract:** v1.4.0 (V2 contract fields added 2025-11-16)
 
 ---
 
