@@ -377,6 +377,24 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
   - **Limitation:** All departments use same GL accounts (temporary until Phase 2 department-based accounting)
   - **Future Enhancement:** Phase 2 will implement department-specific GL account mapping (C3 approach)
   - **Script:** `/opt/odoo-dev/scripts/copy_v1_accounting_to_v2.py`
+- ✅ **V2 PARENT STRUCTURE FIX (2025-11-16):** Critical bug fixed - eliminated duplicate journal entries
+  - **Problem Discovered:** User created V2 payslip for ALEJANDRA LOPEZ, journal entry showed $1,450.59 instead of expected $162.45
+  - **Root Cause:** V2 structure (VE_PAYROLL_V2) was inheriting from BASE structure
+    - BASE has 3 rules with accounting: BASIC, GROSS, NET
+    - All 3 BASE rules configured with accounts: Debit 5.1.01.10.001, Credit 1.1.01.02.001
+    - When V2 payslip confirmed, BOTH V2 and BASE rules created journal entries
+    - Result: Double accounting (V2 $162.45 + BASE $1,288.14 = $1,450.59 total)
+  - **Fix Applied:** Removed parent_id from V2 structure (`v2_struct.write({'parent_id': False})`)
+  - **Result:** V2 now completely independent with only its own 11 rules
+  - **Verification (ALEJANDRA LOPEZ SLIP/748, PAY1/2025/11/0310):**
+    - ✅ Total Debit: $162.45 (was $1,450.59 - FIXED!)
+    - ✅ Total Credit: $162.45 (balanced)
+    - ✅ No BASE rule duplicates
+    - ✅ Only 10 journal lines (5 V2 rules × 2 sides)
+    - ✅ Disbursement: $156.70 (correct)
+    - ✅ All checks passed - accounting is accurate
+  - **Impact:** All V2 payslips created BEFORE this fix have incorrect journal entries and must be recreated
+  - **Script:** `/opt/odoo-dev/scripts/fix_v2_remove_parent_structure.py`
 - ⏳ **Phases 6-8:** Optional (parallel operation, cutover, V1 decommission)
 
 **Spreadsheet Validation Results (2025-11-15):**
