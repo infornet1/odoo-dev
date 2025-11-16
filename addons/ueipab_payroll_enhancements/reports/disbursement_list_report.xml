@@ -42,7 +42,7 @@
                         </div>
                         <div class="col-6 text-end">
                             <strong>Total Employees:</strong>
-                            <span t-esc="len(batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')))"/>
+                            <span t-esc="len(batch.slip_ids.filtered(lambda s: s.state != 'cancel'))"/>
                         </div>
                     </div>
 
@@ -64,8 +64,8 @@
                             <t t-set="total_amount_usd" t-value="0"/>
                             <t t-set="total_amount_veb" t-value="0"/>
 
-                            <!-- Loop through payslips (only done/paid) -->
-                            <t t-foreach="batch.slip_ids.filtered(lambda s: s.state in ('done', 'paid')).sorted(lambda s: s.employee_id.name)" t-as="slip">
+                            <!-- Loop through payslips (exclude only cancelled) -->
+                            <t t-foreach="batch.slip_ids.filtered(lambda s: s.state != 'cancel').sorted(lambda s: s.employee_id.name)" t-as="slip">
                                 <!-- Calculate net amount for this payslip (V2 first, then V1 fallback) -->
                                 <t t-set="net_line" t-value="slip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')"/>
                                 <t t-if="not net_line">
@@ -162,10 +162,11 @@
                     <div class="row mt-5">
                         <div class="col-12">
                             <p class="text-muted small">
-                                <strong>Note:</strong> This disbursement list shows only confirmed payslips (done/paid status).
+                                <strong>Note:</strong> This disbursement list shows all payslips in the batch (excluding cancelled payslips).
                                 Amounts are displayed in dual currency: USD (company base currency) and VEB (Venezuelan Bolívar).
                                 VEB amounts are calculated using the exchange rate captured when each payslip was processed.
                                 Exchange rates may vary between employees based on their payslip computation date.
+                                <strong>V2 Support:</strong> Report automatically detects V2 payslips (VE_NET_V2 rule) and falls back to V1 (VE_NET rule) for compatibility.
                             </p>
                         </div>
                     </div>
