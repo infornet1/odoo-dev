@@ -1,7 +1,7 @@
 # Venezuelan Payroll V2 - Revision Plan
 **Date:** 2025-11-14
 **Updated:** 2025-11-16
-**Status:** ✅ PHASE 3 COMPLETE - READY FOR PHASE 4
+**Status:** ✅ PHASE 4 COMPLETE - READY FOR PHASE 5
 **Reason:** V1 model design improvement (confusing percentages → transparent dollar amounts)
 
 ---
@@ -301,7 +301,46 @@ result = -(monthly_sso * proportion)
 - Clone "Payroll Disbursement Detail" report for V2
 - Update to show new breakdown (Salary / ExtraBonus / Bonus)
 
-### Phase 4: Testing (2-3 days)
+### Phase 4: Data Migration (1 day)
+**Status:** ✅ COMPLETE (2025-11-16)
+
+**Migration Script:** `/opt/odoo-dev/scripts/phase4_migrate_contracts_to_v2.py`
+
+**Migration Results:**
+- ✅ All 44 active employees migrated successfully (100% success rate)
+- ✅ V2 fields populated from spreadsheet columns K, L, M
+- ✅ Case-insensitive employee name matching implemented
+- ✅ All wage totals verified within $0.01 rounding tolerance
+
+**V2 Mapping Formula Applied:**
+```python
+# Column K → ueipab_salary_v2 (direct)
+salary_v2 = Column_K_VEB / 234.8715
+
+# Column L → ueipab_extrabonus_v2 (direct)
+extrabonus_v2 = Column_L_VEB / 234.8715
+
+# Column M - $40 → ueipab_bonus_v2 (Cesta Ticket deducted from M only)
+bonus_v2 = (Column_M_VEB / 234.8715) - 40.00
+
+# Fixed $40 → cesta_ticket_usd (reused existing field, not modified)
+cesta_ticket = 40.00
+```
+
+**Sample Migration Results:**
+- **Rafael Perez:** Salary=$119.09, ExtraBonus=$51.21, Bonus=$190.32, Cesta=$40.00, Total=$400.62 (exact match ✓)
+- **ARCIDES ARZOLA:** Salary=$285.39, ExtraBonus=$0.00, Bonus=$249.52, Cesta=$40.00, Total=$574.91 ($0.01 diff ✓)
+- **Virginia Verde:** Salary=$146.19, ExtraBonus=$0.00, Bonus=$203.19, Cesta=$40.00, Total=$389.38 ($0.01 diff ✓)
+- **Alejandra Lopez:** Salary=$143.65, ExtraBonus=$0.00, Bonus=$141.25, Cesta=$40.00, Total=$324.90 ($0.01 diff ✓)
+- **SERGIO MANEIRO:** Salary=$106.12, ExtraBonus=$13.30, Bonus=$143.40, Cesta=$40.00, Total=$302.82 (exact match ✓)
+
+**Key Findings:**
+- ✅ Only 4 employees have ExtraBonus values: SERGIO MANEIRO, ANDRES MORALES, PABLO NAVARRO, RAFAEL PEREZ
+- ✅ All other 40 employees have ExtraBonus=$0.00
+- ✅ All wage totals match within acceptable rounding tolerance ($0.00-$0.01)
+- ✅ NO percentage calculations used (direct import from spreadsheet columns K, L, M)
+
+### Phase 5: Testing (2-3 days)
 
 **Test Database:** `testing` (current development database)
 

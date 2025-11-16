@@ -185,7 +185,7 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 
 ### 4. Venezuelan Payroll V2 Revision Plan
 
-**Status:** ✅ PHASE 3 COMPLETE - READY FOR PHASE 4
+**Status:** ✅ PHASE 4 COMPLETE - READY FOR PHASE 5
 **Created:** 2025-11-14
 **Updated:** 2025-11-16
 **Type:** System Redesign
@@ -286,7 +286,22 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
   - Proper sequence order: Earnings (1-5), Deductions (101-105), Net (200)
   - **Accounting:** Left blank for now (can copy from V1 structure later once V2 is tested)
   - **Script:** `/opt/odoo-dev/scripts/phase3_create_v2_salary_structure.py`
-- ⏳ **Phases 4-8:** Pending (awaiting user approval to proceed)
+- ✅ **Phase 4 COMPLETE (2025-11-16):** Bulk update 44 contracts with spreadsheet data
+  - **Migration:** All 44 active employees migrated successfully (100% success rate)
+  - **Data Source:** Spreadsheet columns K, L, M from "15nov2025" tab
+  - **V2 Mapping Applied:**
+    - Column K → `ueipab_salary_v2` (direct, subject to deductions)
+    - Column L → `ueipab_extrabonus_v2` (direct, NOT subject to deductions)
+    - Column M - $40 → `ueipab_bonus_v2` (Cesta Ticket deducted from Column M only)
+    - $40.00 → `cesta_ticket_usd` (reused existing field)
+  - **Verification:** All contracts validated with $0.00-$0.01 rounding tolerance
+  - **Sample Results:**
+    - Rafael Perez: Salary=$119.09, ExtraBonus=$51.21, Bonus=$190.32, Total=$400.62 (exact match)
+    - ARCIDES ARZOLA: Salary=$285.39, ExtraBonus=$0.00, Bonus=$249.52, Total=$574.91 ($0.01 diff)
+    - Virginia Verde: Salary=$146.19, ExtraBonus=$0.00, Bonus=$203.19, Total=$389.38 ($0.01 diff)
+  - **Only 4 employees have ExtraBonus:** SERGIO MANEIRO, ANDRES MORALES, PABLO NAVARRO, RAFAEL PEREZ
+  - **Script:** `/opt/odoo-dev/scripts/phase4_migrate_contracts_to_v2.py`
+- ⏳ **Phases 5-8:** Pending (awaiting user approval to proceed)
 
 **Spreadsheet Validation Results (2025-11-15):**
 - ✅ **44/44 employees (100.0%)** - Perfect wage match! 🎯
