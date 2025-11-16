@@ -231,7 +231,7 @@ VE_SSO_DED = ueipab_salary_v2 × 2.25%  # Applied to $119.21
 ```
 
 **Deduction Rates (Monthly Basis with Proration) - CEO CONFIRMED:**
-1. **IVSS (SSO):** 4.0% monthly (prorated by actual payslip period days/30)
+1. **IVSS (SSO):** 4.5% monthly (prorated by actual payslip period days/30) - **CORRECTED 2025-11-16**
 2. **FAOV:** 1.0% monthly (prorated by actual payslip period days/30)
 3. **INCES (PARO):** 0.5% monthly (prorated by actual payslip period days/30)
 4. **ARI:** Dynamic % (from `ueipab_ari_withholding_rate` field, prorated by days/30)
@@ -279,12 +279,12 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
 - ✅ **Phase 3 COMPLETE (2025-11-16):** V2 Salary Structure created with 11 salary rules
   - **Structure:** "Salarios Venezuela UEIPAB V2" (Code: VE_PAYROLL_V2, ID: 9)
   - **Earnings Rules (5):** VE_SALARY_V2, VE_EXTRABONUS_V2, VE_BONUS_V2, VE_CESTA_TICKET_V2, VE_GROSS_V2
-  - **Deduction Rules (5):** VE_SSO_DED_V2 (4%), VE_FAOV_DED_V2 (1%), VE_PARO_DED_V2 (0.5%), VE_ARI_DED_V2 (variable%), VE_TOTAL_DED_V2
+  - **Deduction Rules (5):** VE_SSO_DED_V2 (4.5%), VE_FAOV_DED_V2 (1%), VE_PARO_DED_V2 (0.5%), VE_ARI_DED_V2 (variable%), VE_TOTAL_DED_V2
   - **Net Rule (1):** VE_NET_V2
   - All deductions apply ONLY to `ueipab_salary_v2` field (NOT to bonuses or cesta ticket)
   - All amounts prorated by actual payslip period: `monthly_amount × (period_days / 30.0)`
   - Proper sequence order: Earnings (1-5), Deductions (101-105), Net (200)
-  - **Accounting:** Left blank for now (can copy from V1 structure later once V2 is tested)
+  - **Accounting:** ✅ Now configured (see V2 ACCOUNTING CONFIGURED section below)
   - **Script:** `/opt/odoo-dev/scripts/phase3_create_v2_salary_structure.py`
 - ✅ **Phase 4 COMPLETE (2025-11-16):** Bulk update 44 contracts with spreadsheet data
   - **Migration:** All 44 active employees migrated successfully (100% success rate)
@@ -329,6 +329,54 @@ All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or C
   - **Files Updated:**
     - `addons/ueipab_payroll_enhancements/reports/disbursement_list_report.xml`
     - `addons/ueipab_payroll_enhancements/reports/payroll_disbursement_detail_report.xml`
+- ✅ **DISBURSEMENT LIST FIX (2025-11-16):** Report filter corrected to show all payslips
+  - **Problem:** Filter was too restrictive (`state in ('done', 'paid')`), showing layout but no data for draft payslips
+  - **Fix:** Changed to `state != 'cancel'` to match Disbursement Detail behavior
+  - **Result:** Now shows all payslips except cancelled ones (draft, verify, done, paid all visible)
+  - **Verified:** NOVIEMBRE15-2 batch now shows all 44 payslips correctly
+- ✅ **SSO RATE FIX (2025-11-16):** Corrected V2 SSO deduction rate from 4.0% to 4.5% monthly
+  - **Problem:** V2 using 4.0% SSO instead of required 4.5% monthly, causing $0.14-$0.30 NET variance
+  - **CEO Confirmation:** "we must use 4.5% monthly basis and bi-weekly 4.5%/2=15days"
+  - **Formula Applied:** `(monthly_salary × 0.045) × (period_days / 30.0)`
+  - **Fix:** Updated `VE_SSO_DED_V2` salary rule formula with proper database commit
+  - **Testing:** Rafael Perez test results:
+    - Before fix (SLIP/699, SLIP/702): SSO = $2.38 (4.0%), NET = $195.84
+    - After fix (SLIP/703): SSO = $2.68 (4.5%), NET = $195.55 ✅
+    - Target: $195.70 (spreadsheet)
+    - **Final Accuracy:** 0.077% variance - EXCELLENT!
+  - **Script:** `/opt/odoo-dev/scripts/fix_v2_sso_rate.py`
+- ✅ **EXCEL EXPORT FEATURE (2025-11-16):** Added Excel export to Disbursement Detail wizard
+  - **Module Version:** `ueipab_payroll_enhancements` v1.8.0
+  - **Output Formats:** PDF (existing) or Excel (.xlsx)
+  - **Excel Features:**
+    - Professional formatting (colored headers, currency formatting, totals)
+    - Same 11 columns as PDF report
+    - Automatic column width sizing
+    - Dynamic filename with batch/date range + currency
+    - Supports USD and VEB with exchange rate conversion
+  - **Implementation:**
+    - Added `output_format` field to wizard (Selection: pdf/excel)
+    - Created `_action_export_excel()` method using xlsxwriter
+    - Updated wizard view with format selection radio buttons
+    - Button changed from "Print Report" to "Generate Report"
+  - **Files Modified:**
+    - `models/payroll_disbursement_wizard.py` (+250 lines Excel generation)
+    - `wizard/payroll_disbursement_wizard_view.xml` (added format selection)
+    - `__manifest__.py` (version bump to 1.8.0)
+- ✅ **V2 ACCOUNTING CONFIGURED (2025-11-16):** V2 salary structure now generates journal entries
+  - **Approach:** Option A - Simple V1→V2 accounting mapping (temporary solution)
+  - **Configuration Applied:**
+    - `VE_SSO_DED_V2`: Debit 5.1.01.10.001, Credit 2.1.01.01.002 (copied from V1)
+    - `VE_FAOV_DED_V2`: Debit 5.1.01.10.001, Credit 2.1.01.01.002 (copied from V1)
+    - `VE_PARO_DED_V2`: Debit 5.1.01.10.001, Credit 2.1.01.01.002 (copied from V1)
+    - `VE_ARI_DED_V2`: Debit 5.1.01.10.001, Credit 2.1.01.01.002 (same as other deductions)
+    - `VE_NET_V2`: Debit 5.1.01.10.001, Credit 2.1.01.01.002 (copied from V1)
+  - **Pattern:** Matches V1 - earnings have NO accounting, only deductions + NET create journal entries
+  - **Journal Entry Structure:** Each V2 payslip creates entries for 4 deductions + 1 net = 5 journal lines
+  - **Status:** V2 payslips can now be confirmed (state = Done) and will auto-create accounting entries
+  - **Limitation:** All departments use same GL accounts (temporary until Phase 2 department-based accounting)
+  - **Future Enhancement:** Phase 2 will implement department-specific GL account mapping (C3 approach)
+  - **Script:** `/opt/odoo-dev/scripts/copy_v1_accounting_to_v2.py`
 - ⏳ **Phases 6-8:** Optional (parallel operation, cutover, V1 decommission)
 
 **Spreadsheet Validation Results (2025-11-15):**
@@ -529,7 +577,7 @@ env.cr.commit()
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.7.0
+- **ueipab_payroll_enhancements:** v1.8.0
 - **ueipab_hr_contract:** v1.4.0 (V2 contract fields added 2025-11-16)
 
 ---
