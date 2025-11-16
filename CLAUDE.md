@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-14
+**Last Updated:** 2025-11-16
 
 ## Core Instructions
 
@@ -185,8 +185,9 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 
 ### 4. Venezuelan Payroll V2 Revision Plan
 
-**Status:** ⏸️ PLANNING COMPLETE - AWAITING APPROVAL
+**Status:** 🚧 PHASE 2 IN PROGRESS - CEO APPROVED
 **Created:** 2025-11-14
+**Updated:** 2025-11-16
 **Type:** System Redesign
 
 **Purpose:**
@@ -229,13 +230,17 @@ contract.wage = Salary + ExtraBonus + Bonus + Cesta = $400.62
 VE_SSO_DED = ueipab_salary_v2 × 2.25%  # Applied to $119.21
 ```
 
-**Deduction Rates (Semi-Monthly) - CONFIRMED:**
-1. **IVSS (SSO):** 4.5% monthly ÷ 2 = 2.25% semi-monthly
-2. **FAOV:** 1% monthly ÷ 2 = 0.5% semi-monthly
-3. **INCES (PARO):** 0.25% monthly ÷ 2 = 0.125% semi-monthly
-4. **ARI:** Dynamic % (from `ueipab_ari_withholding_rate` field) ÷ 2 semi-monthly
+**Deduction Rates (Monthly Basis with Proration) - CEO CONFIRMED:**
+1. **IVSS (SSO):** 4.0% monthly (prorated by actual payslip period days/30)
+2. **FAOV:** 1.0% monthly (prorated by actual payslip period days/30)
+3. **INCES (PARO):** 0.5% monthly (prorated by actual payslip period days/30)
+4. **ARI:** Dynamic % (from `ueipab_ari_withholding_rate` field, prorated by days/30)
 
-All deductions apply **ONLY to Salary field** in V2 (NOT to ExtraBonus or Bonus).
+**Proration Formula:** `monthly_deduction × (period_days / 30.0)`
+- Handles standard bi-weekly (15 days), terminations, partial periods automatically
+- CEO approved Option A (True Semi-Monthly Division) approach
+
+All deductions apply **ONLY to Salary V2 field** (NOT to ExtraBonus, Bonus, or Cesta Ticket).
 
 **Systems Affected:**
 1. **[VE] UEIPAB Venezuelan Payroll** - Regular bi-weekly payroll (44 employees, 24x/year)
@@ -253,11 +258,60 @@ All deductions apply **ONLY to Salary field** in V2 (NOT to ExtraBonus or Bonus)
   - Can export to CSV for bulk import
 
 **Implementation Status:**
-- ✅ Phase 1: Root cause analysis complete
-- ✅ Phase 1: Impact analysis complete
-- ✅ Phase 1: V2 plan documented (480 lines)
-- ⏸️ Phase 1: Awaiting legal review and HR confirmation
-- ⏳ Phases 2-8: Not started (awaiting user approval)
+- ✅ **Phase 1 COMPLETE:** Root cause analysis, impact analysis, V2 plan documented
+- ✅ **Phase 1 COMPLETE:** Spreadsheet validation (100% accuracy - 44/44 employees)
+- ✅ **Phase 1 COMPLETE:** Cesta Ticket decision (reuse existing field)
+- ✅ **Phase 1 COMPLETE:** V2 design clarification (NO percentages, HR-approved values)
+- ✅ **CEO APPROVED (2025-11-16):** Legal compliance confirmed, all blockers removed
+- ✅ **CEO APPROVED (2025-11-16):** Option A deduction approach (proration by days/30)
+- ✅ **CEO APPROVED (2025-11-16):** Bulk UPDATE strategy (V1 fields untouched)
+- 🚧 **Phase 2 IN PROGRESS (2025-11-16):** Adding V2 contract fields
+- ⏳ **Phases 3-8:** Pending (Phase 2 completion)
+
+**Spreadsheet Validation Results (2025-11-15):**
+- ✅ **44/44 employees (100.0%)** - Perfect wage match! 🎯
+- ⚠️ 0/44 employees (0.0%) - No mismatches
+- Spreadsheet ID: `19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s`, Tab: "15nov2025"
+- Exchange Rate: 234.8715 VEB/USD
+- **Conclusion:** Spreadsheet is **fully validated** and ready for V2 migration
+- **Status:** Migration-ready with 100% data accuracy confirmed
+
+**Cesta Ticket Design Decision (2025-11-15):**
+- ✅ **REUSE existing field:** `cesta_ticket_usd` (already exists in V1)
+- ❌ **NOT creating:** `ueipab_cesta_ticket_v2` (would duplicate existing field)
+- **Rationale:** Cesta Ticket is legally distinct mandatory benefit requiring separate tracking
+- **V2 Wage Formula:** `wage = ueipab_salary_v2 + ueipab_extrabonus_v2 + ueipab_bonus_v2 + cesta_ticket_usd`
+- **Current Rule:** `VE_CESTA_TICKET` will continue working in V2 (no changes needed)
+
+**V2 Design Clarification - NO Percentage Calculations (2025-11-15):**
+
+**CRITICAL:** V2 eliminates ALL percentage calculations. Values are HR-approved actual dollar amounts.
+
+**❌ WRONG (What V1 Does):**
+```python
+# V1 - Confusing percentage calculations
+VE_SALARY_70 = ueipab_deduction_base × 70%  # Calculated percentage
+VE_BONUS_25  = ueipab_deduction_base × 25%  # Calculated percentage
+VE_EXTRA_5   = ueipab_deduction_base × 5%   # Calculated percentage
+```
+
+**✅ CORRECT (What V2 Does):**
+```python
+# V2 - Direct HR-approved dollar amounts (NO calculations!)
+ueipab_salary_v2 = $119.21      # HR-approved actual value (stored in contract)
+ueipab_bonus_v2 = $281.41       # HR-approved actual value (stored in contract)
+ueipab_extrabonus_v2 = $0.00    # HR-approved actual value (stored in contract)
+cesta_ticket_usd = $40.00       # Existing field (not migrated)
+```
+
+**Migration Approach:**
+- ✅ HR fills "SalaryStructureV2" spreadsheet tab with **actual dollar values**
+- ✅ HR reviews and approves all 44 employee breakdowns
+- ✅ Migration script **imports** these values (NO calculation, NO percentages)
+- ✅ 70/30 split is only a **suggestion** for HR (they can use any split they want)
+
+**Why This Matters:**
+The whole purpose of V2 is to eliminate confusing percentage logic and use transparent, direct dollar amounts that HR controls.
 
 **Diagnostic Scripts Created:**
 - `scripts/verify_70_percent_pattern.py` - Confirmed 40 employees use 100% base
@@ -266,11 +320,16 @@ All deductions apply **ONLY to Salary field** in V2 (NOT to ExtraBonus or Bonus)
 - `scripts/analyze_spreadsheet_formulas.py` - Verified spreadsheet calculations
 - `scripts/analyze_period_scaling.py` - Confirmed semi-monthly logic
 - `scripts/check_deduction_formulas.py` - Validated formula percentages
+- `scripts/validate_spreadsheet_wages_v2.py` - **NEW:** Validates Odoo wages vs spreadsheet (100% match ✅)
 
-📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)** (480 lines)
+📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)** (840 lines)
 
-**User Directive:**
-> "DO NOT TOUCH NOTHING YET" - No implementation until plan approved
+**CEO Directives (2025-11-16):**
+- ✅ **Phase 2 APPROVED:** Begin implementation of V2 contract fields
+- ✅ **Strategy:** Bulk UPDATE (add V2 fields, keep V1 fields untouched)
+- ✅ **Testing:** Validate against already-paid NOVIEMBRE15-2 batch
+- ✅ **Timeline:** 6-day development cycle approved (Nov 18-23)
+- ✅ **Legal:** CEO confirmed full Venezuelan labor law compliance
 
 ---
 
