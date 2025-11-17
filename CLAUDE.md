@@ -244,6 +244,52 @@ interest = average_balance * 0.13 * (service_months / 12.0)
    - Result: ✅ V2 payslips now show correct data (e.g., SLIP/795: Prestaciones $618.45, Interest $85.47)
    - Backward Compatible: ✅ V1 liquidations still work perfectly
 
+**2025-11-17 - Layout Optimization (v1.8.0 → PLANNED):**
+**Status:** 🚧 IN PROGRESS - Applying lessons from Liquidación Report v1.15.0-v1.16.0
+
+**Planned Improvements:**
+1. **Remove Header/Footer:**
+   - Apply `web.basic_layout` pattern (same as Liquidación Report v1.15.0)
+   - Replace `web.external_layout` with `web.basic_layout`
+   - Maintains UTF-8 encoding, removes company logo/page numbers
+
+2. **Change Orientation to Portrait:**
+   - Current: Landscape Letter (11"x8.5")
+   - New: Portrait Letter (8.5"x11")
+   - Rationale: Better for single-page fit with fewer columns
+
+3. **Remove 3 Columns (Save Space):**
+   - Remove: INGRESO MENSUAL (monthly income - less relevant)
+   - Remove: ADELANTO DE PRESTACIONES (prepaid benefits - rarely used)
+   - Remove: INTERESE CANCELADOS (cancelled interest - rarely used)
+   - Keep: Essential columns only (Month, Year, Prestaciones, Interest, Balance)
+
+4. **Single-Page Layout Optimization:**
+   - Reduce font sizes (following v1.16.0 pattern: 7pt base, 6.5pt tables)
+   - Optimize margins and spacing
+   - Target: Fit 23-month report on single Portrait Letter page
+
+**Technical Approach:**
+- Follow exact pattern from Liquidación Report success:
+  - v1.15.0: `web.basic_layout` for no headers/footers + UTF-8
+  - v1.16.0: Space optimization (remove non-essential fields, compact layout)
+- Update paper format orientation: Landscape → Portrait
+- Test with SLIP/568 (23 months - longest case)
+
+**Expected Benefits:**
+- ✅ Clean professional layout (no headers/footers)
+- ✅ Single-page printing (easier distribution)
+- ✅ Focus on essential data (Prestaciones + Interest only)
+- ✅ Portrait orientation (standard document format)
+
+**Implementation Plan:**
+1. Update template: Apply `web.basic_layout`, remove 3 columns
+2. Update paper format: Change orientation to Portrait
+3. Optimize fonts/spacing for single-page fit
+4. Test with SLIP/568 (23-month case)
+5. Verify UTF-8 encoding still works
+6. Update module version
+
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
 📖 **[Wizard-Based Report Pattern Guide](documentation/WIZARD_BASED_REPORT_PATTERN.md)** ⭐ NEW!
 
