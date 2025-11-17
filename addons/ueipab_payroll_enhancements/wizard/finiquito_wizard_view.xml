@@ -10,8 +10,12 @@
                     <field name="payslip_ids" widget="many2many_tags" options="{'no_create': True}"/>
                     <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
                 </group>
+                <group>
+                    <label for="output_format" string="Output Format"/>
+                    <field name="output_format" widget="radio" options="{'horizontal': True}"/>
+                </group>
                 <footer>
-                    <button name="action_print_pdf" string="Generate Report" type="object" class="btn-primary"/>
+                    <button name="action_generate_report" string="Generate Report" type="object" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

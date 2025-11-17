@@ -680,7 +680,7 @@ Detailed breakdown report showing liquidation calculation formulas for Venezuela
 **Status:** ✅ PRODUCTION READY
 **Started:** 2025-11-17
 **Completed:** 2025-11-17
-**Module:** `ueipab_payroll_enhancements` v1.18.1
+**Module:** `ueipab_payroll_enhancements` v1.18.2
 
 **Purpose:**
 Formal legal document for labor settlement agreements between UEIPAB and employees upon contract termination. Provides official finiquito (settlement) letter with all required legal declarations and signatures.
@@ -789,6 +789,25 @@ Formal legal document for labor settlement agreements between UEIPAB and employe
 - Justified text alignment throughout
 
 **Version History:**
+
+**v1.18.2 (2025-11-17) - DOCX Export Feature Added:**
+- ✅ **NEW: Word Document Export (.docx format)**
+- Added `output_format` field to wizard (PDF or DOCX)
+- Implemented `action_export_docx()` method using python-docx library
+- Professional DOCX formatting:
+  - 9pt font (legal readability)
+  - Justified paragraphs (formal business letter style)
+  - Proper margins (0.6 inches all sides)
+  - Two-column signature table layout
+  - Bold section headers (PRIMERO-CUARTO)
+- Multiple payslip support (page breaks between documents)
+- Dynamic filename: `Finiquito_[Employee]_[Slip].docx`
+- Benefits over PDF:
+  - ✅ Perfect spacing (no wkhtmltopdf quirks)
+  - ✅ Editable by user if needed
+  - ✅ Better UTF-8 character rendering
+  - ✅ Native Word format for printing/signing
+- Status: ✅ Production ready
 
 **v1.18.1 (2025-11-17) - Minor Text Updates:**
 - Updated legal representative: "Director Suplente GUSTAVO JOSE PERDOMO MATA" → "Director Principal GUSTAVO PERDOMO"
@@ -939,7 +958,7 @@ env.cr.commit()
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.14.0 (Liquidación Breakdown report development - 2025-11-17)
+- **ueipab_payroll_enhancements:** v1.18.2 (Finiquito report with DOCX export - 2025-11-17)
 - **ueipab_hr_contract:** v1.4.0 (V2 contract fields added 2025-11-16)
 
 ---
