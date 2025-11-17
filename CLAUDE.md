@@ -792,8 +792,9 @@ Formal legal document for labor settlement agreements between UEIPAB and employe
 
 **v1.18.1 (2025-11-17) - Minor Text Updates:**
 - Updated legal representative: "Director Suplente GUSTAVO JOSE PERDOMO MATA" → "Director Principal GUSTAVO PERDOMO"
-- Fixed: Spaces already present in date fields (no changes needed)
 - Applied to: Introduction paragraph and signature section
+- Note: Date field spacing verified (already correct in template)
+- Known Issue: Some spacing issues may persist in PDF rendering (wkhtmltopdf quirk)
 - Status: ✅ Production ready
 
 **v1.18.0 (2025-11-17) - Initial Release:**
