@@ -2,34 +2,25 @@
 <odoo>
     <!-- Relación de Liquidación - PDF Template -->
 
-    <!-- Custom minimal layout with explicit UTF-8 encoding -->
-    <template id="liquidacion_breakdown_layout">
-        &lt;!DOCTYPE html&gt;
-        <html>
-            <head>
-                <meta charset="utf-8"/>
-                <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-                <title>Relación de Liquidación</title>
-                <style type="text/css">
-                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-                    .page { margin: 10mm; }
-                    table { border-collapse: collapse; width: 100%; }
-                    .table-bordered { border: 1px solid #dee2e6; }
-                    .table-bordered td, .table-bordered th { border: 1px solid #dee2e6; padding: 4px; }
-                </style>
-            </head>
-            <body>
-                <main>
-                    <t t-out="0"/>
-                </main>
-            </body>
-        </html>
+    <!-- Empty header template -->
+    <template id="liquidacion_report_header">
+        <!-- Intentionally empty - no header -->
+    </template>
+
+    <!-- Empty footer template -->
+    <template id="liquidacion_report_footer">
+        <!-- Intentionally empty - no footer -->
     </template>
 
     <template id="liquidacion_breakdown_report">
-        <t t-call="ueipab_payroll_enhancements.liquidacion_breakdown_layout">
+        <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report">
-                <div class="page" style="font-size: 7pt;">
+                <t t-call="web.external_layout">
+                    <!-- Use empty header/footer -->
+                    <t t-set="report_header" t-value="'ueipab_payroll_enhancements.liquidacion_report_header'"/>
+                    <t t-set="report_footer" t-value="'ueipab_payroll_enhancements.liquidacion_report_footer'"/>
+
+                    <div class="page" style="font-size: 7pt;">
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
@@ -241,7 +232,8 @@
                     </div>
 
                     <div style="page-break-after: always;" t-if="not report_last"/>
-                </div>
+                    </div>
+                </t>
             </t>
         </t>
     </template>
