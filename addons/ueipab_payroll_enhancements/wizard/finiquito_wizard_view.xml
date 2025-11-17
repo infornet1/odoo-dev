@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Finiquito Wizard Form View -->
+    <record id="view_finiquito_wizard" model="ir.ui.view">
+        <field name="name">finiquito.wizard.form</field>
+        <field name="model">finiquito.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Acuerdo Finiquito Laboral">
+                <group>
+                    <field name="payslip_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
+                </group>
+                <footer>
+                    <button name="action_print_pdf" string="Generate Report" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_finiquito_wizard" model="ir.actions.act_window">
+        <field name="name">Acuerdo Finiquito Laboral</field>
+        <field name="res_model">finiquito.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="binding_type">action</field>
+    </record>
+
+    <!-- Menu Item under Reporting -->
+    <menuitem
+        id="menu_finiquito_wizard"
+        name="Acuerdo Finiquito Laboral"
+        parent="ueipab_payroll_enhancements.menu_payroll_reports"
+        action="action_finiquito_wizard"
+        sequence="60"/>
+        
+</odoo>

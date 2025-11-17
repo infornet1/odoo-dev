@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acuerdo Finiquito Laboral - Formal Letter Template -->
+
+    <template id="finiquito_report">
+        <t t-call="web.html_container">
+            <t t-foreach="reports" t-as="report">
+                <t t-call="web.basic_layout">
+                    <div class="page" style="font-size: 9pt; line-height: 1.4;">
+                        
+                        <!-- Report Title -->
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0; padding: 0; font-size: 11pt; font-weight: bold; text-transform: uppercase;">
+                                FINIQUITO DE LA RELACIÓN LABORAL ENTRE<br/>
+                                UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO C.A,<br/>
+                                Y <t t-esc="report.get('employee').name.upper()"/>
+                            </h3>
+                            <p style="margin: 5px 0 0 0; font-size: 9pt; font-weight: bold;">
+                                PAGO DE PRESTACIONES SOCIALES POR TERMINACIÓN DE CONTRATO DE TRABAJO
+                            </p>
+                        </div>
+
+                        <!-- Introduction Paragraph -->
+                        <p style="text-align: justify; margin-bottom: 12px;">
+                            <strong>Entre:</strong> La Unidad Educativa Instituto Privado "Andres Bello" C.A, con Registro de Información Fiscal Nro. <strong>J-080086171</strong>, de este domicilio, debidamente representado por su Director Suplente <strong>GUSTAVO JOSE PERDOMO MATA</strong>, Venezolano, mayor de edad, de este domicilio y titular de cédula de identidad Nro. <strong>V-15.128.008</strong>, por una parte; y por la otra el trabajador <strong><t t-esc="report.get('employee').name"/></strong>, venezolano, mayor de edad, de este domicilio y titular de la cédula de identidad Nro. <strong><t t-esc="report.get('employee').identification_id or 'N/A'"/></strong>, hemos convenido en finiquitar la relación de trabajo, en los siguientes términos:
+                        </p>
+
+                        <!-- PRIMERO -->
+                        <p style="text-align: justify; margin-bottom: 12px;">
+                            <strong>PRIMERO:</strong> El Trabajador ha prestado sus servicios en la Instituto Privado Andrés Bello CA, desde el <strong><t t-esc="report.get('date_start_str')"/></strong> hasta el <strong><t t-esc="report.get('date_to_str')"/></strong>.
+                        </p>
+
+                        <!-- SEGUNDO -->
+                        <p style="text-align: justify; margin-bottom: 12px;">
+                            <strong>SEGUNDO:</strong> El Trabajador recibe en este acto, a su entera satisfacción de parte de la Instituto Privado Andrés Bello CA, la cantidad de <strong><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('net_amount')))"/></strong>, suma esta que comprende: todos los conceptos laborales descritos en el recibo de liquidación final del contrato de trabajo adjunto y que forma parte de este finiquito.
+                        </p>
+
+                        <!-- TERCERO -->
+                        <p style="text-align: justify; margin-bottom: 12px;">
+                            <strong>TERCERO:</strong> El Trabajador <strong><t t-esc="report.get('employee').name"/></strong>, declara que durante todo el tiempo que prestó servicios como profesora a la Instituto Privado Andrés Bello CA, recibió oportunamente el pago total de las remuneraciones y beneficios convenidos, y en consecuencia nada le adeuda la Instituto Privado Andrés Bello CA, por los conceptos indicados en el finiquito ni por ningún otro, sea de origen legal, contractual o extracontractual derivado o relacionado con la prestación de sus servicios. Por este motivo, la trabajadora otorga a la empresa el más amplio y total finiquito, renunciando a toda acción legal, contractual y extracontractual en contra de la Instituto Privado Andrés Bello CA, declaración que la trabajadora fórmula libre y espontáneamente en perfecto y cabal conocimiento de cada uno y de todos sus derechos.
+                        </p>
+
+                        <!-- CUARTO -->
+                        <p style="text-align: justify; margin-bottom: 12px;">
+                            <strong>CUARTO:</strong> Para constancia firman las partes el presente finiquito en señal de conformidad y se hacen dos (2) ejemplares del mismo tenor y a un solo efecto.
+                        </p>
+
+                        <!-- Date Line -->
+                        <p style="text-align: left; margin-top: 20px; margin-bottom: 40px;">
+                            El Tigre, a los <strong><t t-esc="report.get('today_day')"/></strong> días del mes de <strong><t t-esc="report.get('today_month')"/></strong> del año <strong><t t-esc="report.get('today_year')"/></strong>.
+                        </p>
+
+                        <!-- Signatures Section -->
+                        <div style="margin-top: 60px;">
+                            <table style="width: 100%; font-size: 9pt;">
+                                <tr>
+                                    <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                        <div style="border-top: 1px solid #000; padding-top: 5px;">
+                                            <strong>Instituto Privado Andrés Bello CA</strong><br/>
+                                            GUSTAVO JOSE PERDOMO MATA<br/>
+                                            Director Suplente<br/>
+                                            C.I.: V-15.128.008
+                                        </div>
+                                    </td>
+                                    <td style="width: 4%;"></td>
+                                    <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                        <div style="border-top: 1px solid #000; padding-top: 5px;">
+                                            <strong>TRABAJADOR: <t t-esc="report.get('employee').name.upper()"/></strong><br/>
+                                            CÉDULA DE IDENTIDAD: <t t-esc="report.get('employee').identification_id or 'N/A'"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+
+                    <!-- Page break between reports -->
+                    <t t-if="not report_last">
+                        <p style="page-break-after: always;"/>
+                    </t>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>
