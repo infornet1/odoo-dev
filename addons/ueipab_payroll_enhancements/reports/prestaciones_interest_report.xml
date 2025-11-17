@@ -5,47 +5,48 @@
     <template id="prestaciones_interest">
         <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report_data">
-                <t t-call="web.external_layout">
-                    <div class="page">
+                <t t-call="web.basic_layout">
+                    <div class="page" style="font-size: 7pt;">
                         <!-- Report Header -->
-                        <div class="row mt-4 mb-3">
-                            <div class="col-12 text-center">
-                                <h3><strong>PRESTACIONES SOCIALES E INTERESES</strong></h3>
-                                <h4>Detalle Mensual de Acumulación</h4>
-                            </div>
+                        <div style="text-align: center; margin-bottom: 5px;">
+                            <h3 style="margin: 0; padding: 0; font-size: 10pt;"><strong>PRESTACIONES SOCIALES E INTERESES</strong></h3>
+                            <p style="margin: 2px 0 0 0; font-size: 7pt; color: #666;">Detalle Mensual de Acumulación</p>
                         </div>
 
                         <!-- Employee Information -->
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <strong>Empleado:</strong> <span t-esc="report_data.get('employee').name"/><br/>
-                                <strong>Cédula:</strong> <span t-esc="report_data.get('employee').identification_id"/><br/>
-                                <strong>Departamento:</strong> <span t-esc="report_data.get('employee').department_id.name"/>
-                            </div>
-                            <div class="col-6">
-                                <strong>Inicio Contrato:</strong> <span t-esc="report_data.get('contract').date_start"/><br/>
-                                <strong>Fecha Liquidación:</strong> <span t-esc="report_data.get('payslip').date_to"/><br/>
-                                <strong>Moneda:</strong> <span t-esc="report_data.get('currency').name"/>
-                            </div>
-                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom: 5px; font-size: 7pt;">
+                            <tr>
+                                <td style="width: 20%; background-color: #f8f9fa;"><strong>Empleado:</strong></td>
+                                <td style="width: 30%;"><span t-esc="report_data.get('employee').name"/></td>
+                                <td style="width: 20%; background-color: #f8f9fa;"><strong>Cédula:</strong></td>
+                                <td style="width: 30%;"><span t-esc="report_data.get('employee').identification_id"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f8f9fa;"><strong>Inicio Contrato:</strong></td>
+                                <td><span t-esc="report_data.get('contract').date_start"/></td>
+                                <td style="background-color: #f8f9fa;"><strong>Fecha Liquidación:</strong></td>
+                                <td><span t-esc="report_data.get('payslip').date_to"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f8f9fa;"><strong>Moneda:</strong></td>
+                                <td colspan="3"><span t-esc="report_data.get('currency').name"/></td>
+                            </tr>
+                        </table>
 
                         <!-- Monthly Breakdown Table -->
                         <div class="row">
                             <div class="col-12">
-                                <table class="table table-sm table-bordered" style="font-size: 7pt;">
+                                <table class="table table-sm table-bordered" style="font-size: 6.5pt;">
                                     <thead style="background-color: #e9ecef;">
                                         <tr>
-                                            <th class="text-center">Mes a<br/>Calcular</th>
-                                            <th class="text-right">Ingreso<br/>Mensual</th>
-                                            <th class="text-right">Salario<br/>Integral</th>
-                                            <th class="text-center">Días x<br/>Mes</th>
-                                            <th class="text-right">Prestaciones<br/>del Mes</th>
-                                            <th class="text-right">Adelanto de<br/>Prestaciones</th>
-                                            <th class="text-right">Acumulado de<br/>Prestaciones</th>
-                                            <th class="text-right">Tasa<br/>del Mes</th>
-                                            <th class="text-right">Intereses<br/>Del Mes</th>
-                                            <th class="text-right">Interese<br/>Cancelados</th>
-                                            <th class="text-right">Intereses<br/>Ganados</th>
+                                            <th class="text-center" style="width: 12%;">Mes a<br/>Calcular</th>
+                                            <th class="text-right" style="width: 10%;">Salario<br/>Integral</th>
+                                            <th class="text-center" style="width: 8%;">Días x<br/>Mes</th>
+                                            <th class="text-right" style="width: 15%;">Prestaciones<br/>del Mes</th>
+                                            <th class="text-right" style="width: 15%;">Acumulado de<br/>Prestaciones</th>
+                                            <th class="text-right" style="width: 10%;">Tasa<br/>del Mes</th>
+                                            <th class="text-right" style="width: 15%;">Intereses<br/>Del Mes</th>
+                                            <th class="text-right" style="width: 15%;">Intereses<br/>Ganados</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -53,11 +54,6 @@
                                             <tr>
                                                 <!-- Month -->
                                                 <td class="text-left"><span t-esc="month.get('month_name')"/></td>
-
-                                                <!-- Monthly Income -->
-                                                <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('monthly_income', 0))"/>
-                                                </td>
 
                                                 <!-- Integral Salary (daily) -->
                                                 <td class="text-right">
@@ -72,11 +68,6 @@
                                                 <!-- Prestaciones del Mes -->
                                                 <td class="text-right">
                                                     <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('deposit_amount', 0))"/>
-                                                </td>
-
-                                                <!-- Adelanto -->
-                                                <td class="text-right">
-                                                    <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('advance', 0))"/>
                                                 </td>
 
                                                 <!-- Accumulated Prestaciones -->
@@ -94,11 +85,6 @@
                                                     <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('month_interest', 0))"/>
                                                 </td>
 
-                                                <!-- Interest Canceled -->
-                                                <td class="text-right">
-                                                    <span t-if="month.get('interest_canceled', 0) &gt; 0"><span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('interest_canceled', 0))"/></span>
-                                                </td>
-
                                                 <!-- Accumulated Interest -->
                                                 <td class="text-right">
                                                     <strong><span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(month.get('accumulated_interest', 0))"/></strong>
@@ -110,18 +96,13 @@
                                         <tr style="background-color: #f8f9fa; font-weight: bold;">
                                             <td class="text-left">Total por Emp.:</td>
                                             <td></td>
-                                            <td></td>
                                             <td class="text-center">
                                                 <span t-esc="report_data.get('totals', {}).get('total_days', 0)"/>
                                             </td>
                                             <td></td>
                                             <td class="text-right">
-                                                <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_advance', 0))"/>
-                                            </td>
-                                            <td class="text-right">
                                                 <span t-esc="report_data.get('currency').symbol"/><span t-esc="'{:,.2f}'.format(report_data.get('totals', {}).get('total_prestaciones', 0))"/>
                                             </td>
-                                            <td></td>
                                             <td></td>
                                             <td></td>
                                             <td class="text-right">
@@ -134,16 +115,12 @@
                         </div>
 
                         <!-- Report Footer Notes -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <p style="font-size: 8pt;">
-                                    <strong>Notas:</strong><br/>
-                                    • Prestaciones depositadas trimestralmente (15 días cada 3 meses)<br/>
-                                    • Intereses calculados al 13% anual sobre saldo promedio acumulado<br/>
-                                    • Salario Integral incluye salario base más proporcional de utilidades y bono vacacional<br/>
-                                    • Tasa del mes representa el tipo de cambio aplicable (si aplica conversión de moneda)
-                                </p>
-                            </div>
+                        <div style="margin-top: 5px; font-size: 6pt; color: #666; padding: 3px; background-color: #f8f9fa; border-left: 2px solid #2196F3;">
+                            <strong>Notas:</strong>
+                            Prestaciones: 15 días cada 3 meses •
+                            Intereses: 13% anual sobre saldo promedio •
+                            Salario Integral incluye proporcional de utilidades y bono vacacional •
+                            Tasa representa tipo de cambio aplicable
                         </div>
 
                     </div>
