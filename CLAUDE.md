@@ -675,6 +675,80 @@ Detailed breakdown report showing liquidation calculation formulas for Venezuela
 
 ---
 
+### 6. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
+
+**Status:** 🚧 IN PROGRESS - New Report Implementation
+**Started:** 2025-11-17
+**Module:** `ueipab_payroll_enhancements` v1.18.0 (planned)
+
+**Purpose:**
+Formal legal document for labor settlement agreements between UEIPAB and employees upon contract termination. Provides official finiquito (settlement) letter with all required legal declarations and signatures.
+
+**Requirements:**
+
+1. **Menu Location:**
+   - Add under: Reporting main menu → "Acuerdo Finiquito Laboral"
+   - Model: hr.payslip (liquidation payslips)
+
+2. **Layout Pattern:**
+   - Apply lessons from Liquidación v1.15.0-v1.16.0 and Prestaciones v1.17.0
+   - `web.basic_layout` (no headers/footers)
+   - Portrait Letter orientation
+   - Single-page fit (optimized fonts/margins)
+
+3. **Content Structure:**
+   - **Format:** Formal business letter template
+   - **Paragraph Style:** Justified text alignment
+   - **Dynamic Placeholders:**
+     - `[employee name]` → Employee full name
+     - `[employee VAT ID]` → Employee identification number
+     - `[payslip start date]` → Contract start date
+     - `[payslip end date]` → Liquidation date
+     - `[net claim amount]` → Total net liquidation amount (formatted with currency)
+
+4. **Letter Sections:**
+   - **Title:** "FINIQUITO DE LA RELACIÓN LABORAL ENTRE UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO C.A, Y [EMPLOYEE NAME]"
+   - **Subtitle:** "PAGO DE PRESTACIONES SOCIALES POR TERMINACIÓN DE CONTRATO DE TRABAJO"
+   - **Introduction:** Legal parties identification (Company RIF, Legal Rep, Employee)
+   - **PRIMERO:** Service period declaration
+   - **SEGUNDO:** Payment acknowledgment with net amount
+   - **TERCERO:** Employee declaration of full satisfaction and legal waiver
+   - **CUARTO:** Signature clause and document copies
+   - **Footer:** Date line "El Tigre, a los xx días del mes de xx del año xx"
+   - **Signatures:** Two-column layout (Company representative | Employee)
+
+5. **Signature Section:**
+   - **Left:** Instituto Privado Andrés Bello CA (company)
+   - **Right:** TRABAJADOR: [employee name], CÉDULA: [employee VAT ID]
+   - Format similar to Liquidación Report v1.16.0 signature section
+
+**Technical Approach:**
+- Wizard-based report (following Prestaciones/Liquidación pattern)
+- Model: `finiquito.wizard` (TransientModel)
+- Template: Formal letter layout with justified paragraphs
+- Font: 9pt base (readable for legal document)
+- Margins: 15px (slightly wider than Liquidación for formal appearance)
+- Data source: Liquidation payslip + contract + employee fields
+
+**Implementation Plan:**
+1. Create wizard model and view
+2. Create report template with formal letter layout
+3. Create report action and paper format
+4. Add menu item under Reporting
+5. Test with liquidation payslip (SLIP/795)
+6. Verify single-page fit
+7. Update module version to 1.18.0
+
+**Expected Output:**
+- Professional legal document
+- Single-page Portrait Letter format
+- Justified paragraph text
+- Dynamic placeholder replacement
+- Clean signature section
+- Ready for printing and legal filing
+
+---
+
 ## Additional Documentation
 
 ### Legal & Compliance
