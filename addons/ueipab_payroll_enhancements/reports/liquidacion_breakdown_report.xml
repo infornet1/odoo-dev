@@ -22,12 +22,6 @@
                             <td style="width: 25%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
                         </tr>
                         <tr>
-                            <td style="background-color: #f8f9fa;"><strong>Departamento:</strong></td>
-                            <td><t t-esc="report.get('employee').department_id.name or 'N/A'"/></td>
-                            <td style="background-color: #f8f9fa;"><strong>Cargo:</strong></td>
-                            <td><t t-esc="report.get('employee').job_id.name or 'N/A'"/></td>
-                        </tr>
-                        <tr>
                             <td style="background-color: #f8f9fa;"><strong>Fecha Ingreso:</strong></td>
                             <td><t t-esc="report.get('date_start_str')"/></td>
                             <td style="background-color: #f8f9fa;"><strong>Fecha Liquidación:</strong></td>
@@ -35,21 +29,22 @@
                         </tr>
                         <tr>
                             <td style="background-color: #f8f9fa;"><strong>Período Servicio:</strong></td>
-                            <td colspan="3">
+                            <td>
                                 <t t-esc="report.get('service_months_total')"/> meses
                                 (<t t-esc="report.get('service_years')"/> año<t t-if="report.get('service_years') != 1">s</t>,
                                 <t t-esc="report.get('service_months')"/> mes<t t-if="report.get('service_months') != 1">es</t>)
                             </td>
-                        </tr>
-                        <t t-if="report.get('original_hire_date') and report.get('original_hire_date') != report.get('contract').date_start">
-                            <tr>
+                            <t t-if="report.get('original_hire_date') and report.get('original_hire_date') != report.get('contract').date_start">
                                 <td style="background-color: #f8f9fa;"><strong>Antigüedad Total:</strong></td>
-                                <td colspan="3">
+                                <td>
                                     <t t-esc="'%.2f' % report.get('total_seniority_years')"/> años
                                     (desde <t t-esc="report.get('original_hire_date_str')"/>)
                                 </td>
-                            </tr>
-                        </t>
+                            </t>
+                            <t t-else="">
+                                <td colspan="2"></td>
+                            </t>
+                        </tr>
                     </table>
 
                     <!-- SECTION 1: PRESTACIONES (Benefits) -->
