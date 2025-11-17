@@ -2,24 +2,10 @@
 <odoo>
     <!-- Relación de Liquidación - PDF Template -->
 
-    <!-- Empty header template -->
-    <template id="liquidacion_report_header">
-        <!-- Intentionally empty - no header -->
-    </template>
-
-    <!-- Empty footer template -->
-    <template id="liquidacion_report_footer">
-        <!-- Intentionally empty - no footer -->
-    </template>
-
     <template id="liquidacion_breakdown_report">
         <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report">
-                <t t-call="web.external_layout">
-                    <!-- Use empty header/footer -->
-                    <t t-set="report_header" t-value="'ueipab_payroll_enhancements.liquidacion_report_header'"/>
-                    <t t-set="report_footer" t-value="'ueipab_payroll_enhancements.liquidacion_report_footer'"/>
-
+                <t t-call="web.basic_layout">
                     <div class="page" style="font-size: 7pt;">
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
