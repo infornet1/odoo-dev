@@ -187,8 +187,8 @@ contract.ueipab_vacation_paid_until    # Last vacation payment date (Aug 1)
 
 ### 3. Prestaciones Sociales Interest Report
 
-**Status:** ✅ Production Ready - All Issues Resolved!
-**Last Updated:** 2025-11-14
+**Status:** ✅ Production Ready - V2 Support Added!
+**Last Updated:** 2025-11-17
 **Module:** `ueipab_payroll_enhancements` v1.7.0
 
 **Quick Summary:**
@@ -198,6 +198,7 @@ contract.ueipab_vacation_paid_until    # Last vacation payment date (Aug 1)
 - 11-column landscape report format
 - Shows quarterly prestaciones deposits and monthly interest accrual
 - **Full VEB currency support with historical exchange rates**
+- **✅ V2 Liquidation Support (2025-11-17)** - Works with both V1 and V2 structures
 
 **Interest Calculation Method:**
 ```python
@@ -212,8 +213,9 @@ interest = average_balance * 0.13 * (service_months / 12.0)
 - **VEB Report:** Prestaciones Bs.75,434.50, Interest Bs.10,428.66
 - Exchange rates: 36.14 - 231.09 VEB/USD (varies by month)
 
-**Issues Fixed (2025-11-14):**
+**Issues Fixed:**
 
+**2025-11-14:**
 1. **Blank PDF Issue:**
    - Root Cause: AbstractModel reading from `docids` instead of `data.get('payslip_ids')`
    - Fix Applied: Changed to read from wizard data first (same pattern as working Disbursement report)
@@ -226,6 +228,21 @@ interest = average_balance * 0.13 * (service_months / 12.0)
      - Updated `_get_exchange_rate()` to use historical rates (fallback to earliest for old dates)
      - Changed template to use dynamic currency symbol
    - Result: ✅ Report displays correctly in both USD and VEB with proper exchange rates
+
+**2025-11-17 - V2 Liquidation Support:**
+1. **V2 Payslips Not Visible in Wizard:**
+   - Root Cause: Hardcoded domain `('struct_id.name', '=', 'Liquidación Venezolana')` (V1 only)
+   - Fix Applied: Updated domain to include V2: `('struct_id.name', 'in', ['Liquidación Venezolana', 'Liquidación Venezolana V2'])`
+   - Result: ✅ 17 liquidation payslips now visible (14 V1 + 3 V2)
+
+2. **Report Showing $0 for V2 Payslips:**
+   - Root Cause: Report hardcoded to V1 rule codes only (`LIQUID_PRESTACIONES`, `LIQUID_INTERESES`, etc.)
+   - Fix Applied: Added V2 → V1 fallback logic:
+     ```python
+     prestaciones = _get_line_value('LIQUID_PRESTACIONES_V2') or _get_line_value('LIQUID_PRESTACIONES')
+     ```
+   - Result: ✅ V2 payslips now show correct data (e.g., SLIP/795: Prestaciones $618.45, Interest $85.47)
+   - Backward Compatible: ✅ V1 liquidations still work perfectly
 
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
 📖 **[Wizard-Based Report Pattern Guide](documentation/WIZARD_BASED_REPORT_PATTERN.md)** ⭐ NEW!
