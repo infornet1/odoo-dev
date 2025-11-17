@@ -81,11 +81,12 @@ class PrestacionesInterestReport(models.AbstractModel):
         usd = self.env.ref('base.USD')
 
         # Get key values from payslip (all in USD)
-        prestaciones_total = self._get_line_value(payslip, 'LIQUID_PRESTACIONES')
-        intereses_total = self._get_line_value(payslip, 'LIQUID_INTERESES')
-        integral_daily = self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY')
-        deduction_base = self._get_line_value(payslip, 'LIQUID_DAILY_SALARY')
-        service_months = self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS')
+        # Try V2 codes first, fall back to V1 for backward compatibility
+        prestaciones_total = self._get_line_value(payslip, 'LIQUID_PRESTACIONES_V2') or self._get_line_value(payslip, 'LIQUID_PRESTACIONES')
+        intereses_total = self._get_line_value(payslip, 'LIQUID_INTERESES_V2') or self._get_line_value(payslip, 'LIQUID_INTERESES')
+        integral_daily = self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY_V2') or self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY')
+        deduction_base = self._get_line_value(payslip, 'LIQUID_DAILY_SALARY_V2') or self._get_line_value(payslip, 'LIQUID_DAILY_SALARY')
+        service_months = self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS_V2') or self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS')
 
         # Calculate monthly income (monthly salary)
         monthly_income = deduction_base * 30  # Daily to monthly
