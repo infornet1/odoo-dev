@@ -6,15 +6,15 @@
         <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report">
                 <t t-call="web.external_layout">
-                    <div class="page" style="font-size: 9pt;">
+                    <div class="page" style="font-size: 7pt;">
                     <!-- Header Section -->
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h3 style="margin: 0; padding: 0;">RELACIÓN DE LIQUIDACIÓN</h3>
-                        <p style="margin: 5px 0 0 0; font-size: 8pt; color: #666;">Liquidation Breakdown Report</p>
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
+                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Liquidation Breakdown Report</p>
                     </div>
 
                     <!-- Employee Information -->
-                    <table class="table table-sm table-bordered" style="margin-bottom: 15px;">
+                    <table class="table table-sm table-bordered" style="margin-bottom: 8px; font-size: 7pt;">
                         <tr>
                             <td style="width: 25%; background-color: #f8f9fa;"><strong>Empleado:</strong></td>
                             <td style="width: 25%;"><t t-esc="report.get('employee').name"/></td>
@@ -53,12 +53,12 @@
                     </table>
 
                     <!-- SECTION 1: PRESTACIONES (Benefits) -->
-                    <div style="margin-bottom: 15px;">
-                        <h5 style="background-color: #4CAF50; color: white; padding: 5px 10px; margin: 0 0 10px 0;">
+                    <div style="margin-bottom: 8px;">
+                        <h5 style="background-color: #4CAF50; color: white; padding: 3px 8px; margin: 0 0 5px 0; font-size: 8pt;">
                             1. PRESTACIONES SOCIALES (BENEFICIOS)
                         </h5>
 
-                        <table class="table table-sm table-bordered">
+                        <table class="table table-sm table-bordered" style="font-size: 6.5pt;">
                             <thead style="background-color: #e8f5e9;">
                                 <tr>
                                     <th style="width: 3%;">#</th>
@@ -70,25 +70,25 @@
                             <tbody>
                                 <t t-foreach="report.get('benefits')" t-as="benefit">
                                     <tr>
-                                        <td style="vertical-align: top;"><t t-esc="benefit.get('number')"/></td>
-                                        <td>
+                                        <td style="vertical-align: top; padding: 2px;"><t t-esc="benefit.get('number')"/></td>
+                                        <td style="padding: 2px;">
                                             <strong><t t-esc="benefit.get('name')"/></strong><br/>
-                                            <span style="font-size: 8pt; color: #666;">
+                                            <span style="font-size: 6pt; color: #666;">
                                                 <t t-esc="benefit.get('formula')"/><br/>
                                                 <t t-esc="benefit.get('calculation')"/>
                                             </span>
                                         </td>
-                                        <td style="text-align: right; vertical-align: top; font-size: 8pt;">
+                                        <td style="text-align: right; vertical-align: top; font-size: 6pt; padding: 2px;">
                                             <t t-esc="benefit.get('detail')"/>
                                         </td>
-                                        <td style="text-align: right; vertical-align: top;">
+                                        <td style="text-align: right; vertical-align: top; padding: 2px;">
                                             <strong><t t-esc="'%s %.2f' % (report.get('currency').symbol, benefit.get('amount'))"/></strong>
                                         </td>
                                     </tr>
                                 </t>
                                 <tr style="background-color: #e8f5e9; font-weight: bold;">
-                                    <td colspan="3" style="text-align: right;">SUBTOTAL PRESTACIONES:</td>
-                                    <td style="text-align: right;">
+                                    <td colspan="3" style="text-align: right; padding: 3px;">SUBTOTAL PRESTACIONES:</td>
+                                    <td style="text-align: right; padding: 3px;">
                                         <t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('total_benefits'))"/>
                                     </td>
                                 </tr>
@@ -97,12 +97,12 @@
                     </div>
 
                     <!-- SECTION 2: DEDUCCIONES (Deductions) -->
-                    <div style="margin-bottom: 15px;">
-                        <h5 style="background-color: #f44336; color: white; padding: 5px 10px; margin: 0 0 10px 0;">
+                    <div style="margin-bottom: 8px;">
+                        <h5 style="background-color: #f44336; color: white; padding: 3px 8px; margin: 0 0 5px 0; font-size: 8pt;">
                             2. DEDUCCIONES
                         </h5>
 
-                        <table class="table table-sm table-bordered">
+                        <table class="table table-sm table-bordered" style="font-size: 6.5pt;">
                             <thead style="background-color: #ffebee;">
                                 <tr>
                                     <th style="width: 3%;">#</th>
@@ -114,29 +114,29 @@
                                 <t t-if="report.get('deductions')">
                                     <t t-foreach="report.get('deductions')" t-as="deduction">
                                         <tr>
-                                            <td style="vertical-align: top;"><t t-esc="deduction.get('number')"/></td>
-                                            <td>
+                                            <td style="vertical-align: top; padding: 2px;"><t t-esc="deduction.get('number')"/></td>
+                                            <td style="padding: 2px;">
                                                 <strong><t t-esc="deduction.get('name')"/></strong><br/>
-                                                <span style="font-size: 8pt; color: #666;">
+                                                <span style="font-size: 6pt; color: #666;">
                                                     <t t-esc="deduction.get('formula')"/><br/>
                                                     <t t-esc="deduction.get('calculation')"/>
                                                 </span>
                                             </td>
-                                            <td style="text-align: right; vertical-align: top;">
+                                            <td style="text-align: right; vertical-align: top; padding: 2px;">
                                                 <strong><t t-esc="'%s %.2f' % (report.get('currency').symbol, deduction.get('amount'))"/></strong>
                                             </td>
                                         </tr>
                                     </t>
                                     <tr style="background-color: #ffebee; font-weight: bold;">
-                                        <td colspan="2" style="text-align: right;">TOTAL DEDUCCIONES:</td>
-                                        <td style="text-align: right;">
+                                        <td colspan="2" style="text-align: right; padding: 3px;">TOTAL DEDUCCIONES:</td>
+                                        <td style="text-align: right; padding: 3px;">
                                             <t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('total_deductions'))"/>
                                         </td>
                                     </tr>
                                 </t>
                                 <t t-else="">
                                     <tr>
-                                        <td colspan="3" style="text-align: center; color: #666; padding: 10px;">
+                                        <td colspan="3" style="text-align: center; color: #666; padding: 5px;">
                                             No hay deducciones aplicables
                                         </td>
                                     </tr>
@@ -146,44 +146,75 @@
                     </div>
 
                     <!-- FINAL TOTAL -->
-                    <div style="margin-top: 20px; border: 3px solid #333; padding: 15px; background-color: #f8f9fa;">
-                        <table style="width: 100%; font-size: 11pt;">
+                    <div style="margin-top: 10px; border: 2px solid #333; padding: 8px; background-color: #f8f9fa;">
+                        <table style="width: 100%; font-size: 8pt;">
                             <tr>
-                                <td style="width: 70%; text-align: right; padding: 5px;"><strong>TOTAL PRESTACIONES:</strong></td>
-                                <td style="width: 30%; text-align: right; padding: 5px;">
+                                <td style="width: 70%; text-align: right; padding: 2px;"><strong>TOTAL PRESTACIONES:</strong></td>
+                                <td style="width: 30%; text-align: right; padding: 2px;">
                                     <strong><t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('total_benefits'))"/></strong>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="text-align: right; padding: 5px;"><strong>TOTAL DEDUCCIONES:</strong></td>
-                                <td style="text-align: right; padding: 5px;">
+                                <td style="text-align: right; padding: 2px;"><strong>TOTAL DEDUCCIONES:</strong></td>
+                                <td style="text-align: right; padding: 2px;">
                                     <strong>(<t t-esc="'%s %.2f' % (report.get('currency').symbol, abs(report.get('total_deductions')))"/>)</strong>
                                 </td>
                             </tr>
                             <tr style="border-top: 2px solid #333;">
-                                <td style="text-align: right; padding: 10px 5px;"><strong style="font-size: 13pt;">NETO A RECLAMAR:</strong></td>
-                                <td style="text-align: right; padding: 10px 5px; background-color: #fff3cd;">
-                                    <strong style="font-size: 13pt;"><t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('net_amount'))"/></strong>
+                                <td style="text-align: right; padding: 5px 2px;"><strong style="font-size: 9pt;">NETO A RECLAMAR:</strong></td>
+                                <td style="text-align: right; padding: 5px 2px; background-color: #fff3cd;">
+                                    <strong style="font-size: 9pt;"><t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('net_amount'))"/></strong>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Declaration Section -->
+                    <div style="margin-top: 10px; font-size: 7pt; padding: 8px; background-color: #fff; border: 1px solid #ddd;">
+                        <p style="margin: 0; text-align: justify; line-height: 1.3;">
+                            <strong>DECLARACIÓN:</strong> El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de
+                            <strong><t t-esc="'%s %.2f' % (report.get('currency').symbol, report.get('net_amount'))"/></strong>
+                            a su entera satisfacción por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
+                        </p>
+                    </div>
+
+                    <!-- Signatures Section -->
+                    <div style="margin-top: 15px;">
+                        <table style="width: 100%; font-size: 7pt;">
+                            <tr>
+                                <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                    <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
+                                        <strong><t t-esc="report.get('employee').name"/></strong><br/>
+                                        C.I.: <t t-esc="report.get('employee').identification_id or 'N/A'"/><br/>
+                                        Firma del Trabajador
+                                    </div>
+                                </td>
+                                <td style="width: 4%;"></td>
+                                <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                    <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
+                                        <strong>______________________________</strong><br/>
+                                        C.I.: __________________<br/>
+                                        Firma del Testigo
+                                    </div>
                                 </td>
                             </tr>
                         </table>
                     </div>
 
                     <!-- Notes Section -->
-                    <div style="margin-top: 15px; font-size: 7.5pt; color: #666; padding: 10px; background-color: #f8f9fa; border-left: 3px solid #2196F3;">
-                        <strong>Notas:</strong><br/>
-                        • Salario Diario Base: <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % (report.get('daily_salary') * 30)"/> / 30 = <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % report.get('daily_salary')"/><br/>
-                        • Salario Diario Integral: <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % report.get('integral_daily')"/><br/>
+                    <div style="margin-top: 8px; font-size: 6pt; color: #666; padding: 5px; background-color: #f8f9fa; border-left: 2px solid #2196F3;">
+                        <strong>Notas:</strong>
+                        Salario Diario Base: <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % (report.get('daily_salary') * 30)"/> / 30 = <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % report.get('daily_salary')"/> •
+                        Salario Diario Integral: <t t-esc="report.get('currency').symbol"/> <t t-esc="'%.2f' % report.get('integral_daily')"/>
                         <t t-if="report.get('bono_rate') > 15">
-                            • Tasa Bono Vacacional: 15 + (<t t-esc="'%.2f' % report.get('total_seniority_years')"/> - 1) = <t t-esc="'%.1f' % report.get('bono_rate')"/> días/año<br/>
+                            • Tasa Bono Vacacional: 15 + (<t t-esc="'%.2f' % report.get('total_seniority_years')"/> - 1) = <t t-esc="'%.1f' % report.get('bono_rate')"/> días/año
                         </t>
                         <t t-if="report.get('original_hire_date') and report.get('original_hire_date') != report.get('contract').date_start">
-                            • Antigüedad calculada desde fecha original de contratación<br/>
+                            • Antigüedad calculada desde fecha original de contratación
                         </t>
                         <t t-if="report.get('currency').name == 'VEB'">
-                            • Tipo de Cambio: <t t-esc="'%.2f' % report.get('exchange_rate')"/> VEB/USD<br/>
+                            • Tipo de Cambio: <t t-esc="'%.2f' % report.get('exchange_rate')"/> VEB/USD
                         </t>
-                        • Estructura: <t t-esc="report.get('structure_name')"/>
                     </div>
 
                     <div style="page-break-after: always;" t-if="not report_last"/>
