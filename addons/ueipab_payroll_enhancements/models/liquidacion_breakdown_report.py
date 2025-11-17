@@ -13,7 +13,7 @@ from dateutil.relativedelta import relativedelta
 class LiquidacionBreakdownReport(models.AbstractModel):
     """Report model for Relación de Liquidación breakdown."""
 
-    _name = 'report.ueipab_payroll_enhancements.liquidacion_breakdown'
+    _name = 'report.ueipab_payroll_enhancements.liquidacion_breakdown_report'
     _description = 'Liquidación Breakdown Report'
 
     @api.model
