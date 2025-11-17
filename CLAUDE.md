@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-16
+**Last Updated:** 2025-11-17
 
 ## Core Instructions
 
@@ -101,38 +101,87 @@ Total = Salary + Bonus = wage
 
 ### 2. Venezuelan Liquidation System
 
-**Status:** ✅ Production Ready (All 9 Phases Complete)
-**Last Updated:** 2025-11-13
+**Status:** ✅ V1 Production Ready | ✅ V2 PRODUCTION READY (All Tests Passed!)
+**Last Updated:** 2025-11-17
 **Module:** `ueipab_payroll_enhancements` + `ueipab_hr_contract`
 
 **Quick Summary:**
 - Calculates employee severance and benefits per Venezuelan Labor Law (LOTTT)
+- **Two parallel structures:** V1 (legacy) and V2 (new, using ueipab_salary_v2)
 - Fixed hardcoded formulas - now calculates dynamically based on contract data
 - Added 3 historical tracking fields for complex employee scenarios
 - Implements vacation prepaid deduction for Aug 1 annual payments
-- All 13 salary rules updated and tested
+
+**V1 vs V2 Comparison:**
+
+| Aspect | V1 (Legacy) | V2 (New) |
+|--------|-------------|----------|
+| **Structure Code** | LIQUID_VE | LIQUID_VE_V2 |
+| **Salary Field** | `ueipab_deduction_base` | `ueipab_salary_v2` ✅ |
+| **Field Type** | Calculated (~42% of wage) | Direct HR-approved amount |
+| **Accounting** | 5.1.01.10.002 / 2.1.01.10.005 | **5.1.01.10.010** / 2.1.01.10.005 |
+| **Status** | Production (Active) | ✅ Production Ready (Tested) |
+
+**V2 Implementation (2025-11-17):**
+- ✅ Structure created: "Liquidación Venezolana V2" (ID: 10, Code: LIQUID_VE_V2)
+- ✅ All 14 salary rules updated with V2 formulas
+- ✅ Accounting configured: 5.1.01.10.010 (Debit) / 2.1.01.10.005 (Credit)
+- ✅ `ueipab_original_hire_date` logic preserved (progressive bono rate)
+- ✅ Historical tracking supported (previous liquidation, prepaid vacation)
+- ✅ Independent structure (no parent inheritance issues)
+- ✅ **ALL 3 TEST EMPLOYEES VERIFIED:**
+  - VIRGINIA VERDE (5.84 years): $1,200.93 net ✅
+  - GABRIEL ESPAÑA (2.30 years): $1,245.31 net ✅
+  - DIXIA BELLORIN (12.92 years): $1,048.25 net ✅
+- ✅ Progressive bono rate formula working correctly (16.3, 19.8, 26.9 days/year)
+- ✅ Antiguedad net owed calculation verified (265.7 days already paid deducted)
+- ✅ Journal entries balanced and posted correctly
 
 **Key Contract Fields:**
 ```python
-contract.ueipab_deduction_base         # Base salary for liquidation
+# V1 Fields (Legacy)
+contract.ueipab_deduction_base         # V1: Base salary for liquidation
+
+# V2 Fields (New)
+contract.ueipab_salary_v2              # V2: Direct salary subject to deductions
+
+# Historical Tracking (Both V1 and V2)
 contract.ueipab_original_hire_date     # Original hire date (for antiguedad)
 contract.ueipab_previous_liquidation_date  # Last full liquidation date
 contract.ueipab_vacation_paid_until    # Last vacation payment date (Aug 1)
 ```
 
-**Production-Ready Scripts:**
+**V1 Production Scripts:**
 - `/opt/odoo-dev/scripts/phase2_fix_liquidation_formulas_validated.py`
 - `/opt/odoo-dev/scripts/phase3_fix_historical_tracking_tryexcept.py`
 - `/opt/odoo-dev/scripts/phase4_add_vacation_prepaid_deduction.py`
 - `/opt/odoo-dev/scripts/phase4_fix_net_safe.py`
 - `/opt/odoo-dev/scripts/phase4_fix_sequence_order.py`
 
-**Test Cases:**
-- ✅ Gabriel España (simple case): $875.34 net
-- ✅ Virginia Verde (complex rehire): $786.18 net
-- ✅ Josefina Rodriguez (prepaid deduction): $1,177.00 net
+**V2 Implementation Scripts:**
+- `/opt/odoo-dev/scripts/create_liquidation_v2_structure.py` - ✅ Executed successfully
+- `/opt/odoo-dev/scripts/verify_slip_795_journal_entry.py` - ✅ VIRGINIA VERDE verification
+- `/opt/odoo-dev/scripts/verify_slip_796_comparison.py` - ✅ GABRIEL ESPAÑA verification
+- `/opt/odoo-dev/scripts/verify_slip_797_dixia.py` - ✅ DIXIA BELLORIN verification
 
-📖 **[Complete Documentation](documentation/LIQUIDATION_COMPLETE_GUIDE.md)**
+**V2 Test Results (2025-11-17) - ALL PASSED:**
+
+| Employee | Payslip | Seniority | Bono Rate | Service | Net Liquidation |
+|----------|---------|-----------|-----------|---------|-----------------|
+| **VIRGINIA VERDE** | SLIP/795 | 5.84 years | 19.8 d/y | 26.97 mo | $1,200.93 ✅ |
+| **GABRIEL ESPAÑA** | SLIP/796 | 2.30 years | 16.3 d/y | 23.30 mo | $1,245.31 ✅ |
+| **DIXIA BELLORIN** | SLIP/797 | 12.92 years | 26.9 d/y | 23.30 mo | $1,048.25 ✅ |
+
+**Key Findings:**
+- ✅ V2 salary field (ueipab_salary_v2) working correctly (all daily rates verified)
+- ✅ Progressive bono rate formula validated across all seniority levels
+- ✅ Antiguedad deduction working (DIXIA: 265.7 days already paid, net owed 48.7 days)
+- ✅ Salary impact > seniority impact (daily rate drives total liquidation amount)
+- ✅ Journal entries balanced and posted to correct accounts
+
+📖 **[V1 Complete Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md)**
+📖 **[V2 Migration Plan](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md)**
+📖 **[V2 Testing Guide](documentation/LIQUIDACION_V2_TESTING_GUIDE.md)** ⭐ **NEW!**
 
 ---
 
