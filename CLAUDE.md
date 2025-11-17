@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-17
+**Last Updated:** 2025-11-17 02:55 UTC
 
 ## Core Instructions
 
@@ -525,6 +525,93 @@ The whole purpose of V2 is to eliminate confusing percentage logic and use trans
 - ✅ **Testing:** Validate against already-paid NOVIEMBRE15-2 batch
 - ✅ **Timeline:** 6-day development cycle approved (Nov 18-23)
 - ✅ **Legal:** CEO confirmed full Venezuelan labor law compliance
+
+---
+
+### 5. Relación de Liquidación Report (Breakdown Report)
+
+**Status:** ⚠️ IN DEVELOPMENT - PDF Rendering Issue
+**Started:** 2025-11-17
+**Module:** `ueipab_payroll_enhancements` v1.10.0 (planned)
+
+**Purpose:**
+Detailed breakdown report showing liquidation calculation formulas for Venezuelan severance payments. Displays step-by-step calculations for all 6 benefits and 3 deductions with formulas and intermediate values.
+
+**Current Implementation Status:**
+
+✅ **Completed Components:**
+- Wizard model (`liquidacion_breakdown_wizard.py`) - Multi-payslip selection, currency choice
+- Report model (`liquidacion_breakdown_report.py`) - Formula generation with V1/V2 fallback
+- QWeb template (`liquidacion_breakdown_report.xml`) - Full breakdown layout
+- XLSX export controller (`liquidacion_breakdown_xlsx.py`) - Excel export functionality
+- Security rules and menu integration
+
+✅ **Data Flow Verified:**
+- Report model `_get_report_values()` returns correct data structure
+- Template receives all required variables: `reports`, `docs`, `currency`
+- Test case (SLIP/795 VIRGINIA VERDE): 6 benefits, 3 deductions, $1,200.93 net
+- HTML rendering works correctly (112KB output with all employee data)
+
+❌ **Blocking Issue: Blank PDF Generation**
+- **Symptom:** PDF generates successfully but contains no visible content (1.2KB file)
+- **Root Cause:** Unknown - wkhtmltopdf conversion failing despite correct HTML
+- **HTML Renders:** ✅ Template produces 112,279 bytes with "VIRGINIA VERDE" and all data
+- **PDF Converts:** ❌ wkhtmltopdf outputs 1,231 bytes (empty content stream)
+
+**Troubleshooting Performed (2025-11-17):**
+
+1. **Template Structure Verification:**
+   - ✅ Correct hierarchy: `web.html_container` → `web.external_layout` → `<div class="page">`
+   - ✅ Template ID matches report_name: `ueipab_payroll_enhancements.liquidacion_breakdown_report`
+   - ✅ Compared with working Prestaciones report - structure identical
+
+2. **Currency Variable Scope Fix:**
+   - Changed all `currency.symbol` → `report.get('currency').symbol`
+   - Changed all `currency.name` → `report.get('currency').name`
+   - Aligned with Prestaciones pattern for variable access
+
+3. **Data Passing Verification:**
+   - ✅ Wizard calls: `report.report_action(docids=self.payslip_ids.ids, data=data)`
+   - ✅ Report model returns: `{'doc_ids', 'doc_model', 'docs', 'data', 'currency', 'reports'}`
+   - ✅ Template receives all variables correctly
+
+4. **Rendering Tests:**
+   - ✅ `qweb._render()` produces 112KB HTML with full data
+   - ✅ Employee name "VIRGINIA VERDE" present in HTML
+   - ❌ `report_action._render_qweb_pdf()` produces 1.2KB PDF (empty)
+   - ❌ wkhtmltopdf error: "Failed to load about:blank, with network status code 301"
+
+**Files Created:**
+- `models/liquidacion_breakdown_wizard.py` (113 lines)
+- `models/liquidacion_breakdown_report.py` (299 lines)
+- `reports/liquidacion_breakdown_report.xml` (197 lines)
+- `controllers/liquidacion_breakdown_xlsx.py` (274 lines)
+- `wizard/liquidacion_breakdown_wizard_view.xml` (48 lines)
+- `reports/report_actions.xml` (updated with new action + paper format)
+
+**Diagnostic Scripts:**
+- `scripts/test_pdf_generation.py` - Tests PDF generation directly
+- `scripts/diagnose_template_rendering.py` - Checks template structure
+- `scripts/test_template_render_only.py` - Isolates HTML rendering
+- `scripts/check_report_template_exists.py` - Verifies template registration
+- `scripts/test_report_action_call.py` - Tests wizard flow
+
+**Similar Issue Reference:**
+- Prestaciones Interest Report had blank PDF issue (2025-11-14)
+- **Resolution:** Changed `_get_report_values` to read from `data.get('payslip_ids')` instead of `docids`
+- **Status:** Fixed - Prestaciones now works correctly
+- **Key Learning:** AbstractModel wizards must prioritize `data` dict over `docids` parameter
+
+**Next Steps for Resolution:**
+1. Compare exact data flow between Prestaciones (working) and Liquidacion (broken)
+2. Check if wkhtmltopdf asset loading is causing "about:blank" error
+3. Review Odoo 17 docs on QWeb PDF reports for wizard-based patterns
+4. Test with minimal template to isolate wkhtmltopdf vs template issue
+5. Check if module upgrade is needed to refresh view database cache
+
+**Current Workaround:**
+- XLSX export functionality works correctly (not affected by PDF issue)
+- Users can export to Excel while PDF issue is being resolved
 
 ---
 

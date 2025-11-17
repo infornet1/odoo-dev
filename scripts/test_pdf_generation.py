@@ -1,66 +1,54 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Test actual PDF generation from report.
+Test actual PDF generation
 """
 
-import sys
-import base64
+# Find SLIP/795
+payslip = env['hr.payslip'].search([('number', '=', 'SLIP/795')], limit=1)
 
-env = globals().get('env')
-if not env:
-    print("ERROR: Must run via odoo shell")
-    sys.exit(1)
+if not payslip:
+    print("❌ SLIP/795 not found!")
+else:
+    print(f"✅ Found payslip: {payslip.number}")
 
-print("="*80)
-print("TESTING PDF GENERATION")
-print("="*80)
+    # Get report action
+    report_action = env.ref('ueipab_payroll_enhancements.action_report_liquidacion_breakdown')
+    print(f"✅ Report action found: {report_action.name}")
+    print(f"   Report name: {report_action.report_name}")
 
-# Get test payslip
-slip568 = env['hr.payslip'].search([('number', '=', 'SLIP/568')], limit=1)
-print(f"\n✅ Payslip: {slip568.number} (ID: {slip568.id})")
+    # Get currency
+    usd = env.ref('base.USD')
 
-# Get report action
-report_action = env.ref('ueipab_payroll_enhancements.action_report_prestaciones_interest')
-print(f"✅ Report action: {report_action.name}")
+    # Prepare data (same as wizard would pass)
+    data = {
+        'wizard_id': None,
+        'currency_id': usd.id,
+        'currency_name': 'USD',
+        'payslip_ids': [payslip.id],
+    }
 
-# Get USD
-usd = env.ref('base.USD')
+    print(f"\n=== Attempting PDF Generation ===")
+    try:
+        # Generate PDF
+        pdf_content, report_format = report_action.with_context()._render_qweb_pdf(
+            report_action.report_name,
+            res_ids=[payslip.id],
+            data=data
+        )
 
-# Prepare data (same as wizard)
-data = {
-    'currency_id': usd.id,
-    'payslip_ids': [slip568.id],
-}
+        print(f"✅ PDF generated successfully!")
+        print(f"   PDF size: {len(pdf_content)} bytes")
+        print(f"   Format: {report_format}")
 
-print(f"\n" + "="*80)
-print("GENERATING PDF...")
-print("="*80)
-
-try:
-    # Use _render_qweb_pdf with correct Odoo 17 signature
-    pdf_content, output_format = report_action._render_qweb_pdf(
-        report_ref='ueipab_payroll_enhancements.prestaciones_interest',
-        res_ids=[slip568.id],
-        data=data
-    )
-
-    print(f"\n✅ PDF Generated!")
-    print(f"   Format: {output_format}")
-    print(f"   Size: {len(pdf_content)} bytes")
-
-    if len(pdf_content) > 0:
-        print(f"   First 100 bytes: {pdf_content[:100]}")
-
-        # Save to file
-        output_path = '/opt/odoo-dev/prestaciones_test.pdf'
-        with open(output_path, 'wb') as f:
+        # Save to file for inspection
+        with open('/tmp/test_liquidacion.pdf', 'wb') as f:
             f.write(pdf_content)
-        print(f"\n✅ PDF saved to: {output_path}")
-        print(f"   You can download and view it to see if data is there")
-    else:
-        print(f"\n❌ PDF is EMPTY!")
+        print(f"   PDF saved to: /tmp/test_liquidacion.pdf")
 
-except Exception as e:
-    print(f"\n❌ ERROR generating PDF: {e}")
-    import traceback
-    traceback.print_exc()
+    except Exception as e:
+        print(f"❌ PDF generation failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+print("\n=== Test Complete ===")

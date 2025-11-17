@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Minimal Test Template -->
+
+    <template id="liquidacion_breakdown_report">
+        <t t-call="web.html_container">
+            <t t-foreach="reports" t-as="report">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>TEST REPORT</h2>
+                        <p>Employee: <span t-esc="report.get('employee').name"/></p>
+                        <p>Currency: <span t-esc="report.get('currency').name"/></p>
+                        <p>Net Amount: <span t-esc="report.get('net_amount')"/></p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

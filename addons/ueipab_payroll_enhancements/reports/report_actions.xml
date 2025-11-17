@@ -58,4 +58,30 @@
         <field name="print_report_name">'Prestaciones_Interest_%s' % (object.employee_id.name.replace(' ', '_'))</field>
     </record>
 
+    <!-- Paper Format for Liquidación Breakdown Report -->
+    <record id="paperformat_liquidacion_breakdown" model="report.paperformat">
+        <field name="name">Liquidación Breakdown Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">25</field>
+        <field name="margin_left">10</field>
+        <field name="margin_right">10</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- Report Action for Liquidación Breakdown -->
+    <record id="action_report_liquidacion_breakdown" model="ir.actions.report">
+        <field name="name">Relación de Liquidación</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.liquidacion_breakdown_report</field>
+        <field name="report_file">ueipab_payroll_enhancements.liquidacion_breakdown_report</field>
+        <field name="paperformat_id" ref="paperformat_liquidacion_breakdown"/>
+        <field name="print_report_name">'Relacion_Liquidacion_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_to.strftime('%Y%m%d'))</field>
+    </record>
+
 </odoo>

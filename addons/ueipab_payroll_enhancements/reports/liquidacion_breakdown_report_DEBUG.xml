@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Debug Template - Check if variables exist -->
+
+    <template id="liquidacion_breakdown_report">
+        <t t-call="web.html_container">
+            <div class="page">
+                <h2>DEBUG REPORT</h2>
+                <p>Reports count: <span t-esc="len(reports) if reports else 'reports is None'"/></p>
+                <p>Docs count: <span t-esc="len(docs) if docs else 'docs is None'"/></p>
+                <p>Currency: <span t-esc="currency.name if currency else 'currency is None'"/></p>
+            </div>
+        </t>
+    </template>
+
+</odoo>

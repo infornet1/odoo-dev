@@ -19,7 +19,15 @@
               sequence="10"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
-    <!-- Report 2: Prestaciones Soc. Intereses (NEW - FULLY WORKING) -->
+    <!-- Report 2: Relación de Liquidación (NEW - FULLY WORKING) -->
+    <menuitem id="menu_liquidacion_breakdown"
+              name="Relación de Liquidación"
+              parent="menu_payroll_reports"
+              action="action_liquidacion_breakdown_wizard"
+              sequence="12"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- Report 3: Prestaciones Soc. Intereses (FULLY WORKING) -->
     <menuitem id="menu_prestaciones_interest"
               name="Prestaciones Soc. Intereses"
               parent="menu_payroll_reports"

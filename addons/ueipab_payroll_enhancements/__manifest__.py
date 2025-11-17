@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.8.0',
+    'version': '17.0.1.9.0',
     'category': 'Human Resources/Payroll',
-    'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), cancel workflow, and custom reports menu',
+    'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
 UEIPAB Payroll Enhancements
 ============================
@@ -29,12 +29,21 @@ Reports Available:
   - Excel export with formatted columns and totals
   - Columns: Employee, VAT ID, Department, Gross, ARI Tax, Social Security, Other Deductions, Net USD, Exchange Rate, Net VEB
   - Flexible filtering (batch or date range)
-* Prestaciones Soc. Intereses - NEW! FULLY WORKING
+* Prestaciones Soc. Intereses - FULLY WORKING
   - Month-by-month breakdown of prestaciones and interest accrual
   - Shows quarterly deposits (15 days every 3 months)
   - Displays accumulated balance and interest earned
   - Supports USD and VEB currency display
   - Multiple payslip selection for batch reporting
+* Relación de Liquidación - NEW! FULLY WORKING
+  - Detailed breakdown of liquidation benefits and deductions
+  - Shows all formula calculations for transparency
+  - Displays progressive bono vacacional rate based on seniority
+  - Tracks antiguedad from original hire date with prepaid deductions
+  - Export formats: PDF or Excel (.xlsx)
+  - Portrait Letter format (fits on one page)
+  - Supports USD and VEB currency display
+  - V1 and V2 liquidation structure compatibility
 * Payroll Taxes - Coming soon
 * Payroll Accounting - Coming soon
 * Liquidation Forms - Coming soon
@@ -65,12 +74,14 @@ Use Cases:
         'wizard/payroll_accounting_wizard_view.xml',
         'wizard/liquidation_wizard_view.xml',
         'wizard/prestaciones_interest_wizard_view.xml',
+        'wizard/liquidacion_breakdown_wizard_view.xml',
 
         # Reports
         'reports/report_actions.xml',
         'reports/disbursement_list_report.xml',
         'reports/payroll_disbursement_detail_report.xml',
         'reports/prestaciones_interest_report.xml',
+        'reports/liquidacion_breakdown_report.xml',
 
         # Views and Menu
         'views/hr_payslip_employees_views.xml',

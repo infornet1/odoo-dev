@@ -1,0 +1,298 @@
+# -*- coding: utf-8 -*-
+"""
+Relación de Liquidación Report Model
+
+Generates detailed breakdown of liquidation calculations with formulas.
+"""
+
+from odoo import models, api, _
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+
+
+class LiquidacionBreakdownReport(models.AbstractModel):
+    """Report model for Relación de Liquidación breakdown."""
+
+    _name = 'report.ueipab_payroll_enhancements.liquidacion_breakdown'
+    _description = 'Liquidación Breakdown Report'
+
+    @api.model
+    def _get_report_values(self, docids, data=None):
+        """Generate report data with formula breakdowns.
+
+        Args:
+            docids: List of hr.payslip IDs
+            data: Data dict from wizard
+
+        Returns:
+            dict: Report data
+        """
+        # Get payslip IDs from data dict
+        payslip_ids = data.get('payslip_ids', []) if data else []
+
+        if not payslip_ids and docids:
+            payslip_ids = docids
+
+        payslips = self.env['hr.payslip'].browse(payslip_ids)
+
+        # Get currency
+        currency_id = data.get('currency_id') if data else self.env.ref('base.USD').id
+        currency = self.env['res.currency'].browse(currency_id)
+
+        # Generate report data for each payslip
+        reports = []
+        for payslip in payslips:
+            report_data = self._generate_breakdown(payslip, currency)
+            reports.append(report_data)
+
+        return {
+            'doc_ids': payslip_ids,
+            'doc_model': 'hr.payslip',
+            'docs': payslips,
+            'data': data,
+            'currency': currency,
+            'reports': reports,
+        }
+
+    def _generate_breakdown(self, payslip, currency):
+        """Generate complete breakdown for a payslip.
+
+        Args:
+            payslip: hr.payslip record
+            currency: res.currency record
+
+        Returns:
+            dict: Breakdown data
+        """
+        contract = payslip.contract_id
+        employee = payslip.employee_id
+
+        # Get USD currency
+        usd = self.env.ref('base.USD')
+
+        # Detect if V1 or V2
+        is_v2 = payslip.struct_id.code == 'LIQUID_VE_V2'
+
+        # Get base data (try V2 first, fall back to V1)
+        service_months = self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS_V2') or self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS')
+        daily_salary = self._get_line_value(payslip, 'LIQUID_DAILY_SALARY_V2') or self._get_line_value(payslip, 'LIQUID_DAILY_SALARY')
+        integral_daily = self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY_V2') or self._get_line_value(payslip, 'LIQUID_INTEGRAL_DAILY')
+
+        # Calculate service period
+        service_years = int(service_months / 12)
+        remaining_months = int(service_months % 12)
+
+        # Get original hire date for seniority calculation
+        original_hire = contract.ueipab_original_hire_date if hasattr(contract, 'ueipab_original_hire_date') else contract.date_start
+        total_seniority_years = 0.0
+        bono_rate = 15.0
+
+        if original_hire:
+            total_days = (payslip.date_to - original_hire).days
+            total_seniority_years = total_days / 365.0
+
+            # Calculate progressive bono rate
+            if total_seniority_years >= 16:
+                bono_rate = 30.0
+            elif total_seniority_years >= 1:
+                bono_rate = min(15.0 + (total_seniority_years - 1), 30.0)
+
+        # Get all benefit values
+        vacaciones = self._get_line_value(payslip, 'LIQUID_VACACIONES_V2') or self._get_line_value(payslip, 'LIQUID_VACACIONES')
+        bono_vacacional = self._get_line_value(payslip, 'LIQUID_BONO_VACACIONAL_V2') or self._get_line_value(payslip, 'LIQUID_BONO_VACACIONAL')
+        utilidades = self._get_line_value(payslip, 'LIQUID_UTILIDADES_V2') or self._get_line_value(payslip, 'LIQUID_UTILIDADES')
+        prestaciones = self._get_line_value(payslip, 'LIQUID_PRESTACIONES_V2') or self._get_line_value(payslip, 'LIQUID_PRESTACIONES')
+        antiguedad = self._get_line_value(payslip, 'LIQUID_ANTIGUEDAD_V2') or self._get_line_value(payslip, 'LIQUID_ANTIGUEDAD')
+        intereses = self._get_line_value(payslip, 'LIQUID_INTERESES_V2') or self._get_line_value(payslip, 'LIQUID_INTERESES')
+
+        # Get deduction values
+        faov = self._get_line_value(payslip, 'LIQUID_FAOV_V2') or self._get_line_value(payslip, 'LIQUID_FAOV')
+        inces = self._get_line_value(payslip, 'LIQUID_INCES_V2') or self._get_line_value(payslip, 'LIQUID_INCES')
+        prepaid = self._get_line_value(payslip, 'LIQUID_VACATION_PREPAID_V2') or self._get_line_value(payslip, 'LIQUID_VACATION_PREPAID')
+
+        # Get net
+        net = self._get_line_value(payslip, 'LIQUID_NET_V2') or self._get_line_value(payslip, 'LIQUID_NET')
+
+        # Calculate days for each benefit (approximations for display)
+        vacaciones_days = (service_months / 12.0) * 15.0
+        bono_days = (service_months / 12.0) * bono_rate
+        utilidades_days = (service_months / 12.0) * 30.0
+        prestaciones_days = (service_months / 3.0) * 15.0
+
+        # Calculate antiguedad days
+        antiguedad_total_days = 0.0
+        antiguedad_paid_days = 0.0
+        antiguedad_net_days = 0.0
+
+        if original_hire:
+            total_months_seniority = (payslip.date_to - original_hire).days / 30.0
+            antiguedad_total_days = total_months_seniority * 2.0
+
+            # Check if previous liquidation exists
+            if hasattr(contract, 'ueipab_previous_liquidation_date') and contract.ueipab_previous_liquidation_date:
+                paid_days_period = (contract.ueipab_previous_liquidation_date - original_hire).days
+                paid_months = paid_days_period / 30.0
+                antiguedad_paid_days = paid_months * 2.0
+
+            antiguedad_net_days = antiguedad_total_days - antiguedad_paid_days
+
+        # Convert to selected currency
+        date_ref = payslip.date_to
+
+        # Benefits
+        benefits = [
+            {
+                'number': 1,
+                'name': 'Vacaciones',
+                'formula': '15 días por año × salario diario',
+                'calculation': f'({service_months:.2f}/12) × 15 días × ${daily_salary:.2f}',
+                'detail': f'{vacaciones_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(vacaciones, usd, currency, date_ref),
+            },
+            {
+                'number': 2,
+                'name': 'Bono Vacacional',
+                'formula': f'Tasa progresiva: {bono_rate:.1f} días/año ({total_seniority_years:.2f} años de antigüedad)',
+                'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × ${daily_salary:.2f}',
+                'detail': f'{bono_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(bono_vacacional, usd, currency, date_ref),
+            },
+            {
+                'number': 3,
+                'name': 'Utilidades',
+                'formula': '30 días por año × salario diario',
+                'calculation': f'({service_months:.2f}/12) × 30 días × ${daily_salary:.2f}',
+                'detail': f'{utilidades_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(utilidades, usd, currency, date_ref),
+            },
+            {
+                'number': 4,
+                'name': 'Prestaciones Sociales',
+                'formula': '15 días por trimestre × salario integral',
+                'calculation': f'({service_months:.2f}/3) × 15 días × ${integral_daily:.2f}',
+                'detail': f'{prestaciones_days:.1f} días × ${integral_daily:.2f}',
+                'amount': self._convert_currency(prestaciones, usd, currency, date_ref),
+            },
+            {
+                'number': 5,
+                'name': 'Antigüedad',
+                'formula': '2 días por mes desde fecha original de ingreso',
+                'calculation': f'Total: {antiguedad_total_days:.1f} días - Ya pagados: {antiguedad_paid_days:.1f} días',
+                'detail': f'{antiguedad_net_days:.1f} días × ${integral_daily:.2f}',
+                'amount': self._convert_currency(antiguedad, usd, currency, date_ref),
+            },
+            {
+                'number': 6,
+                'name': 'Intereses sobre Prestaciones',
+                'formula': '13% anual sobre saldo promedio de prestaciones',
+                'calculation': f'${prestaciones:.2f} × 50% × 13% × ({service_months:.2f}/12)',
+                'detail': f'',
+                'amount': self._convert_currency(intereses, usd, currency, date_ref),
+            },
+        ]
+
+        total_benefits = sum(b['amount'] for b in benefits)
+
+        # Deductions
+        deductions = []
+
+        if faov != 0:
+            deductions.append({
+                'number': 1,
+                'name': 'FAOV (Fondo de Ahorro Habitacional)',
+                'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
+                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 1%',
+                'amount': self._convert_currency(faov, usd, currency, date_ref),
+            })
+
+        if inces != 0:
+            deductions.append({
+                'number': 2,
+                'name': 'INCES / PARO FORZOSO',
+                'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
+                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 0.5%',
+                'amount': self._convert_currency(inces, usd, currency, date_ref),
+            })
+
+        if prepaid != 0:
+            prepaid_date = contract.ueipab_vacation_paid_until if hasattr(contract, 'ueipab_vacation_paid_until') and contract.ueipab_vacation_paid_until else None
+            prepaid_detail = f'Período prepagado desde {prepaid_date.strftime("%d/%m/%Y")}' if prepaid_date else 'Deducción por pago adelantado'
+
+            deductions.append({
+                'number': 3,
+                'name': 'Vacaciones y Bono Prepagadas',
+                'formula': 'Deducción por pago adelantado',
+                'calculation': prepaid_detail,
+                'amount': self._convert_currency(prepaid, usd, currency, date_ref),
+            })
+
+        total_deductions = sum(d['amount'] for d in deductions)
+
+        # Calculate exchange rate for display
+        exchange_rate = self._get_exchange_rate(date_ref, currency)
+
+        return {
+            'payslip': payslip,
+            'employee': employee,
+            'contract': contract,
+            'currency': currency,
+            'exchange_rate': exchange_rate,
+            'is_v2': is_v2,
+            'structure_name': payslip.struct_id.name,
+            'service_years': service_years,
+            'service_months': remaining_months,
+            'service_months_total': service_months,
+            'original_hire_date': original_hire,
+            'original_hire_date_str': original_hire.strftime('%d/%m/%Y') if original_hire else '',
+            'date_start_str': contract.date_start.strftime('%d/%m/%Y') if contract.date_start else '',
+            'date_to_str': payslip.date_to.strftime('%d/%m/%Y') if payslip.date_to else '',
+            'total_seniority_years': total_seniority_years,
+            'bono_rate': bono_rate,
+            'daily_salary': daily_salary,
+            'integral_daily': integral_daily,
+            'benefits': benefits,
+            'deductions': deductions,
+            'total_benefits': total_benefits,
+            'total_deductions': total_deductions,
+            'net_amount': self._convert_currency(net, usd, currency, date_ref),
+        }
+
+    def _convert_currency(self, amount, from_currency, to_currency, date_ref):
+        """Convert amount from one currency to another."""
+        if from_currency == to_currency:
+            return amount
+
+        return from_currency._convert(
+            from_amount=amount,
+            to_currency=to_currency,
+            company=self.env.company,
+            date=date_ref
+        )
+
+    def _get_line_value(self, payslip, code):
+        """Get value from payslip line by code."""
+        line = payslip.line_ids.filtered(lambda l: l.code == code)
+        return line.total if line else 0.0
+
+    def _get_exchange_rate(self, date_ref, currency):
+        """Get exchange rate for display."""
+        if currency.name == 'USD':
+            return 1.0
+
+        if currency.name == 'VEB':
+            rate_record = self.env['res.currency.rate'].search([
+                ('currency_id', '=', currency.id),
+                ('name', '<=', date_ref)
+            ], limit=1, order='name desc')
+
+            if not rate_record:
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name asc')
+
+            if rate_record and hasattr(rate_record, 'company_rate'):
+                return rate_record.company_rate
+            elif rate_record and rate_record.rate > 0:
+                return 1.0 / rate_record.rate
+
+        return 1.0
