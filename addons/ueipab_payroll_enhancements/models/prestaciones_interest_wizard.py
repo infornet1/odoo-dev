@@ -24,8 +24,8 @@ class PrestacionesInterestWizard(models.TransientModel):
         'hr.payslip',
         string='Liquidation Payslips',
         required=True,
-        domain="[('struct_id.name', '=', 'Liquidación Venezolana'), ('state', 'in', ['draft', 'done'])]",
-        help='Select one or more liquidation payslips to generate interest breakdown reports'
+        domain="[('struct_id.name', 'in', ['Liquidación Venezolana', 'Liquidación Venezolana V2']), ('state', 'in', ['draft', 'done'])]",
+        help='Select one or more liquidation payslips to generate interest breakdown reports (V1 or V2)'
     )
 
     currency_id = fields.Many2one(
