@@ -22,7 +22,7 @@
 
                         <!-- Introduction Paragraph -->
                         <p style="text-align: justify; margin-bottom: 12px;">
-                            <strong>Entre:</strong> La Unidad Educativa Instituto Privado "Andres Bello" C.A, con Registro de Información Fiscal Nro. <strong>J-080086171</strong>, de este domicilio, debidamente representado por su Director Suplente <strong>GUSTAVO JOSE PERDOMO MATA</strong>, Venezolano, mayor de edad, de este domicilio y titular de cédula de identidad Nro. <strong>V-15.128.008</strong>, por una parte; y por la otra el trabajador <strong><t t-esc="report.get('employee').name"/></strong>, venezolano, mayor de edad, de este domicilio y titular de la cédula de identidad Nro. <strong><t t-esc="report.get('employee').identification_id or 'N/A'"/></strong>, hemos convenido en finiquitar la relación de trabajo, en los siguientes términos:
+                            <strong>Entre:</strong> La Unidad Educativa Instituto Privado "Andres Bello" C.A, con Registro de Información Fiscal Nro. <strong>J-080086171</strong>, de este domicilio, debidamente representado por su Director Principal <strong>GUSTAVO PERDOMO</strong>, Venezolano, mayor de edad, de este domicilio y titular de cédula de identidad Nro. <strong>V-15.128.008</strong>, por una parte; y por la otra el trabajador <strong><t t-esc="report.get('employee').name"/></strong>, venezolano, mayor de edad, de este domicilio y titular de la cédula de identidad Nro. <strong><t t-esc="report.get('employee').identification_id or 'N/A'"/></strong>, hemos convenido en finiquitar la relación de trabajo, en los siguientes términos:
                         </p>
 
                         <!-- PRIMERO -->
@@ -57,8 +57,8 @@
                                     <td style="width: 48%; text-align: center; vertical-align: bottom;">
                                         <div style="border-top: 1px solid #000; padding-top: 5px;">
                                             <strong>Instituto Privado Andrés Bello CA</strong><br/>
-                                            GUSTAVO JOSE PERDOMO MATA<br/>
-                                            Director Suplente<br/>
+                                            GUSTAVO PERDOMO<br/>
+                                            Director Principal<br/>
                                             C.I.: V-15.128.008
                                         </div>
                                     </td>

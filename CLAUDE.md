@@ -680,7 +680,7 @@ Detailed breakdown report showing liquidation calculation formulas for Venezuela
 **Status:** ✅ PRODUCTION READY
 **Started:** 2025-11-17
 **Completed:** 2025-11-17
-**Module:** `ueipab_payroll_enhancements` v1.18.0
+**Module:** `ueipab_payroll_enhancements` v1.18.1
 
 **Purpose:**
 Formal legal document for labor settlement agreements between UEIPAB and employees upon contract termination. Provides official finiquito (settlement) letter with all required legal declarations and signatures.
@@ -787,6 +787,21 @@ Formal legal document for labor settlement agreements between UEIPAB and employe
 - 9pt font (legal readability)
 - 15px margins (formal document appearance)
 - Justified text alignment throughout
+
+**Version History:**
+
+**v1.18.1 (2025-11-17) - Minor Text Updates:**
+- Updated legal representative: "Director Suplente GUSTAVO JOSE PERDOMO MATA" → "Director Principal GUSTAVO PERDOMO"
+- Fixed: Spaces already present in date fields (no changes needed)
+- Applied to: Introduction paragraph and signature section
+- Status: ✅ Production ready
+
+**v1.18.0 (2025-11-17) - Initial Release:**
+- Complete formal letter template implementation
+- V2→V1 liquidation structure fallback
+- Currency conversion support (USD/VEB)
+- Dynamic placeholder replacement
+- Professional signature section
 
 ---
 
