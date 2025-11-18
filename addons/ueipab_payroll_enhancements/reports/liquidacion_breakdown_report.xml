@@ -20,8 +20,7 @@
                             <td style="width: 16.66%;"><t t-esc="report.get('employee').name"/></td>
                             <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Cédula:</strong></td>
                             <td style="width: 16.66%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Estructura:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="'V2' if report.get('is_v2') else 'V1'"/></td>
+                            <td style="width: 16.66%;" colspan="2"></td>
                         </tr>
                         <tr>
                             <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Salario:</strong></td>
@@ -44,13 +43,10 @@
                                     <t t-esc="'%.2f' % report.get('total_seniority_years')"/> años
                                     (desde <t t-esc="report.get('original_hire_date_str')"/>)
                                 </td>
-                                <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Tasa Bono:</strong></td>
-                                <td style="width: 16.66%;"><t t-esc="'%.1f' % report.get('bono_rate')"/> días/año</td>
+                                <td style="width: 16.66%;" colspan="2"></td>
                             </t>
                             <t t-else="">
-                                <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Tasa Bono:</strong></td>
-                                <td style="width: 16.66%;"><t t-esc="'%.1f' % report.get('bono_rate')"/> días/año</td>
-                                <td style="width: 16.66%;" colspan="2"></td>
+                                <td style="width: 16.66%;" colspan="4"></td>
                             </t>
                         </tr>
                     </table>
