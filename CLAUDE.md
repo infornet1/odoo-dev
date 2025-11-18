@@ -126,12 +126,13 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Single-page Portrait Letter layout
 - V1 and V2 structure support
 
-**✅ NEW: Exchange Rate Override (v1.19.0 - 2025-11-17):**
+**✅ Exchange Rate Override (v1.19.0 - 2025-11-17 TESTED):**
 - Override automatic VEB rate for delayed payments
-- Custom rate entry (e.g., 234.87 for Nov 15 payment vs 124.51 historical)
-- Alternate: Rate date selector for automatic lookup
-- Supports cash flow delays (compute Jul 31, pay Nov 15)
+- Custom rate entry (e.g., 300.00 for manual override)
+- Rate date selector for automatic lookup (e.g., Nov 17 → 236.4601)
+- Supports cash flow delays (compute Jul 31 @ 124.51, pay Nov 17 @ 236.46)
 - Rate source displayed on report: "Personalizada", "Tasa del DD/MM/YYYY", or "Automática"
+- **Tested:** SLIP/802 with Nov 17 date shows +89.9% increase (149,528 → 283,972 VEB) ✅
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
