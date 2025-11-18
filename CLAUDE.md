@@ -131,7 +131,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.19.8
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.21.0
 
 **Key Features:**
 - Detailed breakdown of all 6 liquidation benefits with formulas
@@ -182,6 +182,13 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **Exchange Rate Override Behavior:** Interest IGNORES override (always uses accrual)
 - **Rationale:** Interest accumulated over 23 months, different from other benefits
 - **Zero Employee Confusion:** Both reports ALWAYS consistent regardless of override
+
+**✅ Interest Formula Display Improvement (v1.21.0 - 2025-11-18):**
+- **Problem Fixed:** Misleading calculation formula removed (showed Bs.162,206.90 × 50% × 13% × (23.30/12) implying Bs. 20,471.86, but actual was Bs. 4,224.84)
+- **New Calculation Display:** "Acumulación mensual (23 meses) - Ver reporte 'Prestaciones Soc. Intereses'"
+- **New Detail Column:** "Ver reporte 'Prestaciones Soc. Intereses'" (directs employee to detailed breakdown)
+- **Employee Experience:** Clear reference to supporting documentation, no confusing arithmetic
+- **Professional:** Shows complete documentation approach, verifiable by employee
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
@@ -308,7 +315,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.20.0 (Accrual-based interest calculation - 2025-11-18 IN PROGRESS)
+- **ueipab_payroll_enhancements:** v1.21.0 (Interest formula display improvement - 2025-11-18)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
