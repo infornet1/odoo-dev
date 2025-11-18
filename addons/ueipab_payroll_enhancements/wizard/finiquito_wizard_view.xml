@@ -14,6 +14,27 @@
                     <label for="output_format" string="Output Format"/>
                     <field name="output_format" widget="radio" options="{'horizontal': True}"/>
                 </group>
+                <group string="Exchange Rate Options (VEB Only)">
+                    <group>
+                        <field name="use_custom_rate"/>
+                        <field name="custom_exchange_rate"
+                               invisible="not use_custom_rate"
+                               required="use_custom_rate"
+                               placeholder="e.g., 236.4601"/>
+                    </group>
+                    <group>
+                        <label for="rate_date" string="Rate Date (Auto Lookup)"
+                               invisible="use_custom_rate"/>
+                        <field name="rate_date"
+                               invisible="use_custom_rate"
+                               placeholder="Leave blank to use payslip date"/>
+                    </group>
+                </group>
+                <div class="alert alert-warning" role="alert" invisible="not use_custom_rate">
+                    <strong>Custom Rate Active</strong><br/>
+                    The report will use your custom rate (<field name="custom_exchange_rate"/> VEB/USD) instead of the automatic rate lookup.
+                    This is useful when the payment date differs from the liquidation date.
+                </div>
                 <footer>
                     <button name="action_generate_report" string="Generate Report" type="object" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>

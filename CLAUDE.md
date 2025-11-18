@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-18 11:45 UTC
+**Last Updated:** 2025-11-18 22:40 UTC
 
 ## Core Instructions
 
@@ -210,7 +210,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 6. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.23.0
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.0
 
 **Key Features:**
 - Formal legal settlement document (4 legal sections)
@@ -220,15 +220,18 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - V1 and V2 liquidation support
 - Exchange rate override support (matches Relación report)
 
-**✅ Exchange Rate Override Support (v1.23.0 - 2025-11-18):**
-- **CRITICAL FIX:** Finiquito now respects exchange rate override from wizard
-- **Old (WRONG):** Always used automatic rate for payslip date (Bs. 158,294.80)
-- **New (CORRECT):** Checks wizard override, uses custom rate when enabled (Bs. 300,621.18)
-- **Example (SLIP/802):** With Nov 17 override (236.46), amount increased 89.9%
-- **Consistency:** Now matches Relación report perfectly in all scenarios
+**✅ Exchange Rate Override UI (v1.25.0 - 2025-11-18 TESTED):**
+- **CRITICAL FIX:** Added exchange rate override fields to wizard UI
+- **Problem:** v1.23.0 added report support but forgot wizard UI fields
+- **Symptom:** Relación showed Bs. 300,621.18, Finiquito showed Bs. 158,294.80 (different rates)
+- **Solution:** Added 3 fields to wizard: `use_custom_rate`, `custom_exchange_rate`, `rate_date`
+- **UI:** Matches Relación wizard (Exchange Rate Options section with alert)
+- **Test Result:** SLIP/803 now shows Bs. 300,621.18 in BOTH reports with override ✅
+- **Perfect Consistency:** All 3 liquidation reports (Prestaciones, Relación, Finiquito) have identical override support
 
 **Version History:**
-- **v1.23.0:** Added exchange rate override support (2025-11-18)
+- **v1.25.0:** Added exchange rate override wizard UI fields (2025-11-18) ✅
+- **v1.23.0:** Added exchange rate override report support (2025-11-18)
 - **v1.18.2:** Added DOCX export with python-docx library
 - **v1.18.1:** Updated legal representative name
 - **v1.18.0:** Initial release with PDF export
@@ -338,7 +341,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.24.0 (Relación report payslip number in header - 2025-11-18)
+- **ueipab_payroll_enhancements:** v1.25.0 (Finiquito wizard exchange rate override UI - 2025-11-18)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

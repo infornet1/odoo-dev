@@ -37,6 +37,24 @@ class FiniquitoWizard(models.TransientModel):
         help='Choose output format for the report'
     )
 
+    # Exchange Rate Override Options (added in v1.25.0)
+    use_custom_rate = fields.Boolean(
+        string='Use Custom Exchange Rate',
+        default=False,
+        help='Override automatic exchange rate lookup with a custom rate'
+    )
+
+    custom_exchange_rate = fields.Float(
+        string='Custom Rate (VEB/USD)',
+        digits=(12, 4),
+        help='Custom exchange rate to use (e.g., 236.4601). Only used if "Use Custom Exchange Rate" is checked.'
+    )
+
+    rate_date = fields.Date(
+        string='Rate Date',
+        help='Date to lookup exchange rate automatically. Leave blank to use payslip liquidation date.'
+    )
+
     def action_generate_report(self):
         """Generate report in selected format"""
         self.ensure_one()
@@ -53,6 +71,9 @@ class FiniquitoWizard(models.TransientModel):
         data = {
             'payslip_ids': self.payslip_ids.ids,
             'currency_id': self.currency_id.id,
+            'use_custom_rate': self.use_custom_rate,
+            'custom_exchange_rate': self.custom_exchange_rate,
+            'rate_date': self.rate_date,
         }
 
         return self.env.ref('ueipab_payroll_enhancements.action_report_finiquito').report_action(
@@ -71,6 +92,9 @@ class FiniquitoWizard(models.TransientModel):
         data = {
             'payslip_ids': self.payslip_ids.ids,
             'currency_id': self.currency_id.id,
+            'use_custom_rate': self.use_custom_rate,
+            'custom_exchange_rate': self.custom_exchange_rate,
+            'rate_date': self.rate_date,
         }
         report_values = report_model._get_report_values(self.payslip_ids.ids, data=data)
 
