@@ -143,11 +143,10 @@
     <!-- Add link to Portal Home (My Account) -->
     <template id="portal_my_home_add_details_link" inherit_id="portal.portal_my_home">
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
-            <li class="list-group-item">
-                <a href="/my/details">
-                    <i class="fa fa-fw fa-id-card-o"/> My Details &amp; Payslips
-                </a>
-            </li>
+            <a href="/my/details" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div><i class="fa fa-fw fa-id-card-o"/> My Details &amp; Payslips</div>
+                <span t-if="payslip_count" class="badge rounded-pill o_portal_payslip_count"><t t-esc="payslip_count"/></span>
+            </a>
         </xpath>
     </template>
 </odoo>

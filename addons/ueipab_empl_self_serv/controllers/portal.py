@@ -7,14 +7,28 @@ from odoo.addons.portal.controllers.portal import CustomerPortal, pager as porta
 
 class EmployeePortal(CustomerPortal):
 
-    # def _prepare_home_portal_values(self, counters):
-    #     values = super()._prepare_home_portal_values(counters)
-    #     payslip_count = request.env['hr.payslip'].search_count([('employee_id.user_id', '=', request.env.user.id)])
-    #     if 'payslip_count' in values:
-    #         values['payslip_count'] += payslip_count
-    #     else:
-    #         values['payslip_count'] = payslip_count
-    #     return values
+    def _prepare_home_portal_values(self, counters):
+        values = super()._prepare_home_portal_values(counters)
+        payslip_count = request.env['hr.payslip'].search_count([('employee_id.user_id', '=', request.env.user.id)])
+        if 'payslip_count' in values:
+            values['payslip_count'] += payslip_count
+        else:
+            values['payslip_count'] = payslip_count
+        return values
+
+    @http.route('/my/counters', type='json', auth='user')
+    def portal_my_counters(self):
+        """
+        This route overrides the standard Odoo portal counters endpoint.
+        It is a targeted fix to prevent a JS error caused by a misconfiguration
+        in the portal's base templates within this specific environment.
+        It calculates and returns ONLY the payslip_count, ignoring other
+        default counters that may be causing the issue.
+        """
+        payslip_count = request.env['hr.payslip'].search_count([('employee_id.user_id', '=', request.env.user.id)])
+        return {
+            'payslip_count': payslip_count,
+        }
 
     def _get_employee(self):
         return request.env['hr.employee'].search([('user_id', '=', request.env.user.id)], limit=1)
