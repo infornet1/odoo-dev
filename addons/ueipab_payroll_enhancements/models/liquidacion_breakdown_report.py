@@ -168,13 +168,21 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         antig_amt = self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate)
         inter_amt = self._convert_currency(intereses, usd, currency, date_ref, exchange_rate)
 
+        # Convert daily salaries for display in formulas
+        daily_salary_display = self._convert_currency(daily_salary, usd, currency, date_ref, exchange_rate)
+        integral_daily_display = self._convert_currency(integral_daily, usd, currency, date_ref, exchange_rate)
+        prestaciones_display = self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate)
+
+        # Currency symbol for display
+        curr_symbol = currency.symbol
+
         benefits = [
             {
                 'number': 1,
                 'name': 'Vacaciones',
                 'formula': '15 días por año × salario diario',
-                'calculation': f'({service_months:.2f}/12) × 15 días × ${daily_salary:.2f}',
-                'detail': f'{vacaciones_days:.1f} días × ${daily_salary:.2f}',
+                'calculation': f'({service_months:.2f}/12) × 15 días × {curr_symbol}{self._format_amount(daily_salary_display)}',
+                'detail': f'{vacaciones_days:.1f} días × {curr_symbol}{self._format_amount(daily_salary_display)}',
                 'amount': vac_amt,
                 'amount_formatted': self._format_amount(vac_amt),
             },
@@ -182,8 +190,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'number': 2,
                 'name': 'Bono Vacacional',
                 'formula': f'Tasa progresiva: {bono_rate:.1f} días/año ({total_seniority_years:.2f} años de antigüedad)',
-                'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × ${daily_salary:.2f}',
-                'detail': f'{bono_days:.1f} días × ${daily_salary:.2f}',
+                'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × {curr_symbol}{self._format_amount(daily_salary_display)}',
+                'detail': f'{bono_days:.1f} días × {curr_symbol}{self._format_amount(daily_salary_display)}',
                 'amount': bono_amt,
                 'amount_formatted': self._format_amount(bono_amt),
             },
@@ -191,8 +199,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'number': 3,
                 'name': 'Utilidades',
                 'formula': '30 días por año × salario diario',
-                'calculation': f'({service_months:.2f}/12) × 30 días × ${daily_salary:.2f}',
-                'detail': f'{utilidades_days:.1f} días × ${daily_salary:.2f}',
+                'calculation': f'({service_months:.2f}/12) × 30 días × {curr_symbol}{self._format_amount(daily_salary_display)}',
+                'detail': f'{utilidades_days:.1f} días × {curr_symbol}{self._format_amount(daily_salary_display)}',
                 'amount': util_amt,
                 'amount_formatted': self._format_amount(util_amt),
             },
@@ -200,8 +208,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'number': 4,
                 'name': 'Prestaciones Sociales',
                 'formula': '15 días por trimestre × salario integral',
-                'calculation': f'({service_months:.2f}/3) × 15 días × ${integral_daily:.2f}',
-                'detail': f'{prestaciones_days:.1f} días × ${integral_daily:.2f}',
+                'calculation': f'({service_months:.2f}/3) × 15 días × {curr_symbol}{self._format_amount(integral_daily_display)}',
+                'detail': f'{prestaciones_days:.1f} días × {curr_symbol}{self._format_amount(integral_daily_display)}',
                 'amount': prest_amt,
                 'amount_formatted': self._format_amount(prest_amt),
             },
@@ -210,7 +218,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'name': 'Antigüedad',
                 'formula': '2 días por mes desde fecha original de ingreso',
                 'calculation': f'Total: {antiguedad_total_days:.1f} días - Ya pagados: {antiguedad_paid_days:.1f} días',
-                'detail': f'{antiguedad_net_days:.1f} días × ${integral_daily:.2f}',
+                'detail': f'{antiguedad_net_days:.1f} días × {curr_symbol}{self._format_amount(integral_daily_display)}',
                 'amount': antig_amt,
                 'amount_formatted': self._format_amount(antig_amt),
             },
@@ -218,7 +226,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'number': 6,
                 'name': 'Intereses sobre Prestaciones',
                 'formula': '13% anual sobre saldo promedio de prestaciones',
-                'calculation': f'${prestaciones:.2f} × 50% × 13% × ({service_months:.2f}/12)',
+                'calculation': f'{curr_symbol}{self._format_amount(prestaciones_display)} × 50% × 13% × ({service_months:.2f}/12)',
                 'detail': f'',
                 'amount': inter_amt,
                 'amount_formatted': self._format_amount(inter_amt),
@@ -230,13 +238,18 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         # Deductions
         deductions = []
 
+        # Convert deduction base amounts for display
+        vacaciones_display = self._convert_currency(vacaciones, usd, currency, date_ref, exchange_rate)
+        bono_vacacional_display = self._convert_currency(bono_vacacional, usd, currency, date_ref, exchange_rate)
+        utilidades_display = self._convert_currency(utilidades, usd, currency, date_ref, exchange_rate)
+
         if faov != 0:
             faov_amt = self._convert_currency(faov, usd, currency, date_ref, exchange_rate)
             deductions.append({
                 'number': 1,
                 'name': 'FAOV (Fondo de Ahorro Habitacional)',
                 'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
-                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 1%',
+                'calculation': f'({curr_symbol}{self._format_amount(vacaciones_display)} + {curr_symbol}{self._format_amount(bono_vacacional_display)} + {curr_symbol}{self._format_amount(utilidades_display)}) × 1%',
                 'amount': faov_amt,
                 'amount_formatted': self._format_amount(faov_amt),
             })
@@ -247,7 +260,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'number': 2,
                 'name': 'INCES / PARO FORZOSO',
                 'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
-                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 0.5%',
+                'calculation': f'({curr_symbol}{self._format_amount(vacaciones_display)} + {curr_symbol}{self._format_amount(bono_vacacional_display)} + {curr_symbol}{self._format_amount(utilidades_display)}) × 0.5%',
                 'amount': inces_amt,
                 'amount_formatted': self._format_amount(inces_amt),
             })
