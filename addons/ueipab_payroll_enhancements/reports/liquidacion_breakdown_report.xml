@@ -10,7 +10,7 @@
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
-                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Liquidation Breakdown Report</p>
+                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Fecha Liquidación: <t t-esc="report.get('date_to_str')"/></p>
                     </div>
 
                     <!-- Employee Information -->
@@ -22,12 +22,10 @@
                             <td style="width: 25%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
                         </tr>
                         <tr>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Salario:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('salary_v2_formatted') if report.get('salary_v2') else 'N/A')"/></td>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Fecha Ingreso:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="report.get('date_start_str')"/></td>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Fecha Liquidación:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="report.get('date_to_str')"/></td>
+                            <td style="width: 25%; background-color: #f8f9fa;"><strong>Salario:</strong></td>
+                            <td style="width: 25%;"><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('salary_v2_formatted') if report.get('salary_v2') else 'N/A')"/></td>
+                            <td style="width: 25%; background-color: #f8f9fa;"><strong>Fecha Ingreso:</strong></td>
+                            <td style="width: 25%;"><t t-esc="report.get('date_start_str')"/></td>
                         </tr>
                         <tr>
                             <td style="width: 25%; background-color: #f8f9fa;"><strong>Período Servicio:</strong></td>
