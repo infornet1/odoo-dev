@@ -42,7 +42,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         # Generate report data for each payslip
         reports = []
         for payslip in payslips:
-            report_data = self._generate_breakdown(payslip, currency)
+            report_data = self._generate_breakdown(payslip, currency, data)
             reports.append(report_data)
 
         return {
@@ -54,12 +54,13 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'reports': reports,
         }
 
-    def _generate_breakdown(self, payslip, currency):
+    def _generate_breakdown(self, payslip, currency, data=None):
         """Generate complete breakdown for a payslip.
 
         Args:
             payslip: hr.payslip record
             currency: res.currency record
+            data: Optional wizard data with custom rate/date
 
         Returns:
             dict: Breakdown data
@@ -228,8 +229,21 @@ class LiquidacionBreakdownReport(models.AbstractModel):
 
         total_deductions = sum(d['amount'] for d in deductions)
 
+        # Get exchange rate parameters from wizard data
+        custom_rate = data.get('custom_exchange_rate') if data else None
+        custom_date = data.get('rate_date') if data else None
+        use_custom = data.get('use_custom_rate', False) if data else False
+
         # Calculate exchange rate for display
-        exchange_rate = self._get_exchange_rate(date_ref, currency)
+        exchange_rate = self._get_exchange_rate(date_ref, currency, custom_rate, custom_date)
+
+        # Determine rate source for display
+        if use_custom and custom_rate:
+            rate_source = f'Personalizada - {date_ref.strftime("%d/%m/%Y")}'
+        elif custom_date:
+            rate_source = f'Tasa del {custom_date.strftime("%d/%m/%Y")}'
+        else:
+            rate_source = f'Automática ({date_ref.strftime("%d/%m/%Y")})'
 
         return {
             'payslip': payslip,
@@ -237,6 +251,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'contract': contract,
             'currency': currency,
             'exchange_rate': exchange_rate,
+            'rate_source': rate_source,
             'is_v2': is_v2,
             'structure_name': payslip.struct_id.name,
             'service_years': service_years,
@@ -274,15 +289,32 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         line = payslip.line_ids.filtered(lambda l: l.code == code)
         return line.total if line else 0.0
 
-    def _get_exchange_rate(self, date_ref, currency):
-        """Get exchange rate for display."""
+    def _get_exchange_rate(self, date_ref, currency, custom_rate=None, custom_date=None):
+        """Get exchange rate for display.
+
+        Args:
+            date_ref: Reference date from payslip (payslip.date_to)
+            currency: Target currency
+            custom_rate: Optional custom rate override (VEB/USD)
+            custom_date: Optional custom date for rate lookup
+
+        Returns:
+            float: Exchange rate (VEB/USD or 1.0 for USD)
+        """
         if currency.name == 'USD':
             return 1.0
 
         if currency.name == 'VEB':
+            # USE CUSTOM RATE IF PROVIDED
+            if custom_rate and custom_rate > 0:
+                return custom_rate
+
+            # USE CUSTOM DATE IF PROVIDED, OTHERWISE USE date_ref
+            lookup_date = custom_date if custom_date else date_ref
+
             rate_record = self.env['res.currency.rate'].search([
                 ('currency_id', '=', currency.id),
-                ('name', '<=', date_ref)
+                ('name', '<=', lookup_date)
             ], limit=1, order='name desc')
 
             if not rate_record:

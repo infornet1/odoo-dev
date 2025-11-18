@@ -7,7 +7,7 @@ for employee liquidation benefits and deductions.
 """
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class LiquidacionBreakdownWizard(models.TransientModel):
@@ -42,6 +42,25 @@ class LiquidacionBreakdownWizard(models.TransientModel):
         help='Number of payslips selected'
     )
 
+    use_custom_rate = fields.Boolean(
+        string='Use Custom Exchange Rate',
+        default=False,
+        help='Override automatic rate with custom rate for VEB currency'
+    )
+
+    custom_exchange_rate = fields.Float(
+        string='Custom VEB Rate',
+        digits=(12, 4),
+        help='Custom VEB/USD exchange rate (e.g., 234.8715)\n'
+             'Only used when "Use Custom Exchange Rate" is enabled and VEB currency selected'
+    )
+
+    rate_date = fields.Date(
+        string='Rate Date',
+        help='Date for automatic exchange rate lookup (defaults to payslip date_to)\n'
+             'Use this to get rate from a different date (e.g., actual payment date)'
+    )
+
     # ========================================
     # COMPUTED FIELDS
     # ========================================
@@ -73,6 +92,9 @@ class LiquidacionBreakdownWizard(models.TransientModel):
             'currency_id': self.currency_id.id,
             'currency_name': self.currency_id.name,
             'payslip_ids': self.payslip_ids.ids,
+            'use_custom_rate': self.use_custom_rate,
+            'custom_exchange_rate': self.custom_exchange_rate if self.use_custom_rate else None,
+            'rate_date': self.rate_date,
         }
 
         # Generate PDF report
@@ -99,7 +121,7 @@ class LiquidacionBreakdownWizard(models.TransientModel):
 
     @api.onchange('currency_id')
     def _onchange_currency(self):
-        """Validate currency selection."""
+        """Validate currency selection and reset custom rate."""
         if self.currency_id:
             # Only allow USD or VEB
             valid_currencies = ['USD', 'VEB']
@@ -110,3 +132,23 @@ class LiquidacionBreakdownWizard(models.TransientModel):
                         'message': _('Please select either USD or VEB currency.')
                     }
                 }
+
+            # Reset custom rate fields when switching away from VEB
+            if self.currency_id.name != 'VEB':
+                self.use_custom_rate = False
+                self.custom_exchange_rate = 0.0
+                self.rate_date = False
+
+    @api.constrains('custom_exchange_rate', 'use_custom_rate')
+    def _check_custom_rate(self):
+        """Validate custom exchange rate."""
+        for wizard in self:
+            if wizard.use_custom_rate and wizard.currency_id.name == 'VEB':
+                if not wizard.custom_exchange_rate or wizard.custom_exchange_rate <= 0:
+                    raise ValidationError(
+                        _('Custom exchange rate must be greater than 0')
+                    )
+                if wizard.custom_exchange_rate > 1000:
+                    raise ValidationError(
+                        _('Exchange rate seems too high (>1000). Please verify the value.')
+                    )

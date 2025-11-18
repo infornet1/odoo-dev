@@ -208,7 +208,7 @@
                             • Antigüedad calculada desde fecha original de contratación
                         </t>
                         <t t-if="report.get('currency').name == 'VEB'">
-                            • Tipo de Cambio: <t t-esc="'%.2f' % report.get('exchange_rate')"/> VEB/USD
+                            • Tipo de Cambio: <t t-esc="'%.4f' % report.get('exchange_rate')"/> VEB/USD (<t t-esc="report.get('rate_source', 'Automática')"/>)
                         </t>
                     </div>
 

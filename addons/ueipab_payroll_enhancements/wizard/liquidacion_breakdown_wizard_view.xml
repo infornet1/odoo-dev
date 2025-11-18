@@ -21,6 +21,27 @@
                         <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
                     </group>
                 </group>
+                <group string="Exchange Rate Options (VEB Only)">
+                    <group>
+                        <field name="use_custom_rate"/>
+                        <field name="custom_exchange_rate"
+                               invisible="not use_custom_rate"
+                               required="use_custom_rate"
+                               placeholder="e.g., 234.8715"/>
+                    </group>
+                    <group>
+                        <label for="rate_date" string="Rate Date (Auto Lookup)"
+                               invisible="use_custom_rate"/>
+                        <field name="rate_date"
+                               invisible="use_custom_rate"
+                               placeholder="Leave blank to use payslip date"/>
+                    </group>
+                </group>
+                <div class="alert alert-warning" role="alert" invisible="not use_custom_rate">
+                    <strong>Custom Rate Active</strong><br/>
+                    The report will use your custom rate (<field name="custom_exchange_rate"/> VEB/USD) instead of the automatic rate lookup.
+                    This is useful when the payment date differs from the liquidation date.
+                </div>
                 <div class="alert alert-success" role="alert" invisible="payslip_count == 0">
                     <strong><field name="payslip_count"/> payslip(s) selected</strong><br/>
                     A separate report will be generated for each selected payslip.
