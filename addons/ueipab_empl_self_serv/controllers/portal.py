@@ -7,14 +7,14 @@ from odoo.addons.portal.controllers.portal import CustomerPortal, pager as porta
 
 class EmployeePortal(CustomerPortal):
 
-    def _prepare_home_portal_values(self, counters):
-        values = super()._prepare_home_portal_values(counters)
-        payslip_count = request.env['hr.payslip'].search_count([('employee_id.user_id', '=', request.env.user.id)])
-        if 'payslip_count' in values:
-            values['payslip_count'] += payslip_count
-        else:
-            values['payslip_count'] = payslip_count
-        return values
+    # def _prepare_home_portal_values(self, counters):
+    #     values = super()._prepare_home_portal_values(counters)
+    #     payslip_count = request.env['hr.payslip'].search_count([('employee_id.user_id', '=', request.env.user.id)])
+    #     if 'payslip_count' in values:
+    #         values['payslip_count'] += payslip_count
+    #     else:
+    #         values['payslip_count'] = payslip_count
+    #     return values
 
     def _get_employee(self):
         return request.env['hr.employee'].search([('user_id', '=', request.env.user.id)], limit=1)
