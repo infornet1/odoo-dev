@@ -117,7 +117,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.19.1
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.19.3
 
 **Key Features:**
 - Detailed breakdown of all 6 liquidation benefits with formulas
@@ -134,10 +134,16 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Rate source displayed on report: "Personalizada", "Tasa del DD/MM/YYYY", or "Automática"
 - **Tested:** SLIP/802 with Nov 17 date shows +89.9% increase (149,528 → 283,972 VEB) ✅
 
-**✅ Number Formatting (v1.19.1 - 2025-11-17):**
+**✅ Number Formatting (v1.19.1-1.19.2 - 2025-11-17):**
 - Thousand separators for all amounts (33,560.78 instead of 33560.78)
 - Applied to benefits, deductions, totals, declaration, and notes sections
 - Improved readability for large VEB amounts (e.g., Bs. 283,972.03) ✅
+
+**✅ Formula Currency Display (v1.19.3 - 2025-11-17):**
+- Calculation formulas now show amounts in selected currency
+- Example: `(23.30/12) × 15 días × $4.87` becomes `(23.30/12) × 15 días × Bs.1,151.56` when VEB selected
+- Applied to all benefit calculations, deduction bases, and detail columns
+- Daily salaries converted: $4.87 → Bs.1,151.56 (at 236.46 rate) ✅
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
