@@ -114,8 +114,13 @@
                                         <td><span t-field="slip.date_from"/></td>
                                         <td><span t-field="slip.date_to"/></td>
                                         <td class="text-end">
-                                            <span t-field="slip.line_ids.filtered(lambda line: line.code == 'NET').total"
-                                                  t-options="{'widget': 'monetary', 'display_currency': slip.company_id.currency_id}"/>
+                                            <t t-if="slip.company_id.currency_id">
+                                                <span t-field="slip.line_ids.filtered(lambda line: line.code == 'NET').total"
+                                                      t-options="{'widget': 'monetary', 'display_currency': slip.company_id.currency_id}"/>
+                                            </t>
+                                            <t t-else="">
+                                                <span t-esc="slip.line_ids.filtered(lambda line: line.code == 'NET').total"/>
+                                            </t>
                                         </td>
                                         <td class="text-end">
                                             <a class="btn btn-sm btn-primary" t-attf-href="/my/payslip/print?payslip_id=#{slip.id}" title="Download">
