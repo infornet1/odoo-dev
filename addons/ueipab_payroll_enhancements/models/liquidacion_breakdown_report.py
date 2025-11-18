@@ -231,8 +231,20 @@ class LiquidacionBreakdownReport(models.AbstractModel):
 
         # Get exchange rate parameters from wizard data
         custom_rate = data.get('custom_exchange_rate') if data else None
-        custom_date = data.get('rate_date') if data else None
+        custom_date_raw = data.get('rate_date') if data else None
         use_custom = data.get('use_custom_rate', False) if data else False
+
+        # Convert custom_date from string to date object if needed
+        custom_date = None
+        if custom_date_raw:
+            if isinstance(custom_date_raw, str):
+                from datetime import datetime
+                try:
+                    custom_date = datetime.strptime(custom_date_raw, '%Y-%m-%d').date()
+                except:
+                    custom_date = None
+            else:
+                custom_date = custom_date_raw
 
         # Calculate exchange rate for display
         exchange_rate = self._get_exchange_rate(date_ref, currency, custom_rate, custom_date)
