@@ -139,7 +139,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.21.0
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.24.0
 
 **Key Features:**
 - Detailed breakdown of all 6 liquidation benefits with formulas
@@ -181,6 +181,12 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Row 3: Período Servicio | Antigüedad Total
 - Title shows: "RELACIÓN DE LIQUIDACIÓN / Fecha Liquidación: 31/07/2025"
 - Consistent structure, professional appearance ✅
+
+**✅ Payslip Number in Header (v1.24.0 - 2025-11-18):**
+- Added payslip number to report header for easy reference
+- Format: "Nro: SLIP/802 │ Fecha Liquidación: 31/07/2025"
+- Benefits: Easy traceability, professional appearance, links to system record
+- Employee can quickly cite the payslip number when needed
 
 **✅ Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18):**
 - **CRITICAL FIX:** "Intereses sobre Prestaciones" now uses accrual-based calculation
@@ -332,7 +338,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.23.0 (Finiquito exchange rate override support - 2025-11-18)
+- **ueipab_payroll_enhancements:** v1.24.0 (Relación report payslip number in header - 2025-11-18)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

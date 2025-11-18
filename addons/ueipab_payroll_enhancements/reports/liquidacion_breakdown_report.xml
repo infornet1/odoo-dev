@@ -10,7 +10,7 @@
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
-                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Fecha Liquidación: <t t-esc="report.get('date_to_str')"/></p>
+                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Nro: <t t-esc="report['payslip'].number"/> │ Fecha Liquidación: <t t-esc="report.get('date_to_str')"/></p>
                     </div>
 
                     <!-- Employee Information -->
