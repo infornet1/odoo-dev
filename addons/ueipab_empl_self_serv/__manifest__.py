@@ -13,7 +13,10 @@
         'portal',
         'hr_payroll_community',
     ],
-    'data': [],
+    'data': [
+        'security/ir.model.access.csv',
+        'security/security.xml',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,
