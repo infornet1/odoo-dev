@@ -421,29 +421,22 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         if service_months <= 0:
             return 0.0
 
-        # If custom rate override is enabled, use SINGLE rate for all months
-        if use_custom and custom_rate:
-            return intereses_total * custom_rate
-
-        # Otherwise, calculate accrual-based (month-by-month)
+        # CRITICAL: Interest ALWAYS uses accrual-based calculation
+        # Ignores exchange rate override to ensure consistency with Prestaciones report
+        # Rationale: Interest accumulated over 23 months at historical rates
         contract = payslip.contract_id
         start_date = contract.date_start
         end_date = payslip.date_to
 
         interest_per_month = intereses_total / service_months
 
-        # Accumulate VEB month-by-month
+        # Accumulate VEB month-by-month using historical rates
         accumulated_veb = 0.0
         current_date = start_date
 
         while current_date <= end_date:
-            # Get rate for this month (or custom override date)
-            if custom_date:
-                lookup_date = custom_date  # Use override date for all months
-            else:
-                lookup_date = current_date  # Use each month's own date
-
-            month_rate = self._get_exchange_rate(lookup_date, currency, None, None)
+            # Always use current month's historical rate (no override)
+            month_rate = self._get_exchange_rate(current_date, currency, None, None)
             month_interest_veb = interest_per_month * month_rate
             accumulated_veb += month_interest_veb
 
