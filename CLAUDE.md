@@ -117,7 +117,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.15.0
+**Status:** 🚧 ENHANCEMENT IN PROGRESS | **Module:** `ueipab_payroll_enhancements` v1.15.0
 
 **Key Features:**
 - Detailed breakdown of all 6 liquidation benefits with formulas
@@ -126,7 +126,14 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Single-page Portrait Letter layout
 - V1 and V2 structure support
 
+**🚀 NEW: Exchange Rate Override (v1.16.0 - In Progress):**
+- Override automatic VEB rate for delayed payments
+- Custom rate entry (e.g., 234.87 for Nov 15 payment vs 124.51 historical)
+- Alternate: Rate date selector for automatic lookup
+- Supports cash flow delays (compute Jul 31, pay Nov 15)
+
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
+📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** 🚧
 
 ---
 
