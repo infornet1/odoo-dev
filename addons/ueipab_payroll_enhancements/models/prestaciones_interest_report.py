@@ -102,8 +102,9 @@ class PrestacionesInterestReport(models.AbstractModel):
         monthly_data = []
         current_date = start_date
         month_num = 0
-        accumulated_prestaciones = 0.0
-        accumulated_interest = 0.0
+        accumulated_prestaciones_usd = 0.0
+        accumulated_interest_usd = 0.0
+        accumulated_interest_veb = 0.0  # NEW: Properly accumulate VEB amounts
         total_days_deposited = 0
 
         # Interest distribution: proportional to months
@@ -123,14 +124,14 @@ class PrestacionesInterestReport(models.AbstractModel):
             deposit_days = 15 if is_deposit_month else 0
             deposit_amount = quarterly_deposit if is_deposit_month else 0.0
 
-            # Update accumulated prestaciones
-            accumulated_prestaciones += deposit_amount
+            # Update accumulated prestaciones (USD)
+            accumulated_prestaciones_usd += deposit_amount
             total_days_deposited += deposit_days
 
-            # Monthly interest (proportional distribution)
+            # Monthly interest (proportional distribution) in USD
             # Interest accrues on the balance, but we distribute total interest proportionally
-            month_interest = interest_per_month if month_num > 0 else 0.0
-            accumulated_interest += month_interest
+            month_interest_usd = interest_per_month if month_num > 0 else 0.0
+            accumulated_interest_usd += month_interest_usd
 
             # Get exchange rate for this month
             exchange_rate = self._get_exchange_rate(current_date, currency)
@@ -149,14 +150,16 @@ class PrestacionesInterestReport(models.AbstractModel):
                 deposit_amount, usd, currency, current_date
             )
             accumulated_prestaciones_converted = self._convert_currency(
-                accumulated_prestaciones, usd, currency, current_date
+                accumulated_prestaciones_usd, usd, currency, current_date
             )
+
+            # CRITICAL FIX: Convert THIS month's interest at THIS month's rate, then accumulate VEB
             month_interest_converted = self._convert_currency(
-                month_interest, usd, currency, current_date
+                month_interest_usd, usd, currency, current_date
             )
-            accumulated_interest_converted = self._convert_currency(
-                accumulated_interest, usd, currency, current_date
-            )
+            accumulated_interest_veb += month_interest_converted  # Accumulate VEB properly
+
+            accumulated_interest_converted = accumulated_interest_veb  # Use properly accumulated VEB
 
             monthly_data.append({
                 'month_name': month_name,
@@ -178,13 +181,12 @@ class PrestacionesInterestReport(models.AbstractModel):
             if current_date > end_date:
                 break
 
-        # Calculate totals (convert to selected currency)
+        # Calculate totals
+        # CRITICAL FIX: Use properly accumulated VEB amounts (already converted month-by-month)
         total_prestaciones_converted = self._convert_currency(
-            accumulated_prestaciones, usd, currency, end_date
+            accumulated_prestaciones_usd, usd, currency, end_date
         )
-        total_interest_converted = self._convert_currency(
-            accumulated_interest, usd, currency, end_date
-        )
+        total_interest_converted = accumulated_interest_veb  # Already accumulated in VEB
 
         totals = {
             'total_days': total_days_deposited,

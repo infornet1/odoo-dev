@@ -166,7 +166,9 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         util_amt = self._convert_currency(utilidades, usd, currency, date_ref, exchange_rate)
         prest_amt = self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate)
         antig_amt = self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate)
-        inter_amt = self._convert_currency(intereses, usd, currency, date_ref, exchange_rate)
+
+        # CRITICAL FIX: Use accrual-based calculation for interest (matches Prestaciones report)
+        inter_amt = self._calculate_accrued_interest(payslip, currency, data)
 
         # Convert daily salaries for display in formulas
         daily_salary_display = self._convert_currency(daily_salary, usd, currency, date_ref, exchange_rate)
@@ -372,6 +374,84 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             str: Formatted amount with thousand separators (e.g., "1,234.56")
         """
         return '{:,.2f}'.format(amount)
+
+    def _calculate_accrued_interest(self, payslip, currency, data=None):
+        """Calculate interest using month-by-month accrual (matches Prestaciones report).
+
+        Args:
+            payslip: hr.payslip record
+            currency: res.currency record
+            data: Optional wizard data with custom rate/date
+
+        Returns:
+            float: Accrued interest amount in target currency
+        """
+        # Get USD currency
+        usd = self.env.ref('base.USD')
+
+        # If USD currency, just return the USD total
+        if currency == usd:
+            intereses_usd = self._get_line_value(payslip, 'LIQUID_INTERESES_V2') or \
+                           self._get_line_value(payslip, 'LIQUID_INTERESES')
+            return intereses_usd
+
+        # Get exchange rate override params if provided
+        custom_rate = data.get('custom_exchange_rate') if data else None
+        custom_date_raw = data.get('rate_date') if data else None
+        use_custom = data.get('use_custom_rate', False) if data else False
+
+        # Convert custom_date from string to date object if needed
+        custom_date = None
+        if custom_date_raw:
+            if isinstance(custom_date_raw, str):
+                from datetime import datetime
+                try:
+                    custom_date = datetime.strptime(custom_date_raw, '%Y-%m-%d').date()
+                except:
+                    custom_date = None
+            else:
+                custom_date = custom_date_raw
+
+        # Get payslip data
+        service_months = self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS_V2') or \
+                        self._get_line_value(payslip, 'LIQUID_SERVICE_MONTHS')
+        intereses_total = self._get_line_value(payslip, 'LIQUID_INTERESES_V2') or \
+                         self._get_line_value(payslip, 'LIQUID_INTERESES')
+
+        if service_months <= 0:
+            return 0.0
+
+        # If custom rate override is enabled, use SINGLE rate for all months
+        if use_custom and custom_rate:
+            return intereses_total * custom_rate
+
+        # Otherwise, calculate accrual-based (month-by-month)
+        contract = payslip.contract_id
+        start_date = contract.date_start
+        end_date = payslip.date_to
+
+        interest_per_month = intereses_total / service_months
+
+        # Accumulate VEB month-by-month
+        accumulated_veb = 0.0
+        current_date = start_date
+
+        while current_date <= end_date:
+            # Get rate for this month (or custom override date)
+            if custom_date:
+                lookup_date = custom_date  # Use override date for all months
+            else:
+                lookup_date = current_date  # Use each month's own date
+
+            month_rate = self._get_exchange_rate(lookup_date, currency, None, None)
+            month_interest_veb = interest_per_month * month_rate
+            accumulated_veb += month_interest_veb
+
+            current_date = current_date + relativedelta(months=1)
+            if current_date > end_date:
+                break
+
+        return accumulated_veb
 
     def _get_exchange_rate(self, date_ref, currency, custom_rate=None, custom_date=None):
         """Get exchange rate for display.
