@@ -42,14 +42,21 @@ class FiniquitoReport(models.AbstractModel):
             # Convert to selected currency if needed (payslip uses company currency)
             payslip_currency = payslip.company_id.currency_id
             if currency != payslip_currency:
-                # Get exchange rate for payslip date
                 rate_date = payslip.date_to or payslip.date_from
-                net_amount = payslip_currency._convert(
-                    net_amount,
-                    currency,
-                    payslip.company_id,
-                    rate_date
-                )
+
+                # Check for custom exchange rate override (matches Relación report behavior)
+                if data and data.get('use_custom_rate') and data.get('custom_exchange_rate'):
+                    # Use custom override rate
+                    exchange_rate = data.get('custom_exchange_rate')
+                    net_amount = net_amount * exchange_rate
+                else:
+                    # Use automatic rate for payslip date
+                    net_amount = payslip_currency._convert(
+                        net_amount,
+                        currency,
+                        payslip.company_id,
+                        rate_date
+                    )
             
             # Format dates
             date_start_str = contract.date_start.strftime('%d/%m/%Y') if contract.date_start else 'N/A'
