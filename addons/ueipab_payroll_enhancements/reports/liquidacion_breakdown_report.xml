@@ -22,10 +22,12 @@
                             <td style="width: 25%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
                         </tr>
                         <tr>
-                            <td style="background-color: #f8f9fa;"><strong>Fecha Ingreso:</strong></td>
-                            <td><t t-esc="report.get('date_start_str')"/></td>
-                            <td style="background-color: #f8f9fa;"><strong>Fecha Liquidación:</strong></td>
-                            <td><t t-esc="report.get('date_to_str')"/></td>
+                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Salario:</strong></td>
+                            <td style="width: 16.66%;"><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('salary_v2_formatted') if report.get('salary_v2') else 'N/A')"/></td>
+                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Fecha Ingreso:</strong></td>
+                            <td style="width: 16.66%;"><t t-esc="report.get('date_start_str')"/></td>
+                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Fecha Liquidación:</strong></td>
+                            <td style="width: 16.66%;"><t t-esc="report.get('date_to_str')"/></td>
                         </tr>
                         <tr>
                             <td style="background-color: #f8f9fa;"><strong>Período Servicio:</strong></td>

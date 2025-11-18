@@ -290,6 +290,10 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         else:
             rate_source = f'Automática ({date_ref.strftime("%d/%m/%Y")})'
 
+        # Get salary V2 from contract and convert to selected currency
+        salary_v2 = contract.ueipab_salary_v2 if hasattr(contract, 'ueipab_salary_v2') else 0.0
+        salary_v2_display = self._convert_currency(salary_v2, usd, currency, date_ref, exchange_rate)
+
         return {
             'payslip': payslip,
             'employee': employee,
@@ -321,6 +325,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'total_deductions_formatted': self._format_amount(abs(total_deductions)),
             'net_amount': net_amount,
             'net_amount_formatted': self._format_amount(net_amount),
+            'salary_v2': salary_v2,
+            'salary_v2_formatted': self._format_amount(salary_v2_display),
         }
 
     def _convert_currency(self, amount, from_currency, to_currency, date_ref, exchange_rate=None):
