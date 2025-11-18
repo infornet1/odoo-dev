@@ -71,7 +71,7 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 ---
 
 ### 3. Prestaciones Sociales Interest Report
-**Status:** 🔧 IN PROGRESS - Accrual Calculation Fix | **Module:** `ueipab_payroll_enhancements` v1.20.0
+**Status:** ✅ PRODUCTION READY - Accrual Calculation | **Module:** `ueipab_payroll_enhancements` v1.20.0
 
 **Key Features:**
 - Month-by-month breakdown of prestaciones and interest (13% annual)
@@ -82,14 +82,15 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 **✅ Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18):**
 - **CRITICAL FIX:** Corrected VEB interest calculation to use proper accrual accounting
 - **Old (WRONG):** Re-converted accumulated USD total each month (Bs. 10,641.29 for SLIP/802)
-- **New (CORRECT):** Sum of monthly interest conversions (Bs. 4,224.84 for SLIP/802)
+- **New (CORRECT):** Sum of monthly interest conversions (Bs. 4,160.85 for SLIP/802)
 - **Accounting Impact:** NONE - Company uses USD functional currency, ledger stays $86.58
 - **Report Impact:** VEB display now economically accurate, matches Relación report
 
 **Technical Details:**
 - Each month's interest converted at that month's historical rate
 - VEB amounts accumulate properly (not re-converting same USD)
-- USD display unchanged: always shows payslip total ($86.58)
+- USD display unchanged: always shows payslip total ($85.47)
+- Always uses accrual calculation (NO exchange rate override)
 - Consistent with Relación de Liquidación report
 
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
@@ -173,13 +174,14 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Title shows: "RELACIÓN DE LIQUIDACIÓN / Fecha Liquidación: 31/07/2025"
 - Consistent structure, professional appearance ✅
 
-**🔧 Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18 IN PROGRESS):**
+**✅ Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18):**
 - **CRITICAL FIX:** "Intereses sobre Prestaciones" now uses accrual-based calculation
 - **Matches Prestaciones Interest Report:** Both reports show same VEB amount
 - **Calculation:** Sum of monthly interest conversions (not single-rate conversion)
 - **Example (SLIP/802):** Bs. 4,224.84 (accrual) vs Bs. 10,780.09 (old single-rate)
-- **Exchange Rate Override:** Still supported - applies single rate to all months when used
-- **Zero Employee Confusion:** Both reports consistent in all scenarios
+- **Exchange Rate Override Behavior:** Interest IGNORES override (always uses accrual)
+- **Rationale:** Interest accumulated over 23 months, different from other benefits
+- **Zero Employee Confusion:** Both reports ALWAYS consistent regardless of override
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
@@ -225,7 +227,31 @@ for month in months:
 # Result: Each month's amount converted once at its own rate
 ```
 
-**Impact:** SLIP/802 interest changed from Bs. 10,641.29 (wrong) to Bs. 4,224.84 (correct)
+**Impact:** SLIP/802 interest changed from Bs. 10,641.29 (wrong) to Bs. 4,160.85 (correct)
+
+### Exchange Rate Override for Interest (2025-11-18)
+**Decision:** Interest calculation should IGNORE exchange rate override
+
+**Rationale:**
+- Interest accumulated over 23 months at historical rates
+- Different from other benefits (computed once at liquidation)
+- Prestaciones Interest Report shows detailed monthly breakdown
+- Both reports must match for employee understanding
+
+```python
+# ❌ WRONG - Interest uses override rate
+if use_custom and custom_rate:
+    return intereses_total * custom_rate  # Simple conversion
+
+# ✅ CORRECT - Interest always uses accrual (ignores override)
+# Always calculate month-by-month regardless of override
+for month in service_period:
+    month_interest_veb = convert(month_interest_usd, month_historical_rate)
+    accumulated_veb += month_interest_veb
+return accumulated_veb  # Accrual-based, consistent with Prestaciones report
+```
+
+**Impact:** Ensures report consistency even when override rate is used for other benefits
 
 ### Odoo safe_eval Restrictions (Salary Rules)
 ```python
