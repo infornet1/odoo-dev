@@ -35,6 +35,7 @@ class EmployeePortal(CustomerPortal):
 
     @http.route(['/my/details', '/my/details/page/<int:page>'], type='http', auth="user", website=True)
     def portal_my_details(self, page=1, sortby=None, filterby=None, search=None, search_in='content', **kw):
+        raise Exception("This is a deliberate crash to test if the new controller file is being loaded.")
         employee = self._get_employee()
         if not employee:
             # Render a specific template if the portal user has no linked employee record
