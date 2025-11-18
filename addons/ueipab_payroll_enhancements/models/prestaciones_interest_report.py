@@ -153,10 +153,10 @@ class PrestacionesInterestReport(models.AbstractModel):
                 accumulated_prestaciones_usd, usd, currency, current_date
             )
 
-            # CRITICAL FIX: Convert THIS month's interest at THIS month's rate, then accumulate VEB
-            month_interest_converted = self._convert_currency(
-                month_interest_usd, usd, currency, current_date
-            )
+            # Convert THIS month's interest using direct multiplication (matches Relación report)
+            # Get the exchange rate for this specific month
+            month_rate = self._get_exchange_rate(current_date, currency)
+            month_interest_converted = month_interest_usd * month_rate
             accumulated_interest_veb += month_interest_converted  # Accumulate VEB properly
 
             accumulated_interest_converted = accumulated_interest_veb  # Use properly accumulated VEB

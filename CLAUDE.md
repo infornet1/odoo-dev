@@ -71,7 +71,7 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 ---
 
 ### 3. Prestaciones Sociales Interest Report
-**Status:** ✅ PRODUCTION READY - Accrual Calculation | **Module:** `ueipab_payroll_enhancements` v1.20.0
+**Status:** ✅ PRODUCTION READY - Accrual Calculation | **Module:** `ueipab_payroll_enhancements` v1.22.0
 
 **Key Features:**
 - Month-by-month breakdown of prestaciones and interest (13% annual)
@@ -82,15 +82,23 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 **✅ Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18):**
 - **CRITICAL FIX:** Corrected VEB interest calculation to use proper accrual accounting
 - **Old (WRONG):** Re-converted accumulated USD total each month (Bs. 10,641.29 for SLIP/802)
-- **New (CORRECT):** Sum of monthly interest conversions (Bs. 4,160.85 for SLIP/802)
+- **New (CORRECT):** Sum of monthly interest conversions (Bs. 4,224.84 for SLIP/802)
 - **Accounting Impact:** NONE - Company uses USD functional currency, ledger stays $86.58
 - **Report Impact:** VEB display now economically accurate, matches Relación report
+
+**✅ Exchange Rate Consistency Fix (v1.22.0 - 2025-11-18):**
+- **CRITICAL FIX:** Ensured Prestaciones and Relación reports use IDENTICAL exchange rates
+- **Old (WRONG):** Used Odoo's `_convert_currency()` which reads `rate` field (Bs. 4,160.85)
+- **New (CORRECT):** Direct multiplication with `company_rate` field (Bs. 4,224.84)
+- **Root Cause:** Odoo's `rate` field (1/0.0282 = 35.47) ≠ `company_rate` field (36.14)
+- **Result:** PERFECT MATCH between both reports - zero employee confusion!
 
 **Technical Details:**
 - Each month's interest converted at that month's historical rate
 - VEB amounts accumulate properly (not re-converting same USD)
-- USD display unchanged: always shows payslip total ($85.47)
+- USD display unchanged: always shows payslip total ($86.58)
 - Always uses accrual calculation (NO exchange rate override)
+- Both reports use identical `_get_exchange_rate()` method with `company_rate`
 - Consistent with Relación de Liquidación report
 
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
@@ -315,7 +323,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.21.0 (Interest formula display improvement - 2025-11-18)
+- **ueipab_payroll_enhancements:** v1.22.0 (Prestaciones exchange rate consistency fix - 2025-11-18)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
