@@ -140,95 +140,6 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         # Convert to selected currency
         date_ref = payslip.date_to
 
-        # Benefits
-        benefits = [
-            {
-                'number': 1,
-                'name': 'Vacaciones',
-                'formula': '15 días por año × salario diario',
-                'calculation': f'({service_months:.2f}/12) × 15 días × ${daily_salary:.2f}',
-                'detail': f'{vacaciones_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(vacaciones, usd, currency, date_ref),
-            },
-            {
-                'number': 2,
-                'name': 'Bono Vacacional',
-                'formula': f'Tasa progresiva: {bono_rate:.1f} días/año ({total_seniority_years:.2f} años de antigüedad)',
-                'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × ${daily_salary:.2f}',
-                'detail': f'{bono_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(bono_vacacional, usd, currency, date_ref),
-            },
-            {
-                'number': 3,
-                'name': 'Utilidades',
-                'formula': '30 días por año × salario diario',
-                'calculation': f'({service_months:.2f}/12) × 30 días × ${daily_salary:.2f}',
-                'detail': f'{utilidades_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(utilidades, usd, currency, date_ref),
-            },
-            {
-                'number': 4,
-                'name': 'Prestaciones Sociales',
-                'formula': '15 días por trimestre × salario integral',
-                'calculation': f'({service_months:.2f}/3) × 15 días × ${integral_daily:.2f}',
-                'detail': f'{prestaciones_days:.1f} días × ${integral_daily:.2f}',
-                'amount': self._convert_currency(prestaciones, usd, currency, date_ref),
-            },
-            {
-                'number': 5,
-                'name': 'Antigüedad',
-                'formula': '2 días por mes desde fecha original de ingreso',
-                'calculation': f'Total: {antiguedad_total_days:.1f} días - Ya pagados: {antiguedad_paid_days:.1f} días',
-                'detail': f'{antiguedad_net_days:.1f} días × ${integral_daily:.2f}',
-                'amount': self._convert_currency(antiguedad, usd, currency, date_ref),
-            },
-            {
-                'number': 6,
-                'name': 'Intereses sobre Prestaciones',
-                'formula': '13% anual sobre saldo promedio de prestaciones',
-                'calculation': f'${prestaciones:.2f} × 50% × 13% × ({service_months:.2f}/12)',
-                'detail': f'',
-                'amount': self._convert_currency(intereses, usd, currency, date_ref),
-            },
-        ]
-
-        total_benefits = sum(b['amount'] for b in benefits)
-
-        # Deductions
-        deductions = []
-
-        if faov != 0:
-            deductions.append({
-                'number': 1,
-                'name': 'FAOV (Fondo de Ahorro Habitacional)',
-                'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
-                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 1%',
-                'amount': self._convert_currency(faov, usd, currency, date_ref),
-            })
-
-        if inces != 0:
-            deductions.append({
-                'number': 2,
-                'name': 'INCES / PARO FORZOSO',
-                'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
-                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 0.5%',
-                'amount': self._convert_currency(inces, usd, currency, date_ref),
-            })
-
-        if prepaid != 0:
-            prepaid_date = contract.ueipab_vacation_paid_until if hasattr(contract, 'ueipab_vacation_paid_until') and contract.ueipab_vacation_paid_until else None
-            prepaid_detail = f'Período prepagado desde {prepaid_date.strftime("%d/%m/%Y")}' if prepaid_date else 'Deducción por pago adelantado'
-
-            deductions.append({
-                'number': 3,
-                'name': 'Vacaciones y Bono Prepagadas',
-                'formula': 'Deducción por pago adelantado',
-                'calculation': prepaid_detail,
-                'amount': self._convert_currency(prepaid, usd, currency, date_ref),
-            })
-
-        total_deductions = sum(d['amount'] for d in deductions)
-
         # Get exchange rate parameters from wizard data
         custom_rate = data.get('custom_exchange_rate') if data else None
         custom_date_raw = data.get('rate_date') if data else None
@@ -246,8 +157,97 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             else:
                 custom_date = custom_date_raw
 
-        # Calculate exchange rate for display
+        # Calculate exchange rate for display AND conversion
         exchange_rate = self._get_exchange_rate(date_ref, currency, custom_rate, custom_date)
+
+        # Benefits
+        benefits = [
+            {
+                'number': 1,
+                'name': 'Vacaciones',
+                'formula': '15 días por año × salario diario',
+                'calculation': f'({service_months:.2f}/12) × 15 días × ${daily_salary:.2f}',
+                'detail': f'{vacaciones_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(vacaciones, usd, currency, date_ref, exchange_rate),
+            },
+            {
+                'number': 2,
+                'name': 'Bono Vacacional',
+                'formula': f'Tasa progresiva: {bono_rate:.1f} días/año ({total_seniority_years:.2f} años de antigüedad)',
+                'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × ${daily_salary:.2f}',
+                'detail': f'{bono_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(bono_vacacional, usd, currency, date_ref, exchange_rate),
+            },
+            {
+                'number': 3,
+                'name': 'Utilidades',
+                'formula': '30 días por año × salario diario',
+                'calculation': f'({service_months:.2f}/12) × 30 días × ${daily_salary:.2f}',
+                'detail': f'{utilidades_days:.1f} días × ${daily_salary:.2f}',
+                'amount': self._convert_currency(utilidades, usd, currency, date_ref, exchange_rate),
+            },
+            {
+                'number': 4,
+                'name': 'Prestaciones Sociales',
+                'formula': '15 días por trimestre × salario integral',
+                'calculation': f'({service_months:.2f}/3) × 15 días × ${integral_daily:.2f}',
+                'detail': f'{prestaciones_days:.1f} días × ${integral_daily:.2f}',
+                'amount': self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate),
+            },
+            {
+                'number': 5,
+                'name': 'Antigüedad',
+                'formula': '2 días por mes desde fecha original de ingreso',
+                'calculation': f'Total: {antiguedad_total_days:.1f} días - Ya pagados: {antiguedad_paid_days:.1f} días',
+                'detail': f'{antiguedad_net_days:.1f} días × ${integral_daily:.2f}',
+                'amount': self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate),
+            },
+            {
+                'number': 6,
+                'name': 'Intereses sobre Prestaciones',
+                'formula': '13% anual sobre saldo promedio de prestaciones',
+                'calculation': f'${prestaciones:.2f} × 50% × 13% × ({service_months:.2f}/12)',
+                'detail': f'',
+                'amount': self._convert_currency(intereses, usd, currency, date_ref, exchange_rate),
+            },
+        ]
+
+        total_benefits = sum(b['amount'] for b in benefits)
+
+        # Deductions
+        deductions = []
+
+        if faov != 0:
+            deductions.append({
+                'number': 1,
+                'name': 'FAOV (Fondo de Ahorro Habitacional)',
+                'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
+                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 1%',
+                'amount': self._convert_currency(faov, usd, currency, date_ref, exchange_rate),
+            })
+
+        if inces != 0:
+            deductions.append({
+                'number': 2,
+                'name': 'INCES / PARO FORZOSO',
+                'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
+                'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 0.5%',
+                'amount': self._convert_currency(inces, usd, currency, date_ref, exchange_rate),
+            })
+
+        if prepaid != 0:
+            prepaid_date = contract.ueipab_vacation_paid_until if hasattr(contract, 'ueipab_vacation_paid_until') and contract.ueipab_vacation_paid_until else None
+            prepaid_detail = f'Período prepagado desde {prepaid_date.strftime("%d/%m/%Y")}' if prepaid_date else 'Deducción por pago adelantado'
+
+            deductions.append({
+                'number': 3,
+                'name': 'Vacaciones y Bono Prepagadas',
+                'formula': 'Deducción por pago adelantado',
+                'calculation': prepaid_detail,
+                'amount': self._convert_currency(prepaid, usd, currency, date_ref, exchange_rate),
+            })
+
+        total_deductions = sum(d['amount'] for d in deductions)
 
         # Determine rate source for display
         if use_custom and custom_rate:
@@ -281,14 +281,30 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'deductions': deductions,
             'total_benefits': total_benefits,
             'total_deductions': total_deductions,
-            'net_amount': self._convert_currency(net, usd, currency, date_ref),
+            'net_amount': self._convert_currency(net, usd, currency, date_ref, exchange_rate),
         }
 
-    def _convert_currency(self, amount, from_currency, to_currency, date_ref):
-        """Convert amount from one currency to another."""
+    def _convert_currency(self, amount, from_currency, to_currency, date_ref, exchange_rate=None):
+        """Convert amount from one currency to another.
+
+        Args:
+            amount: Amount to convert
+            from_currency: Source currency (usually USD)
+            to_currency: Target currency (USD or VEB)
+            date_ref: Reference date for automatic lookup
+            exchange_rate: Optional pre-calculated exchange rate (VEB/USD)
+
+        Returns:
+            float: Converted amount
+        """
         if from_currency == to_currency:
             return amount
 
+        # Use pre-calculated exchange rate if provided (for VEB)
+        if exchange_rate and to_currency.name == 'VEB' and from_currency.name == 'USD':
+            return amount * exchange_rate
+
+        # Fall back to Odoo's automatic conversion
         return from_currency._convert(
             from_amount=amount,
             to_currency=to_currency,
