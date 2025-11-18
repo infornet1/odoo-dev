@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-17 02:55 UTC
+**Last Updated:** 2025-11-18 11:45 UTC
 
 ## Core Instructions
 
@@ -71,13 +71,26 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 ---
 
 ### 3. Prestaciones Sociales Interest Report
-**Status:** ✅ Production Ready - V2 Support | **Module:** `ueipab_payroll_enhancements` v1.17.0
+**Status:** 🔧 IN PROGRESS - Accrual Calculation Fix | **Module:** `ueipab_payroll_enhancements` v1.20.0
 
 **Key Features:**
 - Month-by-month breakdown of prestaciones and interest (13% annual)
 - V1 and V2 liquidation structure support
 - Currency selection (USD/VEB) with historical exchange rates
 - Single-page Portrait Letter layout
+
+**✅ Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18):**
+- **CRITICAL FIX:** Corrected VEB interest calculation to use proper accrual accounting
+- **Old (WRONG):** Re-converted accumulated USD total each month (Bs. 10,641.29 for SLIP/802)
+- **New (CORRECT):** Sum of monthly interest conversions (Bs. 4,224.84 for SLIP/802)
+- **Accounting Impact:** NONE - Company uses USD functional currency, ledger stays $86.58
+- **Report Impact:** VEB display now economically accurate, matches Relación report
+
+**Technical Details:**
+- Each month's interest converted at that month's historical rate
+- VEB amounts accumulate properly (not re-converting same USD)
+- USD display unchanged: always shows payslip total ($86.58)
+- Consistent with Relación de Liquidación report
 
 📖 **[Complete Documentation](documentation/PRESTACIONES_INTEREST_REPORT.md)**
 📖 **[Wizard-Based Report Pattern](documentation/WIZARD_BASED_REPORT_PATTERN.md)**
@@ -160,6 +173,14 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Title shows: "RELACIÓN DE LIQUIDACIÓN / Fecha Liquidación: 31/07/2025"
 - Consistent structure, professional appearance ✅
 
+**🔧 Accrual-Based Interest Calculation (v1.20.0 - 2025-11-18 IN PROGRESS):**
+- **CRITICAL FIX:** "Intereses sobre Prestaciones" now uses accrual-based calculation
+- **Matches Prestaciones Interest Report:** Both reports show same VEB amount
+- **Calculation:** Sum of monthly interest conversions (not single-rate conversion)
+- **Example (SLIP/802):** Bs. 4,224.84 (accrual) vs Bs. 10,780.09 (old single-rate)
+- **Exchange Rate Override:** Still supported - applies single rate to all months when used
+- **Zero Employee Confusion:** Both reports consistent in all scenarios
+
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
 
@@ -185,6 +206,26 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ## Key Technical Learnings
+
+### Accrual-Based Currency Conversion (2025-11-18)
+**Problem:** Converting accumulated amounts month-by-month causes incorrect results
+```python
+# ❌ WRONG - Re-converts total accumulated USD each month
+accumulated_usd = 0.0
+for month in months:
+    accumulated_usd += month_amount_usd
+    accumulated_veb = convert(accumulated_usd, month_rate)  # WRONG!
+# Result: Earlier months get converted multiple times with different rates
+
+# ✅ CORRECT - Convert each month's amount once, accumulate VEB
+accumulated_veb = 0.0
+for month in months:
+    month_veb = convert(month_amount_usd, month_rate)
+    accumulated_veb += month_veb  # Proper accrual accounting
+# Result: Each month's amount converted once at its own rate
+```
+
+**Impact:** SLIP/802 interest changed from Bs. 10,641.29 (wrong) to Bs. 4,224.84 (correct)
 
 ### Odoo safe_eval Restrictions (Salary Rules)
 ```python
@@ -241,7 +282,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.19.0 (Exchange rate override - 2025-11-17)
+- **ueipab_payroll_enhancements:** v1.20.0 (Accrual-based interest calculation - 2025-11-18 IN PROGRESS)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
