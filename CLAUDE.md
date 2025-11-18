@@ -210,7 +210,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 6. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.0
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.1
 
 **Key Features:**
 - Formal legal settlement document (4 legal sections)
@@ -220,17 +220,23 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - V1 and V2 liquidation support
 - Exchange rate override support (matches Relación report)
 
-**✅ Exchange Rate Override UI (v1.25.0 - 2025-11-18 TESTED):**
-- **CRITICAL FIX:** Added exchange rate override fields to wizard UI
-- **Problem:** v1.23.0 added report support but forgot wizard UI fields
-- **Symptom:** Relación showed Bs. 300,621.18, Finiquito showed Bs. 158,294.80 (different rates)
-- **Solution:** Added 3 fields to wizard: `use_custom_rate`, `custom_exchange_rate`, `rate_date`
-- **UI:** Matches Relación wizard (Exchange Rate Options section with alert)
-- **Test Result:** SLIP/803 now shows Bs. 300,621.18 in BOTH reports with override ✅
-- **Perfect Consistency:** All 3 liquidation reports (Prestaciones, Relación, Finiquito) have identical override support
+**✅ Rate Date Fix (v1.25.1 - 2025-11-18 TESTED):**
+- **BUG FIX:** Report model now correctly handles `rate_date` parameter
+- **Problem:** v1.25.0 added wizard UI fields but report ignored `rate_date`
+- **Symptom:** Selecting "Rate Date (Auto Lookup)" as 11/17/2025 still showed old rate (Bs. 158,294.80)
+- **Solution:** Added date conversion logic and lookup in report model `finiquito_report.py`
+- **Test Result:** SLIP/803 with rate_date=11/17/2025 now shows Bs. 300,621.18 ✅
+- **Behavior:** If `rate_date` provided, uses that date for automatic rate lookup instead of payslip date
+
+**✅ Exchange Rate Override UI (v1.25.0 - 2025-11-18):**
+- Added exchange rate override fields to wizard UI
+- 3 fields: `use_custom_rate`, `custom_exchange_rate`, `rate_date`
+- UI matches Relación wizard (Exchange Rate Options section with alert)
+- Perfect consistency across all 3 liquidation reports
 
 **Version History:**
-- **v1.25.0:** Added exchange rate override wizard UI fields (2025-11-18) ✅
+- **v1.25.1:** Fixed rate_date parameter handling in report model (2025-11-18) ✅
+- **v1.25.0:** Added exchange rate override wizard UI fields (2025-11-18)
 - **v1.23.0:** Added exchange rate override report support (2025-11-18)
 - **v1.18.2:** Added DOCX export with python-docx library
 - **v1.18.1:** Updated legal representative name
@@ -341,7 +347,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.25.0 (Finiquito wizard exchange rate override UI - 2025-11-18)
+- **ueipab_payroll_enhancements:** v1.25.1 (Finiquito rate_date parameter fix - 2025-11-18)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
