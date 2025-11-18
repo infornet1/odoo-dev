@@ -237,6 +237,38 @@ class HrContract(models.Model):
              "- Vacation owed: 15 days (1 year * 15 days/year)\n"
              "- Bono owed: 14 days (1 year * 14 days/year for 5+ years seniority)",
     )
+    ueipab_vacation_prepaid_amount = fields.Monetary(
+        string="Vacation/Bono Prepaid Amount",
+        currency_field='currency_id',
+        help="Total amount paid in advance for vacation and bono vacacional benefits.\n\n"
+             "This field stores the sum of all advance vacation/bono payments made to the employee "
+             "(typically Aug 1 annual payments). This amount will be deducted from the liquidation "
+             "calculation to avoid double payment.\n\n"
+             "SCHOOL YEAR SYSTEM:\n"
+             "- Fiscal year: Sep 1 - Aug 31\n"
+             "- Annual payment: Aug 1 (covers PAST year Aug 1 X-1 to Jul 31 X)\n"
+             "- Example: Aug 1, 2025 payment covers Aug 1, 2024 - Jul 31, 2025\n\n"
+             "HOW TO CALCULATE:\n"
+             "1. Review payslips for Aug 1 payments during liquidation period\n"
+             "2. Sum all vacation + bono amounts paid on those dates\n"
+             "3. Enter the total here\n\n"
+             "EXAMPLES:\n"
+             "- YOSMARI (hired Sep 2024, liquidated Oct 2025):\n"
+             "  Aug 1, 2025 payment: $88.98\n"
+             "  Enter: $88.98\n\n"
+             "- VIRGINIA (previous liquidation Jul 2023, current liquidation Jul 2025):\n"
+             "  Aug 1, 2024 payment: $134.48\n"
+             "  Aug 1, 2025 payment: $122.34\n"
+             "  Enter: $256.82 ($134.48 + $122.34)\n\n"
+             "- NEW EMPLOYEE (hired after last Aug 1, no advance payments):\n"
+             "  Enter: $0.00 (or leave blank)\n\n"
+             "LIQUIDATION FORMULA:\n"
+             "  Net vacation/bono = (Full vacation + Full bono) - ueipab_vacation_prepaid_amount\n\n"
+             "NOTE: Leave at 0.00 if no advance payments were made during liquidation period.",
+        tracking=True,
+        copy=False,
+        groups='hr.group_hr_user',
+    )
 
     # ==========================================================================
     # V2 COMPENSATION METHODS

@@ -71,12 +71,14 @@
                                 <field name="ueipab_original_hire_date" string="Original Hire Date"/>
                                 <field name="ueipab_previous_liquidation_date" string="Previous Liquidation"/>
                                 <field name="ueipab_vacation_paid_until" string="Vacation Paid Until"/>
+                                <field name="ueipab_vacation_prepaid_amount" string="Vacation/Bono Prepaid"/>
                             </group>
                             <group>
                                 <separator string="Field Descriptions"/>
                                 <div class="o_form_label">Original Hire Date: First day of employment for antiguedad calculation</div>
                                 <div class="o_form_label">Previous Liquidation: Last full settlement date (if rehired)</div>
-                                <div class="o_form_label">Vacation Paid Until: Last Aug 1 vacation payment date</div>
+                                <div class="o_form_label">Vacation Paid Until: Last Aug 1 vacation payment date (tracking only)</div>
+                                <div class="o_form_label">Vacation/Bono Prepaid: Total $ amount paid in advance (e.g., $88.98, $256.82)</div>
                             </group>
                         </group>
                     </page>

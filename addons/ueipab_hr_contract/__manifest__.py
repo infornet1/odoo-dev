@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB HR Contract Extensions',
-    'version': '17.0.1.4.0',
+    'version': '17.0.1.5.0',
     'category': 'Human Resources',
     'summary': 'Venezuelan payroll fields for UEIPAB contracts',
     'description': """
@@ -32,6 +32,12 @@ V2 Compensation Breakdown (v1.4.0 - Added 2025-11-16 - CEO APPROVED):
 - Option A proration: Deductions calculated by actual payslip period days/30
 - Data source: Google Spreadsheet columns K, L, M (100% validated)
 - Legal compliance: CEO confirmed full Venezuelan labor law compliance
+
+V2 Vacation/Bono Fix (v1.5.0 - Added 2025-11-17):
+- ueipab_vacation_prepaid_amount: Total vacation/bono amount paid in advance
+- Fixes double deduction bug where NET was incorrectly $0.00
+- Manual entry of actual prepaid amounts (e.g., $88.98, $256.82)
+- School year system: Sep 1 - Aug 31; Aug 1 payments cover PAST year
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',
