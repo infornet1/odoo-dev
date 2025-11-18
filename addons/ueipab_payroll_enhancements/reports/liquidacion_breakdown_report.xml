@@ -16,11 +16,10 @@
                     <!-- Employee Information -->
                     <table class="table table-sm table-bordered" style="margin-bottom: 8px; font-size: 7pt;">
                         <tr>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Empleado:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="report.get('employee').name"/></td>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Cédula:</strong></td>
-                            <td style="width: 16.66%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
-                            <td style="width: 16.66%;" colspan="2"></td>
+                            <td style="width: 25%; background-color: #f8f9fa;"><strong>Empleado:</strong></td>
+                            <td style="width: 25%;"><t t-esc="report.get('employee').name"/></td>
+                            <td style="width: 25%; background-color: #f8f9fa;"><strong>Cédula:</strong></td>
+                            <td style="width: 25%;"><t t-esc="report.get('employee').identification_id or 'N/A'"/></td>
                         </tr>
                         <tr>
                             <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Salario:</strong></td>
@@ -31,22 +30,21 @@
                             <td style="width: 16.66%;"><t t-esc="report.get('date_to_str')"/></td>
                         </tr>
                         <tr>
-                            <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Período Servicio:</strong></td>
-                            <td style="width: 16.66%;">
+                            <td style="width: 25%; background-color: #f8f9fa;"><strong>Período Servicio:</strong></td>
+                            <td style="width: 25%;">
                                 <t t-esc="report.get('service_months_total')"/> meses
                                 (<t t-esc="report.get('service_years')"/> año<t t-if="report.get('service_years') != 1">s</t>,
                                 <t t-esc="report.get('service_months')"/> mes<t t-if="report.get('service_months') != 1">es</t>)
                             </td>
                             <t t-if="report.get('original_hire_date') and report.get('original_hire_date') != report.get('contract').date_start">
-                                <td style="width: 16.66%; background-color: #f8f9fa;"><strong>Antigüedad Total:</strong></td>
-                                <td style="width: 16.66%;">
+                                <td style="width: 25%; background-color: #f8f9fa;"><strong>Antigüedad Total:</strong></td>
+                                <td style="width: 25%;">
                                     <t t-esc="'%.2f' % report.get('total_seniority_years')"/> años
                                     (desde <t t-esc="report.get('original_hire_date_str')"/>)
                                 </td>
-                                <td style="width: 16.66%;" colspan="2"></td>
                             </t>
                             <t t-else="">
-                                <td style="width: 16.66%;" colspan="4"></td>
+                                <td style="width: 50%;" colspan="2"></td>
                             </t>
                         </tr>
                     </table>
