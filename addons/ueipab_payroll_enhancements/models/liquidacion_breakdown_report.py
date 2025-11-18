@@ -161,6 +161,13 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         exchange_rate = self._get_exchange_rate(date_ref, currency, custom_rate, custom_date)
 
         # Benefits
+        vac_amt = self._convert_currency(vacaciones, usd, currency, date_ref, exchange_rate)
+        bono_amt = self._convert_currency(bono_vacacional, usd, currency, date_ref, exchange_rate)
+        util_amt = self._convert_currency(utilidades, usd, currency, date_ref, exchange_rate)
+        prest_amt = self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate)
+        antig_amt = self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate)
+        inter_amt = self._convert_currency(intereses, usd, currency, date_ref, exchange_rate)
+
         benefits = [
             {
                 'number': 1,
@@ -168,7 +175,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': '15 días por año × salario diario',
                 'calculation': f'({service_months:.2f}/12) × 15 días × ${daily_salary:.2f}',
                 'detail': f'{vacaciones_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(vacaciones, usd, currency, date_ref, exchange_rate),
+                'amount': vac_amt,
+                'amount_formatted': self._format_amount(vac_amt),
             },
             {
                 'number': 2,
@@ -176,7 +184,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': f'Tasa progresiva: {bono_rate:.1f} días/año ({total_seniority_years:.2f} años de antigüedad)',
                 'calculation': f'({service_months:.2f}/12) × {bono_rate:.1f} días × ${daily_salary:.2f}',
                 'detail': f'{bono_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(bono_vacacional, usd, currency, date_ref, exchange_rate),
+                'amount': bono_amt,
+                'amount_formatted': self._format_amount(bono_amt),
             },
             {
                 'number': 3,
@@ -184,7 +193,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': '30 días por año × salario diario',
                 'calculation': f'({service_months:.2f}/12) × 30 días × ${daily_salary:.2f}',
                 'detail': f'{utilidades_days:.1f} días × ${daily_salary:.2f}',
-                'amount': self._convert_currency(utilidades, usd, currency, date_ref, exchange_rate),
+                'amount': util_amt,
+                'amount_formatted': self._format_amount(util_amt),
             },
             {
                 'number': 4,
@@ -192,7 +202,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': '15 días por trimestre × salario integral',
                 'calculation': f'({service_months:.2f}/3) × 15 días × ${integral_daily:.2f}',
                 'detail': f'{prestaciones_days:.1f} días × ${integral_daily:.2f}',
-                'amount': self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate),
+                'amount': prest_amt,
+                'amount_formatted': self._format_amount(prest_amt),
             },
             {
                 'number': 5,
@@ -200,7 +211,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': '2 días por mes desde fecha original de ingreso',
                 'calculation': f'Total: {antiguedad_total_days:.1f} días - Ya pagados: {antiguedad_paid_days:.1f} días',
                 'detail': f'{antiguedad_net_days:.1f} días × ${integral_daily:.2f}',
-                'amount': self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate),
+                'amount': antig_amt,
+                'amount_formatted': self._format_amount(antig_amt),
             },
             {
                 'number': 6,
@@ -208,7 +220,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': '13% anual sobre saldo promedio de prestaciones',
                 'calculation': f'${prestaciones:.2f} × 50% × 13% × ({service_months:.2f}/12)',
                 'detail': f'',
-                'amount': self._convert_currency(intereses, usd, currency, date_ref, exchange_rate),
+                'amount': inter_amt,
+                'amount_formatted': self._format_amount(inter_amt),
             },
         ]
 
@@ -218,24 +231,29 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         deductions = []
 
         if faov != 0:
+            faov_amt = self._convert_currency(faov, usd, currency, date_ref, exchange_rate)
             deductions.append({
                 'number': 1,
                 'name': 'FAOV (Fondo de Ahorro Habitacional)',
                 'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
                 'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 1%',
-                'amount': self._convert_currency(faov, usd, currency, date_ref, exchange_rate),
+                'amount': faov_amt,
+                'amount_formatted': self._format_amount(faov_amt),
             })
 
         if inces != 0:
+            inces_amt = self._convert_currency(inces, usd, currency, date_ref, exchange_rate)
             deductions.append({
                 'number': 2,
                 'name': 'INCES / PARO FORZOSO',
                 'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
                 'calculation': f'(${vacaciones:.2f} + ${bono_vacacional:.2f} + ${utilidades:.2f}) × 0.5%',
-                'amount': self._convert_currency(inces, usd, currency, date_ref, exchange_rate),
+                'amount': inces_amt,
+                'amount_formatted': self._format_amount(inces_amt),
             })
 
         if prepaid != 0:
+            prepaid_amt = self._convert_currency(prepaid, usd, currency, date_ref, exchange_rate)
             prepaid_date = contract.ueipab_vacation_paid_until if hasattr(contract, 'ueipab_vacation_paid_until') and contract.ueipab_vacation_paid_until else None
             prepaid_detail = f'Período prepagado desde {prepaid_date.strftime("%d/%m/%Y")}' if prepaid_date else 'Deducción por pago adelantado'
 
@@ -244,10 +262,12 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'name': 'Vacaciones y Bono Prepagadas',
                 'formula': 'Deducción por pago adelantado',
                 'calculation': prepaid_detail,
-                'amount': self._convert_currency(prepaid, usd, currency, date_ref, exchange_rate),
+                'amount': prepaid_amt,
+                'amount_formatted': self._format_amount(prepaid_amt),
             })
 
         total_deductions = sum(d['amount'] for d in deductions)
+        net_amount = self._convert_currency(net, usd, currency, date_ref, exchange_rate)
 
         # Determine rate source for display
         if use_custom and custom_rate:
@@ -276,12 +296,18 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'total_seniority_years': total_seniority_years,
             'bono_rate': bono_rate,
             'daily_salary': daily_salary,
+            'daily_salary_formatted': self._format_amount(daily_salary),
+            'monthly_salary_formatted': self._format_amount(daily_salary * 30),
             'integral_daily': integral_daily,
+            'integral_daily_formatted': self._format_amount(integral_daily),
             'benefits': benefits,
             'deductions': deductions,
             'total_benefits': total_benefits,
+            'total_benefits_formatted': self._format_amount(total_benefits),
             'total_deductions': total_deductions,
-            'net_amount': self._convert_currency(net, usd, currency, date_ref, exchange_rate),
+            'total_deductions_formatted': self._format_amount(abs(total_deductions)),
+            'net_amount': net_amount,
+            'net_amount_formatted': self._format_amount(net_amount),
         }
 
     def _convert_currency(self, amount, from_currency, to_currency, date_ref, exchange_rate=None):
@@ -316,6 +342,17 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         """Get value from payslip line by code."""
         line = payslip.line_ids.filtered(lambda l: l.code == code)
         return line.total if line else 0.0
+
+    def _format_amount(self, amount):
+        """Format amount with thousand separators.
+
+        Args:
+            amount: Number to format
+
+        Returns:
+            str: Formatted amount with thousand separators (e.g., "1,234.56")
+        """
+        return '{:,.2f}'.format(amount)
 
     def _get_exchange_rate(self, date_ref, currency, custom_rate=None, custom_date=None):
         """Get exchange rate for display.

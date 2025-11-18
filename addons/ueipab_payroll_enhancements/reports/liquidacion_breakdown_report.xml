@@ -77,14 +77,14 @@
                                             <t t-esc="benefit.get('detail')"/>
                                         </td>
                                         <td style="text-align: right; vertical-align: top; padding: 2px;">
-                                            <strong><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(benefit.get('amount')))"/></strong>
+                                            <strong><t t-esc="'%s %s' % (report.get('currency').symbol, benefit.get('amount_formatted'))"/></strong>
                                         </td>
                                     </tr>
                                 </t>
                                 <tr style="background-color: #e8f5e9; font-weight: bold;">
                                     <td colspan="3" style="text-align: right; padding: 3px;">SUBTOTAL PRESTACIONES:</td>
                                     <td style="text-align: right; padding: 3px;">
-                                        <t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('total_benefits')))"/>
+                                        <t t-esc="'%s %s' % (report.get('currency').symbol, report.get('total_benefits_formatted'))"/>
                                     </td>
                                 </tr>
                             </tbody>
@@ -118,14 +118,14 @@
                                                 </span>
                                             </td>
                                             <td style="text-align: right; vertical-align: top; padding: 2px;">
-                                                <strong><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(deduction.get('amount')))"/></strong>
+                                                <strong><t t-esc="'%s %s' % (report.get('currency').symbol, deduction.get('amount_formatted'))"/></strong>
                                             </td>
                                         </tr>
                                     </t>
                                     <tr style="background-color: #ffebee; font-weight: bold;">
                                         <td colspan="2" style="text-align: right; padding: 3px;">TOTAL DEDUCCIONES:</td>
                                         <td style="text-align: right; padding: 3px;">
-                                            <t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('total_deductions')))"/>
+                                            <t t-esc="'%s %s' % (report.get('currency').symbol, report.get('total_deductions_formatted'))"/>
                                         </td>
                                     </tr>
                                 </t>
@@ -146,19 +146,19 @@
                             <tr>
                                 <td style="width: 70%; text-align: right; padding: 2px;"><strong>TOTAL PRESTACIONES:</strong></td>
                                 <td style="width: 30%; text-align: right; padding: 2px;">
-                                    <strong><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('total_benefits')))"/></strong>
+                                    <strong><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('total_benefits_formatted'))"/></strong>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="text-align: right; padding: 2px;"><strong>TOTAL DEDUCCIONES:</strong></td>
                                 <td style="text-align: right; padding: 2px;">
-                                    <strong>(<t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(abs(report.get('total_deductions'))))"/>)</strong>
+                                    <strong>(<t t-esc="'%s %s' % (report.get('currency').symbol, report.get('total_deductions_formatted'))"/>)</strong>
                                 </td>
                             </tr>
                             <tr style="border-top: 2px solid #333;">
                                 <td style="text-align: right; padding: 5px 2px;"><strong style="font-size: 9pt;">NETO A RECLAMAR:</strong></td>
                                 <td style="text-align: right; padding: 5px 2px; background-color: #fff3cd;">
-                                    <strong style="font-size: 9pt;"><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('net_amount')))"/></strong>
+                                    <strong style="font-size: 9pt;"><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('net_amount_formatted'))"/></strong>
                                 </td>
                             </tr>
                         </table>
@@ -168,7 +168,7 @@
                     <div style="margin-top: 10px; font-size: 7pt; padding: 8px; background-color: #fff; border: 1px solid #ddd;">
                         <p style="margin: 0; text-align: justify; line-height: 1.3;">
                             <strong>DECLARACIÓN:</strong> El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de
-                            <strong><t t-esc="'%s %s' % (report.get('currency').symbol, '{:,.2f}'.format(report.get('net_amount')))"/></strong>
+                            <strong><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('net_amount_formatted'))"/></strong>
                             a su entera satisfacción por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
                         </p>
                     </div>
@@ -199,8 +199,8 @@
                     <!-- Notes Section -->
                     <div style="margin-top: 8px; font-size: 6pt; color: #666; padding: 5px; background-color: #f8f9fa; border-left: 2px solid #2196F3;">
                         <strong>Notas:</strong>
-                        Salario Diario Base: <t t-esc="report.get('currency').symbol"/> <t t-esc="'{:,.2f}'.format(report.get('daily_salary') * 30)"/> / 30 = <t t-esc="report.get('currency').symbol"/> <t t-esc="'{:,.2f}'.format(report.get('daily_salary'))"/> •
-                        Salario Diario Integral: <t t-esc="report.get('currency').symbol"/> <t t-esc="'{:,.2f}'.format(report.get('integral_daily'))"/>
+                        Salario Diario Base: <t t-esc="report.get('currency').symbol"/> <t t-esc="report.get('monthly_salary_formatted')"/> / 30 = <t t-esc="report.get('currency').symbol"/> <t t-esc="report.get('daily_salary_formatted')"/> •
+                        Salario Diario Integral: <t t-esc="report.get('currency').symbol"/> <t t-esc="report.get('integral_daily_formatted')"/>
                         <t t-if="report.get('bono_rate') > 15">
                             • Tasa Bono Vacacional: 15 + (<t t-esc="'%.2f' % report.get('total_seniority_years')"/> - 1) = <t t-esc="'%.1f' % report.get('bono_rate')"/> días/año
                         </t>
