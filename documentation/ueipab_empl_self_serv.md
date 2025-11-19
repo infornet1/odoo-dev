@@ -59,3 +59,31 @@ Data privacy and security are the foundation of this module, enforced through tw
     -   `hr.employee`
     -   `hr.payslip`
     -   `hr.contract`
+
+## 7. Debugging Notes (Current Status: 2025-11-18)
+
+### Persistent JavaScript Error
+
+A `TypeError: Cannot set properties of null (setting 'textContent')` error occurs on the `/my/home` portal page when loading. This error is consistently reported even after applying multiple fixes targeting the `ueipab_empl_self_serv` module's view and controller logic. The stack trace points to Odoo's core `portal.js` (`web.assets_frontend_lazy.js`) attempting to update a counter element that it cannot find in the DOM.
+
+### Investigation Summary
+
+-   **Initial Diagnosis:** Believed to be related to the `payslip_count` from `ueipab_empl_self_serv` module, specifically the missing HTML element in `portal.portal_my_home`.
+-   **Fixes Applied:**
+    1.  Conditional rendering for `t-field` (to handle missing currency).
+    2.  Changed `t-field` to `t-esc` for rendering calculated `Net Salary`.
+    3.  Modified `portal_my_home_add_details_link` template to include the correct `<span class="badge ... o_portal_payslip_count">`.
+    4.  Overrode `/my/counters` route in `controllers/portal.py` to only return `payslip_count` and suppress other potential counters.
+-   **Module Actions:** Upgrades and reinstallations of `ueipab_empl_self_serv` were performed.
+-   **Result:** The error persists on `/my/home`, even after isolating the `ueipab_empl_self_serv` module's counter functionality.
+
+### Current Hypothesis
+
+The error is likely caused by a **pre-existing misconfiguration or bug in the Odoo environment's base portal setup**, independent of the `ueipab_empl_self_serv` module. The `portal.js` script is attempting to update a counter element (from a default Odoo counter like 'Invoices', 'Tasks', etc.) that is missing from the customized `portal.portal_my_home` template in this specific Odoo instance. The `ueipab_empl_self_serv` module, by introducing its own counter, may have merely exposed this underlying issue.
+
+### Pending Action
+
+A diagnostic "poison pill" (deliberate Python crash) was introduced into `controllers/portal.py` to definitively determine if updated Python files are being loaded by the Odoo server. The result of this test is pending user feedback. The "poison pill" has been removed, and the controller has been reverted to its last functional state (with the `/my/counters` override).
+
+---
+**Next Steps:** Wait for user feedback on the "poison pill" test. The root cause (environment vs. code not loading) needs to be confirmed.
