@@ -131,6 +131,8 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **Fix Applied:** Updated LIQUID_INCES_V2 formula to exclude Vacaciones and Bono Vacacional
 - **Impact:** Employees were previously over-deducted by 0.5% on vacation benefits
 - **Formula:** `deduction_base = (LIQUID_UTILIDADES_V2 or 0)` (removed vacation components)
+- **Report Template:** Updated Relación de Liquidación report to show "INCES 0.5% sobre (Utilidades)"
+- **Display:** Removed "/ PARO FORZOSO" suffix, simplified calculation formula
 
 **Implementation Status:**
 - ✅ Phase 1: Analysis & Planning

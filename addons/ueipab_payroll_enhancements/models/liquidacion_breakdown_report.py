@@ -260,9 +260,9 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             inces_amt = self._convert_currency(inces, usd, currency, date_ref, exchange_rate)
             deductions.append({
                 'number': 2,
-                'name': 'INCES / PARO FORZOSO',
-                'formula': '0.5% sobre (Vacaciones + Bono Vacacional + Utilidades)',
-                'calculation': f'({curr_symbol}{self._format_amount(vacaciones_display)} + {curr_symbol}{self._format_amount(bono_vacacional_display)} + {curr_symbol}{self._format_amount(utilidades_display)}) × 0.5%',
+                'name': 'INCES',
+                'formula': '0.5% sobre (Utilidades)',
+                'calculation': f'({curr_symbol}{self._format_amount(utilidades_display)}) × 0.5%',
                 'amount': inces_amt,
                 'amount_formatted': self._format_amount(inces_amt),
             })
