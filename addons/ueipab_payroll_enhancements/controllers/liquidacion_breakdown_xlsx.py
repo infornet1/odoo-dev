@@ -110,12 +110,23 @@ class LiquidacionBreakdownXLSXController(http.Controller):
         })
 
         # Get report model
-        report_model = request.env['report.ueipab_payroll_enhancements.liquidacion_breakdown']
+        report_model = request.env['report.ueipab_payroll_enhancements.liquidacion_breakdown_report']
+
+        # Prepare data dict with wizard parameters (same as PDF)
+        data = {
+            'wizard_id': wizard.id,
+            'currency_id': wizard.currency_id.id,
+            'currency_name': wizard.currency_id.name,
+            'payslip_ids': wizard.payslip_ids.ids,
+            'use_custom_rate': wizard.use_custom_rate,
+            'custom_exchange_rate': wizard.custom_exchange_rate if wizard.use_custom_rate else None,
+            'rate_date': wizard.rate_date,
+        }
 
         # Generate sheet for each payslip
         for payslip in wizard.payslip_ids:
-            # Get breakdown data
-            breakdown = report_model._generate_breakdown(payslip, currency)
+            # Get breakdown data (pass data parameter for rate override)
+            breakdown = report_model._generate_breakdown(payslip, currency, data)
 
             # Create worksheet (use employee name)
             sheet_name = payslip.employee_id.name[:31]  # Excel sheet name limit

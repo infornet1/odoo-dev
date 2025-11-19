@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-18 23:30 UTC
+**Last Updated:** 2025-11-19 12:55 UTC
 
 ## Core Instructions
 
@@ -212,6 +212,15 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **Employee Experience:** Clear reference to supporting documentation, no confusing arithmetic
 - **Professional:** Shows complete documentation approach, verifiable by employee
 
+**✅ XLSX Export Exchange Rate Bug Fix (v1.25.2 - 2025-11-19):**
+- **CRITICAL FIX:** XLSX export now correctly uses wizard's exchange rate parameters
+- **Bug:** XLSX was using payslip date rate (124.51) instead of wizard's rate_date (236.46)
+- **Impact:** XLSX showed Bs. 114,497.09 vs PDF Bs. 217,443.98 (1.90x discrepancy)
+- **Root Cause:** Controller wasn't passing `data` dict with `rate_date`, `use_custom_rate`, `custom_exchange_rate`
+- **Fix:** Updated `/controllers/liquidacion_breakdown_xlsx.py:115-129` to pass wizard parameters
+- **Result:** Perfect parity - both PDF and XLSX now show identical amounts
+- **Technical:** Fixed permissions (755) on controllers directory for proper module loading
+
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
 
@@ -355,7 +364,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.25.1 (Finiquito rate_date parameter fix - 2025-11-18)
+- **ueipab_payroll_enhancements:** v1.25.2 (XLSX export exchange rate bug fix - 2025-11-19)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
