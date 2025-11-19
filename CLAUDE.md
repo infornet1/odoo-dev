@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-18 22:40 UTC
+**Last Updated:** 2025-11-18 23:30 UTC
 
 ## Core Instructions
 
@@ -121,10 +121,16 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ```
 
 **Deduction Rates (Monthly with Proration):**
-- **IVSS (SSO):** 4.5% monthly (prorated by days/30)
-- **FAOV:** 1.0% monthly (prorated by days/30)
-- **INCES (PARO):** 0.5% monthly (prorated by days/30)
-- **ARI:** Variable % (from contract field, prorated by days/30)
+- **IVSS (SSO):** 4.5% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
+- **FAOV:** 1.0% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
+- **INCES (PARO):** 0.5% monthly (prorated by days/30) - **applies ONLY to Utilidades** ✅
+- **ARI:** Variable % (from contract field, prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
+
+**✅ INCES Deduction Scope Fix (2025-11-18):**
+- **Accounting Observation:** INCES should only apply to Utilidades (profit sharing)
+- **Fix Applied:** Updated LIQUID_INCES_V2 formula to exclude Vacaciones and Bono Vacacional
+- **Impact:** Employees were previously over-deducted by 0.5% on vacation benefits
+- **Formula:** `deduction_base = (LIQUID_UTILIDADES_V2 or 0)` (removed vacation components)
 
 **Implementation Status:**
 - ✅ Phase 1: Analysis & Planning
