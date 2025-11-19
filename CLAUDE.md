@@ -311,6 +311,37 @@ return accumulated_veb  # Accrual-based, consistent with Prestaciones report
 
 **Impact:** Ensures report consistency even when override rate is used for other benefits
 
+### Container Issues & Fixes (2025-11-19)
+
+**Issue 1: Empty Database Log Pollution**
+```
+Problem: Database "ueipab" exists but not initialized
+Symptom: ERROR every 60s - "relation ir_module_module does not exist"
+Impact:  ~60 log errors per hour (cosmetic, no functional issues)
+Fix:     DROP DATABASE ueipab;
+```
+
+**Issue 2: WebSocket Port Mismatch**
+```
+Problem: Config uses deprecated longpolling_port = 8078, Docker maps 8072
+Symptom: RuntimeError every 30s - "Couldn't bind websocket on port 8078"
+Impact:  Real-time features broken (chat, notifications), ~120 errors/hour
+Fix:     Update config: longpolling_port = 8078 → gevent_port = 8072
+```
+
+**Root Causes:**
+1. **Empty DB**: Orphaned database created but never initialized with Odoo
+2. **WebSocket**: Using deprecated parameter + port not mapped in Docker
+
+**Combined Fix Applied (2025-11-19):**
+- Dropped empty `ueipab` database
+- Updated to `gevent_port = 8072` (Odoo 17 standard)
+- Ensured `workers = 2` set (required for websocket)
+- Single restart applied both fixes
+- Result: ~180 fewer errors per hour + real-time features working
+
+📖 **[Complete Diagnosis & Procedure](documentation/COMBINED_FIX_PROCEDURE.md)**
+
 ### Odoo safe_eval Restrictions (Salary Rules)
 ```python
 # ❌ FORBIDDEN in safe_eval:
@@ -381,6 +412,11 @@ except:
 - [Liquidation Approach Analysis](documentation/LIQUIDATION_APPROACH_ANALYSIS.md)
 - [Monica Mosqueda Analysis](documentation/MONICA_MOSQUEDA_ANALYSIS_2025-11-13.md)
 - [Liquidation Validation Summary](documentation/LIQUIDATION_VALIDATION_SUMMARY_2025-11-13.md)
+
+### Infrastructure & Troubleshooting (2025-11-19)
+- [Empty Database Issue Diagnosis](documentation/UEIPAB_EMPTY_DATABASE_ISSUE_DIAGNOSIS.md)
+- [WebSocket Configuration Issue](documentation/WEBSOCKET_ISSUE_DIAGNOSIS.md)
+- [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md) ⭐
 
 ---
 
