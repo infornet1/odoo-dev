@@ -147,7 +147,9 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.24.0
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.2
+
+**📋 Enhancement In Review:** Hide Vacaciones/Bono when fully prepaid - see [Plan](documentation/HIDE_PREPAID_VACATION_ENHANCEMENT.md)
 
 **Key Features:**
 - Detailed breakdown of all 6 liquidation benefits with formulas
