@@ -14,7 +14,7 @@ import xlsxwriter
 class LiquidacionBreakdownXLSXController(http.Controller):
     """Controller for XLSX export of liquidation breakdown reports."""
 
-    @http.route('/report/xlsx/liquidacion_breakdown/<int:wizard_id>', type='http', auth='user')
+    @http.route('/liquidacion/breakdown/xlsx/<int:wizard_id>', type='http', auth='user')
     def download_liquidacion_breakdown_xlsx(self, wizard_id, **kwargs):
         """Generate and download XLSX report.
 

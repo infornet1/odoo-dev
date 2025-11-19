@@ -115,7 +115,7 @@ class LiquidacionBreakdownWizard(models.TransientModel):
         # Generate Excel file
         return {
             'type': 'ir.actions.act_url',
-            'url': f'/report/xlsx/liquidacion_breakdown/{self.id}',
+            'url': f'/liquidacion/breakdown/xlsx/{self.id}',
             'target': 'new',
         }
 
