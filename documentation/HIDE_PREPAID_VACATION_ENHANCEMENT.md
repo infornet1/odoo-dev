@@ -1,9 +1,29 @@
-# Enhancement Plan: Hide Prepaid Vacaciones/Bono in Relación de Liquidación
+# Enhancement Plan: Show "Pagado" for Prepaid Vacaciones/Bono in Relación de Liquidación
 
-**Status:** 📋 In Review
+**Status:** 📋 In Review (Updated with "Pagado" approach)
 **Target Version:** v1.26.0
 **Created:** 2025-11-19
+**Last Updated:** 2025-11-19 13:15 UTC
 **Author:** Development Team
+
+---
+
+## 🔄 IMPORTANT UPDATE (2025-11-19 13:15 UTC)
+
+**Approach Changed from "Hide Rows" to "Show Pagado Status"**
+
+### Original Approach (Discarded)
+- ❌ Remove Vacaciones/Bono rows entirely when prepaid
+- ❌ Renumber remaining benefits (1-4 instead of 1-6)
+- ❌ Variable layout structure across reports
+
+### NEW Approach (Current) ✅
+- ✅ **KEEP all rows** (consistent 1-6 structure)
+- ✅ Show **"Pagado mensualmente"** instead of amounts
+- ✅ Same layout for ALL reports (easy comparison)
+- ✅ Professional accounting standard
+
+**Rationale:** Consistent layout is more important than hiding information. The "Pagado mensualmente" status is clear, professional, and maintains report structure integrity.
 
 ---
 
@@ -51,14 +71,24 @@ NET EFFECT FROM VACACIONES/BONO:      Bs. 0.00
 
 ### Desired Outcome
 
+**✅ REVISED APPROACH (2025-11-19): Keep Layout Consistent, Show Status**
+
 **When Vacaciones + Bono net = $0 (fully prepaid):**
-- ❌ **DON'T show** Vacaciones line in benefits
-- ❌ **DON'T show** Bono Vacacional line in benefits
-- ❌ **DON'T show** Prepaid deduction line
-- ✅ **DO add** clear explanatory note: *"Vacaciones y Bono Vacacional ya pagados mensualmente"*
+- ✅ **KEEP** Vacaciones line in benefits → Show "Pagado mensualmente"
+- ✅ **KEEP** Bono Vacacional line in benefits → Show "Pagado mensualmente"
+- ✅ **KEEP** row structure (consistent numbering across all reports)
+- ❌ **HIDE** Prepaid deduction line (already reflected as "Pagado")
+- ✅ **ADD** explanatory note with total amount paid
 
 **When net ≠ $0 (partially prepaid or not prepaid):**
-- ✅ Show all lines normally (employee still owes or is owed money)
+- ✅ Show all lines with monetary amounts (current behavior)
+
+**Why This Approach Is Better:**
+1. **Consistent Layout:** All liquidation reports have identical structure
+2. **Clear Status:** "Pagado mensualmente" is explicit and unambiguous
+3. **Easy Comparison:** Employee can compare different liquidations
+4. **Transparent:** Shows vacation benefit exists (not hidden)
+5. **Professional:** Standard accounting practice to show $0 items with status
 
 ---
 
@@ -138,14 +168,17 @@ Add **optional boolean field** to `liquidacion.breakdown.wizard`:
 
 ```python
 hide_prepaid_vacation = fields.Boolean(
-    string='Ocultar Vacaciones/Bono (si prepagadas)',
+    string='Mostrar "Pagado" en Vacaciones/Bono (si prepagadas)',
     default=False,
-    help='Oculta Vacaciones y Bono Vacacional cuando están completamente prepagadas (neto $0)\n'
-         'Útil para evitar confusión cuando estos beneficios ya fueron pagados mensualmente'
+    help='Muestra "Pagado mensualmente" en lugar de montos cuando Vacaciones y Bono\n'
+         'están completamente prepagadas (neto $0). Mantiene estructura consistente\n'
+         'del reporte y clarifica que ya fueron pagados mensualmente.'
 )
 ```
 
 **UI Placement:** After `rate_date` field in wizard form
+
+**UI Label Update:** Changed from "Ocultar" (Hide) to "Mostrar Pagado" (Show Paid) to reflect new approach
 
 ### Report Behavior Decision Tree
 
@@ -171,7 +204,7 @@ Show All     Check Net Amount
            + Add Note    LINES
 ```
 
-### Scenario A: **Toggle ON + Fully Prepaid (Net = $0)**
+### Scenario A: **Toggle ON + Fully Prepaid (Net = $0)** ✅ REVISED
 
 **Detection Logic:**
 ```python
@@ -183,19 +216,19 @@ net = vac + bono + prepaid
 is_fully_prepaid = abs(net) < 0.01  # Tolerance for rounding
 
 if hide_prepaid_vacation and is_fully_prepaid:
-    # HIDE lines, ADD note
+    # SHOW rows with "Pagado mensualmente" instead of amount
+    # HIDE prepaid deduction (implied by "Pagado" status)
 ```
 
 **PDF/XLSX Output:**
 ```
 PRESTACIONES SOCIALES (BENEFICIOS)
-1. Utilidades                         $XXX.XX
-2. Prestaciones Sociales              $XXX.XX
-3. Antigüedad                         $XXX.XX
-4. Intereses sobre Prestaciones       $XXX.XX
-
-[NO Vacaciones line]
-[NO Bono Vacacional line]
+1. Vacaciones                         Pagado mensualmente
+2. Bono Vacacional                    Pagado mensualmente
+3. Utilidades                         $XXX.XX
+4. Prestaciones Sociales              $XXX.XX
+5. Antigüedad                         $XXX.XX
+6. Intereses sobre Prestaciones       $XXX.XX
 
 Subtotal Prestaciones:                $XXX.XX
 
@@ -203,19 +236,25 @@ DEDUCCIONES
 - FAOV (1%)                          -$XX.XX
 - INCES (0.5%)                       -$XX.XX
 
-[NO Prepaid deduction line]
+[NO Prepaid deduction line - already shown as "Pagado" above]
 
 Total Deducciones:                   -$XX.XX
 
 NETO A RECLAMAR:                      $XXX.XX
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 NOTA IMPORTANTE:
-Vacaciones y Bono Vacacional ya pagados mensualmente
-Período: Sep 2023 - Jul 2025
-Monto total pagado: $271.84 (Bs. 67,890.12)
+📝 NOTA:
+• Vacaciones y Bono Vacacional pagados mensualmente
+  durante período de empleo
+  Monto total: $271.84 (Bs. 67,890.12 al 19/11/2025)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+**Key Changes from Original:**
+- ✅ Rows remain (consistent layout)
+- ✅ Show "Pagado mensualmente" instead of blank/hiding
+- ✅ Numbering stays 1-6 (same across all reports)
+- ✅ Clear status visible at a glance
 
 ### Scenario B: **Toggle ON + Partially Prepaid (Net ≠ $0)**
 
@@ -349,35 +388,35 @@ def _generate_breakdown(self, payslip, currency, data=None):
     is_fully_prepaid = abs(vac_bono_net) < 0.01
     should_hide_vacation = hide_prepaid and is_fully_prepaid
 
-    # Build benefits list (conditional)
+    # Build benefits list (ALWAYS include all rows, conditional display)
     benefits = []
     benefit_num = 1
 
-    # Vacaciones (conditional)
-    if not should_hide_vacation:
-        benefits.append({
-            'number': benefit_num,
-            'name': 'Vacaciones',
-            'formula': '...',
-            'calculation': '...',
-            'detail': '...',
-            'amount': vac_amt,
-            'amount_formatted': self._format_amount(vac_amt, currency),
-        })
-        benefit_num += 1
+    # Vacaciones (ALWAYS included, conditional amount vs "Pagado")
+    benefits.append({
+        'number': benefit_num,
+        'name': 'Vacaciones',
+        'formula': '...' if not should_hide_vacation else '',
+        'calculation': '...' if not should_hide_vacation else '',
+        'detail': '...' if not should_hide_vacation else '',
+        'amount': vac_amt if not should_hide_vacation else None,
+        'amount_formatted': self._format_amount(vac_amt, currency) if not should_hide_vacation else 'Pagado mensualmente',
+        'is_prepaid': should_hide_vacation,  # Flag for special rendering
+    })
+    benefit_num += 1
 
-    # Bono Vacacional (conditional)
-    if not should_hide_vacation:
-        benefits.append({
-            'number': benefit_num,
-            'name': 'Bono Vacacional',
-            'formula': '...',
-            'calculation': '...',
-            'detail': '...',
-            'amount': bono_amt,
-            'amount_formatted': self._format_amount(bono_amt, currency),
-        })
-        benefit_num += 1
+    # Bono Vacacional (ALWAYS included, conditional amount vs "Pagado")
+    benefits.append({
+        'number': benefit_num,
+        'name': 'Bono Vacacional',
+        'formula': '...' if not should_hide_vacation else '',
+        'calculation': '...' if not should_hide_vacation else '',
+        'detail': '...' if not should_hide_vacation else '',
+        'amount': bono_amt if not should_hide_vacation else None,
+        'amount_formatted': self._format_amount(bono_amt, currency) if not should_hide_vacation else 'Pagado mensualmente',
+        'is_prepaid': should_hide_vacation,  # Flag for special rendering
+    })
+    benefit_num += 1
 
     # Other benefits (always show)
     benefits.append({
@@ -817,15 +856,17 @@ Expected Result:
 ❓ Employee confused: "Why Bs. 64K benefit then -64K deduction?"
 ```
 
-### After (With Hide Feature Enabled)
+### After (With "Pagado" Feature Enabled) ✅ REVISED
 ```
 ┌────────────────────────────────────────┐
 │ PRESTACIONES SOCIALES (BENEFICIOS)     │
 ├────────────────────────────────────────┤
-│ 1. Utilidades            Bs. 37,450.12 │
-│ 2. Prestaciones          Bs. 175,923.88│
-│ 3. Antigüedad            Bs. 73,568.90 │
-│ 4. Intereses             Bs. 8,704.47  │
+│ 1. Vacaciones            Pagado mensualmente│
+│ 2. Bono Vacacional       Pagado mensualmente│
+│ 3. Utilidades            Bs. 37,450.12 │
+│ 4. Prestaciones          Bs. 175,923.88│
+│ 5. Antigüedad            Bs. 73,568.90 │
+│ 6. Intereses             Bs. 8,704.47  │
 │────────────────────────────────────────│
 │ SUBTOTAL:                Bs. 295,647.37│
 └────────────────────────────────────────┘
@@ -844,14 +885,19 @@ Expected Result:
 └────────────────────────────────────────┘
 
 ┌────────────────────────────────────────┐
-│ 📝 NOTA IMPORTANTE:                    │
-│ Vacaciones y Bono Vacacional ya        │
-│ pagados mensualmente                   │
-│ Período: Sep 2023 - Jul 2025          │
-│ Monto total pagado: Bs. 64,243.27     │
+│ 📝 NOTA:                               │
+│ • Vacaciones y Bono Vacacional pagados │
+│   mensualmente durante período de      │
+│   empleo (Sep 2023 - Jul 2025)        │
+│   Monto total: Bs. 64,243.27          │
 └────────────────────────────────────────┘
 
-✅ Clear! Employee understands vacation already paid
+✅ BENEFITS:
+   • Consistent layout (all reports have 1-6 structure)
+   • Clear status ("Pagado mensualmente")
+   • Easy to compare across different employees
+   • Professional appearance (standard accounting)
+   • No confusion about "missing" lines
 ```
 
 ---
