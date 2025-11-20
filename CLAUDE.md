@@ -147,7 +147,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.2
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.3
 
 **📋 Enhancement In Review:** Hide Vacaciones/Bono when fully prepaid - see [Plan](documentation/HIDE_PREPAID_VACATION_ENHANCEMENT.md)
 
@@ -222,6 +222,15 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **Fix:** Updated `/controllers/liquidacion_breakdown_xlsx.py:115-129` to pass wizard parameters
 - **Result:** Perfect parity - both PDF and XLSX now show identical amounts
 - **Technical:** Fixed permissions (755) on controllers directory for proper module loading
+
+**✅ Antigüedad Display Fix (v1.25.3 - 2025-11-20):**
+- **BUG FIX:** "Antigüedad Total" now displays for ALL employees, not just re-hires
+- **Problem:** Field was hidden when `original_hire_date` = `contract.date_start` (e.g., SLIP/801)
+- **Old Logic:** Only showed antiguedad if employee had different hire dates (indicating re-hire)
+- **New Logic:** Always shows "Antigüedad Total" if `original_hire_date` exists
+- **Enhancement:** Parenthetical note "(desde [date])" only shows if dates differ
+- **Result:** Consistent display - all liquidation reports now show employee seniority
+- **Example:** SLIP/801 now shows "Antigüedad Total: 1.03 años" (was blank before)
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
@@ -397,7 +406,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.25.2 (XLSX export exchange rate bug fix - 2025-11-19)
+- **ueipab_payroll_enhancements:** v1.25.3 (Antigüedad display fix - 2025-11-20)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

@@ -34,11 +34,13 @@
                                 (<t t-esc="report.get('service_years')"/> año<t t-if="report.get('service_years') != 1">s</t>,
                                 <t t-esc="report.get('service_months')"/> mes<t t-if="report.get('service_months') != 1">es</t>)
                             </td>
-                            <t t-if="report.get('original_hire_date') and report.get('original_hire_date') != report.get('contract').date_start">
+                            <t t-if="report.get('original_hire_date')">
                                 <td style="width: 25%; background-color: #f8f9fa;"><strong>Antigüedad Total:</strong></td>
                                 <td style="width: 25%;">
                                     <t t-esc="'%.2f' % report.get('total_seniority_years')"/> años
-                                    (desde <t t-esc="report.get('original_hire_date_str')"/>)
+                                    <t t-if="report.get('original_hire_date') != report.get('contract').date_start">
+                                        (desde <t t-esc="report.get('original_hire_date_str')"/>)
+                                    </t>
                                 </td>
                             </t>
                             <t t-else="">

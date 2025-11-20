@@ -14,4 +14,4 @@ limit_memory_soft = 2147483648
 limit_request = 8192
 limit_time_cpu = 6000
 limit_time_real = 12000
-gevent_port = 8072
+longpolling_port = 8078
