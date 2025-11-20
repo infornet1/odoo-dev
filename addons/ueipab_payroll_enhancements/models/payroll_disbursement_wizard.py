@@ -262,7 +262,7 @@ class PayrollDisbursementWizard(models.TransientModel):
         worksheet.set_column('D:D', 12)  # Bonus
         worksheet.set_column('E:E', 12)  # Gross
         worksheet.set_column('F:F', 12)  # ARI TAX
-        worksheet.set_column('G:G', 12)  # SSO 4%
+        worksheet.set_column('G:G', 12)  # SSO 4.5%
         worksheet.set_column('H:H', 12)  # FAOV 1%
         worksheet.set_column('I:I', 12)  # PARO 0.5%
         worksheet.set_column('J:J', 12)  # Total Deductions
@@ -295,7 +295,7 @@ class PayrollDisbursementWizard(models.TransientModel):
             f'Bonus ({currency_symbol})',
             f'Gross ({currency_symbol})',
             f'ARI TAX ({currency_symbol})',
-            f'SSO 4% ({currency_symbol})',
+            f'SSO 4.5% ({currency_symbol})',
             f'FAOV 1% ({currency_symbol})',
             f'PARO 0.5% ({currency_symbol})',
             f'Total Deductions ({currency_symbol})',

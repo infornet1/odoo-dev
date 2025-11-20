@@ -35,7 +35,7 @@
                         <group>
                             <group>
                                 <separator string="Deduction Rules"/>
-                                <div class="o_form_label">Salary V2: Subject to SSO 4%, FAOV 1%, PARO 0.5%, ARI (variable %)</div>
+                                <div class="o_form_label">Salary V2: Subject to SSO 4.5%, FAOV 1%, PARO 0.5%, ARI (variable %)</div>
                                 <div class="o_form_label">Extra Bonus V2: Exempt from all deductions</div>
                                 <div class="o_form_label">Bonus V2: Exempt from all deductions</div>
                                 <div class="o_form_label">Cesta Ticket: Exempt from all deductions</div>

@@ -57,7 +57,7 @@ class HrContract(models.Model):
         index=True,                 # Database index for faster queries
         required=False,             # Optional (supports V1/V2 parallel operation)
         help='Monthly base salary subject to mandatory Venezuelan social security '
-             'deductions (SSO 4%%, FAOV 1%%, PARO 0.5%%, ARI variable%%).\n\n'
+             'deductions (SSO 4.5%%, FAOV 1%%, PARO 0.5%%, ARI variable%%).\n\n'
              'This is the ONLY component subject to payroll deductions per Venezuelan labor law.\n\n'
              '🔹 SOURCE: Imported from Google Spreadsheet Column K (SALARIO MENSUAL MAS BONO)\n'
              '🔹 SPREADSHEET: 19Kbx42whU4lzFI4vcXDDjbz_auOjLUXe7okBhAFbi8s, Tab "15nov2025"\n'
@@ -282,7 +282,7 @@ class HrContract(models.Model):
             wage = salary_v2 + extrabonus_v2 + bonus_v2 + cesta_ticket_usd
 
         DEDUCTION RULES (CEO Approved 2025-11-16):
-            - salary_v2: Subject to SSO 4%, FAOV 1%, PARO 0.5%, ARI variable%
+            - salary_v2: Subject to SSO 4.5%, FAOV 1%, PARO 0.5%, ARI variable%
             - extrabonus_v2: Exempt from all deductions
             - bonus_v2: Exempt from all deductions
             - cesta_ticket_usd: Exempt from all deductions (mandatory benefit)
