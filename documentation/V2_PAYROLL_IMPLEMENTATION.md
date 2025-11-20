@@ -1,7 +1,7 @@
 # Venezuelan Payroll V2 - Implementation Reference
 
 **Status:** ✅ PHASE 5 COMPLETE - PRODUCTION READY
-**Last Updated:** 2025-11-16
+**Last Updated:** 2025-11-20
 
 ## Implementation Timeline
 
@@ -37,7 +37,7 @@
 5. `VE_GROSS_V2` - Sum of all earnings
 
 **Deduction Rules (5):**
-1. `VE_SSO_DED_V2` - 4.5% monthly (prorated by days/30)
+1. `VE_SSO_DED_V2` - 4.5% monthly with **Bs 1300 ceiling** (prorated by days/30) - Updated 2025-11-20
 2. `VE_FAOV_DED_V2` - 1.0% monthly (prorated by days/30)
 3. `VE_PARO_DED_V2` - 0.5% monthly (prorated by days/30)
 4. `VE_ARI_DED_V2` - Variable % from contract field (prorated by days/30)
@@ -52,7 +52,32 @@
 - Proper sequence order: Earnings (1-5), Deductions (101-105), Net (200)
 - Independent structure (no parent inheritance)
 
-**Script:** `/opt/odoo-dev/scripts/phase3_create_v2_salary_structure.py`
+**SSO Deduction Special Logic (Updated 2025-11-20):**
+- **Ceiling Applied:** Bs 1300 monthly maximum per employee
+- **Exchange Rate:** Uses bi-weekly rate from `payslip.exchange_rate_used`
+- **Fallback Rate:** 236.4601 VES/USD (only if payslip rate missing)
+- **Calculation:** `min(employee_salary, Bs_1300_in_USD) × 4.5%`
+- **Effect:** Employees earning > Bs 1300/month have SSO capped at Bs 1300
+- **Accounting Compliance:** Per accounting team requirement 2025-11-20
+
+**Example SSO Calculation (exchange rate 236.46 VES/USD):**
+```
+Bs 1300 ÷ 236.46 = $5.50 USD ceiling
+
+Employee earning $119/month:
+  SSO Base: min($119, $5.50) = $5.50 (ceiling applied)
+  Monthly SSO: $5.50 × 4.5% = $0.25
+  Bi-weekly (15 days): $0.25 × (15/30) = $0.12
+
+Employee earning $3/month:
+  SSO Base: min($3, $5.50) = $3.00 (actual salary)
+  Monthly SSO: $3.00 × 4.5% = $0.14
+  Bi-weekly (15 days): $0.14 × (15/30) = $0.07
+```
+
+**Scripts:**
+- Creation: `/opt/odoo-dev/scripts/phase3_create_v2_salary_structure.py`
+- SSO Ceiling Update: `/opt/odoo-dev/scripts/fix_v2_sso_bs1300_ceiling.py`
 
 ---
 
