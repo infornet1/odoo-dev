@@ -147,7 +147,7 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 5. Relación de Liquidación Report (Breakdown Report)
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.3
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.4
 
 **📋 Enhancement In Review:** Hide Vacaciones/Bono when fully prepaid - see [Plan](documentation/HIDE_PREPAID_VACATION_ENHANCEMENT.md)
 
@@ -231,6 +231,21 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **Enhancement:** Parenthetical note "(desde [date])" only shows if dates differ
 - **Result:** Consistent display - all liquidation reports now show employee seniority
 - **Example:** SLIP/801 now shows "Antigüedad Total: 1.03 años" (was blank before)
+
+**✅ XLSX Layout Consistency Fix (v1.25.4 - 2025-11-20):**
+- **BUG FIX:** XLSX export now matches PDF layout exactly
+- **Missing Fields Added:**
+  - **Salario:** Now shown in employee header (Row 2)
+  - **Antigüedad Total:** Now shown with same logic as PDF (Row 3)
+  - **Payslip Number:** Added to report title (Nro: SLIP/XXX)
+  - **Rate Source:** Exchange rate note now shows source (Personalizada/Automática/Tasa del DD/MM/YYYY)
+- **Layout Changes:**
+  - Converted employee info from vertical list to 2x4 grid (matching PDF)
+  - Row 1: Empleado | Cédula
+  - Row 2: Salario | Fecha Ingreso
+  - Row 3: Período Servicio | Antigüedad Total
+- **Result:** Perfect PDF/XLSX parity - both reports show identical information
+- **Files Changed:** `controllers/liquidacion_breakdown_xlsx.py` (lines 143-180, 289)
 
 📖 **[Development Journey](documentation/RELACION_BREAKDOWN_REPORT.md)** ⭐
 📖 **[Exchange Rate Override Design](documentation/EXCHANGE_RATE_OVERRIDE_FEATURE.md)** ✅
@@ -406,7 +421,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.25.3 (Antigüedad display fix - 2025-11-20)
+- **ueipab_payroll_enhancements:** v1.25.4 (XLSX layout consistency fix - 2025-11-20)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

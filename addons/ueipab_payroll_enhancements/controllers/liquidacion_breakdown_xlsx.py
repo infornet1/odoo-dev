@@ -140,36 +140,42 @@ class LiquidacionBreakdownXLSXController(http.Controller):
 
             row = 0
 
-            # HEADER
-            worksheet.merge_range(row, 0, row, 3, 'RELACIÓN DE LIQUIDACIÓN', header_format)
-            row += 1
-            worksheet.merge_range(row, 0, row, 3, 'Liquidation Breakdown Report', header_format)
-            row += 2
+            # HEADER (matching PDF layout)
+            title_text = f"RELACIÓN DE LIQUIDACIÓN\nNro: {payslip.number} │ Fecha Liquidación: {breakdown['payslip'].date_to.strftime('%d/%m/%Y')}"
+            worksheet.merge_range(row, 0, row + 1, 3, title_text, header_format)
+            row += 3
 
-            # EMPLOYEE INFO
+            # EMPLOYEE INFO (matching PDF layout)
+            # Row 1: Empleado | Cédula
             worksheet.write(row, 0, 'Empleado:', title_format)
-            worksheet.merge_range(row, 1, row, 3, breakdown['employee'].name, text_format)
+            worksheet.write(row, 1, breakdown['employee'].name, text_format)
+            worksheet.write(row, 2, 'Cédula:', title_format)
+            worksheet.write(row, 3, breakdown['employee'].identification_id or 'N/A', text_format)
             row += 1
 
-            worksheet.write(row, 0, 'Cédula:', title_format)
-            worksheet.merge_range(row, 1, row, 3, breakdown['employee'].identification_id or 'N/A', text_format)
+            # Row 2: Salario | Fecha Ingreso
+            worksheet.write(row, 0, 'Salario:', title_format)
+            salary_text = f"{currency.symbol}{breakdown.get('salary_v2_formatted', 'N/A')}" if breakdown.get('salary_v2') else 'N/A'
+            worksheet.write(row, 1, salary_text, text_format)
+            worksheet.write(row, 2, 'Fecha Ingreso:', title_format)
+            worksheet.write(row, 3, breakdown['contract'].date_start.strftime('%d/%m/%Y'), text_format)
             row += 1
 
-            worksheet.write(row, 0, 'Departamento:', title_format)
-            worksheet.write(row, 1, breakdown['employee'].department_id.name or 'N/A', text_format)
-            worksheet.write(row, 2, 'Cargo:', title_format)
-            worksheet.write(row, 3, breakdown['employee'].job_id.name or 'N/A', text_format)
-            row += 1
-
-            worksheet.write(row, 0, 'Fecha Ingreso:', title_format)
-            worksheet.write(row, 1, breakdown['contract'].date_start.strftime('%d/%m/%Y'), text_format)
-            worksheet.write(row, 2, 'Fecha Liquidación:', title_format)
-            worksheet.write(row, 3, breakdown['payslip'].date_to.strftime('%d/%m/%Y'), text_format)
-            row += 1
-
+            # Row 3: Período Servicio | Antigüedad Total
             worksheet.write(row, 0, 'Período Servicio:', title_format)
             service_text = f"{breakdown['service_months_total']} meses ({breakdown['service_years']} año(s), {breakdown['service_months']} mes(es))"
-            worksheet.merge_range(row, 1, row, 3, service_text, text_format)
+            worksheet.write(row, 1, service_text, text_format)
+
+            # Show Antigüedad Total if original_hire_date exists (matching PDF logic)
+            if breakdown.get('original_hire_date'):
+                worksheet.write(row, 2, 'Antigüedad Total:', title_format)
+                antiguedad_text = f"{breakdown['total_seniority_years']:.2f} años"
+                if breakdown['original_hire_date'] != breakdown['contract'].date_start:
+                    antiguedad_text += f" (desde {breakdown['original_hire_date'].strftime('%d/%m/%Y')})"
+                worksheet.write(row, 3, antiguedad_text, text_format)
+            else:
+                worksheet.write(row, 2, '', text_format)
+                worksheet.write(row, 3, '', text_format)
             row += 2
 
             # SECTION 1: BENEFITS
@@ -280,7 +286,8 @@ class LiquidacionBreakdownXLSXController(http.Controller):
                 notes.append(f"• Antigüedad calculada desde fecha original de contratación ({breakdown['original_hire_date'].strftime('%d/%m/%Y')})")
 
             if currency.name == 'VEB':
-                notes.append(f"• Tipo de Cambio: {breakdown['exchange_rate']:.2f} VEB/USD")
+                rate_source = breakdown.get('rate_source', 'Automática')
+                notes.append(f"• Tipo de Cambio: {breakdown['exchange_rate']:.4f} VEB/USD ({rate_source})")
 
             notes.append(f"• Estructura: {breakdown['structure_name']}")
 
