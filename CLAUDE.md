@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-21 13:35 UTC
+**Last Updated:** 2025-11-21 17:45 UTC
 
 ## Core Instructions
 
@@ -266,7 +266,26 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 
 ---
 
-### 6. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
+### 6. Payslip Email Delivery System
+**Status:** 🚧 IN DEVELOPMENT - Phase 1 | **Module:** `ueipab_payroll_enhancements`
+
+**Objective:** Integrate bulk and single payslip email delivery directly into Odoo's Reporting menu
+
+**Implementation Approach:** Native Odoo (mail.template + wizard)
+
+**Phase 1 - Template Integration (Current):**
+- Converting HTML template to QWeb mail.template
+- Regular payslip email template with V2 support
+- AGUINALDOS-specific template (Christmas theme)
+- Automatic exchange rate integration
+
+**Timeline:** 10-day implementation (3 phases)
+
+📖 **[Complete Implementation Plan](documentation/PAYSLIP_EMAIL_DELIVERY_IMPLEMENTATION_PLAN.md)** ⭐
+
+---
+
+### 7. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
 **Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.1
 
 **Key Features:**
