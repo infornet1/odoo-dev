@@ -200,8 +200,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             {
                 'number': 3,
                 'name': 'Utilidades',
-                'formula': '30 días por año × salario diario',
-                'calculation': f'({service_months:.2f}/12) × 30 días × {curr_symbol}{self._format_amount(daily_salary_display)}',
+                'formula': '15 días por año × salario diario',
+                'calculation': f'({service_months:.2f}/12) × 15 días × {curr_symbol}{self._format_amount(daily_salary_display)}',
                 'detail': f'{utilidades_days:.1f} días × {curr_symbol}{self._format_amount(daily_salary_display)}',
                 'amount': util_amt,
                 'amount_formatted': self._format_amount(util_amt),
