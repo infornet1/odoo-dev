@@ -37,8 +37,8 @@ def extract_html_from_xml(xml_file):
 
 # Extract HTML templates
 print("\n📄 Reading template files...")
-payslip_html = extract_html_from_xml(template_dir / 'payslip_email_template.xml')
-aguinaldos_html = extract_html_from_xml(template_dir / 'aguinaldos_email_template.xml')
+payslip_html = extract_html_from_xml(template_dir / 'payslip_email_template.xml.bak')
+aguinaldos_html = extract_html_from_xml(template_dir / 'aguinaldos_email_template.xml.bak')
 
 if not payslip_html:
     print("❌ Failed to extract regular payslip template")
@@ -157,6 +157,11 @@ for template in all_templates:
     print(f"   Email From: {template.email_from}")
     print(f"   Auto Delete: {template.auto_delete}")
     print(f"   Body Length: {len(template.body_html)} characters")
+
+# Commit the transaction
+print("\n💾 Committing to database...")
+env.cr.commit()
+print("✅ Transaction committed")
 
 print("\n" + "=" * 80)
 print("✅ EMAIL TEMPLATES CREATED SUCCESSFULLY!")
