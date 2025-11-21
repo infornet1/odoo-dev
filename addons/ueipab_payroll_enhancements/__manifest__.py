@@ -68,9 +68,9 @@ Use Cases:
         # Security
         'security/ir.model.access.csv',
 
-        # Email Templates
-        'data/email_templates/payslip_email_template.xml',
-        'data/email_templates/aguinaldos_email_template.xml',
+        # Email Templates - Loaded programmatically via scripts/create_payslip_email_templates.py
+        # 'data/email_templates/payslip_email_template.xml',
+        # 'data/email_templates/aguinaldos_email_template.xml',
 
         # Wizards
         'wizard/payroll_disbursement_wizard_view.xml',
