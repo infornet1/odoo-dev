@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.25.4',
+    'version': '17.0.1.26.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
@@ -67,6 +67,10 @@ Use Cases:
     'data': [
         # Security
         'security/ir.model.access.csv',
+
+        # Email Templates
+        'data/email_templates/payslip_email_template.xml',
+        'data/email_templates/aguinaldos_email_template.xml',
 
         # Wizards
         'wizard/payroll_disbursement_wizard_view.xml',

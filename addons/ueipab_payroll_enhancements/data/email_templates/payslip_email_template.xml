@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- ========================================
+             Payslip Email Template - Employee Delivery
+             ======================================== -->
+
+        <record id="email_template_payslip_delivery" model="mail.template">
+            <field name="name">Payslip Email - Employee Delivery</field>
+            <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
+            <field name="subject">💰 Comprobante de Pago - ${object.employee_id.name} (${object.date_from.strftime('%B %Y') if object.date_from else 'N/A'})</field>
+            <field name="email_from">recursoshumanos@ueipab.edu.ve</field>
+            <field name="email_to">${object.employee_id.work_email or object.employee_id.address_home_id.email or ''}</field>
+            <field name="auto_delete" eval="True"/>
+
+        <!-- Optional: Attach PDF payslip report -->
+        <!-- <field name="report_template" ref="hr_payroll.action_report_payslip"/> -->
+        <!-- <field name="report_name">Comprobante_${object.employee_id.name}_${object.date_from.strftime('%Y%m%d') if object.date_from else 'payslip'}</field> -->
+
+            <field name="body_html" type="html"><![CDATA[
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Comprobante de Pago - UEIPAB</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .payslip-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        .info-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .section-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            margin: 25px -30px 15px -30px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .amount-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .amount-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .amount-table .label-col {
+            color: #555;
+            font-weight: 500;
+            width: 60%;
+        }
+        .amount-table .amount-col {
+            text-align: right;
+            color: #333;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .total-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 25px -30px;
+            border-top: 3px solid #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+        .total-row.final {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .bcv-section {
+            background: #fff9e6;
+            border: 2px dashed #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .bcv-section .bcv-label {
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        .bcv-section .bcv-rate {
+            font-size: 24px;
+            font-weight: bold;
+            color: #d39e00;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .footer strong {
+            color: #667eea;
+        }
+        @media (max-width: 600px) {
+            .payslip-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+            .section-title {
+                margin: 20px -20px 10px -20px;
+                font-size: 16px;
+            }
+            .total-section {
+                margin: 20px -20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="payslip-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>💰 Comprobante de Pago</h1>
+            <p>Instituto Privado Andrés Bello, CA</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Employee Information -->
+            <div class="info-row">
+                <span class="info-label">📋 Nro. Comprobante:</span>
+                <span class="info-value">${object.number or 'N/A'} │ ${object.payslip_run_id.name if object.payslip_run_id else 'N/A'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">📅 Período:</span>
+                <span class="info-value">${object.date_from.strftime('%d/%m/%Y') if object.date_from else 'N/A'} → ${object.date_to.strftime('%d/%m/%Y') if object.date_to else 'N/A'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">👤 Nombre y Apellido:</span>
+                <span class="info-value">${object.employee_id.name or 'N/A'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🆔 Cédula:</span>
+                <span class="info-value">${object.employee_id.identification_id or 'N/A'}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">💳 Cuenta:</span>
+                <span class="info-value">${object.employee_id.bank_account_id.acc_number if object.employee_id.bank_account_id else 'N/A'}</span>
+            </div>
+
+            <%
+                # Get V2 payroll lines
+                salary_v2 = object.line_ids.filtered(lambda l: l.code == 'VE_SALARY_V2')
+                bonus_v2 = object.line_ids.filtered(lambda l: l.code == 'VE_BONUS_V2')
+                extrabonus_v2 = object.line_ids.filtered(lambda l: l.code == 'VE_EXTRABONUS_V2')
+                gross_v2 = object.line_ids.filtered(lambda l: l.code == 'VE_GROSS_V2')
+
+                # Get deductions
+                sso = object.line_ids.filtered(lambda l: l.code == 'VE_SSO_DED_V2')
+                faov = object.line_ids.filtered(lambda l: l.code == 'VE_FAOV_DED_V2')
+                paro = object.line_ids.filtered(lambda l: l.code == 'VE_PARO_DED_V2')
+                ari = object.line_ids.filtered(lambda l: l.code == 'VE_ARI_DED_V2')
+                total_ded = object.line_ids.filtered(lambda l: l.code == 'VE_TOTAL_DED_V2')
+
+                # Get exchange rate (use payslip field or default)
+                exchange_rate = getattr(object, 'exchange_rate_used', None) or 241.5780
+            %>
+
+            <!-- Credits Section -->
+            <div class="section-title">✅ Salario + Bonos</div>
+            <table class="amount-table">
+                <tr>
+                    <td class="label-col">Salario Base</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format((salary_v2.total if salary_v2 else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr>
+                    <td class="label-col">Bonos</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format((bonus_v2.total if bonus_v2 else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr>
+                    <td class="label-col">Otros Bonos</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format((extrabonus_v2.total if extrabonus_v2 else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr style="border-top: 2px solid #667eea; font-weight: bold;">
+                    <td class="label-col">Total Asignaciones</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format((gross_v2.total if gross_v2 else 0.0) * exchange_rate)}</td>
+                </tr>
+            </table>
+
+            <!-- Deductions Section -->
+            <div class="section-title">❌ Deducciones</div>
+            <table class="amount-table">
+                <tr>
+                    <td class="label-col">IVSS (Instituto Venezolano de los Seguros Sociales)</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format(abs(sso.total if sso else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr>
+                    <td class="label-col">FAOV (Fondo de Ahorro Obligatorio para la Vivienda)</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format(abs(faov.total if faov else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr>
+                    <td class="label-col">INCES (Instituto Nacional de Capacitación y Educación)</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format(abs(paro.total if paro else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr>
+                    <td class="label-col">Otras Deducciones</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format(abs(ari.total if ari else 0.0) * exchange_rate)}</td>
+                </tr>
+                <tr style="border-top: 2px solid #667eea; font-weight: bold;">
+                    <td class="label-col">Total Deducciones</td>
+                    <td class="amount-col">Bs. ${'{:,.2f}'.format(abs(total_ded.total if total_ded else 0.0) * exchange_rate)}</td>
+                </tr>
+            </table>
+
+            <!-- Total Section -->
+            <div class="total-section">
+                <div class="total-row final">
+                    <span>💵 Total a Recibir:</span>
+                    <span>Bs. ${'{:,.2f}'.format((object.net_wage or 0.0) * exchange_rate)}</span>
+                </div>
+            </div>
+
+            <!-- Exchange Rate -->
+            <div class="bcv-section">
+                <div class="bcv-label">Tasa de Cambio (Referencia)</div>
+                <div class="bcv-rate">Bs. ${'{:,.4f}'.format(exchange_rate)}</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>📧 ¿Dudas o consultas?</strong></p>
+            <p>Si usted tiene alguna duda por favor escribir inmediatamente al correo <strong>recursoshumanos@ueipab.edu.ve</strong></p>
+            <p style="margin-top: 15px; color: #999; font-size: 12px;">
+                Este es un documento generado automáticamente. Por favor, responda directamente a este correo si tiene dudas.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+]]></field>
+        </record>
+
+    </data>
+</odoo>
