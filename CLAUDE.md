@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-19 12:55 UTC
+**Last Updated:** 2025-11-21 13:35 UTC
 
 ## Core Instructions
 
@@ -150,9 +150,11 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - ✅ Phase 3: V2 Salary Structure (VE_PAYROLL_V2, 11 rules)
 - ✅ Phase 4: Bulk Contract Migration (44/44 employees)
 - ✅ Phase 5: V2 Testing & Validation (97.7% accuracy)
+- ✅ AGUINALDOS V2 Migration (2025-11-21): Updated formula to use `ueipab_salary_v2`
 
 📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)**
 📖 **[V2 Implementation Reference](documentation/V2_PAYROLL_IMPLEMENTATION.md)** ⭐
+📖 **[AGUINALDOS V2 Migration](documentation/AGUINALDOS_V2_MIGRATION.md)** ✅
 
 ---
 
