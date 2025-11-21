@@ -57,6 +57,14 @@ contract.ueipab_vacation_paid_until    # Last vacation payment date (tracking on
 contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 ```
 
+**V2 Antigüedad Validation Fix (2025-11-21):** 🔴 CRITICAL
+- **Bug Fixed:** Invalid `previous_liquidation_date` causing overpayments
+- **Problem:** Dates before contract start created negative "already paid" periods
+- **Example:** SLIP/853 paid $195.08 instead of $100.40 ($94.68 overpayment - 94% error!)
+- **Fix:** Added validation `if previous_liquidation and previous_liquidation >= contract.date_start:`
+- **Impact:** Prevents 20.7% overpayment on affected liquidations
+- **Compliance:** LOTTT Article 142(b) - no antiguedad for fictional periods
+
 **V2 Vacation/Bono Fix (2025-11-17):**
 - Fixed double deduction bug where NET was incorrectly $0.00
 - New field: `ueipab_vacation_prepaid_amount` for actual prepaid amounts
@@ -66,6 +74,8 @@ contract.ueipab_vacation_prepaid_amount    # Total prepaid vacation/bono amount
 📖 **[V1 Complete Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md)**
 📖 **[V2 Migration Plan](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md)**
 📖 **[V2 Implementation Details](documentation/LIQUIDATION_V2_IMPLEMENTATION.md)** ⭐
+📖 **[V2 Antigüedad Bug Analysis](documentation/LIQUIDATION_V2_FORMULA_BUGS_2025-11-21.md)** 🔴
+📖 **[SLIP/854 Validation Report](documentation/SLIP854_VALIDATION_REPORT.md)** ✅
 📖 **[V2 Vacation/Bono Fix Plan](documentation/VACATION_BONO_FIX_IMPLEMENTATION_PLAN.md)** ⭐
 
 ---

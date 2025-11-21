@@ -1,7 +1,7 @@
 # Venezuelan Liquidation V2 - Implementation Reference
 
 **Status:** ✅ PRODUCTION READY (All Tests Passed!)
-**Last Updated:** 2025-11-21 (Progressive Vacation Calculation)
+**Last Updated:** 2025-11-21 (Antigüedad Validation Fix)
 
 ## V2 Implementation (2025-11-17)
 
@@ -17,7 +17,21 @@
 - ✅ Independent structure (no parent inheritance issues)
 - ✅ **Progressive vacation calculation** - LOTTT Article 190 compliant (Updated 2025-11-21)
 
-**Key Update (2025-11-21):**
+**Key Updates:**
+
+### 2025-11-21 (PM) - Antigüedad Validation Fix 🔴 CRITICAL
+- **Bug Fixed:** `LIQUID_ANTIGUEDAD_V2` now validates `previous_liquidation_date`
+- **Problem:** Formula used invalid dates (before contract start) causing negative "already paid" calculations
+- **Fix:** Added validation: `if previous_liquidation and previous_liquidation >= contract.date_start:`
+- **Impact Example (SLIP/853):**
+  - Before: $195.08 (invalid date 2023-07-31 before hire 2024-09-01) ❌
+  - After: $100.40 (correctly ignores invalid date) ✅
+  - Overpayment prevented: $94.68 per employee (94% error!)
+- **Test Case (SLIP/854):** Verified NULL previous_liquidation still calculates correctly ($100.40) ✅
+- **Legal Compliance:** LOTTT Article 142(b) - prevents paying antiguedad for fictional negative periods
+- **Documentation:** See `/opt/odoo-dev/documentation/LIQUIDATION_V2_FORMULA_BUGS_2025-11-21.md`
+
+### 2025-11-21 (AM) - Progressive Vacation Calculation
 - `LIQUID_VACACIONES_V2` now uses **progressive calculation** matching `LIQUID_BONO_VACACIONAL_V2`
 - Formula: 15 days + 1 additional per year of service (max 30 days at 16+ years)
 - Eliminates inconsistency between Vacaciones and Bono Vacacional
