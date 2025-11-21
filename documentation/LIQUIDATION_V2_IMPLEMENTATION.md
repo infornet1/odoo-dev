@@ -1,7 +1,7 @@
 # Venezuelan Liquidation V2 - Implementation Reference
 
 **Status:** ✅ PRODUCTION READY (All Tests Passed!)
-**Last Updated:** 2025-11-17
+**Last Updated:** 2025-11-21 (Progressive Vacation Calculation)
 
 ## V2 Implementation (2025-11-17)
 
@@ -12,9 +12,19 @@
 **Structure:**
 - ✅ All rules use `ueipab_salary_v2` field instead of `ueipab_deduction_base`
 - ✅ Accounting configured: 5.1.01.10.010 (Debit) / 2.1.01.10.005 (Credit)
-- ✅ `ueipab_original_hire_date` logic preserved (progressive bono rate)
+- ✅ `ueipab_original_hire_date` logic preserved (progressive rates)
 - ✅ Historical tracking supported (previous liquidation, prepaid vacation)
 - ✅ Independent structure (no parent inheritance issues)
+- ✅ **Progressive vacation calculation** - LOTTT Article 190 compliant (Updated 2025-11-21)
+
+**Key Update (2025-11-21):**
+- `LIQUID_VACACIONES_V2` now uses **progressive calculation** matching `LIQUID_BONO_VACACIONAL_V2`
+- Formula: 15 days + 1 additional per year of service (max 30 days at 16+ years)
+- Eliminates inconsistency between Vacaciones and Bono Vacacional
+- **Impact:** Employees with > 1 year service now receive correct vacation days
+  - Example: 5 years = 95 days (was 75 days) - 26% increase
+  - Example: 10 years = 240 days (was 150 days) - 60% increase
+- **Compliance:** LOTTT Article 190 - employees earn 1 additional day per year
 
 ---
 
