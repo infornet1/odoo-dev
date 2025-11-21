@@ -168,13 +168,15 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - Single-page Portrait Letter layout
 - V1 and V2 structure support
 
-**✅ Exchange Rate Override (v1.19.0 - 2025-11-17 TESTED):**
-- Override automatic VEB rate for delayed payments
+**✅ Exchange Rate Override (v1.19.0 - 2025-11-17, Enhanced v1.26.0 - 2025-11-21):**
+- **Automatic Latest Rate (NEW - v1.26.0):** VEB reports now default to latest available exchange rate in system (not payslip date)
+- **3-Priority System:** (1) Custom rate → (2) Custom date → (3) Latest available (auto)
+- **Example Impact:** SLIP/854 payslip date Oct 28 (218.17) vs latest Nov 21 (241.58) = +10.73%
+- **Unified Footer:** All scenarios display "Tasa de cambio: XXX VEB/USD (Tasa del DD/MM/YYYY)"
 - Custom rate entry (e.g., 300.00 for manual override)
 - Rate date selector for automatic lookup (e.g., Nov 17 → 236.4601)
 - Supports cash flow delays (compute Jul 31 @ 124.51, pay Nov 17 @ 236.46)
-- Rate source displayed on report: "Personalizada", "Tasa del DD/MM/YYYY", or "Automática"
-- **Tested:** SLIP/802 with Nov 17 date shows +89.9% increase (149,528 → 283,972 VEB) ✅
+- **Tested:** All 3 priority scenarios validated with SLIP/854 ✅
 
 **✅ Number Formatting (v1.19.1-1.19.2 - 2025-11-17):**
 - Thousand separators for all amounts (33,560.78 instead of 33560.78)
@@ -431,7 +433,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.25.4 (XLSX layout consistency fix - 2025-11-20)
+- **ueipab_payroll_enhancements:** v1.26.0 (VEB automatic latest rate enhancement - 2025-11-21)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

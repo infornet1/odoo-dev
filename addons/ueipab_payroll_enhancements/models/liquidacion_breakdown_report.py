@@ -158,7 +158,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 custom_date = custom_date_raw
 
         # Calculate exchange rate for display AND conversion
-        exchange_rate = self._get_exchange_rate(date_ref, currency, custom_rate, custom_date)
+        exchange_rate, rate_date_used = self._get_exchange_rate_with_date(date_ref, currency, custom_rate, custom_date)
 
         # Benefits
         vac_amt = self._convert_currency(vacaciones, usd, currency, date_ref, exchange_rate)
@@ -284,13 +284,16 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         total_deductions = sum(d['amount'] for d in deductions)
         net_amount = self._convert_currency(net, usd, currency, date_ref, exchange_rate)
 
-        # Determine rate source for display
+        # Determine rate source for display (simplified - always "Tasa del DD/MM/YYYY")
         if use_custom and custom_rate:
-            rate_source = f'Personalizada - {date_ref.strftime("%d/%m/%Y")}'
-        elif custom_date:
-            rate_source = f'Tasa del {custom_date.strftime("%d/%m/%Y")}'
+            # Custom rate: show payslip date
+            rate_source = f'Tasa del {date_ref.strftime("%d/%m/%Y")}'
+        elif rate_date_used:
+            # Use the actual date from the rate record
+            rate_source = f'Tasa del {rate_date_used.strftime("%d/%m/%Y")}'
         else:
-            rate_source = f'Automática ({date_ref.strftime("%d/%m/%Y")})'
+            # Fallback to payslip date
+            rate_source = f'Tasa del {date_ref.strftime("%d/%m/%Y")}'
 
         # Get salary V2 from contract and convert to selected currency
         salary_v2 = contract.ueipab_salary_v2 if hasattr(contract, 'ueipab_salary_v2') else 0.0
@@ -457,24 +460,35 @@ class LiquidacionBreakdownReport(models.AbstractModel):
 
         Returns:
             float: Exchange rate (VEB/USD or 1.0 for USD)
+
+        Behavior:
+            - If custom_rate provided: Uses custom rate (Priority 1)
+            - If custom_date provided: Uses rate from that date (Priority 2)
+            - Otherwise: Uses LATEST available rate in system (Priority 3)
         """
         if currency.name == 'USD':
             return 1.0
 
         if currency.name == 'VEB':
-            # USE CUSTOM RATE IF PROVIDED
+            # PRIORITY 1: USE CUSTOM RATE IF PROVIDED
             if custom_rate and custom_rate > 0:
                 return custom_rate
 
-            # USE CUSTOM DATE IF PROVIDED, OTHERWISE USE date_ref
-            lookup_date = custom_date if custom_date else date_ref
-
-            rate_record = self.env['res.currency.rate'].search([
-                ('currency_id', '=', currency.id),
-                ('name', '<=', lookup_date)
-            ], limit=1, order='name desc')
+            # PRIORITY 2: USE CUSTOM DATE IF PROVIDED
+            if custom_date:
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id),
+                    ('name', '<=', custom_date)
+                ], limit=1, order='name desc')
+            else:
+                # PRIORITY 3: USE LATEST AVAILABLE RATE (2025-11-21 Enhancement)
+                # Always use the most recent rate in system, regardless of payslip date
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name desc')
 
             if not rate_record:
+                # Fallback: Get any rate available
                 rate_record = self.env['res.currency.rate'].search([
                     ('currency_id', '=', currency.id)
                 ], limit=1, order='name asc')
@@ -485,3 +499,55 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 return 1.0 / rate_record.rate
 
         return 1.0
+
+    def _get_exchange_rate_with_date(self, date_ref, currency, custom_rate=None, custom_date=None):
+        """Get exchange rate with the date it was retrieved from.
+
+        Args:
+            date_ref: Reference date from payslip (payslip.date_to)
+            currency: Target currency
+            custom_rate: Optional custom rate override (VEB/USD)
+            custom_date: Optional custom date for rate lookup
+
+        Returns:
+            tuple: (exchange_rate, rate_date)
+                - exchange_rate (float): The exchange rate value
+                - rate_date (date): The date of the rate record (or None for custom/USD)
+        """
+        if currency.name == 'USD':
+            return 1.0, None
+
+        if currency.name == 'VEB':
+            # PRIORITY 1: USE CUSTOM RATE IF PROVIDED
+            if custom_rate and custom_rate > 0:
+                return custom_rate, date_ref  # Return payslip date for custom rate
+
+            # PRIORITY 2: USE CUSTOM DATE IF PROVIDED
+            if custom_date:
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id),
+                    ('name', '<=', custom_date)
+                ], limit=1, order='name desc')
+            else:
+                # PRIORITY 3: USE LATEST AVAILABLE RATE (2025-11-21 Enhancement)
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name desc')
+
+            if not rate_record:
+                # Fallback: Get any rate available
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name asc')
+
+            if rate_record:
+                rate_value = None
+                if hasattr(rate_record, 'company_rate'):
+                    rate_value = rate_record.company_rate
+                elif rate_record.rate > 0:
+                    rate_value = 1.0 / rate_record.rate
+
+                if rate_value:
+                    return rate_value, rate_record.name  # Return rate and its date
+
+        return 1.0, None
