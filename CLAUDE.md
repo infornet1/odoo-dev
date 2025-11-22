@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-22 09:30 UTC
+**Last Updated:** 2025-11-22 10:10 UTC
 
 ## Core Instructions
 
@@ -267,45 +267,30 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 6. Payslip Email Delivery System
-**Status:** ✅ PHASE 2 COMPLETE - PDF Generation Working | **Module:** `ueipab_payroll_enhancements` v1.28.0
+**Status:** 🔴 DECOMMISSIONED (2025-11-22) | **Replaced by:** `hr_payslip_monthly_report` module
 
-**Objective:** Automated email delivery system for sending payslips to employees with professional PDF attachments
+**Reason for Decommission:**
+Custom Phase 2 email delivery system replaced by professional **hr_payslip_monthly_report** module (Cybrosys) which provides:
+- ✅ **Automatic email on payslip confirmation** (no manual wizard needed)
+- ✅ **Mass confirm payslips** wizard for batch operations
+- ✅ **Monthly payslip reporting** with professional templates
+- ✅ **Professional maintenance** and support from Cybrosys
 
-**Key Features:**
-- **Batch Email Wizard:** Select multiple payslips, choose template type (Regular/AGUINALDOS)
-- **Professional PDF Reports:** Auto-generated and attached to emails
-- **Progress Tracking:** Real-time success/failure logging with detailed error messages
-- **Menu Integration:** Payroll > Reporting > Send by Email
+**Migration Path:**
+- **Settings > General Settings > Payroll** → Enable "Automatic Payslip Email"
+- Configure email template in Settings > Technical > Email > Templates
+- Use "Mass Confirm Payslips" wizard for batch confirmations
 
-**✅ Phase 1 Complete (2025-11-21):**
-- ✅ Email templates created (Regular Payslip + AGUINALDOS)
-- ✅ HTML email design with exchange rate integration
-- ✅ Responsive mobile-friendly layout
+**Decommissioned Components (v1.28.0 → v1.29.0):**
+- Removed `payslip.email.wizard` (batch email wizard)
+- Removed QWeb PDF templates (payslip_email_report, aguinaldos_email_report)
+- Removed "Send by Email" menu entry
+- Removed email report models (PayslipEmailReport, AguinaldosEmailReport)
 
-**✅ Phase 2 Complete (2025-11-22):**
-- ✅ QWeb PDF reports for Regular Payslip and AGUINALDOS
-- ✅ Batch email wizard (`payslip.email.wizard`) with 3-state UI
-- ✅ Menu item in Payroll > Reporting
-- ✅ Pre-formatting pattern for QWeb PDF templates (dates, amounts)
-- ✅ Odoo standard `template.send_mail()` integration
-- ✅ PDF auto-attachment via `report_template_ids` field
-
-**✅ Critical Technical Breakthrough:**
-- **Problem:** QWeb PDF templates cannot execute Python methods (`.format()`, `.strftime()`)
-- **Solution:** Pre-format ALL values in report model's `_get_report_values()` method
-- **Pattern:** Pass formatted strings to QWeb templates, avoiding Python calls entirely
-- **Result:** Stable PDF generation (42KB files, no rendering errors)
-
-**🔄 Phase 3 - Enhancements (Pending):**
-- Server action for right-click "Send Email" on payslip tree/form view
-- Email preview before sending
-- Schedule email sending (e.g., every Friday at 5 PM)
-
-**Test Payslip:** SLIP/943 (Gustavo Perdomo, period 12/01-12/15/2025)
-
-📖 **[Complete Technical Guide](documentation/PAYSLIP_EMAIL_DELIVERY_SYSTEM.md)** ⭐
-📖 **[Implementation Plan](documentation/PAYSLIP_EMAIL_DELIVERY_IMPLEMENTATION_PLAN.md)**
-📖 **[Phase 1 Status Report](documentation/PAYSLIP_EMAIL_PHASE1_STATUS.md)**
+**Archive:**
+- Git tag: `v1.28.0-phase2-final` (preserves Phase 2 work)
+- Documentation: [Decommission Plan](documentation/PHASE2_EMAIL_DECOMMISSION_PLAN.md)
+- Technical guide: [Email Delivery System](documentation/PAYSLIP_EMAIL_DELIVERY_SYSTEM.md) (archived)
 
 ---
 
@@ -478,7 +463,8 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.28.0 (Email delivery system Phase 2 complete - 2025-11-22)
+- **ueipab_payroll_enhancements:** v1.29.0 (Decommissioned email delivery system - 2025-11-22)
+- **hr_payslip_monthly_report:** v17.0.1.0 (Cybrosys - Installed 2025-11-22)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

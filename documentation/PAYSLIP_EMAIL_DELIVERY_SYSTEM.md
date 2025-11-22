@@ -1,7 +1,19 @@
 # Payslip Email Delivery System
 
-**Status:** ✅ PHASE 2 COMPLETE - PDF Generation Working
-**Module:** `ueipab_payroll_enhancements` v1.28.0
+> ⚠️ **DEPRECATED - 2025-11-22**
+>
+> This custom email delivery system has been **DECOMMISSIONED** and replaced by the professional **hr_payslip_monthly_report** module (Cybrosys).
+>
+> **Migration:** Use hr_payslip_monthly_report for automatic email sending on payslip confirmation and mass payslip operations.
+>
+> **Archive:** Git tag `v1.28.0-phase2-final` preserves this implementation.
+>
+> **Decommission Plan:** See [PHASE2_EMAIL_DECOMMISSION_PLAN.md](PHASE2_EMAIL_DECOMMISSION_PLAN.md)
+
+---
+
+**Status:** 🔴 DECOMMISSIONED (v1.28.0 → v1.29.0)
+**Module:** `ueipab_payroll_enhancements` (removed in v1.29.0)
 **Last Updated:** 2025-11-22
 
 ## Overview

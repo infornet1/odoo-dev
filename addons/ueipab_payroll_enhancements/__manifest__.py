@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.28.0',
+    'version': '17.0.1.29.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
@@ -68,10 +68,6 @@ Use Cases:
         # Security
         'security/ir.model.access.csv',
 
-        # Email Templates - Loaded programmatically via scripts/create_payslip_email_templates.py
-        # 'data/email_templates/payslip_email_template.xml',
-        # 'data/email_templates/aguinaldos_email_template.xml',
-
         # Wizards
         'wizard/payroll_disbursement_wizard_view.xml',
         'wizard/payroll_taxes_wizard_view.xml',
@@ -80,7 +76,6 @@ Use Cases:
         'wizard/prestaciones_interest_wizard_view.xml',
         'wizard/liquidacion_breakdown_wizard_view.xml',
         'wizard/finiquito_wizard_view.xml',
-        'wizard/payslip_email_wizard_view.xml',
 
         # Reports
         'reports/report_actions.xml',
@@ -89,8 +84,6 @@ Use Cases:
         'reports/prestaciones_interest_report.xml',
         'reports/liquidacion_breakdown_report.xml',
         'reports/finiquito_report.xml',
-        'reports/payslip_email_report.xml',
-        'reports/aguinaldos_email_report.xml',
 
         # Views and Menu
         'views/hr_payslip_employees_views.xml',

@@ -59,12 +59,4 @@
               sequence="40"
               groups="hr_payroll_community.group_hr_payroll_community_manager"/>
 
-    <!-- Report 6: Send Payslips by Email (NEW - PHASE 2) -->
-    <menuitem id="menu_payslip_email"
-              name="Send by Email"
-              parent="menu_payroll_reports"
-              action="action_payslip_email_wizard"
-              sequence="50"
-              groups="hr_payroll_community.group_hr_payroll_community_user"/>
-
 </odoo>
