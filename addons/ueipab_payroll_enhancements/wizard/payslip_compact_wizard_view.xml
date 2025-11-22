@@ -45,7 +45,7 @@
                     The report will use your custom rate (<field name="custom_exchange_rate"/> VEB/USD) instead of automatic rate lookup.
                 </div>
 
-                <div class="alert alert-success" role="alert" invisible="payslip_count == 0">
+                <div class="alert alert-success" role="alert" invisible="not payslip_ids">
                     <strong><field name="payslip_count"/> payslip(s) selected</strong><br/>
                     A separate report will be generated for each selected payslip.
                     Exchange rate: <field name="exchange_rate_display" readonly="1"/>
@@ -56,7 +56,7 @@
                             string="Generate Report"
                             type="object"
                             class="btn-primary"
-                            invisible="payslip_count == 0"/>
+                            invisible="not payslip_ids"/>
                     <button string="Cancel"
                             special="cancel"
                             class="btn-secondary"/>
