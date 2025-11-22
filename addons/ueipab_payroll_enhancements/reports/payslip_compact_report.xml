@@ -8,6 +8,16 @@
                 <t t-call="web.basic_layout">
                     <div class="page" style="font-size: 7pt; font-family: Arial, sans-serif;">
 
+                        <!-- DEBUG OUTPUT -->
+                        <div style="background-color: #ffeb3b; padding: 10px; margin-bottom: 10px; border: 3px solid red;">
+                            <p style="color: red; font-size: 16pt; font-weight: bold; margin: 0;">🔍 DEBUG: Template is rendering!</p>
+                            <p style="font-size: 10pt; margin: 5px 0;">Docs count: <t t-esc="len(docs)"/></p>
+                            <p style="font-size: 10pt; margin: 5px 0;">Reports count: <t t-esc="len(reports)"/></p>
+                            <p style="font-size: 10pt; margin: 5px 0;">Current index (o_index): <t t-esc="o_index"/></p>
+                            <p style="font-size: 10pt; margin: 5px 0;">Report keys: <t t-esc="list(report.keys()) if report else 'NO REPORT'"/></p>
+                            <p style="font-size: 10pt; margin: 5px 0;">Payslip number: <t t-esc="report.get('payslip').number if report and report.get('payslip') else 'NO PAYSLIP'"/></p>
+                        </div>
+
                         <!-- TITLE + PAYSLIP INFO -->
                         <div style="text-align: center; margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 8px;">
                             <h3 style="font-size: 11pt; margin: 0 0 5px 0; font-weight: bold;">
