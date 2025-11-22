@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-22 10:10 UTC
+**Last Updated:** 2025-11-22 16:50 UTC
 
 ## Core Instructions
 
@@ -267,31 +267,68 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 6. Payslip Email Delivery System
-**Status:** 🔴 DECOMMISSIONED (2025-11-22) | **No Replacement Installed**
+**Status:** ✅ PRODUCTION READY | **Module:** `hr_payslip_monthly_report` v17.0.1.2 (Cybrosys + Custom Fix)
 
-**Reason for Decommission:**
-Custom Phase 2 email delivery system removed to reduce technical debt. The **hr_payslip_monthly_report** module was briefly tested but uninstalled due to compatibility issues.
+**Migration:** Custom Phase 2 email system decommissioned (v1.28.0 → v1.29.0) and replaced with professional Cybrosys module.
 
-**Current State:**
-- ❌ No automated email delivery system currently installed
-- ✅ Manual payslip delivery via existing reports (Disbursement, Liquidación, etc.)
-- ✅ Standard Odoo email functionality available (manual send)
+**✅ Send Mail Button Fix (v17.0.1.2 - 2025-11-22):**
+- **Bug Fixed:** "Send Mail" button disappeared permanently if user cancelled email wizard
+- **Solution:** Added "Reset Send Status" button for easy recovery
+- **Impact:** Users can now retry sending emails after cancelling wizard
+- **Technical:** Avoided complex mail composer overrides that caused transaction errors
 
-**Decommissioned Components (v1.28.0 → v1.29.0):**
-- Removed `payslip.email.wizard` (batch email wizard)
-- Removed QWeb PDF templates (payslip_email_report, aguinaldos_email_report)
-- Removed "Send by Email" menu entry
-- Removed email report models (PayslipEmailReport, AguinaldosEmailReport)
+**Key Features:**
+- **Automatic Email on Confirmation:** Sends payslip PDF via email when payslip is confirmed
+- **Manual Send Button:** "Send Email" button on payslip form for manual sending
+- **Mass Confirm Wizard:** Bulk confirm multiple payslips (with auto-email if enabled)
+- **Email Template:** Professional template with payslip PDF attachment
 
-**Future Options:**
-- Option 1: Re-implement custom email wizard (Phase 3)
-- Option 2: Use standard Odoo send email feature on payslip form
-- Option 3: Explore alternative email modules from OCA or other sources
+**Configuration:**
+1. Navigate to **Settings > Payroll**
+2. Enable **"Automatic Send Payslip By Mail"** checkbox
+3. Save settings
 
-**Archive:**
-- Git tag: `v1.28.0-phase2-final` (preserves Phase 2 work)
+**Usage:**
+
+**Automatic Send (Recommended):**
+1. Enable auto-send in Payroll settings
+2. Confirm payslip normally via "Confirm" button
+3. Email automatically sent to `employee.private_email`
+4. Payslip marked with `is_send_mail = True`
+
+**Manual Send:**
+1. Open any payslip (draft or confirmed)
+2. Click "Send Mail" button
+3. Compose email window opens with template pre-loaded
+4. Modify message if needed, click "Send"
+5. If you cancel: Click "Reset Send Status" button to show "Send Mail" again
+
+**Mass Confirm:**
+1. Navigate to **Payroll > Payslips**
+2. Select multiple payslips in list view (checkboxes)
+3. Click **Actions > Mass Confirm Payslip**
+4. All selected payslips confirmed (emails sent if auto-send enabled)
+
+**Email Details:**
+- **Template:** "Monthly Payslip Email"
+- **Subject:** `Ref SLIP/XXX` (e.g., "Ref SLIP/944")
+- **Body:** Simple message with PDF attachment
+- **Attachment:** Standard Odoo payslip report PDF
+- **Recipient:** Employee's `private_email` field
+
+**⚠️ Important Notes:**
+- Ensure employees have `private_email` set in their employee records
+- SMTP must be configured (Settings > Technical > Outgoing Mail Servers)
+- Auto-send is currently **ENABLED** in testing database
+- Email sending requires valid email configuration
+
+**Archive (Custom Phase 2 System):**
+- Git tag: `v1.28.0-phase2-final` (preserves Phase 2 custom implementation)
 - Documentation: [Decommission Plan](documentation/PHASE2_EMAIL_DECOMMISSION_PLAN.md)
 - Technical guide: [Email Delivery System](documentation/PAYSLIP_EMAIL_DELIVERY_SYSTEM.md) (archived)
+
+📖 **[Send Mail Button Fix - Final Solution](documentation/SEND_MAIL_BUTTON_FIX_FINAL.md)** ⭐
+📖 **[Bug Diagnosis](documentation/SEND_MAIL_BUTTON_BUG_DIAGNOSIS.md)**
 
 ---
 
