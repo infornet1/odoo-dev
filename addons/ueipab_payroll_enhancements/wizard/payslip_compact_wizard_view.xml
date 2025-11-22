@@ -18,7 +18,7 @@
                         <field name="payslip_count" invisible="1"/>
                     </group>
                     <group>
-                        <field name="currency_id" widget="radio" options="{'horizontal': true}"/>
+                        <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
                     </group>
                 </group>
 
