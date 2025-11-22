@@ -238,10 +238,156 @@ Add visible text to verify template is rendering:
 
 ---
 
-## CONCLUSION
+## LATEST TEST RESULTS (2025-11-22 - Evening Session)
 
-**Data Layer:** ✅ WORKING - Report generates all correct data
-**Template Layer:** ⚠️ UNKNOWN - Uses different iteration pattern than working Liquidación
-**Most Likely Issue:** Browser/Odoo cache preventing new template from loading
+### Debug Output Test - CRITICAL FINDING 🔴
 
-**Recommendation:** Start with Option 1 (cache clearing), then try Option 2 (align template pattern) if issue persists.
+**Test:** Added prominent yellow debug box with red border at top of template
+**Expected:** Debug text should appear even if rest of template fails
+**Result:** **NOTHING - PDF still completely blank**
+
+**Conclusion:** Template is NOT being rendered at all by wkhtmltopdf/Odoo
+
+This rules out:
+- ❌ Template content issues (debug box should show regardless)
+- ❌ Data availability issues (proven working in diagnostic script)
+- ❌ Browser cache (hard refresh attempted multiple times)
+
+This points to:
+- ⚠️ Report action not calling the template correctly
+- ⚠️ Template not registered/loaded in Odoo
+- ⚠️ QWeb rendering pipeline issue
+
+---
+
+## NEXT DEBUGGING STEPS (When Resuming)
+
+### Step 1: Verify Template Registration in Database
+Check if template exists in Odoo database:
+
+```python
+# Script to check template registration
+env['ir.ui.view'].search([('key', 'like', 'payslip_compact')])
+env['ir.ui.view'].search([('name', 'like', 'compact')])
+```
+
+### Step 2: Compare Report Action Records
+Check actual database records:
+
+```python
+# Compare both report actions
+liquidacion = env['ir.actions.report'].search([('report_name', '=', 'ueipab_payroll_enhancements.liquidacion_breakdown_report')])
+compact = env['ir.actions.report'].search([('report_name', '=', 'ueipab_payroll_enhancements.report_payslip_compact')])
+
+print(f"Liquidación ID: {liquidacion.id}, Model: {liquidacion.model}")
+print(f"Compact ID: {compact.id}, Model: {compact.model}")
+```
+
+### Step 3: Test Direct Template Call
+Try calling template directly:
+
+```python
+# Bypass wizard, call report directly
+payslip = env['hr.payslip'].browse(2)  # SLIP/953
+report = env['ir.actions.report'].search([('report_name', '=', 'ueipab_payroll_enhancements.report_payslip_compact')])
+pdf_data, _ = report._render_qweb_pdf([payslip.id])
+print(f"PDF size: {len(pdf_data)} bytes")
+```
+
+### Step 4: Check Odoo Logs During Generation
+Monitor Odoo logs while generating report:
+
+```bash
+docker logs -f odoo-dev-web 2>&1 | grep -E "report|qweb|payslip_compact|error|warning"
+```
+
+Look for:
+- Template not found errors
+- QWeb compilation errors
+- Missing report action warnings
+
+### Step 5: Nuclear Option - Recreate from Scratch
+If all else fails, create minimal test report:
+
+1. Create simplest possible template
+2. Create minimal report action
+3. Test if it renders
+4. Gradually add complexity until it breaks
+
+---
+
+## POSSIBLE ROOT CAUSES (Updated)
+
+### Most Likely (After Debug Test):
+
+1. **Template XML Syntax Error** (90% confidence)
+   - XML not well-formed
+   - QWeb can't compile template
+   - Silent failure in Odoo
+
+2. **Report Action Misconfiguration** (70% confidence)
+   - `report_name` doesn't match template `id`
+   - Model name incorrect
+   - Report type wrong
+
+3. **Template Not Loaded into Database** (50% confidence)
+   - Module upgrade didn't load template
+   - XML file not in manifest data list
+   - Template has duplicate ID
+
+### Less Likely:
+
+4. **wkhtmltopdf Issue** (10% confidence)
+   - Working Liquidación proves wkhtmltopdf functional
+   - Debug box should show even if rendering fails
+
+---
+
+## FILES TO REVIEW (Priority Order)
+
+### 1. Template XML Syntax
+**File:** `reports/payslip_compact_report.xml`
+**Check for:**
+- Proper XML closing tags
+- t-esc vs t-raw usage
+- Nested t-if/t-foreach properly closed
+- QWeb expression syntax errors
+
+### 2. Report Action Configuration
+**File:** `reports/report_actions.xml:133-141`
+**Verify:**
+- `report_name` matches template `id` exactly
+- Model is `hr.payslip` (not `payslip.compact.wizard`)
+- `report_type` is `qweb-pdf`
+- Template `id` is unique
+
+### 3. Manifest Data Loading Order
+**File:** `__manifest__.py`
+**Ensure:**
+- `reports/report_actions.xml` before `reports/payslip_compact_report.xml`
+- OR both templates after actions
+- No circular dependencies
+
+---
+
+## CONCLUSION (UPDATED)
+
+**Data Layer:** ✅ WORKING - Report model generates all correct data (proven)
+**Template Layer:** 🔴 NOT RENDERING - Even debug output doesn't show
+**Root Cause:** Template is not being called/rendered by QWeb pipeline
+
+**Critical Next Step:** Verify template exists in database and is linked to report action
+
+**Session Status:** User taking break - resume debugging when returned
+
+---
+
+## SESSION NOTES
+
+- **Duration:** Extended debugging session (multiple hours)
+- **Fixes Applied:**
+  - ✅ Wizard `docids=` parameter
+  - ✅ Report model `payslip_ids` (plural)
+  - ✅ Debug output added
+- **Outcome:** Template fundamentally not rendering
+- **User Action:** Break - will resume later
