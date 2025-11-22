@@ -55,7 +55,7 @@ class PayslipCompactWizard(models.TransientModel):
         help='Displays the exchange rate that will be used for conversion'
     )
 
-    @api.depends_context('active_ids')
+    @api.depends('payslip_ids')
     def _compute_payslip_count(self):
         """Compute number of payslips selected"""
         for wizard in self:
