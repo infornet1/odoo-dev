@@ -113,4 +113,31 @@
         <field name="print_report_name">'Finiquito_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_to.strftime('%Y%m%d'))</field>
     </record>
 
+    <!-- Paper Format for Payslip Compact Report -->
+    <record id="paperformat_payslip_compact" model="report.paperformat">
+        <field name="name">Payslip Compact Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">10</field>
+        <field name="margin_right">10</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <!-- Report Action for Payslip Compact -->
+    <record id="action_report_payslip_compact" model="ir.actions.report">
+        <field name="name">Comprobante de Pago (Compacto)</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.report_payslip_compact</field>
+        <field name="report_file">ueipab_payroll_enhancements.report_payslip_compact</field>
+        <field name="paperformat_id" ref="paperformat_payslip_compact"/>
+        <field name="print_report_name">'Comprobante_Pago_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_to.strftime('%Y%m%d'))</field>
+    </record>
+
 </odoo>

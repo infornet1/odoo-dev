@@ -27,6 +27,14 @@
               sequence="12"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report 2.5: Comprobante de Pago (Compacto) - NEW -->
+    <menuitem id="menu_payslip_compact"
+              name="Comprobante de Pago (Compacto)"
+              parent="menu_payroll_reports"
+              action="action_payslip_compact_wizard"
+              sequence="13"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 3: Prestaciones Soc. Intereses (FULLY WORKING) -->
     <menuitem id="menu_prestaciones_interest"
               name="Prestaciones Soc. Intereses"

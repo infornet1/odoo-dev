@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Payslip Compact Report Wizard Form View -->
+    <record id="view_payslip_compact_wizard_form" model="ir.ui.view">
+        <field name="name">payslip.compact.wizard.form</field>
+        <field name="model">payslip.compact.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Comprobante de Pago (Compacto)">
+                <group>
+                    <field name="payslip_id" invisible="1"/>
+
+                    <separator string="Currency Selection / Selección de Moneda"/>
+                    <field name="currency_id" widget="radio" options="{'horizontal': true}"/>
+                </group>
+
+                <!-- Exchange Rate Options (only visible if VEB selected) -->
+                <group string="Exchange Rate Options / Opciones de Tasa de Cambio"
+                       invisible="currency_id.name != 'VEB'">
+                    <div class="alert alert-info" role="alert" style="margin-bottom: 8px;">
+                        <strong>Note:</strong> You can use a custom exchange rate, or select a specific date
+                        for automatic rate lookup. If neither is specified, the payslip date rate will be used.
+                    </div>
+
+                    <field name="use_custom_rate"/>
+                    <field name="custom_exchange_rate"
+                           invisible="not use_custom_rate"
+                           placeholder="e.g., 236.4601"/>
+                    <field name="rate_date"
+                           invisible="use_custom_rate"
+                           placeholder="Select date for automatic rate lookup"/>
+
+                    <field name="exchange_rate_display"
+                           widget="text"
+                           readonly="1"
+                           class="o_field_text alert-success"
+                           style="font-weight: bold; color: #155724; background-color: #d4edda; padding: 8px; border-radius: 4px;"/>
+                </group>
+
+                <footer>
+                    <button name="action_generate_report"
+                            string="Generate Report"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_payslip_compact_wizard" model="ir.actions.act_window">
+        <field name="name">Comprobante de Pago (Compacto)</field>
+        <field name="res_model">payslip.compact.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_payslip_compact_wizard_form"/>
+    </record>
+</odoo>
