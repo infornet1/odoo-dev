@@ -6,41 +6,57 @@
         <field name="model">payslip.compact.wizard</field>
         <field name="arch" type="xml">
             <form string="Comprobante de Pago (Compacto)">
-                <group>
-                    <field name="payslip_id" invisible="1"/>
+                <div class="alert alert-info" role="alert">
+                    <strong>Compact Payslip Report</strong><br/>
+                    Generate a single-page compact payslip report with currency conversion support.
+                    Select one or more payslips and choose the display currency.
+                </div>
 
-                    <separator string="Currency Selection / Selección de Moneda"/>
-                    <field name="currency_id" widget="radio" options="{'horizontal': true}"/>
+                <group>
+                    <group>
+                        <field name="payslip_ids" widget="many2many_tags"/>
+                        <field name="payslip_count" invisible="1"/>
+                    </group>
+                    <group>
+                        <field name="currency_id" widget="radio" options="{'horizontal': true}"/>
+                    </group>
                 </group>
 
                 <!-- Exchange Rate Options (only visible if VEB selected) -->
                 <group string="Exchange Rate Options / Opciones de Tasa de Cambio"
                        invisible="currency_id.name != 'VEB'">
-                    <div class="alert alert-info" role="alert" style="margin-bottom: 8px;">
-                        <strong>Note:</strong> You can use a custom exchange rate, or select a specific date
-                        for automatic rate lookup. If neither is specified, the payslip date rate will be used.
-                    </div>
-
-                    <field name="use_custom_rate"/>
-                    <field name="custom_exchange_rate"
-                           invisible="not use_custom_rate"
-                           placeholder="e.g., 236.4601"/>
-                    <field name="rate_date"
-                           invisible="use_custom_rate"
-                           placeholder="Select date for automatic rate lookup"/>
-
-                    <field name="exchange_rate_display"
-                           widget="text"
-                           readonly="1"
-                           class="o_field_text alert-success"
-                           style="font-weight: bold; color: #155724; background-color: #d4edda; padding: 8px; border-radius: 4px;"/>
+                    <group>
+                        <field name="use_custom_rate"/>
+                        <field name="custom_exchange_rate"
+                               invisible="not use_custom_rate"
+                               placeholder="e.g., 236.4601"/>
+                    </group>
+                    <group>
+                        <label for="rate_date" string="Rate Date (Auto Lookup)"
+                               invisible="use_custom_rate"/>
+                        <field name="rate_date"
+                               invisible="use_custom_rate"
+                               placeholder="Leave blank for latest rate"/>
+                    </group>
                 </group>
+
+                <div class="alert alert-warning" role="alert" invisible="not use_custom_rate">
+                    <strong>Custom Rate Active</strong><br/>
+                    The report will use your custom rate (<field name="custom_exchange_rate"/> VEB/USD) instead of automatic rate lookup.
+                </div>
+
+                <div class="alert alert-success" role="alert" invisible="payslip_count == 0">
+                    <strong><field name="payslip_count"/> payslip(s) selected</strong><br/>
+                    A separate report will be generated for each selected payslip.
+                    Exchange rate: <field name="exchange_rate_display" readonly="1"/>
+                </div>
 
                 <footer>
                     <button name="action_generate_report"
                             string="Generate Report"
                             type="object"
-                            class="btn-primary"/>
+                            class="btn-primary"
+                            invisible="payslip_count == 0"/>
                     <button string="Cancel"
                             special="cancel"
                             class="btn-secondary"/>

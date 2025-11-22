@@ -7,11 +7,18 @@ class PayslipCompactWizard(models.TransientModel):
     _name = 'payslip.compact.wizard'
     _description = 'Payslip Compact Report Wizard'
 
-    payslip_id = fields.Many2one(
+    payslip_ids = fields.Many2many(
         'hr.payslip',
-        string='Payslip',
+        string='Payslips',
         required=True,
-        help='Payslip to generate compact report for'
+        domain="[('state', '!=', 'cancel')]",
+        help='Select payslips to generate compact report for. A separate report will be generated for each selected payslip.'
+    )
+
+    payslip_count = fields.Integer(
+        string='Payslips Count',
+        compute='_compute_payslip_count',
+        help='Number of payslips selected'
     )
 
     currency_id = fields.Many2one(
@@ -48,7 +55,13 @@ class PayslipCompactWizard(models.TransientModel):
         help='Displays the exchange rate that will be used for conversion'
     )
 
-    @api.depends('currency_id', 'use_custom_rate', 'custom_exchange_rate', 'rate_date', 'payslip_id')
+    @api.depends_context('active_ids')
+    def _compute_payslip_count(self):
+        """Compute number of payslips selected"""
+        for wizard in self:
+            wizard.payslip_count = len(wizard.payslip_ids)
+
+    @api.depends('currency_id', 'use_custom_rate', 'custom_exchange_rate', 'rate_date', 'payslip_ids')
     def _compute_exchange_rate_display(self):
         """Display the exchange rate that will be used"""
         for wizard in self:
@@ -63,10 +76,10 @@ class PayslipCompactWizard(models.TransientModel):
             # Determine date for rate lookup
             if wizard.rate_date:
                 lookup_date = wizard.rate_date
-            elif wizard.payslip_id and wizard.payslip_id.date_to:
-                lookup_date = wizard.payslip_id.date_to
+            elif wizard.payslip_ids and len(wizard.payslip_ids) == 1:
+                lookup_date = wizard.payslip_ids[0].date_to
             else:
-                wizard.exchange_rate_display = 'Please select payslip or rate date'
+                wizard.exchange_rate_display = 'Select payslip(s) to see rate'
                 continue
 
             # Lookup rate
@@ -91,9 +104,13 @@ class PayslipCompactWizard(models.TransientModel):
         """Generate compact payslip report with selected currency"""
         self.ensure_one()
 
+        if not self.payslip_ids:
+            from odoo.exceptions import UserError
+            raise UserError('Please select at least one payslip to generate the report.')
+
         # Prepare data for report
         data = {
-            'payslip_id': self.payslip_id.id,
+            'payslip_ids': self.payslip_ids.ids,
             'currency_id': self.currency_id.id,
             'use_custom_rate': self.use_custom_rate,
             'custom_exchange_rate': self.custom_exchange_rate,
@@ -102,6 +119,6 @@ class PayslipCompactWizard(models.TransientModel):
 
         # Return report action
         return self.env.ref('ueipab_payroll_enhancements.action_report_payslip_compact').report_action(
-            self.payslip_id,
+            self.payslip_ids,
             data=data
         )
