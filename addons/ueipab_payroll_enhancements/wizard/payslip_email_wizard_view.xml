@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Payslip Email Wizard Form View -->
+    <record id="view_payslip_email_wizard_form" model="ir.ui.view">
+        <field name="name">payslip.email.wizard.form</field>
+        <field name="model">payslip.email.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Send Payslips by Email">
+                <header>
+                    <button name="action_send_emails"
+                            string="Send Emails"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_reset"
+                            string="Reset"
+                            type="object"
+                            invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sending,done"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <span invisible="state == 'draft'">📧 </span>
+                            <span>Send Payslips by Email</span>
+                        </h1>
+                    </div>
+
+                    <!-- Draft State: Configuration -->
+                    <group invisible="state != 'draft'">
+                        <group string="📋 Payslip Selection">
+                            <field name="payslip_ids" widget="many2many_tags" nolabel="1">
+                                <tree>
+                                    <field name="number"/>
+                                    <field name="employee_id"/>
+                                    <field name="date_from"/>
+                                    <field name="date_to"/>
+                                    <field name="struct_id"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                            <field name="payslip_count" string="Selected Payslips"/>
+                        </group>
+
+                        <group string="📧 Email Template">
+                            <field name="template_type" widget="radio"/>
+                            <field name="template_id"
+                                   options="{'no_create': True, 'no_open': True}"
+                                   required="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Sending State: Progress -->
+                    <group invisible="state != 'sending'">
+                        <div class="alert alert-info" role="alert">
+                            <strong>⏳ Sending emails...</strong>
+                            <p>Please wait while emails are being sent to employees.</p>
+                        </div>
+                    </group>
+
+                    <!-- Done State: Results -->
+                    <group invisible="state != 'done'">
+                        <group string="📊 Results Summary" col="2">
+                            <field name="email_sent_count"
+                                   string="✅ Successfully Sent"
+                                   widget="integer"/>
+                            <field name="email_failed_count"
+                                   string="❌ Failed"
+                                   widget="integer"/>
+                        </group>
+
+                        <group string="📝 Detailed Log" col="1">
+                            <field name="log_message"
+                                   widget="text"
+                                   nolabel="1"
+                                   readonly="1"
+                                   options="{'style': 'font-family: monospace; white-space: pre-wrap;'}"/>
+                        </group>
+                    </group>
+
+                    <!-- Information Box -->
+                    <div class="alert alert-warning" role="alert" invisible="state != 'draft'">
+                        <strong>ℹ️ Important Notes:</strong>
+                        <ul>
+                            <li>Only payslips with valid employee email addresses will be sent</li>
+                            <li>Regular template: For standard payslips (salaries, bonuses)</li>
+                            <li>AGUINALDOS template: For Christmas bonus payslips only</li>
+                            <li>Emails will be sent immediately after clicking "Send Emails"</li>
+                        </ul>
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Payslip Email Wizard Action -->
+    <record id="action_payslip_email_wizard" model="ir.actions.act_window">
+        <field name="name">Send Payslips by Email</field>
+        <field name="res_model">payslip.email.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="binding_view_types">list</field>
+    </record>
+
+</odoo>

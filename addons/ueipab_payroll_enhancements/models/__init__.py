@@ -13,3 +13,4 @@ from . import prestaciones_interest_report
 from . import liquidacion_breakdown_wizard
 from . import liquidacion_breakdown_report
 from . import finiquito_report
+from . import payslip_email_report

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Payslip Email PDF Report Template -->
+    <template id="report_payslip_email_document">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="o">
+                <div class="page" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                        <h1 style="margin: 0; font-size: 28px; font-weight: 600;">💰 Comprobante de Pago</h1>
+                        <p style="margin: 5px 0 0 0; font-size: 16px; opacity: 0.9;">Instituto Privado Andrés Bello, CA</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div style="padding: 30px; background: white; border: 1px solid #e0e0e0; border-top: none;">
+
+                        <!-- Employee Information -->
+                        <t t-set="fmt" t-value="formatted_data[o.id]"/>
+                        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 0; font-weight: 600; color: #555; font-size: 14px; width: 30%;">📋 Nro. Comprobante:</td>
+                                <td style="padding: 8px 0; color: #333; font-size: 14px;"><t t-esc="fmt['number']"/> │ <t t-esc="fmt['payslip_run_name']"/></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 0; font-weight: 600; color: #555; font-size: 14px;">📅 Período:</td>
+                                <td style="padding: 8px 0; color: #333; font-size: 14px;">
+                                    <t t-esc="fmt['period']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 0; font-weight: 600; color: #555; font-size: 14px;">👤 Nombre y Apellido:</td>
+                                <td style="padding: 8px 0; color: #333; font-size: 14px;"><t t-esc="fmt['employee_name']"/></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 0; font-weight: 600; color: #555; font-size: 14px;">🆔 Cédula:</td>
+                                <td style="padding: 8px 0; color: #333; font-size: 14px;"><t t-esc="fmt['employee_id_number']"/></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 0; font-weight: 600; color: #555; font-size: 14px;">💳 Cuenta:</td>
+                                <td style="padding: 8px 0; color: #333; font-size: 14px;">
+                                    <t t-esc="fmt['bank_account']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Credits Section -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; margin: 25px 0 15px 0; font-size: 18px; font-weight: 600;">
+                            ✅ Salario + Bonos
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Salario Base</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['salary_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Bonos</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['bonus_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Otros Bonos</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['extrabonus_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-top: 2px solid #667eea; font-weight: bold;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Total Asignaciones</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['gross_veb']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Deductions Section -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; margin: 25px 0 15px 0; font-size: 18px; font-weight: 600;">
+                            ❌ Deducciones
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">IVSS (Instituto Venezolano de los Seguros Sociales)</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['sso_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">FAOV (Fondo de Ahorro Obligatorio para la Vivienda)</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['faov_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">INCES (Instituto Nacional de Capacitación y Educación)</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['paro_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Otras Deducciones</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['ari_veb']"/>
+                                </td>
+                            </tr>
+                            <tr style="border-top: 2px solid #667eea; font-weight: bold;">
+                                <td style="padding: 10px; color: #555; font-weight: 500;">Total Deducciones</td>
+                                <td style="padding: 10px; text-align: right; color: #333; font-weight: 600; font-size: 15px;">
+                                    Bs. <t t-esc="fmt['total_ded_veb']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Total Section -->
+                        <div style="background: #f8f9fa; padding: 20px; margin: 25px 0; border-top: 3px solid #667eea; border-bottom: 3px solid #667eea;">
+                            <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; color: #667eea;">
+                                <span>💵 Total a Recibir:</span>
+                                <span>Bs. <t t-esc="fmt['net_wage_veb']"/></span>
+                            </div>
+                        </div>
+
+                        <!-- Exchange Rate -->
+                        <div style="background: #fff9e6; border: 2px dashed #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+                            <div style="font-size: 14px; color: #856404; margin-bottom: 5px;">Tasa de Cambio (Referencia)</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d39e00;">Bs. <t t-esc="fmt['exchange_rate']"/></div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div style="background: #f8f9fa; padding: 20px; margin-top: 30px; border-top: 1px solid #e0e0e0; text-align: center; font-size: 13px; color: #666; line-height: 1.6;">
+                            <p><strong style="color: #667eea;">📧 ¿Dudas o consultas?</strong></p>
+                            <p>Si usted tiene alguna duda por favor escribir inmediatamente al correo <strong>recursoshumanos@ueipab.edu.ve</strong></p>
+                            <p style="margin-top: 15px; color: #999; font-size: 12px;">
+                                Este es un documento generado automáticamente.
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Report Action -->
+    <record id="action_report_payslip_email" model="ir.actions.report">
+        <field name="name">Payslip Email Report</field>
+        <field name="model">hr.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.report_payslip_email_document</field>
+        <field name="report_file">ueipab_payroll_enhancements.report_payslip_email_document</field>
+        <field name="print_report_name">'Comprobante_Pago_%s' % (object.number or 'payslip')</field>
+        <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

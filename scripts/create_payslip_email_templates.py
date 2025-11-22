@@ -94,10 +94,10 @@ payslip_template_vals = {
     'model_id': payslip_model.id,
     'subject': '💰 Comprobante de Pago - ${object.employee_id.name} (${object.date_from.strftime("%B %Y") if object.date_from else "N/A"})',
     'email_from': 'recursoshumanos@ueipab.edu.ve',
-    'email_to': '${object.employee_id.work_email or object.employee_id.address_home_id.email or ""}',
+    'email_to': '{{ object.employee_id.work_email }}',
     'body_html': payslip_html,
     'auto_delete': True,
-    'lang': '${object.employee_id.address_home_id.lang or "es_VE"}',
+    'lang': 'es_VE',
 }
 
 try:
@@ -119,10 +119,10 @@ aguinaldos_template_vals = {
     'model_id': payslip_model.id,
     'subject': '🎄 Aguinaldos (Bono Navideño) - ${object.employee_id.name}',
     'email_from': 'recursoshumanos@ueipab.edu.ve',
-    'email_to': '${object.employee_id.work_email or object.employee_id.address_home_id.email or ""}',
+    'email_to': '{{ object.employee_id.work_email }}',
     'body_html': aguinaldos_html,
     'auto_delete': True,
-    'lang': '${object.employee_id.address_home_id.lang or "es_VE"}',
+    'lang': 'es_VE',
 }
 
 try:
