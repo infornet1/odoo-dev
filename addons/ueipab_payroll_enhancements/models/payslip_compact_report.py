@@ -26,10 +26,10 @@ class PayslipCompactReport(models.AbstractModel):
         Returns:
             dict: Report data
         """
-        # Get payslip
-        if data and data.get('payslip_id'):
-            payslip_ids = [data['payslip_id']]
-        else:
+        # Get payslip IDs from data dict (matching Liquidación pattern)
+        payslip_ids = data.get('payslip_ids', []) if data else []
+
+        if not payslip_ids and docids:
             payslip_ids = docids
 
         payslips = self.env['hr.payslip'].browse(payslip_ids)
