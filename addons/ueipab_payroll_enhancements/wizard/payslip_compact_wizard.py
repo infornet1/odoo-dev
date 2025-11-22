@@ -118,7 +118,5 @@ class PayslipCompactWizard(models.TransientModel):
         }
 
         # Return report action
-        return self.env.ref('ueipab_payroll_enhancements.action_report_payslip_compact').report_action(
-            self.payslip_ids,
-            data=data
-        )
+        report = self.env.ref('ueipab_payroll_enhancements.action_report_payslip_compact')
+        return report.report_action(docids=self.payslip_ids.ids, data=data)
