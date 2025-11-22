@@ -267,25 +267,26 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ---
 
 ### 6. Payslip Email Delivery System
-**Status:** 🔴 DECOMMISSIONED (2025-11-22) | **Replaced by:** `hr_payslip_monthly_report` module
+**Status:** 🔴 DECOMMISSIONED (2025-11-22) | **No Replacement Installed**
 
 **Reason for Decommission:**
-Custom Phase 2 email delivery system replaced by professional **hr_payslip_monthly_report** module (Cybrosys) which provides:
-- ✅ **Automatic email on payslip confirmation** (no manual wizard needed)
-- ✅ **Mass confirm payslips** wizard for batch operations
-- ✅ **Monthly payslip reporting** with professional templates
-- ✅ **Professional maintenance** and support from Cybrosys
+Custom Phase 2 email delivery system removed to reduce technical debt. The **hr_payslip_monthly_report** module was briefly tested but uninstalled due to compatibility issues.
 
-**Migration Path:**
-- **Settings > General Settings > Payroll** → Enable "Automatic Payslip Email"
-- Configure email template in Settings > Technical > Email > Templates
-- Use "Mass Confirm Payslips" wizard for batch confirmations
+**Current State:**
+- ❌ No automated email delivery system currently installed
+- ✅ Manual payslip delivery via existing reports (Disbursement, Liquidación, etc.)
+- ✅ Standard Odoo email functionality available (manual send)
 
 **Decommissioned Components (v1.28.0 → v1.29.0):**
 - Removed `payslip.email.wizard` (batch email wizard)
 - Removed QWeb PDF templates (payslip_email_report, aguinaldos_email_report)
 - Removed "Send by Email" menu entry
 - Removed email report models (PayslipEmailReport, AguinaldosEmailReport)
+
+**Future Options:**
+- Option 1: Re-implement custom email wizard (Phase 3)
+- Option 2: Use standard Odoo send email feature on payslip form
+- Option 3: Explore alternative email modules from OCA or other sources
 
 **Archive:**
 - Git tag: `v1.28.0-phase2-final` (preserves Phase 2 work)
@@ -464,7 +465,6 @@ except:
 ## Module Versions
 
 - **ueipab_payroll_enhancements:** v1.29.0 (Decommissioned email delivery system - 2025-11-22)
-- **hr_payslip_monthly_report:** v17.0.1.0 (Cybrosys - Installed 2025-11-22)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
