@@ -53,12 +53,4 @@
         <field name="binding_type">action</field>
     </record>
 
-    <!-- Menu Item under Reporting -->
-    <menuitem
-        id="menu_finiquito_wizard"
-        name="Acuerdo Finiquito Laboral"
-        parent="ueipab_payroll_enhancements.menu_payroll_reports"
-        action="action_finiquito_wizard"
-        sequence="60"/>
-        
 </odoo>

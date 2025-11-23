@@ -83,7 +83,7 @@
                             class="oe_highlight"/>
                     <button name="%(hr_payslip_by_employees_action)d"
                             type="action"
-                            attrs="{'invisible': ['|', ('state', '!=', 'draft'), ('can_generate_payslips', '=', False)]}"
+                            invisible="state != 'draft' or can_generate_payslips == False"
                             string="Generate Payslips" class="oe_highlight"/>
                     <button string="Set to Draft" name="action_payslip_run"
                             type="object" invisible="state != 'close'"/>
@@ -94,7 +94,7 @@
                 <sheet>
                     <!-- Warning message for unconfirmed rate -->
                     <div class="alert alert-warning" role="alert"
-                         attrs="{'invisible': [('exchange_rate_confirmed', '=', True)]}">
+                         invisible="exchange_rate_confirmed == True">
                         <strong>Exchange Rate Required:</strong>
                         Please set and confirm the exchange rate before generating payslips.
                     </div>
@@ -120,14 +120,14 @@
                     <group string="Exchange Rate Control" name="exchange_control">
                         <group>
                             <field name="batch_exchange_rate"
-                                   attrs="{'readonly': [('exchange_rate_confirmed', '=', True)]}"/>
+                                   readonly="exchange_rate_confirmed == True"/>
                             <field name="exchange_rate_confirmed" readonly="1"/>
                         </group>
                         <group>
                             <field name="exchange_rate_set_date" readonly="1"
-                                   attrs="{'invisible': [('exchange_rate_confirmed', '=', False)]}"/>
+                                   invisible="exchange_rate_confirmed == False"/>
                             <field name="exchange_rate_set_by" readonly="1"
-                                   attrs="{'invisible': [('exchange_rate_confirmed', '=', False)]}"/>
+                                   invisible="exchange_rate_confirmed == False"/>
                         </group>
                         <group colspan="2">
                             <div class="oe_button_box" name="exchange_rate_buttons">
@@ -135,14 +135,13 @@
                                         string="Confirm Exchange Rate"
                                         type="object"
                                         class="btn-primary"
-                                        attrs="{'invisible': ['|', ('exchange_rate_confirmed', '=', True),
-                                                                   ('batch_exchange_rate', '&lt;=', 0)]}"/>
+                                        invisible="exchange_rate_confirmed == True or batch_exchange_rate &lt;= 0"/>
 
                                 <button name="action_update_exchange_rate"
                                         string="Update Rate"
                                         type="object"
                                         class="btn-warning"
-                                        attrs="{'invisible': [('exchange_rate_confirmed', '=', False)]}"/>
+                                        invisible="exchange_rate_confirmed == False"/>
                             </div>
                         </group>
                     </group>
@@ -174,7 +173,7 @@
             <form string="Update Exchange Rate">
                 <group>
                     <div class="alert alert-warning" role="alert"
-                         attrs="{'invisible': [('has_payslips', '=', False)]}">
+                         invisible="has_payslips == False">
                         <i class="fa fa-warning"/> Warning: This batch has
                         <field name="payslips_count" readonly="1" class="oe_inline"/>
                         generated payslips.
@@ -186,7 +185,7 @@
                     <field name="new_rate" required="1"/>
                 </group>
 
-                <group attrs="{'invisible': [('has_payslips', '=', False)]}">
+                <group invisible="has_payslips == False">
                     <field name="regenerate_payslips"/>
                     <div class="text-muted">
                         If checked, existing payslips will be deleted and you can regenerate with the new rate.

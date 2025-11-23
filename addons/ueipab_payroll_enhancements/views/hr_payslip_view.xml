@@ -24,6 +24,12 @@
 
             <!-- Add warning banner when payslip belongs to cancelled batch -->
             <header position="inside">
+                <button name="action_compose_payslip_email"
+                        string="Send by Email"
+                        type="object"
+                        class="oe_highlight"
+                        icon="fa-envelope"
+                        help="Compose and send payslip by email"/>
                 <div class="alert alert-warning mb-0"
                      role="alert"
                      invisible="payslip_run_state != 'cancel'">

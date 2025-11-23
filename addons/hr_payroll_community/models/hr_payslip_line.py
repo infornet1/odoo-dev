@@ -46,14 +46,13 @@ class HrPayslipLine(models.Model):
                                   required=True, index=True,
                                   help="Choose Contract for line")
     rate = fields.Float(string='Rate (%)', help="Set Rate for payslip",
-                        digits=dp.get_precision('Payroll Rate'), default=100.0)
-    amount = fields.Float(digits=dp.get_precision('Payroll'), string="Amount",
-                          help="Set Amount for line")
-    quantity = fields.Float(digits=dp.get_precision('Payroll'), default=1.0,
-                            string="Quantity", help="Set Qty for line")
-    total = fields.Float(compute='_compute_total', string='Total',
-                         help="Total amount for Payslip",
-                         digits=dp.get_precision('Payroll'), store=True)
+                               digits='Payroll Rate', default=100.0)
+    amount = fields.Float(digits='Payroll', string="Amount",
+                               help="Amount")
+    quantity = fields.Float(digits='Payroll', default=1.0,
+                               help="Quantity")
+    total = fields.Float(string='Total', readonly=True, store=True,
+                               digits='Payroll')
 
     @api.depends('quantity', 'amount', 'rate')
     def _compute_total(self):

@@ -65,6 +65,12 @@
                         class="btn-primary"
                         icon="fa-print"
                         help="Generate ICF-compliant disbursement list report for finance approval"/>
+                <button name="action_send_batch_emails"
+                        type="object"
+                        string="Send Payslips by Email"
+                        class="oe_highlight"
+                        icon="fa-envelope"
+                        help="Send individual payslips to each employee in this batch via email"/>
             </button>
         </field>
     </record>

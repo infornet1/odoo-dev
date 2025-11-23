@@ -65,10 +65,10 @@ Use Cases:
         'ueipab_hr_contract',  # For access to custom fields if needed
     ],
     'data': [
-        # Security
+        # 1. Security
         'security/ir.model.access.csv',
 
-        # Wizards
+        # 2. Wizards (Define actions)
         'wizard/payroll_disbursement_wizard_view.xml',
         'wizard/payroll_taxes_wizard_view.xml',
         'wizard/payroll_accounting_wizard_view.xml',
@@ -78,19 +78,22 @@ Use Cases:
         'wizard/finiquito_wizard_view.xml',
         'wizard/payslip_compact_wizard_view.xml',
 
-        # Reports
-        'reports/report_actions.xml',
+        # 3. Report Templates & Actions
+        'data/mail_template_payslip.xml', # NEW LINE
         'reports/disbursement_list_report.xml',
         'reports/payroll_disbursement_detail_report.xml',
         'reports/prestaciones_interest_report.xml',
         'reports/liquidacion_breakdown_report.xml',
         'reports/finiquito_report.xml',
         'reports/payslip_compact_report.xml',
+        'reports/report_actions.xml',
 
-        # Views and Menu
+        # 4. Views (which may inherit or use actions from above)
         'views/hr_payslip_employees_views.xml',
         'views/hr_payslip_run_view.xml',
         'views/hr_payslip_view.xml',
+
+        # 5. Menus (last, as they depend on everything else)
         'views/payroll_reports_menu.xml',
     ],
     'installable': True,

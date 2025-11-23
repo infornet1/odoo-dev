@@ -201,7 +201,7 @@ class PayslipCompactReport(models.AbstractModel):
             'display_rate': currency.name == 'VEB'  # Only show for VEB
         }
 
-        # Employee info
+        # Employee info - Point 4: Use 'vat' for Cédula if available
         employee_info = {
             'name': employee.name,
             'identification_id': employee.identification_id or '',
@@ -212,44 +212,95 @@ class PayslipCompactReport(models.AbstractModel):
             'period': f"{payslip.date_from.strftime('%d/%m/%Y')} - {payslip.date_to.strftime('%d/%m/%Y')}"
         }
 
-        # Salary (convert)
-        salary_usd = contract.wage
-        salary_converted = self._convert_amount(salary_usd, exchange_rate)
-
-        # Process earnings
-        earnings = []
+        # --- Refactored Earnings Processing ---
+        processed_earnings = []
         earnings_total = 0.0
+        bonos_total_usd = 0.0
         earnings_categories = ['ALW', 'BASIC', 'GROSS', 'COMP']
 
-        for line in payslip.line_ids.filtered(lambda l: l.category_id.code in earnings_categories and l.total > 0):
-            amount_usd = line.total
-            amount_converted = self._convert_amount(amount_usd, exchange_rate)
+        # Filter lines once
+        earning_lines = payslip.line_ids.filtered(
+            lambda l: l.category_id.code in earnings_categories and l.total > 0 and l.code != 'VE_GROSS_V2'
+        )
 
-            earnings.append({
-                'number': len(earnings) + 1,
-                'name': line.name,
+        for line in earning_lines:
+            # Point 2: Consolidate VE_BONUS_V2 and VE_CESTA_TICKET_V2
+            if line.code in ['VE_BONUS_V2', 'VE_CESTA_TICKET_V2']:
+                bonos_total_usd += line.total
+                continue
+
+            # Process other lines and apply renaming
+            amount_converted = self._convert_amount(line.total, exchange_rate)
+            line_name = line.name
+
+            # Point 1: Rename VE_SALARY_V2
+            if line.code == 'VE_SALARY_V2':
+                line_name = 'Salario quincenal (Deducible)'
+            
+            # Point 3: Rename VE_EXTRABONUS_V2
+            elif line.code == 'VE_EXTRABONUS_V2':
+                line_name = 'Otros Bonos'
+
+            processed_earnings.append({
+                'number': len(processed_earnings) + 1,
+                'name': line_name,
                 'code': line.code,
                 'quantity': line.quantity,
                 'amount': amount_converted,
                 'amount_formatted': self._format_amount(amount_converted, currency)
             })
             earnings_total += amount_converted
+        
+        # Add the consolidated "Bonos" line if it has a value
+        if bonos_total_usd > 0:
+            bonos_converted = self._convert_amount(bonos_total_usd, exchange_rate)
+            processed_earnings.append({
+                'number': len(processed_earnings) + 1,
+                'name': 'Bonos',
+                'code': 'CONSOLIDATED_BONUS',
+                'quantity': 1.0,
+                'amount': bonos_converted,
+                'amount_formatted': self._format_amount(bonos_converted, currency)
+            })
+            earnings_total += bonos_converted
+        
+        # --- End of Refactored Earnings ---
 
+        # Point 6: Calculate "Salario mas Bonos"
+        salary_usd = contract.wage
+        salary_converted = self._convert_amount(salary_usd, exchange_rate)
+        bonos_total_converted = self._convert_amount(bonos_total_usd, exchange_rate)
+        salary_plus_bonos_converted = salary_converted + bonos_total_converted
+        
         # Process deductions
         deductions = []
         deductions_total = 0.0
         deduction_categories = ['DED', 'NET']
 
-        for line in payslip.line_ids.filtered(lambda l: l.category_id.code in deduction_categories and l.total < 0):
+        for line in payslip.line_ids.filtered(
+            lambda l: l.category_id.code in deduction_categories and l.total < 0 and l.code != 'VE_TOTAL_DED_V2'
+        ):
             amount_usd = abs(line.total)
             amount_converted = self._convert_amount(amount_usd, exchange_rate)
 
             # Get rate percentage if available
             rate_text = f"{line.rate:.1f}%" if line.rate else ""
 
+            line_name = line.name  # Initialize with original name
+
+            # Apply renaming based on user's request
+            if line.code == 'VE_SSO_DED_V2':
+                line_name = 'Seguro Social Obligatorio 4.5%'
+            elif line.code == 'VE_FAOV_DED_V2':
+                line_name = 'Política Habiltacional BANAVIH 1%'
+            elif line.code == 'VE_ISLR_DED': # Assuming this code for "Retención de Impuestos sobre Salario"
+                line_name = 'retención de impuesto'
+            elif line.code == 'VE_PARO_DED_V2':
+                line_name = 'Seguro Social Paro Forzoso 0.5%'
+
             deductions.append({
                 'number': len(deductions) + 1,
-                'name': line.name,
+                'name': line_name,  # Use the potentially updated name
                 'code': line.code,
                 'rate': rate_text,
                 'amount': amount_converted,
@@ -264,9 +315,13 @@ class PayslipCompactReport(models.AbstractModel):
             'payslip': payslip,
             'employee': employee_info,
             'exchange': exchange_info,
+            # Old salary values, kept for reference if needed elsewhere
             'salary': salary_converted,
             'salary_formatted': self._format_amount(salary_converted, currency),
-            'earnings': earnings,
+            # New value for "Salario mas Bonos"
+            'salary_plus_bonos': salary_plus_bonos_converted,
+            'salary_plus_bonos_formatted': self._format_amount(salary_plus_bonos_converted, currency),
+            'earnings': processed_earnings,
             'earnings_total': earnings_total,
             'earnings_total_formatted': self._format_amount(earnings_total, currency),
             'deductions': deductions,

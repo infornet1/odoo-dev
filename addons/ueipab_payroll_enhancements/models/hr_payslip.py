@@ -23,6 +23,30 @@ class HrPayslip(models.Model):
     # FIELDS
     # ========================================
 
+    net_wage = fields.Monetary(
+        compute='_compute_net_wage',
+        string='Net Wage',
+        currency_field='currency_id',
+        store=True,
+        help='Net amount of the payslip based on NET category lines.'
+    )
+
+    @api.depends('line_ids.total', 'line_ids.category_id')
+    def _compute_net_wage(self):
+        for payslip in self:
+            net_total = 0.0
+            for line in payslip.line_ids.filtered(lambda l: l.category_id.code == 'NET'):
+                net_total += line.total
+            payslip.net_wage = net_total
+
+    currency_id = fields.Many2one(
+        'res.currency',
+        related='company_id.currency_id',
+        string='Currency',
+        readonly=True,
+        store=True # Added store=True to make it accessible in @api.depends
+    )
+
     payslip_run_state = fields.Selection(
         related='payslip_run_id.state',
         string='Batch Status',
@@ -74,4 +98,63 @@ class HrPayslip(models.Model):
                 )
 
         # If validation passes, call parent method
-        return super(HrPayslip, self).action_payslip_draft()
+        res = super(HrPayslip, self).action_payslip_draft()
+        self.message_post(body=_("Payslip set to Draft."))
+        return res
+    
+    def action_compose_payslip_email(self):
+        """Generates the compact payslip PDF and opens the mail composer."""
+        self.ensure_one()
+
+        # 1. Generate the PDF report
+        report_sudo = self.env['ir.actions.report'].sudo()
+        pdf_content, _ = report_sudo._render_qweb_pdf(
+            'ueipab_payroll_enhancements.action_report_payslip_compact',
+            self.id
+        )
+
+        # 2. Create an ir.attachment record for the PDF
+        attachment = self.env['ir.attachment'].create({
+            'name': f"Payslip-{self.name.replace('/', '_')}.pdf",
+            'type': 'binary',
+            'datas': base64.b64encode(pdf_content),
+            'res_model': 'mail.compose.message',  # Link to mail.compose.message for temporary attachment
+            'res_id': 0,  # No specific record yet, will be linked to the composer
+            'mimetype': 'application/pdf',
+        })
+
+        # 3. Prepare email values and open the mail.compose.message wizard
+        email_to = self.employee_id.work_email if self.employee_id.work_email else self.employee_id.user_id.email
+        if not email_to:
+            raise UserError(_("Employee %s has no work email or user email configured.") % self.employee_id.name)
+
+        subject = f"Your Payslip for {self.name}"
+        body = f"""
+            <p>Dear {self.employee_id.name},</p>
+            <p>Please find your payslip attached for the period from {self.date_from} to {self.date_to}.</p>
+            <p>If you have any questions, please contact the HR department.</p>
+            <br/>
+            <p>Best regards,</p>
+            <p>{self.env.company.name}</p>
+        """
+
+        ctx = {
+            'default_composition_mode': 'comment',
+            'default_model': 'hr.payslip',
+            'default_res_id': self.id,
+            'default_partner_ids': [(6, 0, self.employee_id.address_home_id.ids)] if self.employee_id.address_home_id else False,
+            'default_email_to': email_to,
+            'default_subject': subject,
+            'default_body': body,
+            'default_attachment_ids': [(6, 0, [attachment.id])],
+            'custom_layout': 'mail.mail_notification_light',
+        }
+
+        return {
+            'name': 'Compose Email',
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'mail.compose.message',
+            'target': 'new',
+            'context': ctx,
+        }
