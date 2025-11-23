@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
+<odoo noupdate="1">
     <record id="email_template_edi_payslip_compact" model="mail.template">
-        <field name="name">Payslip Test Template</field>
+        <field name="name">Payslip Compact Report</field>
         <field name="model_id" ref="hr.model_hr_payslip"/>
-        <field name="email_from">test@example.com</field>
-        <field name="partner_to">recipient@example.com</field>
-        <field name="subject">Test Payslip Subject</field>
+        <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+        <field name="email_to">{{ object.employee_id.work_email }}</field>
+        <field name="subject">Payslip {{ object.name }}</field>
         <field name="body_html" type="html">
-            <![CDATA[
-                <p>This is a test email body.</p>
-            ]]>
+            <div style="background-color:#f2f3f5; padding:20px;">
+                <h2 style="color:#4267b2; text-align:center;">Payslip for {{ object.employee_id.name }}</h2>
+                <p style="font-size:16px; text-align:center;">
+                    Dear {{ object.employee_id.name }},
+                </p>
+                <p style="font-size:16px; text-align:center;">
+                    Please find attached your payslip for the period from {{ object.date_from }} to {{ object.date_to }}.
+                </p>
+                <p style="font-size:16px; text-align:center;">
+                    If you have any questions, please contact the HR department.
+                </p>
+                <p style="font-size:16px; text-align:center;">
+                    Best regards,<br/>
+                    {{ object.company_id.name }}
+                </p>
+            </div>
         </field>
         <field name="report_template" ref="ueipab_payroll_enhancements.action_report_payslip_compact"/>
-        <field name="report_name">Payslip.pdf</field>
+        <field name="report_name">Payslip_{{ object.name.replace('/','_') }}.pdf</field>
     </record>
 </odoo>
 
