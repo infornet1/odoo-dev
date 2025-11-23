@@ -4,7 +4,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 class HrPayslipRun(models.Model):
-    _inherit = 'hr.payslip.run'
+    _inherit = ['hr.payslip.run', 'mail.thread']
 
     currency_id = fields.Many2one('res.currency', compute='_compute_total_net_amount_details', string='Currency')
     total_net_amount = fields.Monetary(compute='_compute_total_net_amount_details', string='Total Net Payable', currency_field='currency_id')
