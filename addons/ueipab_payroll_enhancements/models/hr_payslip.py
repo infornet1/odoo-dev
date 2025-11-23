@@ -10,6 +10,8 @@ Enhancement:
     - Follows business policy: batch state controls child payslip states
 """
 
+import base64
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -138,11 +140,14 @@ class HrPayslip(models.Model):
             <p>{self.env.company.name}</p>
         """
 
+        # Get the partner for the employee (user's partner)
+        partner = self.employee_id.user_partner_id if self.employee_id.user_partner_id else False
+
         ctx = {
             'default_composition_mode': 'comment',
             'default_model': 'hr.payslip',
             'default_res_id': self.id,
-            'default_partner_ids': [(6, 0, self.employee_id.address_home_id.ids)] if self.employee_id.address_home_id else False,
+            'default_partner_ids': [(6, 0, [partner.id])] if partner else False,
             'default_email_to': email_to,
             'default_subject': subject,
             'default_body': body,
