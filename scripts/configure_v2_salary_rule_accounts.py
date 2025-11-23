@@ -28,37 +28,34 @@ print(f"  Liquidation Expense:   {liquidation_expense.code} - {liquidation_expen
 print(f"  Liquidation Payable:   {liquidation_payable.code} - {liquidation_payable.name} (ID: {liquidation_payable.id})")
 
 # Configuration mapping
+# NOTE: Only deductions and NET should post to accounting
+# Individual earnings (SALARY, BONUS, etc.) and summary totals (GROSS, TOTAL_DED) should NOT post
 rule_configs = {
-    # V2 Payroll Rules (Regular payroll expense)
-    'VE_SALARY_V2': {
+    # V2 Payroll Deductions (these should post)
+    'VE_SSO_DED_V2': {
         'debit': payroll_expense.id,
         'credit': transition_payable.id,
-        'type': 'payroll'
+        'type': 'deduction'
     },
-    'VE_EXTRABONUS_V2': {
+    'VE_FAOV_DED_V2': {
         'debit': payroll_expense.id,
         'credit': transition_payable.id,
-        'type': 'payroll'
+        'type': 'deduction'
     },
-    'VE_BONUS_V2': {
+    'VE_PARO_DED_V2': {
         'debit': payroll_expense.id,
         'credit': transition_payable.id,
-        'type': 'payroll'
+        'type': 'deduction'
     },
-    'VE_CESTA_TICKET_V2': {
+    'VE_ARI_DED_V2': {
         'debit': payroll_expense.id,
         'credit': transition_payable.id,
-        'type': 'payroll'
+        'type': 'deduction'
     },
-    'VE_GROSS_V2': {
+    'VE_NET_V2': {
         'debit': payroll_expense.id,
         'credit': transition_payable.id,
-        'type': 'payroll'
-    },
-    'VE_TOTAL_DED_V2': {
-        'debit': payroll_expense.id,
-        'credit': transition_payable.id,
-        'type': 'payroll'
+        'type': 'net'
     },
 
     # V2 Liquidation Rules (Liquidation expense)
