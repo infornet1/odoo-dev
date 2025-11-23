@@ -34,11 +34,13 @@ class PayslipCompactReport(models.AbstractModel):
 
         payslips = self.env['hr.payslip'].browse(payslip_ids)
 
-        # Get currency
+        # Get currency - Default to VEB with latest rate for email generation
         if data and data.get('currency_id'):
             currency = self.env['res.currency'].browse(data['currency_id'])
         else:
-            currency = self.env.company.currency_id  # Default to USD
+            # When called from mail template (no wizard), use VEB with latest rate
+            veb_currency = self.env['res.currency'].search([('name', '=', 'VEB')], limit=1)
+            currency = veb_currency if veb_currency else self.env.company.currency_id
 
         # Get exchange rate options from data
         use_custom_rate = data.get('use_custom_rate', False) if data else False

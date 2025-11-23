@@ -3,29 +3,29 @@
     <record id="email_template_edi_payslip_compact" model="mail.template">
         <field name="name">Payslip Compact Report</field>
         <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
-        <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
-        <field name="email_to">{{ object.employee_id.work_email }}</field>
-        <field name="subject">Payslip {{ object.name }}</field>
+        <field name="email_from">${(object.company_id.email or user.email_formatted) | safe}</field>
+        <field name="email_to">${object.employee_id.work_email | safe}</field>
+        <field name="subject">Payslip ${object.name or ''}</field>
         <field name="body_html" type="html">
             <div style="background-color:#f2f3f5; padding:20px;">
-                <h2 style="color:#4267b2; text-align:center;">Payslip for {{ object.employee_id.name }}</h2>
+                <h2 style="color:#4267b2; text-align:center;">Payslip for ${object.employee_id.name or ''}</h2>
                 <p style="font-size:16px; text-align:center;">
-                    Dear {{ object.employee_id.name }},
+                    Dear ${object.employee_id.name or ''},
                 </p>
                 <p style="font-size:16px; text-align:center;">
-                    Please find attached your payslip for the period from {{ object.date_from }} to {{ object.date_to }}.
+                    Please find attached your payslip for the period from ${format_date(object.date_from)} to ${format_date(object.date_to)}.
                 </p>
                 <p style="font-size:16px; text-align:center;">
                     If you have any questions, please contact the HR department.
                 </p>
                 <p style="font-size:16px; text-align:center;">
                     Best regards,<br/>
-                    {{ object.company_id.name }}
+                    ${object.company_id.name or ''}
                 </p>
             </div>
         </field>
         <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_payslip_compact'))]"/>
-        <field name="template_fs">{{(object.name or '').replace('/','_')}}</field>
+        <field name="template_fs">${(object.name or '').replace('/','_')}</field>
     </record>
 </odoo>
 
