@@ -24,8 +24,8 @@
                 </p>
             </div>
         </field>
-        <field name="report_template" ref="ueipab_payroll_enhancements.action_report_payslip_compact"/>
-        <field name="report_name">Payslip_{{ object.name.replace('/','_') }}.pdf</field>
+        <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_payslip_compact'))]"/>
+        <field name="template_fs">{{(object.name or '').replace('/','_')}}</field>
     </record>
 </odoo>
 
