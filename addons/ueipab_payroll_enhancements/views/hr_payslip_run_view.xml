@@ -72,6 +72,13 @@
                         icon="fa-envelope"
                         help="Send individual payslips to each employee in this batch via email"/>
             </button>
+            <!-- Add email template selector field after exchange rate -->
+            <field name="exchange_rate" position="after">
+                <field name="email_template_id"
+                       widget="selection"
+                       placeholder="Select email template..."
+                       help="Choose which email template to use when sending payslips"/>
+            </field>
         </field>
     </record>
 

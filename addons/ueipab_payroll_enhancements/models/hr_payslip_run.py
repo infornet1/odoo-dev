@@ -11,6 +11,15 @@ class HrPayslipRun(models.Model):
     total_net_amount = fields.Monetary(compute='_compute_total_net_amount_details', string='Total Net Payable', currency_field='currency_id')
     exchange_rate = fields.Float(string='Exchange Rate', default=1.0) # Added as referenced in XML
 
+    # Email template selector for batch sending
+    email_template_id = fields.Many2one(
+        'mail.template',
+        string='Email Template',
+        domain="[('model', '=', 'hr.payslip')]",
+        default=lambda self: self.env.ref('ueipab_payroll_enhancements.email_template_edi_payslip_compact', raise_if_not_found=False),
+        help='Select which email template to use when sending payslips to employees'
+    )
+
     @api.depends('slip_ids', 'slip_ids.line_ids.total')
     def _compute_total_net_amount_details(self):
         for record in self:
@@ -33,15 +42,21 @@ class HrPayslipRun(models.Model):
         if not self.slip_ids:
             raise UserError(_("There are no payslips in this batch to send."))
 
-        template = self.env.ref('ueipab_payroll_enhancements.email_template_edi_payslip_compact', raise_if_not_found=False)
+        # Use selected template or fallback to default
+        template = self.email_template_id
         if not template:
-            raise UserError(_("The 'Payslip - Send by Email' template could not be found. Please update the module."))
+            template = self.env.ref('ueipab_payroll_enhancements.email_template_edi_payslip_compact', raise_if_not_found=False)
 
+        if not template:
+            raise UserError(_("Please select an email template or update the module to restore default templates."))
+
+        sent_count = 0
         for slip in self.slip_ids:
             if slip.employee_id.work_email:
                 template.send_mail(slip.id, force_send=True, email_values={'email_to': slip.employee_id.work_email})
-        
-        self.message_post(body=_("Payslips sent by email to employees."))
+                sent_count += 1
+
+        self.message_post(body=_("Payslips sent by email to %s employees using template '%s'.") % (sent_count, template.name))
         return True
 
     def action_cancel(self):

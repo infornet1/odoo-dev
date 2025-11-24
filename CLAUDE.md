@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-22 16:50 UTC
+**Last Updated:** 2025-11-24 03:40 UTC
 
 ## Core Instructions
 
@@ -332,7 +332,72 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 
 ---
 
-### 7. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
+### 7. Payslip Batch Email Template Selector
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.33.0 (2025-11-24)
+
+**Smart template selector** for batch payslip emails with 3 beautiful HTML templates.
+
+**Key Features:**
+- **Template dropdown** on batch form view
+- **Auto-default** to "Payslip Compact Report"
+- **QWeb syntax** for proper email rendering
+- **Inline styles** for email client compatibility
+- **Sent count tracking** in batch message log
+
+**Available Templates:**
+
+1. **Payslip Compact Report** (Default)
+   - Simple professional text email
+   - PDF attachment with full details
+   - Purple/blue color scheme
+   - Best for: Regular payroll with archiving
+
+2. **Payslip Email - Employee Delivery**
+   - Beautiful HTML with gradient headers
+   - Full salary + deductions breakdown tables
+   - Purple gradient design
+   - Exchange rate display
+   - Best for: Monthly detailed employee view
+
+3. **Aguinaldos Email - Christmas Bonus Delivery** 🎄
+   - Christmas-themed (red/green gradient)
+   - Aguinaldos explanation box
+   - Shows only bonus amount (no deductions)
+   - "¡Felices Fiestas!" footer
+   - Best for: December Christmas bonuses
+
+**Usage:**
+1. Open payslip batch form
+2. Select template from **"Email Template"** dropdown
+3. Click **"Send Payslips by Email"** button
+4. All employees receive emails using selected template
+
+**Technical Implementation:**
+- Field: `email_template_id` (Many2one to mail.template)
+- Domain: `[('model', '=', 'hr.payslip')]`
+- Method: `action_send_batch_emails()` uses selected template
+- Syntax: Jinja2 for headers, QWeb for body_html
+
+**Email Syntax Rules (Critical):**
+```python
+# Headers (subject, email_from, email_to, email_cc)
+subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
+
+# Body (body_html)
+<div>
+    <p>Estimado/a <strong t-out="object.employee_id.name"/>,</p>  # QWeb
+</div>
+```
+
+**Version History:**
+- **v1.33.0:** Added template selector with 3 templates (2025-11-24)
+- Fixed "Payslip Compact Report" QWeb syntax
+- Fixed "Aguinaldos Email" with Christmas theme
+- Removed deductions section from Aguinaldos (not applicable)
+
+---
+
+### 8. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
 **Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.1
 
 **Key Features:**
@@ -501,7 +566,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.29.0 (Decommissioned email delivery system - 2025-11-22)
+- **ueipab_payroll_enhancements:** v1.33.0 (Email template selector + 3 beautiful HTML templates - 2025-11-24)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---
