@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Extend HR Contract Form View for Venezuelan Payroll -->
+        <!-- Extend HR Contract Form View for Venezuelan Payroll V2 -->
         <record id="hr_contract_view_form_venezuelan" model="ir.ui.view">
             <field name="name">hr.contract.form.venezuelan</field>
             <field name="model">hr.contract</field>
             <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
             <field name="priority">99</field>
             <field name="arch" type="xml">
-                <!-- Add V1 Venezuelan fields to yearly_benefits (backward compatibility) -->
-                <group name="yearly_benefits" position="inside">
-                    <field name="ueipab_salary_base" string="Salary (70%)"/>
-                    <field name="ueipab_bonus_regular" string="Bonus (25%)"/>
-                    <field name="ueipab_extra_bonus" string="Extra Bonus (5%)"/>
-                </group>
-
                 <!-- Add new notebook pages after "Salary Information" page -->
                 <page name="information" position="after">
 
@@ -116,10 +109,10 @@
             <field name="inherit_id" ref="hr_contract.hr_contract_view_tree"/>
             <field name="priority">99</field>
             <field name="arch" type="xml">
-                <!-- Add Venezuelan fields to tree view -->
+                <!-- Add V2 Venezuelan fields to tree view -->
                 <field name="wage" position="after">
-                    <field name="ueipab_salary_base" string="Salary" optional="show"/>
-                    <field name="ueipab_bonus_regular" string="Bonus" optional="show"/>
+                    <field name="ueipab_salary_v2" string="Salary V2" optional="show"/>
+                    <field name="ueipab_bonus_v2" string="Bonus V2" optional="show"/>
                     <field name="cesta_ticket_usd" string="Cesta Ticket" optional="hide"/>
                 </field>
             </field>

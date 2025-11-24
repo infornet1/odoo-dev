@@ -6,19 +6,7 @@ class HrContract(models.Model):
     _inherit = 'hr.contract'
     _description = 'Employee Contract'
 
-    # Venezuelan Compensation Fields
-    ueipab_salary_base = fields.Monetary(
-        'Salary (70%)',
-        help="70% of total compensation - Base salary component"
-    )
-    ueipab_bonus_regular = fields.Monetary(
-        'Bonus (25%)',
-        help="25% of total compensation - Regular bonus including benefits"
-    )
-    ueipab_extra_bonus = fields.Monetary(
-        'Extra Bonus (5%)',
-        help="5% of total compensation - Extra performance bonus"
-    )
+    # Venezuelan Compensation Fields (V2 Only)
     cesta_ticket_usd = fields.Monetary(
         'Cesta Ticket (USD)',
         default=40.0,
@@ -27,15 +15,6 @@ class HrContract(models.Model):
     wage_ves = fields.Monetary(
         'Wage (VES)',
         help="Total wage amount in Venezuelan Bolivars"
-    )
-
-    # Venezuelan Deduction Base
-    ueipab_deduction_base = fields.Monetary(
-        'Deduction Base (K+L)',
-        help="Original Column K + L value used for calculating monthly deductions. "
-             "This is the base amount BEFORE 70/25/5 distribution and BEFORE extracting Cesta Ticket. "
-             "Deductions (IVSS, FAOV, INCES, ARI) are calculated on this amount per spreadsheet logic. "
-             "Formula: deduction_base = Column K + Column L (from payroll spreadsheet)"
     )
 
     # ==========================================================================
@@ -145,28 +124,6 @@ class HrContract(models.Model):
     prestaciones_last_paid_date = fields.Date(
         'Last Prestaciones Payment',
         help="Date of last prestaciones payment made"
-    )
-
-    # Venezuelan Aguinaldos (Christmas Bonus)
-    ueipab_monthly_salary = fields.Monetary(
-        'Monthly Salary (Spreadsheet)',
-        help="Total monthly salary from payroll spreadsheet (Column K in USD). "
-             "Used for Aguinaldos, year-end bonuses, and other special calculations. "
-             "This field tracks the official salary independent of the 70/25/5 distribution "
-             "used for regular payroll. Synced from Google Sheets using "
-             "sync-monthly-salary-from-spreadsheet.py script.",
-        currency_field='currency_id',
-    )
-    ueipab_salary_notes = fields.Text(
-        'Salary Notes (Audit Trail)',
-        help="Complete audit trail for ueipab_monthly_salary including:\n"
-             "- Source spreadsheet and date\n"
-             "- Column reference\n"
-             "- Original VEB amount\n"
-             "- Exchange rate used\n\n"
-             "Format: 'From payroll sheet {date}, Column K ({veb} VEB) @ {rate} VEB/USD'\n\n"
-             "Example: 'From payroll sheet 31oct2025, Column K (62,748.90 VEB) @ 219.87 VEB/USD'\n\n"
-             "This provides complete traceability and allows verification of calculations at any time.",
     )
 
     # Venezuelan Withhold Income Tax (ARI)
@@ -287,27 +244,14 @@ class HrContract(models.Model):
             - bonus_v2: Exempt from all deductions
             - cesta_ticket_usd: Exempt from all deductions (mandatory benefit)
 
-        LEGAL BASIS:
-            CEO confirmed full compliance with Venezuelan labor law (2025-11-16)
-
-        PRORATION (Option A - CEO Approved):
-            All components prorated by actual payslip period (days / 30)
-            Handles standard bi-weekly (15 days), terminations, and partial periods
-
-        EXAMPLE (Rafael Perez):
+        EXAMPLE:
             salary_v2 = $119.09
             extrabonus_v2 = $51.21
             bonus_v2 = $190.32
             cesta_ticket_usd = $40.00
             ────────────────────
             wage = $400.62
-
-        PARALLEL V1/V2 OPERATION:
-            This method ONLY updates wage if V2 fields are populated.
-            V1 fields (ueipab_deduction_base, etc.) remain untouched.
-            Both structures can coexist during migration period.
         """
-        # Only calculate if at least one V2 field is populated
         if self.ueipab_salary_v2 or self.ueipab_extrabonus_v2 or self.ueipab_bonus_v2:
             self.wage = (
                 (self.ueipab_salary_v2 or 0.0) +

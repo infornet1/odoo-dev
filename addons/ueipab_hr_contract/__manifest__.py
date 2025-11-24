@@ -1,43 +1,36 @@
 {
     'name': 'UEIPAB HR Contract Extensions',
-    'version': '17.0.1.5.0',
+    'version': '17.0.2.0.0',
     'category': 'Human Resources',
-    'summary': 'Venezuelan payroll fields for UEIPAB contracts',
+    'summary': 'Venezuelan V2 payroll fields for UEIPAB contracts',
     'description': """
-UEIPAB HR Contract Extensions
-=============================
-This module extends the HR contract model with Venezuelan payroll fields:
-- Venezuelan compensation breakdown (Salary/Bonus/Extra Bonus)
-- Bi-monthly payroll schedule
-- Prestaciones sociales tracking
-- Cesta Ticket management
-- Aguinaldos (Christmas Bonus) tracking with audit trail
-- Venezuelan Withhold Income Tax (ARI) rate management
-  * Employee-specific ARI withholding rate (0.5% or 1%)
-  * Quarterly tax bracket update tracking
-  * Synced from payroll spreadsheet Column AA
+UEIPAB HR Contract Extensions (V2 Only)
+=======================================
+This module extends the HR contract model with Venezuelan V2 payroll fields.
 
-Liquidation Historical Tracking (v1.3.0 - Added 2025-11-12):
-- Original Hire Date: Track employment start for antiguedad continuity
-- Previous Liquidation Date: Subtract already-paid antiguedad for rehires
-- Vacation Paid Until: Calculate accrued vacation from last Aug 1 payment
-- Supports complex scenarios: rehires, gaps, multiple liquidations
-
-V2 Compensation Breakdown (v1.4.0 - Added 2025-11-16 - CEO APPROVED):
+V2 Compensation Breakdown (CEO APPROVED 2025-11-16):
 - ueipab_salary_v2: Salary subject to mandatory deductions (SSO, FAOV, PARO, ARI)
 - ueipab_extrabonus_v2: Extra bonus exempt from deductions
 - ueipab_bonus_v2: Regular bonus exempt from deductions
-- Parallel V1/V2 operation: Both structures coexist during migration
-- Transparent deduction base: Eliminates confusing percentage calculations
-- Option A proration: Deductions calculated by actual payslip period days/30
-- Data source: Google Spreadsheet columns K, L, M (100% validated)
-- Legal compliance: CEO confirmed full Venezuelan labor law compliance
+- cesta_ticket_usd: Monthly food allowance ($40 default)
 
-V2 Vacation/Bono Fix (v1.5.0 - Added 2025-11-17):
-- ueipab_vacation_prepaid_amount: Total vacation/bono amount paid in advance
-- Fixes double deduction bug where NET was incorrectly $0.00
-- Manual entry of actual prepaid amounts (e.g., $88.98, $256.82)
-- School year system: Sep 1 - Aug 31; Aug 1 payments cover PAST year
+Additional Fields:
+- Bi-monthly payroll schedule configuration
+- Prestaciones sociales tracking
+- Venezuelan Withhold Income Tax (ARI) rate management
+
+Liquidation Historical Tracking:
+- ueipab_original_hire_date: Employment start for antiguedad continuity
+- ueipab_previous_liquidation_date: Already-paid antiguedad for rehires
+- ueipab_vacation_paid_until: Last vacation payment date
+- ueipab_vacation_prepaid_amount: Prepaid vacation/bono amount
+
+Changelog:
+- v2.0.0 (2025-11-24): REMOVED V1 fields (ueipab_salary_base, ueipab_bonus_regular,
+  ueipab_extra_bonus, ueipab_deduction_base, ueipab_monthly_salary, ueipab_salary_notes)
+- v1.5.0 (2025-11-17): Added ueipab_vacation_prepaid_amount field
+- v1.4.0 (2025-11-16): Added V2 compensation fields
+- v1.3.0 (2025-11-12): Added liquidation historical tracking
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',
