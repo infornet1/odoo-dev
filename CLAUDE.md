@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-24 03:40 UTC
+**Last Updated:** 2025-11-24 20:58 UTC
 
 ## Core Instructions
 
@@ -390,10 +390,20 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 ```
 
 **Version History:**
+- **v1.34.0:** Fixed batch fields display (2025-11-24) - see below
 - **v1.33.0:** Added template selector with 3 templates (2025-11-24)
 - Fixed "Payslip Compact Report" QWeb syntax
 - Fixed "Aguinaldos Email" with Christmas theme
 - Removed deductions section from Aguinaldos (not applicable)
+
+**✅ Batch Fields Fix (v1.34.0 - 2025-11-24):**
+- **Bug Fixed:** `total_net_amount` and `exchange_rate` not displaying on batch form
+- **Root Cause 1:** `total_net_amount` computed field only looked for `code == 'NET'`, but V2 payslips use `VE_NET_V2`
+- **Root Cause 2:** `exchange_rate` was a simple field with default 1.0, not auto-populated from VEB rates
+- **Fix 1:** Updated filter to `l.code in ('NET', 'VE_NET_V2')` to support both V1 and V2 payroll
+- **Fix 2:** Changed `exchange_rate` to computed field that auto-populates from latest VEB rate for batch end date
+- **Result:** Batch 120 now shows $7,340.09 total and 243.1105 VEB/USD exchange rate
+- **Note:** Existing batches required one-time recomputation; new batches auto-populate
 
 ---
 
@@ -566,7 +576,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.33.0 (Email template selector + 3 beautiful HTML templates - 2025-11-24)
+- **ueipab_payroll_enhancements:** v1.34.0 (Batch fields fix: total_net_amount + exchange_rate - 2025-11-24)
 - **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
 
 ---

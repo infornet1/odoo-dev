@@ -9,7 +9,13 @@ class HrPayslipRun(models.Model):
 
     currency_id = fields.Many2one('res.currency', compute='_compute_total_net_amount_details', string='Currency')
     total_net_amount = fields.Monetary(compute='_compute_total_net_amount_details', string='Total Net Payable', currency_field='currency_id')
-    exchange_rate = fields.Float(string='Exchange Rate', default=1.0) # Added as referenced in XML
+    exchange_rate = fields.Float(
+        string='Exchange Rate',
+        compute='_compute_exchange_rate',
+        store=True,
+        readonly=False,
+        help='VEB/USD exchange rate. Auto-populated from latest rate but can be manually overridden.'
+    )
 
     # Email template selector for batch sending
     email_template_id = fields.Many2one(
@@ -20,6 +26,25 @@ class HrPayslipRun(models.Model):
         help='Select which email template to use when sending payslips to employees'
     )
 
+    @api.depends('date_end')
+    def _compute_exchange_rate(self):
+        """Auto-populate exchange rate from latest VEB rate for the batch end date."""
+        veb_currency = self.env['res.currency'].search([('name', '=', 'VEB')], limit=1)
+        for record in self:
+            if veb_currency:
+                # Get rate for batch end date (or today if not set)
+                rate_date = record.date_end or fields.Date.today()
+                rate = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', veb_currency.id),
+                    ('name', '<=', rate_date),
+                ], order='name desc', limit=1)
+                if rate:
+                    record.exchange_rate = rate.company_rate
+                else:
+                    record.exchange_rate = 1.0
+            else:
+                record.exchange_rate = 1.0
+
     @api.depends('slip_ids', 'slip_ids.line_ids.total')
     def _compute_total_net_amount_details(self):
         for record in self:
@@ -27,7 +52,8 @@ class HrPayslipRun(models.Model):
             # Fallback to company currency if no slips are available
             currency = self.env.company.currency_id
             for payslip in record.slip_ids.filtered(lambda p: p.state == 'done'):
-                net_line = payslip.line_ids.filtered(lambda l: l.code == 'NET')
+                # Support both standard NET and Venezuelan V2 net codes
+                net_line = payslip.line_ids.filtered(lambda l: l.code in ('NET', 'VE_NET_V2'))
                 if net_line:
                     total += sum(net_line.mapped('total'))
                     if not currency and payslip.currency_id:
