@@ -118,11 +118,12 @@ class HrPayslipEmployees(models.TransientModel):
         # Compute all payslips
         payslips.action_compute_sheet()
 
-        # Apply batch exchange rate (if applicable)
-        if payslip_run.batch_exchange_rate > 0:
+        # Apply batch exchange rate from our custom field (NOT batch_exchange_rate from hr_payroll_community)
+        # Our exchange_rate field is auto-populated from VEB currency rates
+        if payslip_run.exchange_rate > 0:
             payslips.write({
-                'exchange_rate_used': payslip_run.batch_exchange_rate,
-                'exchange_rate_date': payslip_run.exchange_rate_set_date or fields.Datetime.now()
+                'exchange_rate_used': payslip_run.exchange_rate,
+                'exchange_rate_date': fields.Datetime.now()
             })
 
         return {'type': 'ir.actions.act_window_close'}

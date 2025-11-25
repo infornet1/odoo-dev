@@ -26,6 +26,26 @@ class HrPayslipRun(models.Model):
         help='Select which email template to use when sending payslips to employees'
     )
 
+    # Override to bypass hr_payroll_community exchange rate gating
+    # We use our own simpler exchange_rate field for VEB rate tracking
+    exchange_rate_confirmed = fields.Boolean(default=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to auto-confirm exchange rate (bypasses hr_payroll_community gating)."""
+        for vals in vals_list:
+            vals['exchange_rate_confirmed'] = True
+        return super().create(vals_list)
+
+    def _compute_can_generate_payslips(self):
+        """Override to always allow payslip generation (bypasses hr_payroll_community gating).
+
+        The base hr_payroll_community requires both batch_exchange_rate > 0 AND exchange_rate_confirmed.
+        We use our own exchange_rate field, so we override this to always allow generation.
+        """
+        for record in self:
+            record.can_generate_payslips = True
+
     @api.depends('date_end')
     def _compute_exchange_rate(self):
         """Auto-populate exchange rate from latest VEB rate for the batch end date."""
@@ -106,13 +126,40 @@ class HrPayslipRun(models.Model):
         return True
 
     def action_apply_exchange_rate(self):
-        """Applies the batch's exchange rate to all payslips in the batch."""
+        """Applies the batch's exchange rate to all payslips in the batch.
+
+        This updates the exchange_rate_used field on all payslips, overriding
+        any previously set rate (including hardcoded defaults from hr_payroll_community).
+        """
         self.ensure_one()
         if not self.exchange_rate or self.exchange_rate <= 0:
             raise UserError(_("Please set a valid exchange rate (greater than 0) on the batch."))
 
-        # Assuming payslips have a field to store exchange rate
-        # This will update all payslips in the batch with the batch's exchange rate
-        self.slip_ids.write({'custom_exchange_rate': self.exchange_rate}) # Assuming 'custom_exchange_rate' exists on hr.payslip
-        self.message_post(body=_("Exchange rate %s applied to all payslips in this batch.") % self.exchange_rate)
-        return True
+        if not self.slip_ids:
+            raise UserError(_("There are no payslips in this batch to update."))
+
+        # Apply exchange rate to ALL payslips in the batch
+        self.slip_ids.write({
+            'exchange_rate_used': self.exchange_rate,
+            'exchange_rate_date': fields.Datetime.now()
+        })
+
+        # Post a confirmation message with the rate details
+        payslip_count = len(self.slip_ids)
+        total_net_veb = self.total_net_amount * self.exchange_rate if self.total_net_amount else 0.0
+
+        self.message_post(body=_(
+            "Exchange rate applied to %s payslips: %.4f VEB/USD<br/>"
+            "Batch total: $%.2f USD = Bs. %.2f VEB"
+        ) % (payslip_count, self.exchange_rate, self.total_net_amount or 0, total_net_veb))
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Exchange Rate Applied'),
+                'message': _('Exchange rate %.4f VEB/USD applied to %s payslips.') % (self.exchange_rate, payslip_count),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
