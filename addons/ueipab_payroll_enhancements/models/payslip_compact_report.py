@@ -56,7 +56,7 @@ class PayslipCompactReport(models.AbstractModel):
         reports = []
         for payslip in payslips:
             # Get exchange rate
-            exchange_rate, rate_source_date = self._get_exchange_rate(
+            exchange_rate, rate_source_date, rate_source_type = self._get_exchange_rate(
                 payslip,
                 currency,
                 use_custom_rate,
@@ -70,8 +70,7 @@ class PayslipCompactReport(models.AbstractModel):
                 currency,
                 exchange_rate,
                 rate_source_date,
-                use_custom_rate,
-                custom_exchange_rate
+                rate_source_type
             )
             reports.append(report_data)
 
@@ -87,6 +86,12 @@ class PayslipCompactReport(models.AbstractModel):
     def _get_exchange_rate(self, payslip, currency, use_custom, custom_rate, rate_date):
         """Get exchange rate for currency conversion.
 
+        Priority order for VEB:
+        1. Custom rate (if provided via wizard)
+        2. Rate date lookup (if provided via wizard)
+        3. Payslip's exchange_rate_used field (default)
+        4. Latest available rate (fallback)
+
         Args:
             payslip: hr.payslip record
             currency: res.currency record
@@ -95,35 +100,46 @@ class PayslipCompactReport(models.AbstractModel):
             rate_date: Date, date for automatic rate lookup
 
         Returns:
-            tuple: (exchange_rate, rate_source_date)
+            tuple: (exchange_rate, rate_source_date, rate_source_type)
                 - exchange_rate (float): The exchange rate value
                 - rate_source_date (date): The date of the rate record (or None)
+                - rate_source_type (str): 'custom', 'wizard_date', 'payslip', or 'latest'
         """
         if currency.name == 'USD':
-            return 1.0, None
+            return 1.0, None, 'usd'
 
         if currency.name == 'VEB':
             # PRIORITY 1: USE CUSTOM RATE IF PROVIDED
             if use_custom and custom_rate and custom_rate > 0:
-                return custom_rate, None  # No source date for custom rate
+                return custom_rate, None, 'custom'
 
             # PRIORITY 2: USE CUSTOM DATE IF PROVIDED
             if rate_date:
-                lookup_date = rate_date
-            else:
-                # PRIORITY 3: USE LATEST AVAILABLE RATE
-                lookup_date = None
-
-            # Lookup rate
-            if lookup_date:
                 rate_record = self.env['res.currency.rate'].search([
                     ('currency_id', '=', currency.id),
-                    ('name', '<=', lookup_date)
+                    ('name', '<=', rate_date)
                 ], limit=1, order='name desc')
-            else:
-                rate_record = self.env['res.currency.rate'].search([
-                    ('currency_id', '=', currency.id)
-                ], limit=1, order='name desc')
+                if rate_record:
+                    rate_value = None
+                    if hasattr(rate_record, 'company_rate'):
+                        rate_value = rate_record.company_rate
+                    elif rate_record.rate > 0:
+                        rate_value = 1.0 / rate_record.rate
+                    if rate_value:
+                        return rate_value, rate_record.name, 'wizard_date'
+
+            # PRIORITY 3: USE PAYSLIP'S EXCHANGE RATE (exchange_rate_used field)
+            if payslip.exchange_rate_used and payslip.exchange_rate_used > 0:
+                # Get rate date from payslip if available
+                rate_source = None
+                if payslip.exchange_rate_date:
+                    rate_source = payslip.exchange_rate_date.date()
+                return payslip.exchange_rate_used, rate_source, 'payslip'
+
+            # PRIORITY 4: FALLBACK TO LATEST AVAILABLE RATE
+            rate_record = self.env['res.currency.rate'].search([
+                ('currency_id', '=', currency.id)
+            ], limit=1, order='name desc')
 
             if rate_record:
                 rate_value = None
@@ -133,10 +149,10 @@ class PayslipCompactReport(models.AbstractModel):
                     rate_value = 1.0 / rate_record.rate
 
                 if rate_value:
-                    return rate_value, rate_record.name
+                    return rate_value, rate_record.name, 'latest'
 
         # Fallback
-        return 1.0, None
+        return 1.0, None, 'fallback'
 
     def _convert_amount(self, amount_usd, exchange_rate):
         """Convert USD amount to target currency.
@@ -168,7 +184,7 @@ class PayslipCompactReport(models.AbstractModel):
             return f"Bs. {formatted}"
 
     def _prepare_report_data(self, payslip, currency, exchange_rate, rate_source_date,
-                            use_custom_rate, custom_rate):
+                            rate_source_type):
         """Prepare all data for report template.
 
         Args:
@@ -176,8 +192,7 @@ class PayslipCompactReport(models.AbstractModel):
             currency: res.currency record
             exchange_rate: Exchange rate value
             rate_source_date: Date of rate record (or None)
-            use_custom_rate: Boolean, whether custom rate is used
-            custom_rate: Custom exchange rate value
+            rate_source_type: String indicating source ('custom', 'wizard_date', 'payslip', 'latest')
 
         Returns:
             dict: Complete report data
@@ -185,11 +200,16 @@ class PayslipCompactReport(models.AbstractModel):
         contract = payslip.contract_id
         employee = payslip.employee_id
 
-        # Format rate source text
+        # Format rate source text based on rate_source_type
         if currency.name != 'VEB':
             rate_source = None
-        elif use_custom_rate and custom_rate:
+        elif rate_source_type == 'custom':
             rate_source = "Tasa personalizada"
+        elif rate_source_type == 'payslip':
+            if rate_source_date:
+                rate_source = f"Tasa de nómina ({rate_source_date.strftime('%d/%m/%Y')})"
+            else:
+                rate_source = "Tasa de nómina"
         elif rate_source_date:
             rate_source = f"Tasa del {rate_source_date.strftime('%d/%m/%Y')}"
         else:

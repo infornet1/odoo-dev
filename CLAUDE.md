@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-24 22:30 UTC
+**Last Updated:** 2025-11-25 04:45 UTC
 
 ## Core Instructions
 
@@ -407,7 +407,28 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 
 ---
 
-### 8. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
+### 8. Comprobante de Pago (Compacto) Report
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.40.0
+
+**Key Features:**
+- Single-page compact payslip with currency conversion
+- VEB/USD currency selector with exchange rate options
+- Consolidated earnings display (Salary + Bonos)
+- Professional deduction breakdown
+
+**✅ Payslip Exchange Rate Priority (v1.40.0 - 2025-11-25):**
+- **NEW DEFAULT:** When VEB is selected, report now uses payslip's `exchange_rate_used` field
+- **Priority Order:**
+  1. Custom rate (wizard) → "Tasa personalizada"
+  2. Rate date lookup (wizard) → "Tasa del DD/MM/YYYY"
+  3. **Payslip's `exchange_rate_used`** → "Tasa de nómina (DD/MM/YYYY)"
+  4. Latest available rate (fallback) → "Tasa automática"
+- **Benefit:** Report shows same rate used when payslip was generated
+- **Use Case:** Employee receives report with exact rate from their batch
+
+---
+
+### 9. Acuerdo Finiquito Laboral (Labor Settlement Agreement)
 **Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.25.1
 
 **Key Features:**
@@ -576,12 +597,22 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.34.0 (Batch fields fix: total_net_amount + exchange_rate - 2025-11-24)
+- **ueipab_payroll_enhancements:** v1.40.0 (Compact report uses payslip exchange rate - 2025-11-25)
 - **ueipab_hr_contract:** v17.0.2.0.0 (V2 fields only - V1 fields removed - 2025-11-24)
 
 ---
 
-## Production Migration Status (2025-11-24)
+## Production Migration Status (2025-11-25)
+
+### ✅ Salary Structure Assignment Complete (2025-11-25)
+- All 44 production contracts assigned to "Salarios Venezuela UEIPAB V2" (struct_id)
+- All 46 testing contracts assigned to same structure
+- View `hr_payroll_community.hr_contract_view_form` activated in testing (was inactive)
+
+### ✅ ARI Rate Comparison (2025-11-25)
+- Compared ARI rates between Google Spreadsheet (15nov2025 tab) and Odoo production
+- **Result:** 43/44 employees match, 1 discrepancy found
+- **Discrepancy:** ARCIDES ARZOLA (V8478634) - Spreadsheet: 3%, Odoo: 1%
 
 ### ✅ V1 to V2 Contract Field Migration Complete
 

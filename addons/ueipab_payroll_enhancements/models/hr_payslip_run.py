@@ -65,13 +65,14 @@ class HrPayslipRun(models.Model):
             else:
                 record.exchange_rate = 1.0
 
-    @api.depends('slip_ids', 'slip_ids.line_ids.total')
+    @api.depends('slip_ids', 'slip_ids.line_ids.total', 'slip_ids.state')
     def _compute_total_net_amount_details(self):
         for record in self:
             total = 0.0
             # Fallback to company currency if no slips are available
             currency = self.env.company.currency_id
-            for payslip in record.slip_ids.filtered(lambda p: p.state == 'done'):
+            # Include both draft and done payslips (exclude only cancelled)
+            for payslip in record.slip_ids.filtered(lambda p: p.state in ('draft', 'done', 'verify')):
                 # Support both standard NET and Venezuelan V2 net codes
                 net_line = payslip.line_ids.filtered(lambda l: l.code in ('NET', 'VE_NET_V2'))
                 if net_line:
