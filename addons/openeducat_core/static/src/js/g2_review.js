@@ -31,7 +31,9 @@ G2ReviewDialog.props = {
 
 export class G2Review extends Component {
     setup() {
-        const reviewShow = !!cookie.get(`g2_review_${session.db}`);
+        // G2 Review popup disabled - always skip showing the dialog
+        // Original code checked cookie: const reviewShow = !!cookie.get(`g2_review_${session.db}`);
+        const reviewShow = true;  // Always true = never show popup
         this.dialog = useService("dialog");
 
         if (!reviewShow) {
