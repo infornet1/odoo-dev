@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-24 20:58 UTC
+**Last Updated:** 2025-11-24 22:30 UTC
 
 ## Core Instructions
 
@@ -577,7 +577,66 @@ except:
 ## Module Versions
 
 - **ueipab_payroll_enhancements:** v1.34.0 (Batch fields fix: total_net_amount + exchange_rate - 2025-11-24)
-- **ueipab_hr_contract:** v1.5.0 (V2 vacation prepaid amount field - 2025-11-17)
+- **ueipab_hr_contract:** v17.0.2.0.0 (V2 fields only - V1 fields removed - 2025-11-24)
+
+---
+
+## Production Migration Status (2025-11-24)
+
+### ✅ V1 to V2 Contract Field Migration Complete
+
+**V1 Fields Removed (both environments):**
+- `ueipab_salary_base`, `ueipab_bonus_regular`, `ueipab_extra_bonus`
+- `ueipab_deduction_base`, `ueipab_monthly_salary`, `ueipab_salary_notes`
+
+**V2 Fields Active (both environments):**
+- `ueipab_salary_v2`, `ueipab_extrabonus_v2`, `ueipab_bonus_v2`, `cesta_ticket_usd`
+- `ueipab_ari_withholding_rate`, `ueipab_ari_last_update`
+- `ueipab_original_hire_date`, `ueipab_previous_liquidation_date`
+- `ueipab_vacation_paid_until`, `ueipab_vacation_prepaid_amount`
+
+### ✅ Contract Synchronization Complete
+
+| Environment | Running Contracts |
+|-------------|------------------|
+| Testing | 46 |
+| Production | 44 |
+
+**Synced to Production:**
+- 44 contracts with V2 fields synchronized
+- All employees with `department_id` and valid VAT included
+- Last sync: 2025-11-24
+
+**Remaining Differences (2):**
+- `V12345678` - Gustavo Perdomo (test VAT - needs real cédula)
+- `V30597749` - MARIA JIMENEZ (no department_id set)
+
+### ✅ User Permissions Cleanup (2025-11-24)
+
+**47 users had the following rights REMOVED:**
+
+| Category | Groups Removed |
+|----------|----------------|
+| **Payroll** | Manager, Officer |
+| **Contratos** | Administrador, Gerente del empleado |
+| **Ventas** | Administrador, Usuario (all levels) |
+| **Sitio web** | Editor restringido, Editor y diseñador |
+| **Empleados** | Administrador, Encargado |
+| **Reclutamiento** | Administrador, Encargado, Entrevistador |
+| **Marketing por correo** | Usuario |
+| **Encuestas** | Administrador, Usuario |
+| **Administración** | Ajustes, Permisos de acceso |
+
+**Users affected:** All regular employees (teachers, admin staff) now have minimal access rights.
+
+### Production Environment Details
+
+```
+Server: 10.124.0.3
+Container: ueipab17
+Database: DB_UEIPAB
+SSH: root (password in secure docs)
+```
 
 ---
 
