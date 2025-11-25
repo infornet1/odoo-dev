@@ -314,7 +314,46 @@ Only **three columns** - anything not in "Now" is postponed:
 
 ---
 
-## 15. Document References
+## 15. Git Repository Strategy
+
+### Single Repo Approach (Current)
+
+```
+infornet1/odoo-dev/
+├── addons/
+│   ├── openeducat_*              # OpenEducat CE modules (external)
+│   └── ueipab_education_portal/  # Custom portal (NEW - our code)
+├── documentation/
+│   ├── UEIPAB_OPENEDUCAT_*.md    # OpenEducat docs
+│   └── *.md                       # HR/Payroll docs
+├── config/
+│   └── odoo.conf
+└── scripts/
+```
+
+**Rationale:** Simple, everything in one place, easier backup, single developer workflow.
+
+### Git Tags for Milestones
+
+| Tag | Date | Milestone |
+|-----|------|-----------|
+| `openeducat-v0.1` | 31 Mar 2026 | Core complete |
+| `openeducat-v0.9` | 30 Jun 2026 | Pilot complete |
+| `openeducat-v1.0` | 15 Sep 2026 | GO-LIVE |
+
+### Commit Convention
+
+```
+docs:     Documentation changes
+feat:     New features (portal, grading)
+fix:      Bug fixes
+config:   Configuration changes
+refactor: Code restructuring
+```
+
+---
+
+### Document References
 
 | Document | Location |
 |----------|----------|
