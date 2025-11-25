@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-25 04:45 UTC
+**Last Updated:** 2025-11-25 19:15 UTC
 
 ## Core Instructions
 
@@ -135,6 +135,14 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - **FAOV:** 1.0% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
 - **INCES (PARO):** 0.5% monthly (prorated by days/30) - **applies ONLY to Utilidades** ✅
 - **ARI:** Variable % (from contract field, prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
+- **INCES (Payroll):** 0.25% monthly (prorated by days/30) - ⏸️ **DISABLED** pending legal confirmation
+
+**⏸️ VE_INCES_DED_V2 Rule (2025-11-25) - PENDING LEGAL CONFIRMATION:**
+- **Created in Testing:** Rule for 0.25% INCES deduction on `ueipab_salary_v2`
+- **Formula:** `-(salary × 0.0025 × days/30)`
+- **Status:** DISABLED - awaiting legal labor law confirmation
+- **Example:** $285.39 salary × 0.25% × (15/30) = -$0.36
+- **Action Required:** Confirm with legal before enabling in production
 
 **✅ INCES Deduction Scope Fix (2025-11-18):**
 - **Accounting Observation:** INCES should only apply to Utilidades (profit sharing)
