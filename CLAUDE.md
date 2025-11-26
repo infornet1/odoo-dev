@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 02:00 UTC
+**Last Updated:** 2025-11-27 02:10 UTC
 
 ## Core Instructions
 
@@ -834,6 +834,25 @@ location ~ ^/(web|website|payslip|mail|report)(/|$) {
 - **Result:** Subject now correctly shows batch name when present
 
 **Modules upgraded:** `ueipab_hr_contract`, `ueipab_payroll_enhancements`
+
+### ✅ Production Payslip Data Cleanup (2025-11-27)
+
+**Purged test payslip data and reset sequence for fresh start:**
+
+| Action | Details |
+|--------|---------|
+| Cancelled | 5 confirmed payslips (reversed accounting moves) |
+| Deleted | 49 payslips via ORM unlink() (cascaded to related records) |
+| Deleted | 2 test batches (TEST_PAYROLL_V2_2025_11_01-15, NOVIEMBRE15) |
+| Reset | Sequence to 1 (next payslip will be SLIP/001) |
+
+**Safe Cleanup Procedure Used:**
+1. Cancel confirmed payslips → reverses accounting entries
+2. Set cancelled to draft → allows deletion
+3. Delete via `unlink()` → proper cascade to hr_payslip_line, mail_message, mail_followers
+4. Reset ir.sequence → fresh numbering
+
+**Final State:** 0 payslips, 0 batches, next = SLIP/001
 
 ### ✅ Production Deployment (2025-11-26)
 
