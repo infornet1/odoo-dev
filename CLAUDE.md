@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 01:30 UTC
+**Last Updated:** 2025-11-27 01:45 UTC
 
 ## Core Instructions
 
@@ -412,6 +412,14 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 - **Root Cause:** `en_US` locale was using Jinja2 syntax in `body_html` field
 - **Fix:** Changed to QWeb syntax (`t-out="object.employee_id.name"`)
 - **Rule:** `body_html` uses QWeb engine; only header fields use Jinja2
+
+**✅ Subject Line Conditional Fix (2025-11-27):**
+- **Bug Fixed:** Subject not rendering batch name conditional properly
+- **Old (broken):** `{{ (' │ Lote: ' + object.payslip_run_id.name) if object.payslip_run_id else '' }}`
+- **New (working):** `{{' │ Lote: ' + object.payslip_run_id.name if object.payslip_run_id else ''}}`
+- **Root Cause:** Extra outer parentheses in Jinja2 inline conditional
+- **Result:** With batch → `💰 Comprobante de Pago │ Nro.: SLIP/508 │ Lote: NOVIEMBRE15`
+- **Result:** No batch → `💰 Comprobante de Pago │ Nro.: SLIP/005`
 
 **Version History:**
 - **v1.34.0:** Fixed batch fields display (2025-11-24) - see below
