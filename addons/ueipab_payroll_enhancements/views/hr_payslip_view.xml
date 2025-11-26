@@ -38,6 +38,42 @@
                 </div>
             </header>
 
+            <!-- Add Acknowledgment section after other info -->
+            <notebook position="inside">
+                <page string="📝 Acknowledgment" name="acknowledgment">
+                    <group>
+                        <group string="Acknowledgment Status">
+                            <field name="is_acknowledged" widget="boolean_toggle"/>
+                            <field name="acknowledged_date" readonly="1"/>
+                            <button name="action_reset_acknowledgment"
+                                    string="Reset Acknowledgment"
+                                    type="object"
+                                    class="btn-secondary"
+                                    icon="fa-undo"
+                                    invisible="not is_acknowledged"
+                                    confirm="Are you sure you want to reset the acknowledgment status?"/>
+                        </group>
+                        <group string="Audit Information">
+                            <field name="acknowledged_ip" readonly="1"/>
+                            <field name="acknowledged_user_agent" readonly="1"/>
+                            <field name="access_token" readonly="1" groups="base.group_system"/>
+                        </group>
+                    </group>
+                </page>
+            </notebook>
+
+        </field>
+    </record>
+
+    <!-- Extend payslip tree view to show acknowledgment status -->
+    <record id="hr_payslip_tree_acknowledgment" model="ir.ui.view">
+        <field name="name">hr.payslip.tree.acknowledgment</field>
+        <field name="model">hr.payslip</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="is_acknowledged" string="Ack" widget="boolean_toggle" optional="show"/>
+            </field>
         </field>
     </record>
 

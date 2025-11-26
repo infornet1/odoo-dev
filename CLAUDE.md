@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 17:35 UTC
+**Last Updated:** 2025-11-27 01:30 UTC
 
 ## Core Instructions
 
@@ -577,6 +577,72 @@ ueipab_ari_portal/
 
 ---
 
+### 11. Payslip Acknowledgment System
+**Status:** ✅ TESTING READY | **Module:** `ueipab_payroll_enhancements` v1.42.0 (2025-11-26)
+
+**Purpose:** Token-based portal system for employees to acknowledge receipt of their payslips electronically.
+
+**Key Features:**
+- **Unique Access Token:** UUID-based secure token per payslip
+- **Portal Landing Page:** Employee sees payslip details before confirming
+- **Acknowledgment Tracking:** Records date, IP address, and user agent
+- **Email Integration:** Acknowledgment URL included in payslip emails
+- **Chatter Log:** Acknowledgment posted to payslip message history
+
+**Payslip Fields Added:**
+```python
+access_token = fields.Char()              # UUID for secure portal access
+is_acknowledged = fields.Boolean()         # True when employee confirms
+acknowledged_date = fields.Datetime()      # When confirmation occurred
+acknowledged_ip = fields.Char()            # IP address of confirmation
+acknowledged_user_agent = fields.Char()    # Browser/device info
+```
+
+**Routes:**
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/payslip/acknowledge/<id>/<token>` | GET | Landing page with payslip details |
+| `/payslip/acknowledge/<id>/<token>/confirm` | POST | Process confirmation |
+
+**URL Format:**
+```
+https://dev.ueipab.edu.ve/payslip/acknowledge/1010/3b652456-b274-49e2-9acd-e0aa545199a0?db=testing
+```
+
+**Session Requirement (Odoo 17):**
+- Routes use `auth='public'` which requires database session
+- User must first establish session (visit `/web?db=testing`)
+- Testing nginx configured to proxy all Odoo routes for HTTPS access
+
+**Production Deployment Notes:**
+- **URL Base:** `https://odoo.ueipab.edu.ve` (from `web.base.url`)
+- **Database Filter:** Production nginx sets `X-Odoo-dbfilter: DB_UEIPAB`
+- **Single-DB Mode:** `?db=DB_UEIPAB` parameter is redundant but harmless
+- **No nginx changes needed** - production already proxies Odoo routes
+
+**Controller Implementation:**
+- Uses standalone HTML responses (not QWeb templates)
+- Inline CSS for email client compatibility
+- Records IP from `X-Real-IP` header (nginx) or `REMOTE_ADDR`
+- Prevents duplicate acknowledgments
+
+**HR Actions:**
+- **View Acknowledgment:** Fields visible in payslip form view
+- **Reset Acknowledgment:** Button to clear acknowledgment (HR use only)
+- **Filter by Status:** Search payslips by `is_acknowledged` field
+
+**Testing Evidence (2025-11-26):**
+```bash
+# HTTPS flow via nginx (port 443)
+curl -c /tmp/cookies.txt -L "https://dev.ueipab.edu.ve/web?db=testing"
+curl -b /tmp/cookies.txt "https://dev.ueipab.edu.ve/payslip/acknowledge/1010/3b652456-...?db=testing"
+# Result: HTML page with employee name, payslip info, confirm button ✅
+```
+
+📖 **[Session/Routing Investigation](documentation/PAYSLIP_ACK_SESSION_FIX.md)** (if created)
+
+---
+
 ## Key Technical Learnings
 
 ### Accrual-Based Currency Conversion (2025-11-18)
@@ -677,6 +743,35 @@ except:
 <div invisible="field == 0">
 ```
 
+### Odoo 17 Public Route Session Requirement (2025-11-26)
+**Problem:** Routes with `auth='public'` return 404 without an established database session
+
+```python
+# Route definition
+@http.route('/payslip/acknowledge/<int:id>/<string:token>', auth='public')
+def acknowledge_page(self, id, token, **kw):
+    # Works ONLY if user has session cookie from visiting /web?db=xxx first
+```
+
+**Symptoms:**
+- Direct link to route returns 404 (no session)
+- Same link works after visiting `/web?db=testing`
+
+**Solutions:**
+1. **Establish session first:** User visits `/web?db=xxx` before using public routes
+2. **Single-database mode:** Configure `X-Odoo-dbfilter` in nginx (production)
+3. **Use `auth='none'`:** Doesn't work for routes needing database access
+
+**nginx proxy for multi-route HTTPS:**
+```nginx
+location ~ ^/(web|website|payslip|mail|report)(/|$) {
+    proxy_pass http://127.0.0.1:8019;
+    proxy_set_header Cookie $http_cookie;
+    proxy_pass_header Set-Cookie;
+    # ... other headers
+}
+```
+
 ### Report Development Patterns
 - Use `web.basic_layout` for reports without headers/footers (UTF-8 support)
 - Report model naming: `report.<module>.<template_id>` (exact match required)
@@ -709,7 +804,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.42.0 (SSO 4% + Otras Deducciones - 2025-11-26)
+- **ueipab_payroll_enhancements:** v1.43.0 (Payslip Acknowledgment System - 2025-11-26)
 - **ueipab_hr_contract:** v17.0.2.1.0 (Added ueipab_other_deductions field - 2025-11-26)
 - **ueipab_ari_portal:** v17.0.1.0.0 (NEW - Employee AR-I self-service portal - 2025-11-26)
 

@@ -8,9 +8,11 @@ Enhancement:
     - Prevents setting cancelled payslips to draft when batch is cancelled
     - Maintains parent-child state relationship
     - Follows business policy: batch state controls child payslip states
+    - Employee acknowledgment system with portal link and token
 """
 
 import base64
+import uuid
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -58,6 +60,89 @@ class HrPayslip(models.Model):
              'Used to control button visibility and prevent state changes '
              'when batch is cancelled.'
     )
+
+    # ========================================
+    # EMPLOYEE ACKNOWLEDGMENT FIELDS
+    # ========================================
+
+    access_token = fields.Char(
+        string='Access Token',
+        copy=False,
+        index=True,
+        help='Unique token for secure portal access to acknowledge payslip.'
+    )
+
+    is_acknowledged = fields.Boolean(
+        string='Acknowledged',
+        default=False,
+        copy=False,
+        tracking=True,
+        help='Indicates if employee has acknowledged receipt of this payslip.'
+    )
+
+    acknowledged_date = fields.Datetime(
+        string='Acknowledged Date',
+        copy=False,
+        readonly=True,
+        help='Date and time when employee acknowledged the payslip.'
+    )
+
+    acknowledged_ip = fields.Char(
+        string='Acknowledged IP',
+        copy=False,
+        readonly=True,
+        help='IP address from which the acknowledgment was made.'
+    )
+
+    acknowledged_user_agent = fields.Char(
+        string='User Agent',
+        copy=False,
+        readonly=True,
+        help='Browser/device information when acknowledgment was made.'
+    )
+
+    # ========================================
+    # ACKNOWLEDGMENT METHODS
+    # ========================================
+
+    def _generate_access_token(self):
+        """Generate a unique access token for secure portal access."""
+        for payslip in self:
+            if not payslip.access_token:
+                payslip.access_token = str(uuid.uuid4())
+        return True
+
+    def _get_acknowledgment_url(self):
+        """Get the full URL for employee acknowledgment portal page.
+
+        Includes database name parameter for multi-database environments.
+        """
+        self.ensure_one()
+        if not self.access_token:
+            self._generate_access_token()
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        db_name = self.env.cr.dbname
+        return f"{base_url}/payslip/acknowledge/{self.id}/{self.access_token}?db={db_name}"
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to generate access token for new payslips."""
+        payslips = super().create(vals_list)
+        for payslip in payslips:
+            payslip._generate_access_token()
+        return payslips
+
+    def action_reset_acknowledgment(self):
+        """Reset acknowledgment status (for HR use only)."""
+        self.ensure_one()
+        self.write({
+            'is_acknowledged': False,
+            'acknowledged_date': False,
+            'acknowledged_ip': False,
+            'acknowledged_user_agent': False,
+        })
+        self.message_post(body=_("Acknowledgment status reset by %s") % self.env.user.name)
+        return True
 
     # ========================================
     # BUSINESS METHODS

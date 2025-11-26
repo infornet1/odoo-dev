@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acknowledgment Landing Page -->
+    <template id="payslip_acknowledge_page" name="Payslip Acknowledgment Page">
+        <t t-call="web.frontend_layout">
+            <t t-set="title">Confirmar Recepción de Comprobante</t>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <img t-att-src="'/logo.png'" alt="Logo" style="max-height: 80px;" class="mb-3"/>
+                            <h2 class="text-primary">Comprobante de Pago</h2>
+                            <p class="text-muted">Confirmación de Recepción</p>
+                        </div>
+
+                        <!-- Main Card -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-file-text-o me-2"></i>
+                                    <t t-esc="payslip.number"/>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Employee Info -->
+                                <div class="mb-4">
+                                    <h6 class="text-muted mb-3">Información del Empleado</h6>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="text-muted" style="width: 40%;">Empleado:</td>
+                                            <td><strong t-esc="employee.name"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Cédula:</td>
+                                            <td t-esc="employee.identification_id or '-'"/>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Período:</td>
+                                            <td t-esc="period"/>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Monto Neto:</td>
+                                            <td>
+                                                <strong class="text-success">
+                                                    <t t-esc="currency.symbol"/>
+                                                    <t t-esc="'{:,.2f}'.format(net_amount)"/>
+                                                </strong>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <hr/>
+
+                                <!-- Already Acknowledged Message -->
+                                <t t-if="already_acknowledged">
+                                    <div class="alert alert-success mb-4">
+                                        <i class="fa fa-check-circle me-2"></i>
+                                        <strong>Ya confirmado</strong>
+                                        <p class="mb-0 mt-2">
+                                            Este comprobante fue confirmado el
+                                            <strong t-esc="acknowledged_date.strftime('%d/%m/%Y')"/>
+                                            a las <t t-esc="acknowledged_date.strftime('%H:%M')"/>.
+                                        </p>
+                                    </div>
+                                    <div class="text-center">
+                                        <a href="/" class="btn btn-outline-primary">
+                                            <i class="fa fa-home me-2"></i>Ir al Inicio
+                                        </a>
+                                    </div>
+                                </t>
+
+                                <!-- Confirmation Form -->
+                                <t t-else="">
+                                    <div class="alert alert-info mb-4">
+                                        <i class="fa fa-info-circle me-2"></i>
+                                        <strong>Confirmación Requerida</strong>
+                                        <p class="mb-0 mt-2">
+                                            Al hacer clic en el botón de abajo, confirma que ha recibido
+                                            y revisado este comprobante de pago.
+                                        </p>
+                                    </div>
+
+                                    <form t-attf-action="/payslip/acknowledge/#{payslip.id}/#{payslip.access_token}/confirm" method="POST">
+                                        <div class="form-check mb-4">
+                                            <input class="form-check-input" type="checkbox" id="confirmCheck" required="required"/>
+                                            <label class="form-check-label" for="confirmCheck">
+                                                Confirmo que he recibido y revisado este comprobante de pago
+                                                correspondiente al período indicado.
+                                            </label>
+                                        </div>
+
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-success btn-lg">
+                                                <i class="fa fa-check me-2"></i>
+                                                Confirmar Recepción
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <p class="text-muted small mt-4 text-center">
+                                        <i class="fa fa-lock me-1"></i>
+                                        Su confirmación quedará registrada con fecha, hora y dirección IP
+                                        para fines de auditoría.
+                                    </p>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="text-center mt-4 text-muted small">
+                            <p class="mb-1">Instituto Educativo Privado Andrés Bello</p>
+                            <p class="mb-0">
+                                <i class="fa fa-envelope me-1"></i>
+                                recursoshumanos@ueipab.edu.ve
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Success Page -->
+    <template id="payslip_acknowledge_success" name="Payslip Acknowledgment Success">
+        <t t-call="web.frontend_layout">
+            <t t-set="title">Confirmación Exitosa</t>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <div class="mb-4">
+                                    <span class="fa-stack fa-3x text-success">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </div>
+
+                                <h3 class="text-success mb-3">
+                                    <t t-if="already_acknowledged">
+                                        Comprobante Ya Confirmado
+                                    </t>
+                                    <t t-else="">
+                                        ¡Confirmación Exitosa!
+                                    </t>
+                                </h3>
+
+                                <p class="text-muted mb-4">
+                                    <t t-if="already_acknowledged">
+                                        Este comprobante de pago (<strong t-esc="payslip.number"/>)
+                                        ya fue confirmado anteriormente.
+                                    </t>
+                                    <t t-else="">
+                                        Su confirmación de recepción del comprobante de pago
+                                        (<strong t-esc="payslip.number"/>) ha sido registrada correctamente.
+                                    </t>
+                                </p>
+
+                                <div class="alert alert-light">
+                                    <p class="mb-1">
+                                        <strong>Fecha de confirmación:</strong>
+                                    </p>
+                                    <p class="mb-0" t-esc="acknowledged_date.strftime('%d/%m/%Y a las %H:%M:%S')"/>
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <p class="text-muted small">
+                                    Esta confirmación ha sido registrada en el sistema.
+                                    Puede cerrar esta ventana.
+                                </p>
+
+                                <a href="/" class="btn btn-outline-primary mt-3">
+                                    <i class="fa fa-home me-2"></i>Ir al Inicio
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="text-center mt-4 text-muted small">
+                            <p class="mb-1">Instituto Educativo Privado Andrés Bello</p>
+                            <p class="mb-0">
+                                <i class="fa fa-envelope me-1"></i>
+                                recursoshumanos@ueipab.edu.ve
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Error Page -->
+    <template id="payslip_acknowledge_error" name="Payslip Acknowledgment Error">
+        <t t-call="web.frontend_layout">
+            <t t-set="title">Error</t>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <div class="mb-4">
+                                    <span class="fa-stack fa-3x text-danger">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-times fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </div>
+
+                                <h3 class="text-danger mb-3" t-esc="error_title"/>
+
+                                <p class="text-muted mb-4" t-esc="error_message"/>
+
+                                <hr class="my-4"/>
+
+                                <p class="text-muted small">
+                                    Si cree que esto es un error, por favor contacte a Recursos Humanos:
+                                </p>
+
+                                <a href="mailto:recursoshumanos@ueipab.edu.ve" class="btn btn-outline-primary">
+                                    <i class="fa fa-envelope me-2"></i>recursoshumanos@ueipab.edu.ve
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

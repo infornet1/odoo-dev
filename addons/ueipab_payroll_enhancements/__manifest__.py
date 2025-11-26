@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.41.0',
+    'version': '17.0.1.43.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
@@ -63,6 +63,7 @@ Use Cases:
     'depends': [
         'hr_payroll_community',
         'ueipab_hr_contract',  # For access to custom fields if needed
+        'website',  # For portal templates
     ],
     'data': [
         # 1. Security
@@ -92,6 +93,7 @@ Use Cases:
         'views/hr_payslip_employees_views.xml',
         'views/hr_payslip_run_view.xml',
         'views/hr_payslip_view.xml',
+        'views/payslip_acknowledge_templates.xml',
 
         # 5. Menus (last, as they depend on everything else)
         'views/payroll_reports_menu.xml',
