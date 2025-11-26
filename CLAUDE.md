@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 17:15 UTC
+**Last Updated:** 2025-11-26 17:35 UTC
 
 ## Core Instructions
 
@@ -406,6 +406,12 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
     <p>Estimado/a <strong t-out="object.employee_id.name"/>,</p>  # QWeb
 </div>
 ```
+
+**✅ Payslip Compact Report Template Fix (2025-11-26):**
+- **Bug Fixed:** Placeholders showing as raw text (`{{object.employee_id.name}}`)
+- **Root Cause:** `en_US` locale was using Jinja2 syntax in `body_html` field
+- **Fix:** Changed to QWeb syntax (`t-out="object.employee_id.name"`)
+- **Rule:** `body_html` uses QWeb engine; only header fields use Jinja2
 
 **Version History:**
 - **v1.34.0:** Fixed batch fields display (2025-11-24) - see below
