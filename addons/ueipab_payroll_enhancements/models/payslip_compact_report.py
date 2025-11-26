@@ -315,10 +315,14 @@ class PayslipCompactReport(models.AbstractModel):
                 line_name = 'Seguro Social Obligatorio 4.5%'
             elif line.code == 'VE_FAOV_DED_V2':
                 line_name = 'Política Habiltacional BANAVIH 1%'
-            elif line.code == 'VE_ISLR_DED': # Assuming this code for "Retención de Impuestos sobre Salario"
-                line_name = 'retención de impuesto'
+            elif line.code == 'VE_ISLR_DED':
+                line_name = 'Retención de impuesto'
             elif line.code == 'VE_PARO_DED_V2':
                 line_name = 'Seguro Social Paro Forzoso 0.5%'
+            elif line.code == 'VE_ARI_DED_V2':
+                # Get ARI rate from contract field
+                ari_rate = contract.ueipab_ari_withholding_rate or 0.0
+                line_name = f'Retención impuestos AR-I {ari_rate:.0f}%'
 
             deductions.append({
                 'number': len(deductions) + 1,

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-25 19:15 UTC
+**Last Updated:** 2025-11-26 01:35 UTC
 
 ## Core Instructions
 
@@ -416,13 +416,27 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 ---
 
 ### 8. Comprobante de Pago (Compacto) Report
-**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.40.0
+**Status:** ✅ PRODUCTION READY | **Module:** `ueipab_payroll_enhancements` v1.41.0
 
 **Key Features:**
 - Single-page compact payslip with currency conversion
 - VEB/USD currency selector with exchange rate options
 - Consolidated earnings display (Salary + Bonos)
-- Professional deduction breakdown
+- Professional deduction breakdown with friendly names
+
+**✅ ARI Deduction Display Enhancement (v1.41.0 - 2025-11-26):**
+- **Before:** `VE_ARI_DED_V2 - ARI Variable %`
+- **After:** `Retención impuestos AR-I X%` (shows actual rate from contract)
+- **Source:** Reads `ueipab_ari_withholding_rate` from employee's contract
+- **Example:** Employee with 3% ARI → `Retención impuestos AR-I 3%`
+
+**Deduction Display Names:**
+| Code | Display Name |
+|------|--------------|
+| VE_SSO_DED_V2 | Seguro Social Obligatorio 4.5% |
+| VE_FAOV_DED_V2 | Política Habiltacional BANAVIH 1% |
+| VE_PARO_DED_V2 | Seguro Social Paro Forzoso 0.5% |
+| VE_ARI_DED_V2 | Retención impuestos AR-I X% |
 
 **✅ Payslip Exchange Rate Priority (v1.40.0 - 2025-11-25):**
 - **NEW DEFAULT:** When VEB is selected, report now uses payslip's `exchange_rate_used` field
@@ -605,7 +619,7 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.40.0 (Compact report uses payslip exchange rate - 2025-11-25)
+- **ueipab_payroll_enhancements:** v1.41.0 (Compact report ARI display enhancement - 2025-11-26)
 - **ueipab_hr_contract:** v17.0.2.0.0 (V2 fields only - V1 fields removed - 2025-11-24)
 
 ---
