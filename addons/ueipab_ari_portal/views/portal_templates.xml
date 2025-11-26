@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Portal: AR-I List -->
+    <template id="portal_my_ari" name="My AR-I Declarations">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">AR-I Declarations</t>
+            </t>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">My AR-I Declarations</h5>
+                    <a href="/my/ari/new" class="btn btn-primary btn-sm">
+                        <i class="fa fa-plus"/> New Declaration
+                    </a>
+                </div>
+            </div>
+
+            <t t-if="not aris">
+                <div class="alert alert-info">
+                    <p class="mb-0">
+                        You have no AR-I declarations yet.
+                        <a href="/my/ari/new">Create your first declaration</a>.
+                    </p>
+                </div>
+            </t>
+
+            <t t-if="aris">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Year</th>
+                            <th>Period</th>
+                            <th>Income (Bs.)</th>
+                            <th>Withholding %</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="aris" t-as="ari">
+                            <tr>
+                                <td>
+                                    <a t-attf-href="/my/ari/#{ari.id}">
+                                        <t t-esc="ari.name"/>
+                                    </a>
+                                </td>
+                                <td><t t-esc="ari.fiscal_year"/></td>
+                                <td><t t-esc="dict(ari._fields['variation_month'].selection).get(ari.variation_month)"/></td>
+                                <td><t t-esc="'{:,.2f}'.format(ari.income_total)"/></td>
+                                <td><t t-esc="'{:.2f}%'.format(ari.withholding_percentage)"/></td>
+                                <td>
+                                    <span t-attf-class="badge #{
+                                        'bg-secondary' if ari.state == 'draft' else
+                                        'bg-warning' if ari.state == 'submitted' else
+                                        'bg-success' if ari.state == 'approved' else
+                                        'bg-danger' if ari.state == 'rejected' else
+                                        'bg-dark'
+                                    }">
+                                        <t t-esc="dict(ari._fields['state'].selection).get(ari.state)"/>
+                                    </span>
+                                </td>
+                                <td>
+                                    <a t-attf-href="/my/ari/#{ari.id}/download"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Download Excel">
+                                        <i class="fa fa-download"/>
+                                    </a>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <t t-call="portal.pager"/>
+            </t>
+        </t>
+    </template>
+
+    <!-- Portal: AR-I Detail -->
+    <template id="portal_my_ari_detail" name="AR-I Declaration Detail">
+        <t t-call="portal.portal_layout">
+            <t t-set="o_portal_fullwidth_alert" groups="hr.group_hr_manager">
+                <t t-call="portal.portal_back_in_edit_mode">
+                    <t t-set="backend_url" t-value="'/web#model=hr.employee.ari&amp;id=%d&amp;view_type=form' % ari.id"/>
+                </t>
+            </t>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <h4 class="mb-0">
+                                AR-I Declaration: <t t-esc="ari.name"/>
+                            </h4>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <span t-attf-class="badge fs-6 #{
+                                'bg-secondary' if ari.state == 'draft' else
+                                'bg-warning' if ari.state == 'submitted' else
+                                'bg-success' if ari.state == 'approved' else
+                                'bg-danger' if ari.state == 'rejected' else
+                                'bg-dark'
+                            }">
+                                <t t-esc="dict(ari._fields['state'].selection).get(ari.state)"/>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Alert Messages -->
+                    <t t-if="request.params.get('message') == 'created'">
+                        <div class="alert alert-success">
+                            AR-I declaration created successfully. Review your data and submit for HR approval.
+                        </div>
+                    </t>
+                    <t t-if="request.params.get('message') == 'submitted'">
+                        <div class="alert alert-success">
+                            AR-I declaration submitted for HR review.
+                        </div>
+                    </t>
+                    <t t-if="ari.state == 'rejected'">
+                        <div class="alert alert-danger">
+                            <strong>Rejected:</strong> <t t-esc="ari.rejection_reason"/>
+                        </div>
+                    </t>
+
+                    <!-- Summary Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Declaration Info</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Fiscal Year:</td>
+                                    <td><t t-esc="ari.fiscal_year"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Period:</td>
+                                    <td><t t-esc="dict(ari._fields['variation_month'].selection).get(ari.variation_month)"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Submission Date:</td>
+                                    <td><t t-esc="ari.submission_date" t-options='{"widget": "date"}'/></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Results</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="text-muted">Total Income:</td>
+                                    <td>Bs. <t t-esc="'{:,.2f}'.format(ari.income_total)"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Income in UT:</td>
+                                    <td><t t-esc="'{:,.2f}'.format(ari.income_in_ut)"/> UT</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td class="text-muted"><strong>Withholding %:</strong></td>
+                                    <td><strong><t t-esc="'{:.2f}%'.format(ari.withholding_percentage)"/></strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Breakdown -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Income (Section A/B)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm mb-0">
+                                        <tr>
+                                            <td>Primary Employer:</td>
+                                            <td class="text-end">Bs. <t t-esc="'{:,.2f}'.format(ari.income_employer_primary)"/></td>
+                                        </tr>
+                                        <t t-if="ari.income_employer_b">
+                                            <tr>
+                                                <td><t t-esc="ari.employer_b_name or 'Employer B'"/>:</td>
+                                                <td class="text-end">Bs. <t t-esc="'{:,.2f}'.format(ari.income_employer_b)"/></td>
+                                            </tr>
+                                        </t>
+                                        <tr class="table-secondary">
+                                            <td><strong>Total:</strong></td>
+                                            <td class="text-end"><strong>Bs. <t t-esc="'{:,.2f}'.format(ari.income_total)"/></strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>UT Value:</td>
+                                            <td class="text-end">Bs. <t t-esc="'{:,.2f}'.format(ari.ut_value)"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Income in UT:</td>
+                                            <td class="text-end"><t t-esc="'{:,.2f}'.format(ari.income_in_ut)"/> UT</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Deductions &amp; Rebajas</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm mb-0">
+                                        <tr>
+                                            <td>Deduction Type:</td>
+                                            <td class="text-end">
+                                                <t t-if="ari.deduction_type == 'unique'">
+                                                    Único (774 UT)
+                                                </t>
+                                                <t t-else="">
+                                                    Detallado (<t t-esc="'{:,.2f}'.format(ari.deductions_in_ut)"/> UT)
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Personal Rebate:</td>
+                                            <td class="text-end">10 UT</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Family Dependents:</td>
+                                            <td class="text-end"><t t-esc="ari.cargas_familiares_count"/> × 10 = <t t-esc="ari.cargas_familiares_count * 10"/> UT</td>
+                                        </tr>
+                                        <tr class="table-secondary">
+                                            <td><strong>Total Rebajas:</strong></td>
+                                            <td class="text-end"><strong><t t-esc="'{:,.2f}'.format(ari.rebajas_total_ut)"/> UT</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tax Calculation -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Tax Calculation (Sections F-J)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Taxable Income (F)</div>
+                                        <div class="fs-5"><t t-esc="'{:,.2f}'.format(ari.taxable_income_ut)"/> UT</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Estimated Tax (G)</div>
+                                        <div class="fs-5"><t t-esc="'{:,.2f}'.format(ari.estimated_tax_ut)"/> UT</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="text-muted small">Tax to Withhold (I)</div>
+                                        <div class="fs-5"><t t-esc="'{:,.2f}'.format(ari.tax_to_withhold_ut)"/> UT</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center bg-primary text-white p-2 rounded">
+                                        <div class="small">Withholding % (J)</div>
+                                        <div class="fs-3"><t t-esc="'{:.2f}%'.format(ari.withholding_percentage)"/></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="mt-4 d-flex gap-2">
+                        <t t-if="ari.state == 'draft'">
+                            <form t-attf-action="/my/ari/#{ari.id}/submit" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa fa-send"/> Submit for HR Review
+                                </button>
+                            </form>
+                        </t>
+                        <a t-attf-href="/my/ari/#{ari.id}/download" class="btn btn-outline-primary">
+                            <i class="fa fa-download"/> Download AR-I Excel
+                        </a>
+                        <a href="/my/ari" class="btn btn-outline-secondary">
+                            <i class="fa fa-arrow-left"/> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Portal: AR-I Form (Create/Edit) -->
+    <template id="portal_ari_form" name="AR-I Declaration Form">
+        <t t-call="portal.portal_layout">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">New AR-I Declaration</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Error Messages -->
+                    <t t-if="error_message">
+                        <div class="alert alert-danger">
+                            <t t-foreach="error_message" t-as="msg">
+                                <p class="mb-0"><t t-esc="msg"/></p>
+                            </t>
+                        </div>
+                    </t>
+
+                    <form action="/my/ari/create" method="post" class="o_portal_details_form">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                        <!-- Employee Info (readonly) -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <strong>Employee:</strong> <t t-esc="employee.name"/>
+                                    <t t-if="employee.identification_id">
+                                        | <strong>Cédula:</strong> <t t-esc="employee.identification_id"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Period Selection -->
+                        <h5>Declaration Period</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label">Fiscal Year *</label>
+                                <input type="number" name="fiscal_year" class="form-control"
+                                       t-att-value="request.env.cr.execute('SELECT EXTRACT(YEAR FROM CURRENT_DATE)::INT') or 2025"
+                                       required="required"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Period *</label>
+                                <select name="variation_month" class="form-select" required="required">
+                                    <option value="january">Enero (Inicial)</option>
+                                    <option value="march">Marzo</option>
+                                    <option value="june">Junio</option>
+                                    <option value="september">Septiembre</option>
+                                    <option value="december">Diciembre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Is Variation?</label>
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" name="is_variation" class="form-check-input"/>
+                                    <label class="form-check-label">This is a variation update</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section A: Income -->
+                        <h5>Section A: Estimated Annual Income (Bs.)</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Income from UEIPAB *</label>
+                                <input type="number" name="income_employer_primary" class="form-control"
+                                       step="0.01" required="required"
+                                       t-att-value="'{:.2f}'.format(estimated_income or 0)"/>
+                                <small class="text-muted">
+                                    Estimated from contract: Bs. <t t-esc="'{:,.2f}'.format(estimated_income or 0)"/>
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">UT Value (Bs.)</label>
+                                <input type="number" name="ut_value" class="form-control"
+                                       step="0.01" value="9.00"/>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Second Employer Name</label>
+                                <input type="text" name="employer_b_name" class="form-control"
+                                       placeholder="Leave empty if none"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Income from Employer B</label>
+                                <input type="number" name="income_employer_b" class="form-control"
+                                       step="0.01" value="0"/>
+                            </div>
+                        </div>
+
+                        <!-- Section C/E: Deductions -->
+                        <h5>Deductions</h5>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input type="radio" name="deduction_type" value="unique"
+                                           class="form-check-input" id="ded_unique" checked="checked"/>
+                                    <label class="form-check-label" for="ded_unique">
+                                        <strong>Desgravamen Único (774 UT)</strong>
+                                        - No documentation required
+                                    </label>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input type="radio" name="deduction_type" value="itemized"
+                                           class="form-check-input" id="ded_itemized"/>
+                                    <label class="form-check-label" for="ded_itemized">
+                                        <strong>Desgravámenes Detallados</strong>
+                                        - Requires supporting documents
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Itemized Deductions (hidden by default) -->
+                        <div id="itemized_deductions" class="mb-4" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">1. Education Expenses (Bs.)</label>
+                                    <input type="number" name="deduction_education" class="form-control"
+                                           step="0.01" value="0"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">2. Insurance Premiums (Bs.)</label>
+                                    <input type="number" name="deduction_insurance" class="form-control"
+                                           step="0.01" value="0"/>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">3. Medical/Dental Expenses (Bs.)</label>
+                                    <input type="number" name="deduction_medical" class="form-control"
+                                           step="0.01" value="0"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">4. Housing Expenses (Bs.)</label>
+                                    <input type="number" name="deduction_housing" class="form-control"
+                                           step="0.01" value="0"/>
+                                    <select name="deduction_housing_type" class="form-select mt-1">
+                                        <option value="">Select type...</option>
+                                        <option value="mortgage">Mortgage (max 1,000 UT)</option>
+                                        <option value="rent">Rent (max 800 UT)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section H: Rebajas -->
+                        <h5>Section H: Family Dependents (Cargas Familiares)</h5>
+                        <p class="text-muted">Each dependent provides a 10 UT rebate</p>
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="rebaja_spouse" class="form-check-input"/>
+                                    <label class="form-check-label">Spouse (Cónyuge)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Children &lt; 25 years</label>
+                                <input type="number" name="rebaja_children_under_25" class="form-control"
+                                       min="0" value="0"/>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Disabled Children</label>
+                                <input type="number" name="rebaja_children_disabled" class="form-control"
+                                       min="0" value="0"/>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Dependent Parents</label>
+                                <input type="number" name="rebaja_parents" class="form-control"
+                                       min="0" value="0"/>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Prior Year Excess Withholding (Bs.)</label>
+                                <input type="number" name="rebaja_prior_excess" class="form-control"
+                                       step="0.01" value="0"/>
+                                <small class="text-muted">If you overpaid ISLR last year</small>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa fa-save"/> Create Declaration
+                                </button>
+                                <a href="/my/ari" class="btn btn-outline-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- JavaScript for toggling itemized deductions -->
+                    <script>
+                        document.querySelectorAll('input[name="deduction_type"]').forEach(function(radio) {
+                            radio.addEventListener('change', function() {
+                                var itemizedDiv = document.getElementById('itemized_deductions');
+                                if (this.value === 'itemized') {
+                                    itemizedDiv.style.display = 'block';
+                                } else {
+                                    itemizedDiv.style.display = 'none';
+                                }
+                            });
+                        });
+                    </script>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

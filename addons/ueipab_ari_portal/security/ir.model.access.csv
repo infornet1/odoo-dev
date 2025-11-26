@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_employee_ari_user,hr.employee.ari.user,model_hr_employee_ari,group_ari_user,1,1,1,0
+access_hr_employee_ari_manager,hr.employee.ari.manager,model_hr_employee_ari,group_ari_manager,1,1,1,1
+access_hr_employee_ari_hr_manager,hr.employee.ari.hr_manager,model_hr_employee_ari,hr.group_hr_manager,1,1,1,1
+access_hr_employee_ari_hr_user,hr.employee.ari.hr_user,model_hr_employee_ari,hr.group_hr_user,1,0,0,0
+access_ari_reject_wizard,ari.reject.wizard,model_ari_reject_wizard,group_ari_manager,1,1,1,1
+access_ari_reject_wizard_hr,ari.reject.wizard.hr,model_ari_reject_wizard,hr.group_hr_manager,1,1,1,1
+access_ari_excel_generator,ari.excel.generator,model_ari_excel_generator,group_ari_user,1,0,0,0
+access_ari_excel_generator_hr,ari.excel.generator.hr,model_ari_excel_generator,hr.group_hr_user,1,0,0,0

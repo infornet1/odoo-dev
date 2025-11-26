@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend HR Contract Form to show AR-I link -->
+    <record id="view_hr_contract_form_ari" model="ir.ui.view">
+        <field name="name">hr.contract.form.ari</field>
+        <field name="model">hr.contract</field>
+        <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_ari_declarations" type="object"
+                        class="oe_stat_button" icon="fa-file-text-o">
+                    <field name="ari_declaration_count" widget="statinfo"
+                           string="AR-I"/>
+                </button>
+            </div>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Email Template: AR-I Deadline Reminder -->
+    <record id="mail_template_ari_deadline_reminder" model="mail.template">
+        <field name="name">AR-I: Deadline Reminder</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="subject">Recordatorio: Actualización AR-I - Fecha límite {{object.next_deadline}}</field>
+        <field name="email_from">{{(object.company_id.email or user.email)}}</field>
+        <field name="email_to">{{object.employee_id.work_email or object.employee_id.private_email}}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px; font-size: 14px;">
+    <p>Estimado/a <strong>{{object.employee_id.name}}</strong>,</p>
+
+    <p>Le recordamos que la fecha límite para actualizar su declaración AR-I
+    (Retención de Impuesto Sobre la Renta) se aproxima:</p>
+
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p style="margin: 5px 0;"><strong>Período:</strong> {{dict(object._fields['variation_month'].selection).get(object.variation_month)}}</p>
+        <p style="margin: 5px 0;"><strong>Año Fiscal:</strong> {{object.fiscal_year}}</p>
+        <p style="margin: 5px 0;"><strong>Fecha Límite:</strong> {{object.next_deadline}}</p>
+    </div>
+
+    <p>Por favor, acceda al portal de empleados para completar o actualizar su declaración AR-I
+    antes de la fecha indicada.</p>
+
+    <p style="margin-top: 20px;">
+        <a href="/my/ari"
+           style="background-color: #875A7B; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            Acceder al Portal AR-I
+        </a>
+    </p>
+
+    <p style="margin-top: 20px; color: #666;">
+        Si no actualiza su AR-I antes de la fecha límite, se aplicará el porcentaje
+        máximo de retención según lo establecido en el Decreto 1.808.
+    </p>
+
+    <p>Saludos cordiales,<br/>
+    Departamento de Recursos Humanos<br/>
+    {{object.company_id.name}}</p>
+</div>
+        </field>
+    </record>
+
+    <!-- Email Template: AR-I Submitted (to HR) -->
+    <record id="mail_template_ari_submitted" model="mail.template">
+        <field name="name">AR-I: Declaration Submitted</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="subject">Nueva Declaración AR-I para Revisión: {{object.name}}</field>
+        <field name="email_from">{{(object.company_id.email or user.email)}}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px; font-size: 14px;">
+    <p>Se ha recibido una nueva declaración AR-I para revisión:</p>
+
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p style="margin: 5px 0;"><strong>Referencia:</strong> {{object.name}}</p>
+        <p style="margin: 5px 0;"><strong>Empleado:</strong> {{object.employee_id.name}}</p>
+        <p style="margin: 5px 0;"><strong>Cédula:</strong> {{object.employee_id.identification_id}}</p>
+        <p style="margin: 5px 0;"><strong>Año Fiscal:</strong> {{object.fiscal_year}}</p>
+        <p style="margin: 5px 0;"><strong>Período:</strong> {{dict(object._fields['variation_month'].selection).get(object.variation_month)}}</p>
+        <p style="margin: 5px 0;"><strong>Ingreso Total:</strong> Bs. {{'{:,.2f}'.format(object.income_total)}}</p>
+        <p style="margin: 5px 0;"><strong>Porcentaje Calculado:</strong> {{'{:.2f}%'.format(object.withholding_percentage)}}</p>
+    </div>
+
+    <p style="margin-top: 20px;">
+        <a href="/web#id={{object.id}}&amp;model=hr.employee.ari&amp;view_type=form"
+           style="background-color: #875A7B; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            Revisar Declaración
+        </a>
+    </p>
+</div>
+        </field>
+    </record>
+
+    <!-- Email Template: AR-I Approved -->
+    <record id="mail_template_ari_approved" model="mail.template">
+        <field name="name">AR-I: Declaration Approved</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="subject">Su Declaración AR-I ha sido Aprobada: {{object.name}}</field>
+        <field name="email_from">{{(object.company_id.email or user.email)}}</field>
+        <field name="email_to">{{object.employee_id.work_email or object.employee_id.private_email}}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px; font-size: 14px;">
+    <p>Estimado/a <strong>{{object.employee_id.name}}</strong>,</p>
+
+    <p>Su declaración AR-I ha sido <strong style="color: green;">APROBADA</strong>.</p>
+
+    <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p style="margin: 5px 0;"><strong>Referencia:</strong> {{object.name}}</p>
+        <p style="margin: 5px 0;"><strong>Año Fiscal:</strong> {{object.fiscal_year}}</p>
+        <p style="margin: 5px 0;"><strong>Período:</strong> {{dict(object._fields['variation_month'].selection).get(object.variation_month)}}</p>
+        <p style="margin: 5px 0; font-size: 16px;"><strong>Porcentaje de Retención:</strong> {{'{:.2f}%'.format(object.withholding_percentage)}}</p>
+    </div>
+
+    <p>Este porcentaje será aplicado en sus próximos pagos de nómina para la retención
+    del Impuesto Sobre la Renta (ISLR).</p>
+
+    <p>Puede descargar su formulario AR-I desde el portal de empleados:</p>
+
+    <p style="margin-top: 20px;">
+        <a href="/my/ari/{{object.id}}"
+           style="background-color: #28a745; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            Ver Declaración
+        </a>
+    </p>
+
+    <p>Saludos cordiales,<br/>
+    Departamento de Recursos Humanos<br/>
+    {{object.company_id.name}}</p>
+</div>
+        </field>
+    </record>
+
+    <!-- Email Template: AR-I Rejected -->
+    <record id="mail_template_ari_rejected" model="mail.template">
+        <field name="name">AR-I: Declaration Rejected</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="subject">Su Declaración AR-I requiere Corrección: {{object.name}}</field>
+        <field name="email_from">{{(object.company_id.email or user.email)}}</field>
+        <field name="email_to">{{object.employee_id.work_email or object.employee_id.private_email}}</field>
+        <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px; font-size: 14px;">
+    <p>Estimado/a <strong>{{object.employee_id.name}}</strong>,</p>
+
+    <p>Su declaración AR-I ha sido <strong style="color: red;">RECHAZADA</strong>
+    y requiere correcciones.</p>
+
+    <div style="background-color: #f8d7da; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <p style="margin: 5px 0;"><strong>Referencia:</strong> {{object.name}}</p>
+        <p style="margin: 5px 0;"><strong>Motivo del Rechazo:</strong></p>
+        <p style="margin: 5px 0; padding: 10px; background-color: white; border-radius: 3px;">
+            {{object.rejection_reason}}
+        </p>
+    </div>
+
+    <p>Por favor, acceda al portal de empleados para corregir y volver a enviar su declaración:</p>
+
+    <p style="margin-top: 20px;">
+        <a href="/my/ari/{{object.id}}"
+           style="background-color: #dc3545; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            Corregir Declaración
+        </a>
+    </p>
+
+    <p>Saludos cordiales,<br/>
+    Departamento de Recursos Humanos<br/>
+    {{object.company_id.name}}</p>
+</div>
+        </field>
+    </record>
+
+</odoo>

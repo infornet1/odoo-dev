@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 01:35 UTC
+**Last Updated:** 2025-11-26 03:35 UTC
 
 ## Core Instructions
 
@@ -487,6 +487,79 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 
 ---
 
+### 10. AR-I Portal (Employee Self-Service)
+**Status:** ✅ INSTALLED IN TESTING | **Module:** `ueipab_ari_portal` v17.0.1.0.0 (2025-11-26)
+
+**Purpose:** Employee self-service portal for AR-I (Agente de Retención - Impuesto sobre la Renta) tax withholding declarations as required by Venezuelan law (SENIAT Decreto 1.808).
+
+**Key Features:**
+- **Employee Portal:** Self-service AR-I declaration submission at `/my/ari`
+- **Tax Calculation:** Automatic ISLR progressive rate calculation (6% to 34%)
+- **Desgravamen Options:** Único (774 UT fixed) or Detallado (itemized)
+- **Family Dependents:** Cargas familiares (spouse, children, parents)
+- **Excel Export:** Official SENIAT template filled via openpyxl
+- **HR Approval Workflow:** Draft → Submitted → Approved/Rejected
+- **Email Notifications:** Deadline reminders, submission alerts, approval/rejection
+- **Quarterly Deadlines:** Jan 15, Mar 15, Jun 15, Sep 15, Dec 15
+
+**Tax Calculation Example (ARI/2025/0001):**
+```
+Annual Income: 50,000.00 (5,555.56 UT @ 9.00 Bs/UT)
+Desgravamen Único: 774.00 UT
+Taxable Income: 4,781.56 UT
+Estimated Tax: 811.65 UT
+Personal Rebate: 10.00 UT
+Tax to Withhold: 801.65 UT
+★ Withholding %: 14.43%
+```
+
+**Portal Access:**
+- **URL:** `/my/ari` (employee self-service)
+- **Requirement:** User must have linked employee record (`employee.user_id`)
+- **Backend:** Payroll → AR-I Declarations (HR management)
+
+**Security Groups:**
+- **AR-I Manager:** Full access to all declarations
+- **AR-I User:** Access to own declarations only
+- **HR Manager:** Full read/write access
+- **HR User:** Read-only access
+
+**Module Structure:**
+```
+ueipab_ari_portal/
+├── models/
+│   ├── hr_employee_ari.py    # Main AR-I model (81 fields)
+│   ├── ari_excel_generator.py # SENIAT template filler
+│   └── hr_contract.py        # Contract extension
+├── controllers/
+│   └── portal.py             # Portal routes
+├── views/
+│   ├── hr_employee_ari_views.xml
+│   ├── portal_templates.xml
+│   └── portal_menu.xml
+├── wizard/
+│   └── ari_reject_wizard.py
+├── security/
+│   ├── ari_security.xml
+│   └── ir.model.access.csv
+├── data/
+│   ├── ari_cron.xml          # Deadline reminder cron
+│   └── mail_templates.xml    # 4 email templates
+└── static/
+    └── templates/ARI SENIAT FORMATO.xlsx
+```
+
+**Dependencies:**
+- `hr`, `hr_contract`, `portal`, `mail`, `ueipab_hr_contract`
+- `openpyxl` (pip install in container for Excel generation)
+
+**⚠️ Important Notes:**
+- Employee must be linked to portal user (`hr.employee.user_id`)
+- `openpyxl` must be installed in Docker container
+- Portal card appears in "Common" section alongside "Connection & Security"
+
+---
+
 ## Key Technical Learnings
 
 ### Accrual-Based Currency Conversion (2025-11-18)
@@ -621,6 +694,7 @@ except:
 
 - **ueipab_payroll_enhancements:** v1.41.0 (Compact report ARI display enhancement - 2025-11-26)
 - **ueipab_hr_contract:** v17.0.2.0.0 (V2 fields only - V1 fields removed - 2025-11-24)
+- **ueipab_ari_portal:** v17.0.1.0.0 (NEW - Employee AR-I self-service portal - 2025-11-26)
 
 ---
 

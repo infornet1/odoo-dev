@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- AR-I Module Category -->
+    <record id="module_category_ari" model="ir.module.category">
+        <field name="name">AR-I Portal</field>
+        <field name="description">AR-I Tax Declaration Management</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <!-- AR-I User Group -->
+    <record id="group_ari_user" model="res.groups">
+        <field name="name">AR-I User</field>
+        <field name="category_id" ref="module_category_ari"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Can view and submit their own AR-I declarations</field>
+    </record>
+
+    <!-- AR-I Manager Group -->
+    <record id="group_ari_manager" model="res.groups">
+        <field name="name">AR-I Manager</field>
+        <field name="category_id" ref="module_category_ari"/>
+        <field name="implied_ids" eval="[(4, ref('group_ari_user'))]"/>
+        <field name="comment">Can review and approve all AR-I declarations</field>
+        <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+    </record>
+
+    <!-- Record Rules -->
+
+    <!-- Employees can only see their own AR-I declarations -->
+    <record id="ari_rule_employee_own" model="ir.rule">
+        <field name="name">AR-I: Employee sees own declarations</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="domain_force">[('employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_ari_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Managers can see all AR-I declarations -->
+    <record id="ari_rule_manager_all" model="ir.rule">
+        <field name="name">AR-I: Managers see all declarations</field>
+        <field name="model_id" ref="model_hr_employee_ari"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_ari_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+</odoo>

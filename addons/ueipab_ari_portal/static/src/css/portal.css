@@ -1,0 +1,60 @@
+/* AR-I Portal Styles */
+
+/* AR-I Form Cards */
+.o_portal_ari_card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.o_portal_ari_card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Result Highlight */
+.ari-result-highlight {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.ari-result-highlight .percentage {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+/* Status Badges */
+.badge-ari-draft {
+    background-color: #6c757d;
+}
+
+.badge-ari-submitted {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-ari-approved {
+    background-color: #28a745;
+}
+
+.badge-ari-rejected {
+    background-color: #dc3545;
+}
+
+/* Form Sections */
+.ari-section-header {
+    background-color: #e9ecef;
+    padding: 10px 15px;
+    margin: 20px 0 15px 0;
+    border-left: 4px solid #667eea;
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ari-result-highlight .percentage {
+        font-size: 1.8rem;
+    }
+}

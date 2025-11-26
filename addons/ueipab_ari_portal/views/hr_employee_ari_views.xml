@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- AR-I Declaration Tree View -->
+    <record id="view_hr_employee_ari_tree" model="ir.ui.view">
+        <field name="name">hr.employee.ari.tree</field>
+        <field name="model">hr.employee.ari</field>
+        <field name="arch" type="xml">
+            <tree string="AR-I Declarations"
+                  decoration-info="state == 'draft'"
+                  decoration-warning="state == 'submitted'"
+                  decoration-success="state == 'approved'"
+                  decoration-danger="state == 'rejected'">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="fiscal_year"/>
+                <field name="variation_month"/>
+                <field name="income_total" string="Income (Bs.)"/>
+                <field name="withholding_percentage" string="% Retención"/>
+                <field name="submission_date"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'submitted'"
+                       decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- AR-I Declaration Form View -->
+    <record id="view_hr_employee_ari_form" model="ir.ui.view">
+        <field name="name">hr.employee.ari.form</field>
+        <field name="model">hr.employee.ari</field>
+        <field name="arch" type="xml">
+            <form string="AR-I Declaration">
+                <header>
+                    <button name="action_submit" string="Submit for Review"
+                            type="object" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve"
+                            type="object" class="btn-success"
+                            invisible="state != 'submitted'"
+                            groups="hr.group_hr_manager"/>
+                    <button name="action_reject" string="Reject"
+                            type="object" class="btn-danger"
+                            invisible="state != 'submitted'"
+                            groups="hr.group_hr_manager"/>
+                    <button name="action_generate_excel" string="Download AR-I Excel"
+                            type="object" class="btn-secondary"
+                            invisible="state == 'cancelled'"/>
+                    <button name="action_reset_to_draft" string="Reset to Draft"
+                            type="object"
+                            invisible="state not in ['rejected', 'cancelled']"/>
+                    <button name="action_cancel" string="Cancel"
+                            type="object"
+                            invisible="state in ['approved', 'cancelled']"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,submitted,approved"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_generate_excel" type="object"
+                                class="oe_stat_button" icon="fa-file-excel-o"
+                                invisible="not excel_file">
+                            <span class="o_stat_text">Download Excel</span>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Employee Information">
+                            <field name="employee_id" readonly="state != 'draft'"/>
+                            <field name="contract_id" readonly="1"/>
+                            <field name="company_id" readonly="1"/>
+                        </group>
+                        <group string="Declaration Period">
+                            <field name="fiscal_year" readonly="state != 'draft'"/>
+                            <field name="is_variation"/>
+                            <field name="variation_month" readonly="state != 'draft'"/>
+                            <field name="submission_date" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Section A: Income -->
+                        <page string="A. Income Estimation" name="income">
+                            <group>
+                                <group string="Estimated Annual Income (Bs.)">
+                                    <field name="income_employer_primary"
+                                           readonly="state != 'draft'"/>
+                                    <field name="employer_b_name"
+                                           readonly="state != 'draft'"
+                                           placeholder="Second employer name (if any)"/>
+                                    <field name="income_employer_b"
+                                           readonly="state != 'draft'"/>
+                                    <field name="employer_c_name"
+                                           readonly="state != 'draft'"
+                                           placeholder="Third employer name (if any)"/>
+                                    <field name="income_employer_c"
+                                           readonly="state != 'draft'"/>
+                                    <field name="employer_d_name"
+                                           readonly="state != 'draft'"
+                                           placeholder="Fourth employer name (if any)"/>
+                                    <field name="income_employer_d"
+                                           readonly="state != 'draft'"/>
+                                </group>
+                                <group string="Section B: UT Conversion">
+                                    <field name="income_total" readonly="1"/>
+                                    <field name="ut_value" readonly="state != 'draft'"/>
+                                    <field name="income_in_ut" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Section C/E: Deductions -->
+                        <page string="C/E. Deductions" name="deductions">
+                            <group>
+                                <group string="Deduction Type">
+                                    <field name="deduction_type" widget="radio"
+                                           readonly="state != 'draft'"/>
+                                </group>
+                            </group>
+                            <group string="Itemized Deductions (Section C)"
+                                   invisible="deduction_type != 'itemized'">
+                                <group>
+                                    <field name="deduction_education"
+                                           readonly="state != 'draft'"/>
+                                    <field name="deduction_insurance"
+                                           readonly="state != 'draft'"/>
+                                    <field name="deduction_medical"
+                                           readonly="state != 'draft'"/>
+                                    <field name="deduction_housing"
+                                           readonly="state != 'draft'"/>
+                                    <field name="deduction_housing_type"
+                                           readonly="state != 'draft'"
+                                           invisible="not deduction_housing"/>
+                                </group>
+                                <group>
+                                    <field name="deductions_total" readonly="1"/>
+                                    <field name="deductions_in_ut" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Unique Deduction (Section E)"
+                                   invisible="deduction_type != 'unique'">
+                                <field name="deduction_unique_ut" readonly="1"/>
+                                <p class="text-muted">
+                                    Fixed deduction of 774 UT per Art. 61 LISLR.
+                                    No supporting documentation required.
+                                </p>
+                            </group>
+                        </page>
+
+                        <!-- Section H: Rebajas -->
+                        <page string="H. Tax Reductions (Rebajas)" name="rebajas">
+                            <group>
+                                <group string="Personal Rebate">
+                                    <field name="rebaja_personal" readonly="1"/>
+                                </group>
+                                <group string="Family Dependents (Cargas Familiares)">
+                                    <field name="rebaja_spouse" readonly="state != 'draft'"/>
+                                    <field name="rebaja_children_under_25"
+                                           readonly="state != 'draft'"/>
+                                    <field name="rebaja_children_disabled"
+                                           readonly="state != 'draft'"/>
+                                    <field name="rebaja_parents"
+                                           readonly="state != 'draft'"/>
+                                    <field name="cargas_familiares_count" readonly="1"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group string="Prior Year Excess">
+                                    <field name="rebaja_prior_excess"
+                                           readonly="state != 'draft'"/>
+                                </group>
+                                <group string="Total Rebajas">
+                                    <field name="rebajas_total_ut" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Section K: Variation -->
+                        <page string="K. Variation Data" name="variation"
+                              invisible="not is_variation">
+                            <group>
+                                <group string="Year-to-Date Data">
+                                    <field name="ytd_withholding"
+                                           readonly="state != 'draft'"/>
+                                    <field name="ytd_income"
+                                           readonly="state != 'draft'"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Results -->
+                        <page string="Results" name="results">
+                            <group>
+                                <group string="Tax Calculation">
+                                    <field name="taxable_income_ut" readonly="1"/>
+                                    <field name="estimated_tax_ut" readonly="1"/>
+                                    <field name="tax_to_withhold_ut" readonly="1"/>
+                                </group>
+                                <group string="Final Result">
+                                    <field name="withholding_percentage" readonly="1"
+                                           widget="percentage"/>
+                                    <div class="alert alert-info" role="alert">
+                                        <strong>Withholding Percentage:</strong>
+                                        This is the percentage that will be withheld
+                                        from each paycheck for ISLR.
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Documents -->
+                        <page string="Documents" name="documents">
+                            <group>
+                                <field name="attachment_ids" widget="many2many_binary"
+                                       readonly="state != 'draft'"/>
+                            </group>
+                            <group invisible="not excel_file">
+                                <field name="excel_file" filename="excel_filename"/>
+                                <field name="excel_filename" invisible="1"/>
+                            </group>
+                        </page>
+
+                        <!-- HR Review -->
+                        <page string="HR Review" name="review"
+                              groups="hr.group_hr_manager">
+                            <group>
+                                <group string="Review Information">
+                                    <field name="reviewed_by" readonly="1"/>
+                                    <field name="review_date" readonly="1"/>
+                                    <field name="review_notes"/>
+                                </group>
+                                <group string="Rejection"
+                                       invisible="state != 'rejected'">
+                                    <field name="rejection_reason" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- AR-I Declaration Search View -->
+    <record id="view_hr_employee_ari_search" model="ir.ui.view">
+        <field name="name">hr.employee.ari.search</field>
+        <field name="model">hr.employee.ari</field>
+        <field name="arch" type="xml">
+            <search string="AR-I Declarations">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="fiscal_year"/>
+                <separator/>
+                <filter name="filter_draft" string="Draft"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_submitted" string="Pending Review"
+                        domain="[('state', '=', 'submitted')]"/>
+                <filter name="filter_approved" string="Approved"
+                        domain="[('state', '=', 'approved')]"/>
+                <filter name="filter_rejected" string="Rejected"
+                        domain="[('state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="filter_current_year" string="Current Year"
+                        domain="[('fiscal_year', '=', context_today().year)]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter name="group_employee" string="Employee"
+                            context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_state" string="Status"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_year" string="Fiscal Year"
+                            context="{'group_by': 'fiscal_year'}"/>
+                    <filter name="group_month" string="Period"
+                            context="{'group_by': 'variation_month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action to open AR-I declarations -->
+    <record id="action_hr_employee_ari" model="ir.actions.act_window">
+        <field name="name">AR-I Declarations</field>
+        <field name="res_model">hr.employee.ari</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_hr_employee_ari_search"/>
+        <field name="context">{'search_default_filter_current_year': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first AR-I declaration
+            </p>
+            <p>
+                AR-I declarations are used to calculate income tax withholding
+                percentages for employees under Venezuelan law.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action for pending reviews (HR) -->
+    <record id="action_hr_employee_ari_pending" model="ir.actions.act_window">
+        <field name="name">Pending AR-I Reviews</field>
+        <field name="res_model">hr.employee.ari</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('state', '=', 'submitted')]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No pending AR-I declarations to review
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu items -->
+    <menuitem id="menu_ari_root"
+              name="AR-I Portal"
+              parent="hr.menu_hr_root"
+              sequence="50"/>
+
+    <menuitem id="menu_ari_declarations"
+              name="All Declarations"
+              parent="menu_ari_root"
+              action="action_hr_employee_ari"
+              sequence="10"/>
+
+    <menuitem id="menu_ari_pending"
+              name="Pending Reviews"
+              parent="menu_ari_root"
+              action="action_hr_employee_ari_pending"
+              sequence="20"
+              groups="hr.group_hr_manager"/>
+
+</odoo>

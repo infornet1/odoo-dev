@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Add AR-I Entry to Portal Home -->
+    <template id="portal_my_home_ari" name="Portal My Home: AR-I"
+              inherit_id="portal.portal_my_home"
+              priority="40">
+        <xpath expr="//div[@id='portal_common_category']" position="inside">
+            <div class="o_portal_index_card col-md-6 order-2">
+                <a href="/my/ari" title="Declaraciones AR-I"
+                   class="d-flex justify-content-start gap-2 gap-md-3 align-items-center py-3 pe-2 px-md-3 h-100 rounded text-decoration-none text-reset text-bg-light">
+                    <div class="o_portal_icon align-self-start">
+                        <i class="fa fa-file-text-o fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h5 class="mt-0 mb-1">
+                            <span t-out="ari_count" class="me-1"/>
+                            <span>Declaraciones AR-I</span>
+                        </h5>
+                        <p class="m-0 text-600">
+                            Gestione sus declaraciones de retención ISLR
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Breadcrumb for AR-I -->
+    <template id="portal_my_home_menu_ari" name="Portal layout: AR-I menu"
+              inherit_id="portal.portal_breadcrumbs" priority="40">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'ari' or page_name == 'ari_new'"
+                t-attf-class="breadcrumb-item #{'active' if page_name == 'ari' else ''}">
+                <a t-if="page_name != 'ari'" href="/my/ari">AR-I Declarations</a>
+                <t t-else="">AR-I Declarations</t>
+            </li>
+            <li t-if="page_name == 'ari_new'" class="breadcrumb-item active">
+                New Declaration
+            </li>
+        </xpath>
+    </template>
+
+</odoo>
