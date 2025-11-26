@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 04:00 UTC
+**Last Updated:** 2025-11-26 15:55 UTC
 
 ## Core Instructions
 
@@ -161,14 +161,14 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 - ✅ Phase 5: V2 Testing & Validation (97.7% accuracy)
 - ✅ AGUINALDOS V2 Migration (2025-11-21): Updated formula to use `ueipab_salary_v2`
 
-**🔧 Otras Deducciones Feature (2025-11-26) - PARTIAL:**
+**✅ Otras Deducciones Feature (2025-11-26) - COMPLETE:**
 - ✅ Contract field `ueipab_other_deductions` added to model
 - ✅ Salary rule `VE_OTHER_DED_V2` created (seq 105)
 - ✅ `VE_TOTAL_DED_V2` updated to include other deductions
-- ✅ Email template updated with conditional row
-- ✅ Compact report updated with display name
-- ⚠️ **PENDING:** Form view field not visible - needs `ueipab_hr_contract` module upgrade
-- **Fix Required:** Upgrade module via Apps or check view inheritance
+- ✅ Email template "Payslip Email - Employee Delivery" updated with conditional row
+- ✅ Compact report "Comprobante de Pago (Compacto)" updated with display name
+- ✅ Form view field visible in "💼 Salary Breakdown" tab (view arch updated)
+- **Usage:** Set fixed USD amount in contract → deducted from payslip (prorated by days/30)
 
 📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)**
 📖 **[V2 Implementation Reference](documentation/V2_PAYROLL_IMPLEMENTATION.md)** ⭐
