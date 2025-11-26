@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 01:45 UTC
+**Last Updated:** 2025-11-27 02:00 UTC
 
 ## Core Instructions
 
@@ -815,6 +815,25 @@ location ~ ^/(web|website|payslip|mail|report)(/|$) {
 - **ueipab_payroll_enhancements:** v1.43.0 (Payslip Acknowledgment System - 2025-11-26)
 - **ueipab_hr_contract:** v17.0.2.1.0 (Added ueipab_other_deductions field - 2025-11-26)
 - **ueipab_ari_portal:** v17.0.1.0.0 (NEW - Employee AR-I self-service portal - 2025-11-26)
+
+### ✅ Production Deployment (2025-11-27)
+
+**Payslip Acknowledgment System + Email Template Fix deployed to production:**
+
+| Change | Details |
+|--------|---------|
+| ueipab_payroll_enhancements | Upgraded v1.41.0 → v1.43.0 |
+| Acknowledgment Fields | access_token, is_acknowledged, acknowledged_date, acknowledged_ip |
+| Portal Routes | /payslip/acknowledge/<id>/<token> for employee confirmation |
+| Access Tokens | Generated for 49 existing payslips |
+| Email Template | "Payslip Compact Report" subject Jinja2 conditional fixed |
+
+**Email Subject Fix:**
+- **Old (broken):** `{{ (' │ Lote: ' + object.payslip_run_id.name) if object.payslip_run_id else '' }}`
+- **New (working):** `{{' │ Lote: ' + object.payslip_run_id.name if object.payslip_run_id else ''}}`
+- **Result:** Subject now correctly shows batch name when present
+
+**Modules upgraded:** `ueipab_hr_contract`, `ueipab_payroll_enhancements`
 
 ### ✅ Production Deployment (2025-11-26)
 
