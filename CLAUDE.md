@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 03:35 UTC
+**Last Updated:** 2025-11-26 04:00 UTC
 
 ## Core Instructions
 
@@ -131,11 +131,12 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 ```
 
 **Deduction Rates (Monthly with Proration):**
-- **IVSS (SSO):** 4.5% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
+- **IVSS (SSO):** 4% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
 - **FAOV:** 1.0% monthly (prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
 - **INCES (PARO):** 0.5% monthly (prorated by days/30) - **applies ONLY to Utilidades** ✅
 - **ARI:** Variable % (from contract field, prorated by days/30) - applies to Vacaciones, Bono Vacacional, Utilidades
 - **INCES (Payroll):** 0.25% monthly (prorated by days/30) - ⏸️ **DISABLED** pending legal confirmation
+- **Otras Deducciones:** Fixed USD amount from contract field (prorated by days/30) - for loans, advances, etc.
 
 **⏸️ VE_INCES_DED_V2 Rule (2025-11-25) - PENDING LEGAL CONFIRMATION:**
 - **Created in Testing:** Rule for 0.25% INCES deduction on `ueipab_salary_v2`
@@ -155,10 +156,19 @@ contract.cesta_ticket_usd       = $40.00   # Food allowance (existing field)
 **Implementation Status:**
 - ✅ Phase 1: Analysis & Planning
 - ✅ Phase 2: V2 Contract Fields (`ueipab_hr_contract` v1.4.0)
-- ✅ Phase 3: V2 Salary Structure (VE_PAYROLL_V2, 11 rules)
+- ✅ Phase 3: V2 Salary Structure (VE_PAYROLL_V2, 12 rules including VE_OTHER_DED_V2)
 - ✅ Phase 4: Bulk Contract Migration (44/44 employees)
 - ✅ Phase 5: V2 Testing & Validation (97.7% accuracy)
 - ✅ AGUINALDOS V2 Migration (2025-11-21): Updated formula to use `ueipab_salary_v2`
+
+**🔧 Otras Deducciones Feature (2025-11-26) - PARTIAL:**
+- ✅ Contract field `ueipab_other_deductions` added to model
+- ✅ Salary rule `VE_OTHER_DED_V2` created (seq 105)
+- ✅ `VE_TOTAL_DED_V2` updated to include other deductions
+- ✅ Email template updated with conditional row
+- ✅ Compact report updated with display name
+- ⚠️ **PENDING:** Form view field not visible - needs `ueipab_hr_contract` module upgrade
+- **Fix Required:** Upgrade module via Apps or check view inheritance
 
 📖 **[Complete V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)**
 📖 **[V2 Implementation Reference](documentation/V2_PAYROLL_IMPLEMENTATION.md)** ⭐
@@ -433,10 +443,11 @@ subject = "💰 Comprobante │ {{object.number}}"  # Jinja2
 **Deduction Display Names:**
 | Code | Display Name |
 |------|--------------|
-| VE_SSO_DED_V2 | Seguro Social Obligatorio 4.5% |
+| VE_SSO_DED_V2 | Seguro Social Obligatorio 4% |
 | VE_FAOV_DED_V2 | Política Habiltacional BANAVIH 1% |
 | VE_PARO_DED_V2 | Seguro Social Paro Forzoso 0.5% |
 | VE_ARI_DED_V2 | Retención impuestos AR-I X% |
+| VE_OTHER_DED_V2 | Otras Deducciones |
 
 **✅ Payslip Exchange Rate Priority (v1.40.0 - 2025-11-25):**
 - **NEW DEFAULT:** When VEB is selected, report now uses payslip's `exchange_rate_used` field
@@ -692,8 +703,8 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.41.0 (Compact report ARI display enhancement - 2025-11-26)
-- **ueipab_hr_contract:** v17.0.2.0.0 (V2 fields only - V1 fields removed - 2025-11-24)
+- **ueipab_payroll_enhancements:** v1.42.0 (Otras Deducciones support in reports - 2025-11-26)
+- **ueipab_hr_contract:** v17.0.2.1.0 (Added ueipab_other_deductions field - 2025-11-26)
 - **ueipab_ari_portal:** v17.0.1.0.0 (NEW - Employee AR-I self-service portal - 2025-11-26)
 
 ---

@@ -312,7 +312,7 @@ class PayslipCompactReport(models.AbstractModel):
 
             # Apply renaming based on user's request
             if line.code == 'VE_SSO_DED_V2':
-                line_name = 'Seguro Social Obligatorio 4.5%'
+                line_name = 'Seguro Social Obligatorio 4%'
             elif line.code == 'VE_FAOV_DED_V2':
                 line_name = 'Política Habiltacional BANAVIH 1%'
             elif line.code == 'VE_ISLR_DED':
@@ -323,6 +323,8 @@ class PayslipCompactReport(models.AbstractModel):
                 # Get ARI rate from contract field
                 ari_rate = contract.ueipab_ari_withholding_rate or 0.0
                 line_name = f'Retención impuestos AR-I {ari_rate:.0f}%'
+            elif line.code == 'VE_OTHER_DED_V2':
+                line_name = 'Otras Deducciones'
 
             deductions.append({
                 'number': len(deductions) + 1,

@@ -126,6 +126,26 @@ class HrContract(models.Model):
         help="Date of last prestaciones payment made"
     )
 
+    # Other Deductions (Ad-hoc fixed amounts)
+    ueipab_other_deductions = fields.Monetary(
+        string='Other Deductions (USD)',
+        currency_field='currency_id',
+        default=0.0,
+        tracking=True,
+        copy=False,
+        groups='hr.group_hr_user',
+        help="Fixed monthly amount for ad-hoc deductions (loans, advances, etc.).\n\n"
+             "This is a fixed USD amount that will be deducted from each payslip.\n"
+             "The amount is prorated by actual payslip period (days/30).\n\n"
+             "Examples:\n"
+             "- Loan repayment: $50/month\n"
+             "- Salary advance recovery: $100/month\n"
+             "- Equipment purchase: $25/month\n\n"
+             "FORMULA:\n"
+             "  Payslip deduction = ueipab_other_deductions × (period_days / 30.0)\n\n"
+             "Set to 0.00 when no ad-hoc deductions apply.",
+    )
+
     # Venezuelan Withhold Income Tax (ARI)
     ueipab_ari_withholding_rate = fields.Float(
         'ARI Withholding Rate (%)',
