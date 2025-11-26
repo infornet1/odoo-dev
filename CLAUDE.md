@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-26 15:55 UTC
+**Last Updated:** 2025-11-26 17:15 UTC
 
 ## Core Instructions
 
@@ -703,9 +703,25 @@ except:
 
 ## Module Versions
 
-- **ueipab_payroll_enhancements:** v1.42.0 (Otras Deducciones support in reports - 2025-11-26)
+- **ueipab_payroll_enhancements:** v1.42.0 (SSO 4% + Otras Deducciones - 2025-11-26)
 - **ueipab_hr_contract:** v17.0.2.1.0 (Added ueipab_other_deductions field - 2025-11-26)
 - **ueipab_ari_portal:** v17.0.1.0.0 (NEW - Employee AR-I self-service portal - 2025-11-26)
+
+### ✅ Production Deployment (2025-11-26)
+
+**SSO Rate Change + Otras Deducciones Feature deployed to production:**
+
+| Change | Details |
+|--------|---------|
+| VE_SSO_DED_V2 | Rate changed from 4.5% → 4% |
+| VE_OTHER_DED_V2 | New salary rule created (seq 105) |
+| VE_TOTAL_DED_V2 | Updated to include other deductions |
+| Contract Field | `ueipab_other_deductions` added to database |
+| Contract Form | "Other Deductions" section added to Salary Breakdown tab |
+| Email Template | "Payslip Email - Employee Delivery" created in production |
+| Compact Report | SSO label updated to 4%, VE_OTHER_DED_V2 display name added |
+
+**Modules upgraded:** `ueipab_hr_contract`, `ueipab_payroll_enhancements`
 
 ---
 
