@@ -66,20 +66,21 @@ class HrPayslipRun(models.Model):
         """Calculate total net payable for all payslips in batch.
 
         Business Logic:
-            - Only includes payslips in 'done' or 'paid' state
+            - Includes payslips in 'draft', 'done', or 'paid' state
             - Sums the NET salary rule line from each payslip (VE_NET or VE_NET_V2)
-            - Ignores cancelled or draft payslips
+            - Critical for validation before confirming batch
+            - Excludes only cancelled payslips
             - Updates automatically when payslips change
 
         Technical Implementation:
             - Uses @api.depends for automatic recomputation
             - Stored in database for performance (store=True)
-            - Filters payslips by state before calculation
+            - Filters out cancelled payslips only
         """
         for batch in self:
-            # Get all confirmed payslips (not draft or cancelled)
+            # Get all payslips except cancelled ones (include draft for pre-validation)
             valid_slips = batch.slip_ids.filtered(
-                lambda s: s.state in ('done', 'paid')
+                lambda s: s.state != 'cancel'
             )
 
             # Sum the NET line from each payslip
