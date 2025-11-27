@@ -67,7 +67,7 @@ class HrPayslipRun(models.Model):
 
         Business Logic:
             - Only includes payslips in 'done' or 'paid' state
-            - Sums the VE_NET salary rule line from each payslip
+            - Sums the NET salary rule line from each payslip (VE_NET or VE_NET_V2)
             - Ignores cancelled or draft payslips
             - Updates automatically when payslips change
 
@@ -85,12 +85,12 @@ class HrPayslipRun(models.Model):
             # Sum the NET line from each payslip
             total = 0.0
             for slip in valid_slips:
-                # Find the VE_NET salary rule line
+                # Find the NET salary rule line (supports V1: VE_NET and V2: VE_NET_V2)
                 net_line = slip.line_ids.filtered(
-                    lambda l: l.salary_rule_id.code == 'VE_NET'
+                    lambda l: l.salary_rule_id.code in ('VE_NET', 'VE_NET_V2')
                 )
                 if net_line:
-                    # Should only be one VE_NET line per payslip
+                    # Should only be one NET line per payslip
                     total += net_line[0].total
 
             batch.total_net_amount = total
