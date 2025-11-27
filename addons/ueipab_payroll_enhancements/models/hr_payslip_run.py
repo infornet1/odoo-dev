@@ -306,22 +306,25 @@ class HrPayslipRun(models.Model):
             }
 
     def action_sync_dates_to_payslips(self):
-        """Sync batch date range to all payslips in the batch.
+        """Sync batch date range to all payslips in the batch and recompute.
 
         Business Use Case:
             - User changes batch date_start or date_end after payslips are created
             - Clicks "Sync Dates to Payslips" button
             - All payslips in batch get updated with batch dates
+            - Payslips are automatically recomputed with new dates
             - Ensures consistency between batch and payslip date ranges
 
         Business Logic:
-            - Updates date_from and date_to on all payslips in batch
+            - Updates date_from and date_to on all draft payslips in batch
+            - Automatically recomputes payslips after date update
             - Only works on draft payslips (confirmed payslips should not be changed)
             - Shows warning if some payslips are not draft
 
         Technical Implementation:
-            - Batch write operation (efficient)
-            - Shows confirmation with count of updated payslips
+            - Batch write operation for dates (efficient)
+            - Calls action_compute_sheet() on each payslip to recompute
+            - Shows confirmation with count of updated/recomputed payslips
             - Returns action to refresh view
 
         Returns:
@@ -354,8 +357,11 @@ class HrPayslipRun(models.Model):
                 'date_to': batch.date_end,
             })
 
+            # Recompute all updated payslips
+            draft_slips.action_compute_sheet()
+
             # Build message
-            message = _('%d payslip(s) updated with dates %s to %s') % (
+            message = _('%d payslip(s) updated with dates %s to %s and recomputed') % (
                 len(draft_slips),
                 batch.date_start.strftime('%Y-%m-%d'),
                 batch.date_end.strftime('%Y-%m-%d')
@@ -369,7 +375,7 @@ class HrPayslipRun(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': _('Dates Synchronized'),
+                    'title': _('Dates Synchronized & Recomputed'),
                     'message': message,
                     'type': 'success',
                     'sticky': False,
