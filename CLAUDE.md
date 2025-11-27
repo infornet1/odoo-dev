@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 22:45 UTC
+**Last Updated:** 2025-11-27 23:45 UTC
 
 ## Core Instructions
 
@@ -29,6 +29,55 @@
 | 11 | Payslip Acknowledgment | Testing | `ueipab_payroll_enhancements` | - |
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
+| 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
+
+---
+
+## Planned: Duplicate Payslip Warning Enhancement
+
+**Status:** 📋 PLANNED | **Priority:** Medium
+
+**Problem:** Users can accidentally create duplicate payslips for the same employee/period when clicking "Generate Payslips" multiple times.
+
+**Proposed Solution:** Warning wizard before generating payslips
+
+**Duplicate Detection Criteria:**
+- Same employee (`employee_id`)
+- Overlapping date range (`date_from` ≤ batch.date_end AND `date_to` ≥ batch.date_start)
+- Not cancelled (`state != 'cancel'`)
+
+**User Flow:**
+```
+User clicks "Generate Payslips" → System checks for duplicates → If found:
+┌─────────────────────────────────────────────────────┐
+│  ⚠️ Duplicate Payslips Warning                      │
+│                                                     │
+│  The following employees already have payslips      │
+│  for this period (Nov 16-30, 2025):                 │
+│                                                     │
+│  • JUAN PEREZ - SLIP/1001 (Draft)                  │
+│  • MARIA LOPEZ - SLIP/1002 (Confirmed)             │
+│                                                     │
+│  [Skip Duplicates]  [Create All]  [Cancel]          │
+└─────────────────────────────────────────────────────┘
+```
+
+**Button Actions:**
+- **Skip Duplicates:** Only create for employees WITHOUT existing payslips
+- **Create All:** Create all payslips (for intentional duplicates/corrections)
+- **Cancel:** Abort operation
+
+**Implementation:**
+1. Create TransientModel: `hr.payslip.duplicate.warning`
+2. Modify `hr.payslip.employees.action_compute_sheet()` to check duplicates
+3. If duplicates found, open warning wizard instead of creating
+4. Warning wizard buttons call back with `skip_duplicates` or `force_create` flag
+
+**Files to Modify:**
+- `models/hr_payslip_employees.py` - Add duplicate check logic
+- `wizard/payslip_duplicate_warning.py` - New warning wizard (create)
+- `wizard/payslip_duplicate_warning_view.xml` - Wizard form view (create)
+- `security/ir.model.access.csv` - Add wizard access
 
 ---
 
@@ -87,8 +136,15 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 **Date Sync to Payslips (2025-11-27):**
 - Button: "Sync Dates to Payslips" on batch form
 - Updates `date_from`/`date_to` on all **draft** payslips
+- **Automatically recomputes** all updated payslips
 - Skips non-draft payslips with warning
 - Use case: Batch date range changed after payslips created
+
+**Total Net Payable (2025-11-27):**
+- Shows sum of NET amounts for all payslips in batch
+- **Includes draft payslips** (critical for pre-validation)
+- Supports both V1 (`VE_NET`) and V2 (`VE_NET_V2`) structures
+- Only excludes cancelled payslips
 
 **Exchange Rate Application:**
 - Button: "Apply Rate to Payslips" on batch form
