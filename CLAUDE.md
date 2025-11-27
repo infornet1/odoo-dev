@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 02:10 UTC
+**Last Updated:** 2025-11-27 01:50 UTC
 
 ## Core Instructions
 
@@ -648,6 +648,75 @@ curl -b /tmp/cookies.txt "https://dev.ueipab.edu.ve/payslip/acknowledge/1010/3b6
 ```
 
 📖 **[Session/Routing Investigation](documentation/PAYSLIP_ACK_SESSION_FIX.md)** (if created)
+
+---
+
+### 12. Smart Invoice Confirmation Script
+**Status:** ✅ TESTED IN TESTING | **Script:** `scripts/smart_invoice_confirmation.py` (2025-11-27)
+
+**Purpose:** Automate monthly invoice processing with discount pricing and credit application for customers with outstanding credits.
+
+**Business Rules:**
+| Scenario | Unit Price | Credit Applied |
+|----------|------------|----------------|
+| Credit ≥ $34.99 | $162.39 (discount) | Yes |
+| Credit < $34.99 | $197.38 (regular) | Yes |
+| No credit | $197.38 (regular) | No |
+
+**Pricing:**
+- **Regular Fee:** $197.38 per student
+- **Discount Fee:** $162.39 per student
+- **Discount Threshold:** $34.99 minimum credit to qualify
+
+**Script Features:**
+- **DRY_RUN mode:** Preview changes without applying
+- **Discount Logic:** Changes line price if customer has sufficient credits
+- **Auto-Confirm:** Posts draft invoices
+- **Credit Application:** Reconciles available credits to invoice
+- **Summary Report:** Shows discounts applied, credits applied, errors
+
+**Usage:**
+```bash
+# Dry run (preview only)
+docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
+  < /opt/odoo-dev/scripts/smart_invoice_confirmation.py
+
+# Production run (edit script: DRY_RUN = False)
+docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
+  < /opt/odoo-dev/scripts/smart_invoice_confirmation.py
+```
+
+**Test Results (Testing Database):**
+| Partner | Credit | Unit Price | Credit Applied | Remaining |
+|---------|--------|------------|----------------|-----------|
+| TEST_WITH_CREDITS | $50.00 | $162.39 ✅ | $50.00 | $112.39 |
+| TEST_SMALL_CREDIT | $20.00 | $197.38 | $20.00 | $177.38 |
+| TEST_NO_CREDIT | $0.00 | $197.38 | $0.00 | $197.38 |
+
+**Technical Implementation:**
+```python
+# Check if customer qualifies for discount
+credit_info = get_partner_credits(partner.id)
+if credit_info['total'] >= DISCOUNT_THRESHOLD:
+    # Change invoice line price
+    line.write({'price_unit': DISCOUNT_FEE})
+
+# After confirmation, apply credits
+(invoice_receivable_line + credit_line).reconcile()
+```
+
+**Key Functions:**
+- `get_partner_credits(partner_id)` - Returns total credit and credit line records
+- `apply_discount_to_invoice(invoice)` - Changes $197.38 → $162.39 on lines
+- `apply_credits_to_invoice(invoice, credit_lines)` - Reconciles credits to invoice
+
+**Configuration (edit script):**
+```python
+REGULAR_FEE = 197.38       # Standard tuition
+DISCOUNT_FEE = 162.39      # Discounted tuition
+DISCOUNT_THRESHOLD = 34.99 # Min credit for discount
+DRY_RUN = True             # Set False to apply changes
+```
 
 ---
 
