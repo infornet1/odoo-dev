@@ -317,14 +317,27 @@ class PayrollDisbursementWizard(models.TransientModel):
         total_net = 0.0
 
         # Get exchange rate if VEB
+        # Priority: 1) Batch exchange_rate, 2) Payslip exchange_rate_used, 3) Date-based lookup
         usd_currency = self.env.ref('base.USD')
         exchange_rate = 1.0
         if self.currency_id != usd_currency:
-            # Get exchange rate from most recent payslip date
-            latest_date = max(payslips.mapped('date_to'))
-            exchange_rate = usd_currency._convert(
-                1.0, self.currency_id, self.env.company, latest_date
-            )
+            # Try to get exchange rate from batch first
+            if self.batch_id and self.batch_id.exchange_rate and self.batch_id.exchange_rate > 0:
+                # Priority 1: Use batch's custom exchange rate
+                exchange_rate = self.batch_id.exchange_rate
+            elif payslips and payslips[0].exchange_rate_used and payslips[0].exchange_rate_used > 0:
+                # Priority 2: Use payslip's exchange_rate_used field
+                exchange_rate = payslips[0].exchange_rate_used
+            else:
+                # Priority 3: Fallback to date-based currency lookup
+                latest_date = max(payslips.mapped('date_to'))
+                veb_currency = self.currency_id
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', veb_currency.id),
+                    ('name', '<=', latest_date)
+                ], limit=1, order='name desc')
+                if rate_record:
+                    exchange_rate = rate_record.company_rate
 
         # Write data rows
         row = 3

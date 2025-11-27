@@ -38,11 +38,18 @@
                        options="{'digits': [12, 6]}"/>
                 <button name="action_apply_exchange_rate"
                         type="object"
-                        string="Apply to Payslips"
+                        string="Apply Rate to Payslips"
                         class="oe_link"
                         icon="fa-refresh"
                         help="Apply this exchange rate to all payslips in the batch"
                         invisible="not exchange_rate or not slip_ids"/>
+                <button name="action_sync_dates_to_payslips"
+                        type="object"
+                        string="Sync Dates to Payslips"
+                        class="oe_link"
+                        icon="fa-calendar"
+                        help="Update all draft payslips with the batch date range"
+                        invisible="not slip_ids"/>
             </field>
         </field>
     </record>
@@ -65,20 +72,7 @@
                         class="btn-primary"
                         icon="fa-print"
                         help="Generate ICF-compliant disbursement list report for finance approval"/>
-                <button name="action_send_batch_emails"
-                        type="object"
-                        string="Send Payslips by Email"
-                        class="oe_highlight"
-                        icon="fa-envelope"
-                        help="Send individual payslips to each employee in this batch via email"/>
             </button>
-            <!-- Add email template selector field after exchange rate -->
-            <field name="exchange_rate" position="after">
-                <field name="email_template_id"
-                       widget="selection"
-                       placeholder="Select email template..."
-                       help="Choose which email template to use when sending payslips"/>
-            </field>
         </field>
     </record>
 

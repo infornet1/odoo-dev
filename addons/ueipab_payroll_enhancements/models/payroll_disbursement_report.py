@@ -49,16 +49,32 @@ class PayrollDisbursementReport(models.AbstractModel):
 
         # Calculate exchange rate for VEB (if applicable)
         # DO NOT MODIFY PAYSLIP DATA - just pass the rate to template
+        # Priority: 1) Batch exchange_rate, 2) Payslip exchange_rate_used, 3) Date-based lookup
         exchange_rate = 1.0
+        exchange_rate_source = 'USD (no conversion)'
+
         if currency != usd and payslips:
-            # Use latest payslip date for exchange rate lookup
-            latest_date = max(payslips.mapped('date_to'))
-            rate_record = self.env['res.currency.rate'].search([
-                ('currency_id', '=', currency.id),
-                ('name', '<=', latest_date)
-            ], limit=1, order='name desc')
-            if rate_record:
-                exchange_rate = rate_record.company_rate
+            # Try to get exchange rate from batch first
+            batch = payslips[0].payslip_run_id if payslips else None
+
+            if batch and batch.exchange_rate and batch.exchange_rate > 0:
+                # Priority 1: Use batch's custom exchange rate
+                exchange_rate = batch.exchange_rate
+                exchange_rate_source = f'Batch ({batch.name})'
+            elif payslips[0].exchange_rate_used and payslips[0].exchange_rate_used > 0:
+                # Priority 2: Use payslip's exchange_rate_used field
+                exchange_rate = payslips[0].exchange_rate_used
+                exchange_rate_source = 'Payslip (exchange_rate_used)'
+            else:
+                # Priority 3: Fallback to date-based currency lookup
+                latest_date = max(payslips.mapped('date_to'))
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id),
+                    ('name', '<=', latest_date)
+                ], limit=1, order='name desc')
+                if rate_record:
+                    exchange_rate = rate_record.company_rate
+                    exchange_rate_source = f'Date lookup ({latest_date})'
 
         # Return context for QWeb template
         return {
@@ -68,6 +84,7 @@ class PayrollDisbursementReport(models.AbstractModel):
             'data': data,      # Additional wizard data
             'currency': currency,  # Pass currency for dynamic symbol display
             'exchange_rate': exchange_rate,  # Pass rate for template to multiply
+            'exchange_rate_source': exchange_rate_source,  # For debugging/display
         }
 
     def _convert_payslip_values(self, payslips, target_currency):

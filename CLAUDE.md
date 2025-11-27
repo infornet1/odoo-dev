@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 13:15 UTC
+**Last Updated:** 2025-11-27 22:45 UTC
 
 ## Core Instructions
 
@@ -73,7 +73,27 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 2. Rate date lookup (wizard) → "Tasa del DD/MM/YYYY"
 3. Latest available / Payslip rate → "Tasa automática"
 
+**Disbursement Report Priority (2025-11-27):**
+1. Batch `exchange_rate` field → "Batch (BATCH_NAME)"
+2. Payslip `exchange_rate_used` → "Payslip (exchange_rate_used)"
+3. Date-based currency lookup → "Date lookup (YYYY-MM-DD)"
+
 **Interest Calculation:** Always uses accrual method (ignores override)
+
+---
+
+## Payslip Batch Features
+
+**Date Sync to Payslips (2025-11-27):**
+- Button: "Sync Dates to Payslips" on batch form
+- Updates `date_from`/`date_to` on all **draft** payslips
+- Skips non-draft payslips with warning
+- Use case: Batch date range changed after payslips created
+
+**Exchange Rate Application:**
+- Button: "Apply Rate to Payslips" on batch form
+- Updates `exchange_rate_used` on all payslips in batch
+- Works on any state (draft, done, paid, cancel)
 
 ---
 
@@ -95,7 +115,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 | Module | Version | Last Update |
 |--------|---------|-------------|
-| ueipab_payroll_enhancements | v1.43.0 | 2025-11-26 |
+| ueipab_payroll_enhancements | v1.44.0 | 2025-11-27 |
 | ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
 | ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
 
