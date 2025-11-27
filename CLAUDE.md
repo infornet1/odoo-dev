@@ -718,6 +718,45 @@ DISCOUNT_THRESHOLD = 34.99 # Min credit for discount
 DRY_RUN = True             # Set False to apply changes
 ```
 
+**Future Enhancement:** This script will integrate with a recurring invoicing module for full automation. See plan below.
+
+---
+
+### 13. Recurring Invoicing System (PLANNED)
+**Status:** 📋 PLANNING | **Target:** Q1 2026
+
+**Purpose:** Automate monthly tuition invoicing using `sale.order` business process with recurring invoice module.
+
+**Proposed Architecture:**
+```
+Customer → Sale Order → Contract → Auto-generate Invoice → Discount Script → Posted Invoice
+```
+
+**Module Options:**
+| Module | Price | License |
+|--------|-------|---------|
+| `sales_contract_and_recurring_invoices` | Free | AGPL-3 |
+| `contract_recurring_invoice_analytic` | $67.97 | Proprietary |
+
+**Integration Points:**
+1. **Invoice Generation:** Module creates draft invoices via cron (monthly)
+2. **Discount Hook:** Our script applies discount pricing ($197.38 → $162.39)
+3. **Credit Application:** Auto-reconcile available credits
+4. **Confirmation:** Post invoice with full audit trail
+
+**Implementation Phases:**
+1. Module Installation & Configuration (1-2 days)
+2. Product & Pricing Setup (1 day)
+3. Customer Migration to Sale Orders (2-3 days)
+4. Custom Discount Integration (2-3 days)
+5. Credit Application Integration (1-2 days)
+6. Testing & Validation (3-5 days)
+7. Production Deployment (1-2 days)
+
+**Total Estimate:** 11-18 days
+
+📖 **[Complete Implementation Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md)** ⭐
+
 ---
 
 ## Key Technical Learnings
