@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-28 11:35 UTC
+**Last Updated:** 2025-11-28 13:40 UTC
 
 ## Core Instructions
 
@@ -187,11 +187,18 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - **Email From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
 - **Email To:** `{{ object.employee_id.work_email }}`
 - **Email CC:** `recursoshumanos@ueipab.edu.ve`
+- **Exchange Rate:** Uses `object.exchange_rate_used` dynamically (fixed 2025-11-28)
 - Includes digital acknowledgment button
 - Button text: "Enviar conformidad digital"
 - Acknowledgment title: "Acuso conformidad y recepción digital de este comprobante"
 - Records confirmation with date, time, and IP
 - Deduction labels: IVSS 4%, FAOV 1%, Paro Forzoso 0.5%
+
+**Email Template Exchange Rate Fix (2025-11-28):**
+- **Problem:** Template had hardcoded rate `241.5780` in JSONB `body_html` field
+- **Solution:** Changed to `object.exchange_rate_used or 1.0` for dynamic lookup
+- **Affected:** Both `es_VE` and `en_US` locale versions
+- **Template IDs:** Testing: 43, Production: 37
 
 **Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
 - Amount displayed in **VES (Bs.)** using payslip exchange rate
