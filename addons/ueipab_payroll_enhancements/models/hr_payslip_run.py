@@ -65,9 +65,18 @@ class HrPayslipRun(models.Model):
         'mail.template',
         string='Email Template',
         domain="[('model', '=', 'hr.payslip')]",
+        default=lambda self: self._default_email_template(),
         help='Select email template to use when sending payslips by email. '
              'Available templates: Payslip Compact Report, Payslip Email - Employee Delivery, etc.'
     )
+
+    def _default_email_template(self):
+        """Return default email template: 'Payslip Email - Employee Delivery'"""
+        template = self.env['mail.template'].search([
+            ('name', '=', 'Payslip Email - Employee Delivery'),
+            ('model', '=', 'hr.payslip')
+        ], limit=1)
+        return template.id if template else False
 
     @api.depends('slip_ids', 'slip_ids.state', 'slip_ids.line_ids', 'slip_ids.line_ids.total')
     def _compute_total_net_amount(self):

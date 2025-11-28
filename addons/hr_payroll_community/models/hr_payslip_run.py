@@ -92,35 +92,49 @@ class HrPayslipRun(models.Model):
     )
 
     def _default_batch_exchange_rate(self):
-        """Auto-populate exchange rate with most recent rate or system rate"""
-        # Simple default - just return 0.0 for now to avoid transaction issues
-        # The auto-population can be done through onchange methods instead
+        """Auto-populate exchange rate from latest BCV rate (VEB currency)"""
+        try:
+            # Try to get the latest VEB rate from res.currency.rate
+            veb_currency = self.env['res.currency'].search([
+                ('name', 'in', ['VEB', 'VES', 'VEF'])
+            ], limit=1)
+
+            if veb_currency:
+                # Get the most recent rate
+                latest_rate = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', veb_currency.id),
+                    ('company_id', 'in', [self.env.company.id, False])
+                ], order='name desc', limit=1)
+
+                # Use company_rate which stores 1 USD = X VES (direct rate)
+                if latest_rate and latest_rate.company_rate > 0:
+                    return latest_rate.company_rate
+
+            # Fallback: get from most recent confirmed batch
+            recent_batch = self.env['hr.payslip.run'].search([
+                ('batch_exchange_rate', '>', 0),
+                ('exchange_rate_confirmed', '=', True)
+            ], limit=1, order='date_start desc, id desc')
+
+            if recent_batch:
+                return recent_batch.batch_exchange_rate
+
+        except Exception:
+            pass
+
         return 0.0
 
-    @api.onchange('name')
-    def _onchange_name_populate_rate(self):
-        """Auto-populate exchange rate when creating a new batch"""
-        if self.name and not self.batch_exchange_rate:
-            try:
-                # Get the most recent confirmed rate from previous batches
-                recent_batch = self.search([
-                    ('batch_exchange_rate', '>', 0),
-                    ('exchange_rate_confirmed', '=', True)
-                ], limit=1, order='date_start desc, id desc')
+    @api.onchange('date_start', 'date_end')
+    def _onchange_dates_populate_rate(self):
+        """Auto-populate exchange rate when dates change (if rate is still 0)"""
+        if not self.batch_exchange_rate or self.batch_exchange_rate <= 0:
+            self.batch_exchange_rate = self._default_batch_exchange_rate()
 
-                if recent_batch:
-                    self.batch_exchange_rate = recent_batch.batch_exchange_rate
-            except:
-                # If any error occurs, just keep 0.0
-                pass
-
-    @api.depends('exchange_rate_confirmed', 'batch_exchange_rate')
+    @api.depends('batch_exchange_rate')
     def _compute_can_generate_payslips(self):
         for record in self:
-            record.can_generate_payslips = (
-                record.exchange_rate_confirmed and
-                record.batch_exchange_rate > 0
-            )
+            # Generate Payslips button visible when rate > 0 (no confirmation required)
+            record.can_generate_payslips = record.batch_exchange_rate > 0
 
     def _compute_is_validate(self):
         for record in self:

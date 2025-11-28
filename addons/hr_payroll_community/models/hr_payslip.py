@@ -227,18 +227,20 @@ class HrPayslip(models.Model):
                 try:
                     # Get VEB currency (Venezuelan Bolívar)
                     veb_currency = self.env['res.currency'].search([
-                        ('name', '=', 'VEB'),
+                        ('name', 'in', ['VEB', 'VES', 'VEF']),
                         ('active', '=', True)
                     ], limit=1)
 
                     if veb_currency:
-                        # Use the current company_rate value directly (227.5567)
-                        # This is the correct USD->VEB exchange rate as of Nov 6, 2025
-                        current_rate = 227.5567
+                        # Get the latest exchange rate from res.currency.rate
+                        latest_rate = self.env['res.currency.rate'].search([
+                            ('currency_id', '=', veb_currency.id),
+                            ('company_id', 'in', [self.env.company.id, False])
+                        ], order='name desc', limit=1)
 
-                        # Store the company rate
-                        payslip.exchange_rate_used = current_rate
-                        payslip.exchange_rate_date = fields.Datetime.now()
+                        if latest_rate and latest_rate.company_rate > 0:
+                            payslip.exchange_rate_used = latest_rate.company_rate
+                            payslip.exchange_rate_date = fields.Datetime.now()
 
                 except Exception as e:
                     # Log the error but don't break payslip computation

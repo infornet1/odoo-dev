@@ -152,25 +152,28 @@ class PayslipAcknowledgmentController(http.Controller):
             period = f"{payslip.date_from.strftime('%d/%m/%Y')} - {payslip.date_to.strftime('%d/%m/%Y')}"
             net_line = payslip.line_ids.filtered(lambda l: l.code in ('NET', 'VE_NET_V2'))
             net_amount = sum(net_line.mapped('total')) if net_line else 0.0
-            currency = payslip.company_id.currency_id.symbol
+
+            # Convert to VES using exchange rate from payslip
+            exchange_rate = payslip.exchange_rate_used or 1.0
+            net_amount_ves = net_amount * exchange_rate
 
             # Get db from request
             db_name = request.db or request.httprequest.args.get('db', '')
 
             content = f'''
                 <div class="icon" style="background: #667eea;">📋</div>
-                <h1>Confirmar Recepción</h1>
+                <h1>Confirmar Recepción Digital</h1>
                 <div class="content">
                     <p><strong>Comprobante:</strong> {payslip.number}</p>
                     <p><strong>Empleado:</strong> {payslip.employee_id.name}</p>
                     <p><strong>Cédula:</strong> {payslip.employee_id.identification_id or '-'}</p>
                     <p><strong>Período:</strong> {period}</p>
-                    <p><strong>Monto Neto:</strong> <span style="color: #28a745; font-weight: bold;">{currency} {net_amount:,.2f}</span></p>
+                    <p><strong>Monto Neto:</strong> <span style="color: #28a745; font-weight: bold;">Bs. {net_amount_ves:,.2f}</span></p>
                     <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
-                    <p style="color: #666; font-size: 14px;">Al hacer clic en el botón, confirma que ha recibido y revisado este comprobante de pago.</p>
+                    <p style="color: #666; font-size: 14px;">Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital.</p>
                 </div>
                 <form action="/payslip/acknowledge/{payslip_id}/{token}/confirm?db={db_name}" method="POST">
-                    <button type="submit" class="btn">✅ Confirmar Recepción</button>
+                    <button type="submit" class="btn">✅ Confirmar Recepción Digital</button>
                 </form>
                 <p style="margin-top: 15px; color: #999; font-size: 12px;">
                     🔒 Su confirmación quedará registrada con fecha, hora e IP

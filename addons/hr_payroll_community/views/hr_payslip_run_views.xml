@@ -131,11 +131,14 @@
                         </group>
                         <group colspan="2">
                             <div class="oe_button_box" name="exchange_rate_buttons">
+                                <!-- Confirm button: always visible, disabled when rate <= 0 -->
                                 <button name="action_confirm_exchange_rate"
                                         string="Confirm Exchange Rate"
                                         type="object"
                                         class="btn-primary"
-                                        invisible="exchange_rate_confirmed == True or batch_exchange_rate &lt;= 0"/>
+                                        invisible="exchange_rate_confirmed == True"
+                                        readonly="batch_exchange_rate &lt;= 0"
+                                        title="Enter an exchange rate above to enable this button"/>
 
                                 <button name="action_update_exchange_rate"
                                         string="Update Rate"

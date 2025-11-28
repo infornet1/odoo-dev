@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-28 03:50 UTC
+**Last Updated:** 2025-11-28 11:20 UTC
 
 ## Core Instructions
 
@@ -155,12 +155,18 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - Button: "Send Payslips by Email" on batch form
 - Field: `email_template_id` - Select email template before sending
 - Uses notification popup instead of chatter (model doesn't inherit mail.thread)
-- Default template: Payslip Compact Report
+- Default template: **Payslip Email - Employee Delivery** (updated 2025-11-28)
 
-**Generate Payslips Button Visibility:**
-- Requires `batch_exchange_rate > 0` AND `exchange_rate_confirmed = True`
-- Set rate in "Exchange Rate Control" section, then click "Confirm Exchange Rate"
-- This is a safeguard to prevent generating payslips with wrong exchange rate
+**Generate Payslips Button Visibility (Updated 2025-11-28):**
+- Requires `batch_exchange_rate > 0` (simplified - no confirmation step required)
+- Exchange rate auto-populates from latest BCV rate in `res.currency.rate`
+- Fallback: Uses most recent confirmed batch rate if no BCV rate available
+
+**Exchange Rate Auto-Population (2025-11-28):**
+- New batches automatically get latest BCV rate from `res.currency.rate`
+- Lookup order: VEB/VES/VEF currency → latest `company_rate`
+- Fallback: Most recent confirmed batch rate
+- Also triggers on `date_start`/`date_end` change if rate is still 0
 
 ---
 
@@ -168,8 +174,8 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 | Template | Use Case |
 |----------|----------|
-| Payslip Compact Report | Regular payroll (default) |
-| Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment |
+| Payslip Compact Report | Regular payroll |
+| Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment **(DEFAULT)** |
 | Aguinaldos Email | December Christmas bonuses |
 
 **Syntax Rules:**
@@ -183,13 +189,21 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - Records confirmation with date, time, and IP
 - Deduction labels: IVSS 4%, FAOV 1%, Paro Forzoso 0.5%
 
+**Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
+- Amount displayed in **VES (Bs.)** using payslip exchange rate
+- Title: "Confirmar Recepción Digital"
+- Text: "Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital."
+- Button: "Confirmar Recepción Digital"
+- Audit trail: Records date, time, and IP address
+
 ---
 
 ## Module Versions
 
 | Module | Version | Last Update |
 |--------|---------|-------------|
-| ueipab_payroll_enhancements | v1.45.0 | 2025-11-28 |
+| hr_payroll_community | v17.0.1.0.0 | 2025-11-28 |
+| ueipab_payroll_enhancements | v1.46.0 | 2025-11-28 |
 | ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
 | ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
 
