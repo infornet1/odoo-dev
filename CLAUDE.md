@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-28 11:20 UTC
+**Last Updated:** 2025-11-28 11:35 UTC
 
 ## Core Instructions
 
@@ -183,6 +183,10 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - Body (body_html): QWeb `t-out="object.field"`
 
 **Payslip Email - Employee Delivery Template (2025-11-28):**
+- **Subject:** `💰 Comprobante de Pago │ Nro.: {{ object.number }} │ Lote: {{ object.payslip_run_id.name if object.payslip_run_id else "N/A" }}`
+- **Email From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
+- **Email To:** `{{ object.employee_id.work_email }}`
+- **Email CC:** `recursoshumanos@ueipab.edu.ve`
 - Includes digital acknowledgment button
 - Button text: "Enviar conformidad digital"
 - Acknowledgment title: "Acuso conformidad y recepción digital de este comprobante"
