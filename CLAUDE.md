@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-27 23:45 UTC
+**Last Updated:** 2025-11-28 03:50 UTC
 
 ## Core Instructions
 
@@ -26,7 +26,7 @@
 | 8 | Comprobante de Pago Compacto | Production | `ueipab_payroll_enhancements` | - |
 | 9 | Acuerdo Finiquito Laboral | Production | `ueipab_payroll_enhancements` | [Docs](documentation/FINIQUITO_REPORT.md) |
 | 10 | AR-I Portal | Testing | `ueipab_ari_portal` | - |
-| 11 | Payslip Acknowledgment | Testing | `ueipab_payroll_enhancements` | - |
+| 11 | Payslip Acknowledgment | Production | `ueipab_payroll_enhancements` | - |
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
 | 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
@@ -151,6 +151,17 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - Updates `exchange_rate_used` on all payslips in batch
 - Works on any state (draft, done, paid, cancel)
 
+**Batch Email Sending (2025-11-28):**
+- Button: "Send Payslips by Email" on batch form
+- Field: `email_template_id` - Select email template before sending
+- Uses notification popup instead of chatter (model doesn't inherit mail.thread)
+- Default template: Payslip Compact Report
+
+**Generate Payslips Button Visibility:**
+- Requires `batch_exchange_rate > 0` AND `exchange_rate_confirmed = True`
+- Set rate in "Exchange Rate Control" section, then click "Confirm Exchange Rate"
+- This is a safeguard to prevent generating payslips with wrong exchange rate
+
 ---
 
 ## Email Templates (Batch Sending)
@@ -158,12 +169,19 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Template | Use Case |
 |----------|----------|
 | Payslip Compact Report | Regular payroll (default) |
-| Payslip Email - Employee Delivery | Monthly detailed view |
+| Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment |
 | Aguinaldos Email | December Christmas bonuses |
 
 **Syntax Rules:**
 - Headers (subject): Jinja2 `{{object.field}}`
 - Body (body_html): QWeb `t-out="object.field"`
+
+**Payslip Email - Employee Delivery Template (2025-11-28):**
+- Includes digital acknowledgment button
+- Button text: "Enviar conformidad digital"
+- Acknowledgment title: "Acuso conformidad y recepción digital de este comprobante"
+- Records confirmation with date, time, and IP
+- Deduction labels: IVSS 4%, FAOV 1%, Paro Forzoso 0.5%
 
 ---
 
@@ -171,7 +189,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 | Module | Version | Last Update |
 |--------|---------|-------------|
-| ueipab_payroll_enhancements | v1.44.0 | 2025-11-27 |
+| ueipab_payroll_enhancements | v1.45.0 | 2025-11-28 |
 | ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
 | ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
 
@@ -253,7 +271,8 @@ Ctrl+Shift+R (browser hard reload)
 
 **VEB Exchange Rate Sync:** `scripts/sync-veb-rates-from-production.sql`
 - Source: `ueipab17_postgres_1` @ 10.124.0.3
-- Status: 622 rates (2024-01-30 to 2025-11-14)
+- Production: 636 rates (2024-01-30 to 2025-11-27)
+- Currency ID: 2 (VEB)
 
 ---
 

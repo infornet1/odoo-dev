@@ -58,7 +58,7 @@
          Enhancement 2: Print Disbursement Report
          ======================================== -->
 
-    <!-- Add Print Disbursement List button to form view -->
+    <!-- Add Print Disbursement List button and Send Email button to form view -->
     <record id="hr_payslip_run_form_print_button" model="ir.ui.view">
         <field name="name">hr.payslip.run.form.print.button</field>
         <field name="model">hr.payslip.run</field>
@@ -72,7 +72,20 @@
                         class="btn-primary"
                         icon="fa-print"
                         help="Generate ICF-compliant disbursement list report for finance approval"/>
+                <button name="action_send_batch_emails"
+                        type="object"
+                        string="Send Payslips by Email"
+                        class="oe_highlight"
+                        icon="fa-envelope"
+                        invisible="not slip_ids"
+                        help="Send individual payslips to each employee in this batch via email"/>
             </button>
+            <!-- Add email template selector field after exchange rate -->
+            <field name="exchange_rate" position="after">
+                <field name="email_template_id"
+                       placeholder="Select email template..."
+                       help="Choose which email template to use when sending payslips"/>
+            </field>
         </field>
     </record>
 

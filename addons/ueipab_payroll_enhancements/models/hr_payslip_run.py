@@ -61,6 +61,14 @@ class HrPayslipRun(models.Model):
              '"Apply to Payslips" button.'
     )
 
+    email_template_id = fields.Many2one(
+        'mail.template',
+        string='Email Template',
+        domain="[('model', '=', 'hr.payslip')]",
+        help='Select email template to use when sending payslips by email. '
+             'Available templates: Payslip Compact Report, Payslip Email - Employee Delivery, etc.'
+    )
+
     @api.depends('slip_ids', 'slip_ids.state', 'slip_ids.line_ids', 'slip_ids.line_ids.total')
     def _compute_total_net_amount(self):
         """Calculate total net payable for all payslips in batch.
@@ -171,12 +179,19 @@ class HrPayslipRun(models.Model):
                 )
                 sent_count += 1
 
-        self.message_post(
-            body=_("Payslips sent by email to %s employees using template '%s'.") % (
-                sent_count, template.name
-            )
-        )
-        return True
+        # Return success notification
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Emails Sent'),
+                'message': _("Payslips sent by email to %s employees using template '%s'.") % (
+                    sent_count, template.name
+                ),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
 
     def action_cancel(self):
         """Cancel the payslip batch and all associated payslips.
