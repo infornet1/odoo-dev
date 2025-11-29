@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-29 13:45 UTC
+**Last Updated:** 2025-11-29 14:45 UTC
 
 ## Core Instructions
 
@@ -295,6 +295,23 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | ueipab_payroll_enhancements | v1.47.0 | 2025-11-29 |
 | ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
 | ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
+| hrms_dashboard | v17.0.1.0.0 | 2025-11-29 |
+
+**OHRMS Core Modules (2025-11-29):**
+Installed from `ohrms_core-17.0.1.0.0.zip` - safe modules only (excluded `hr_payroll_community` and `hr_payroll_account_community` to preserve customizations):
+- `hrms_dashboard` - HR Dashboard (requires pandas)
+- `ohrms_loan` - Employee loan management
+- `ohrms_salary_advance` - Salary advance requests
+- `ohrms_core` - Base OHRMS module
+- `hr_employee_transfer`, `hr_employee_updation`, `hr_resignation`, `hr_reminder`, `hr_reward_warning`
+- `hr_leave_request_aliasing`, `hr_multi_company`
+- `oh_employee_creation_from_user`, `oh_employee_documents_expiry`
+
+**hrms_dashboard Bug Fix (2025-11-29):**
+- **File:** `addons/hrms_dashboard/models/hr_employee.py:43`
+- **Bug:** `attendance_manual()` used `browse(request.session.uid)` assuming user_id == employee_id
+- **Fix:** Changed to `search([('user_id', '=', request.session.uid)])` to correctly find employee by user link
+- **Symptom:** "Record does not exist" error on check-in/check-out
 
 **v1.47.0 Changes (2025-11-29):**
 - **Relación de Liquidación Report Fix:** Interest now uses historical monthly rates (accrual method) instead of latest rate
