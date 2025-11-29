@@ -282,7 +282,9 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             })
 
         total_deductions = sum(d['amount'] for d in deductions)
-        net_amount = self._convert_currency(net, usd, currency, date_ref, exchange_rate)
+        # CRITICAL FIX: Calculate net from benefits - deductions (not from payslip NET conversion)
+        # This ensures consistency when interest uses accrual method
+        net_amount = total_benefits + total_deductions  # deductions are negative
 
         # Determine rate source for display (simplified - always "Tasa del DD/MM/YYYY")
         if use_custom and custom_rate:
@@ -434,12 +436,14 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         interest_per_month = intereses_total / service_months
 
         # Accumulate VEB month-by-month using historical rates
+        # CRITICAL: Must use actual historical rate for each month (not latest rate)
+        # This matches the Prestaciones Soc. Intereses report calculation
         accumulated_veb = 0.0
         current_date = start_date
 
         while current_date <= end_date:
-            # Always use current month's historical rate (no override)
-            month_rate = self._get_exchange_rate(current_date, currency, None, None)
+            # Get HISTORICAL rate for this specific month (same logic as Prestaciones report)
+            month_rate = self._get_historical_exchange_rate(current_date, currency)
             month_interest_veb = interest_per_month * month_rate
             accumulated_veb += month_interest_veb
 
@@ -448,6 +452,42 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 break
 
         return accumulated_veb
+
+    def _get_historical_exchange_rate(self, date_ref, currency):
+        """Get historical exchange rate for a specific date.
+
+        This method returns the actual rate valid on the given date,
+        NOT the latest rate. Used for accrual calculations.
+
+        Args:
+            date_ref: Date for which to get the rate
+            currency: res.currency record
+
+        Returns:
+            float: Exchange rate (VEB/USD) for the date, or 1.0 for USD
+        """
+        if currency.name == 'USD':
+            return 1.0
+
+        if currency.name == 'VEB':
+            # Get rate valid on or before the specific date
+            rate_record = self.env['res.currency.rate'].search([
+                ('currency_id', '=', currency.id),
+                ('name', '<=', date_ref)
+            ], limit=1, order='name desc')
+
+            # If no rate found for date, use earliest available rate
+            if not rate_record:
+                rate_record = self.env['res.currency.rate'].search([
+                    ('currency_id', '=', currency.id)
+                ], limit=1, order='name asc')
+
+            if rate_record and hasattr(rate_record, 'company_rate'):
+                return rate_record.company_rate
+            elif rate_record and rate_record.rate > 0:
+                return 1.0 / rate_record.rate
+
+        return 1.0
 
     def _get_exchange_rate(self, date_ref, currency, custom_rate=None, custom_date=None):
         """Get exchange rate for display.

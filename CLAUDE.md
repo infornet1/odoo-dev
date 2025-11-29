@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-28 13:40 UTC
+**Last Updated:** 2025-11-29 02:00 UTC
 
 ## Core Instructions
 
@@ -30,6 +30,84 @@
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
 | 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
+| 15 | Batch Email Progress Wizard | Testing | `ueipab_payroll_enhancements` | See below |
+
+---
+
+## Payslip Acknowledgment Monitoring
+
+**Feature Status:** Production (since 2025-11-28)
+
+**First Real Batch:** NOVIEMBRE30 (44 employees, sent 2025-11-28)
+
+**Monitoring Query:**
+```python
+# Check acknowledgment status for a batch
+batch = env['hr.payslip.run'].search([('name', 'ilike', 'BATCH_NAME')])
+acknowledged = batch.slip_ids.filtered(lambda s: s.is_acknowledged)
+pending = batch.slip_ids.filtered(lambda s: not s.is_acknowledged)
+print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
+```
+
+**Payslip Acknowledgment Fields:**
+- `is_acknowledged` (Boolean) - True when employee confirms
+- `acknowledged_date` (Datetime) - When confirmation was made
+- `acknowledged_ip` (Char) - IP address of confirmation
+- `acknowledged_user_agent` (Char) - Browser info
+
+**Portal Route:** `/payslip/acknowledge/<payslip_id>/<token>`
+
+---
+
+## Batch Email Progress Wizard
+
+**Status:** ✅ TESTING | **Deployed:** 2025-11-29 | **Module Version:** v1.45.0
+
+**Problem Solved:** When clicking "Send Payslips by Email" on batch form:
+- No progress indicator during sending
+- No feedback on success/failure per employee
+- No error reporting if emails fail
+- User doesn't know when process completes
+
+**Solution Implemented:** Progress wizard with real-time feedback
+
+**New Button:** "Send Emails (with Progress)" on batch form (alongside existing button)
+
+**Wizard Features:**
+- Progress bar showing percentage complete
+- Real-time stats: ✅ Sent, 📭 No Email, ❌ Failed
+- Results table with status icons per employee
+- "Failed Only" tab for quick error review
+- Color-coded rows (green=sent, orange=no email, red=error)
+- Error messages captured for each failure
+
+**User Flow:**
+```
+1. Open Payslip Batch form
+2. Click "Send Emails (with Progress)" button
+3. Select email template (defaults to batch template)
+4. Click "Start Sending"
+5. Click "Process All Remaining" to send all at once
+6. Review results in summary table
+7. Check "Failed Only" tab if issues occurred
+```
+
+**Files Created:**
+- `wizard/batch_email_wizard.py` - Two TransientModels:
+  - `hr.payslip.batch.email.wizard` - Main wizard
+  - `hr.payslip.batch.email.result` - Per-payslip result tracking
+- `wizard/batch_email_wizard_view.xml` - Wizard form view with tabs
+
+**Files Modified:**
+- `wizard/__init__.py` - Added import
+- `views/hr_payslip_run_view.xml` - Added button (action ID 850)
+- `security/ir.model.access.csv` - Added access rules
+- `__manifest__.py` - Updated version, added XML file
+
+**Testing Notes:**
+- All tests used `env.cr.rollback()` - no actual emails sent
+- Tested: wizard creation, progress tracking, no-email detection, error capture
+- Ready for manual testing in browser
 
 ---
 
@@ -214,9 +292,14 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | v17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | v1.46.0 | 2025-11-28 |
+| ueipab_payroll_enhancements | v1.47.0 | 2025-11-29 |
 | ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
 | ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
+
+**v1.47.0 Changes (2025-11-29):**
+- **Relación de Liquidación Report Fix:** Interest now uses historical monthly rates (accrual method) instead of latest rate
+- **Net Amount Fix:** Now calculated from Benefits - Deductions instead of simple USD conversion
+- Both reports ("Prestaciones Soc. Intereses" and "Relación de Liquidación") now show matching interest amounts
 
 ---
 

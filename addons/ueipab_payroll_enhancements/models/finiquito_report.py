@@ -41,20 +41,24 @@ class FiniquitoReport(models.AbstractModel):
             
             # Convert to selected currency if needed (payslip uses company currency)
             payslip_currency = payslip.company_id.currency_id
-            if currency != payslip_currency:
-                # Default rate date is payslip date
-                rate_date = payslip.date_to or payslip.date_from
+            if currency != payslip_currency and currency.name == 'VEB':
+                # Priority for VEB conversion:
+                # 1. Custom rate from wizard (if provided)
+                # 2. Payslip's exchange_rate_used field
+                # 3. Date-based lookup (fallback)
 
-                # Check for custom exchange rate override (matches Relación report behavior)
                 if data and data.get('use_custom_rate') and data.get('custom_exchange_rate'):
-                    # Use custom override rate
+                    # Use custom override rate from wizard
                     exchange_rate = data.get('custom_exchange_rate')
                     net_amount = net_amount * exchange_rate
+                elif payslip.exchange_rate_used and payslip.exchange_rate_used > 0:
+                    # Use payslip's stored exchange rate (preferred)
+                    net_amount = net_amount * payslip.exchange_rate_used
                 else:
-                    # Check if custom date provided for automatic lookup
+                    # Fallback: date-based lookup
+                    rate_date = payslip.date_to or payslip.date_from
                     custom_date_raw = data.get('rate_date') if data else None
                     if custom_date_raw:
-                        # Convert string to date object if needed
                         if isinstance(custom_date_raw, str):
                             try:
                                 rate_date = datetime.strptime(custom_date_raw, '%Y-%m-%d').date()
@@ -63,7 +67,6 @@ class FiniquitoReport(models.AbstractModel):
                         else:
                             rate_date = custom_date_raw
 
-                    # Use automatic rate for the determined date
                     net_amount = payslip_currency._convert(
                         net_amount,
                         currency,

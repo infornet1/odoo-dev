@@ -24,8 +24,8 @@ class LiquidacionBreakdownWizard(models.TransientModel):
         'hr.payslip',
         string='Liquidation Payslips',
         required=True,
-        domain="[('struct_id.name', 'in', ['Liquidación Venezolana', 'Liquidación Venezolana V2']), ('state', 'in', ['done', 'paid'])]",
-        help='Select liquidation payslips to generate breakdown reports (V1 or V2)'
+        domain="[('struct_id.name', 'in', ['Liquidación Venezolana', 'Liquidación Venezolana V2']), ('state', 'in', ['draft', 'done', 'paid'])]",
+        help='Select liquidation payslips to generate breakdown reports (V1 or V2). Includes draft payslips for preview.'
     )
 
     currency_id = fields.Many2one(

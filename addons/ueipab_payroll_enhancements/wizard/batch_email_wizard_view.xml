@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Batch Email Wizard Form View -->
+    <record id="view_batch_email_wizard_form" model="ir.ui.view">
+        <field name="name">hr.payslip.batch.email.wizard.form</field>
+        <field name="model">hr.payslip.batch.email.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Send Payslips by Email">
+                <!-- Header with state indicator -->
+                <header invisible="state == 'confirm'">
+                    <field name="state" widget="statusbar" statusbar_visible="confirm,sending,done"/>
+                </header>
+
+                <sheet>
+                    <!-- CONFIRM STATE: Show options before starting -->
+                    <div invisible="state != 'confirm'">
+                        <div class="oe_title">
+                            <h2>Send Payslips by Email</h2>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="payslip_run_id" readonly="1"/>
+                                <field name="email_template_id" options="{'no_create': True}"/>
+                            </group>
+                            <group>
+                                <field name="total_count" readonly="1"/>
+                            </group>
+                        </group>
+                        <div class="alert alert-info" role="alert">
+                            <strong>Ready to send!</strong><br/>
+                            Click "Start Sending" to begin sending emails to all employees in this batch.
+                            You will see real-time progress and any errors that occur.
+                        </div>
+                    </div>
+
+                    <!-- SENDING/DONE STATE: Show progress -->
+                    <div invisible="state == 'confirm'">
+                        <div class="oe_title">
+                            <h2 invisible="state != 'sending'">Sending Emails...</h2>
+                            <h2 invisible="state != 'done'">Email Sending Complete</h2>
+                        </div>
+
+                        <!-- Progress Section -->
+                        <group>
+                            <group>
+                                <field name="email_template_id" readonly="1"/>
+                                <field name="current_employee" invisible="state == 'done'"/>
+                            </group>
+                            <group>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label for="progress_percent"/>
+                                        <field name="progress_percent" widget="progressbar"
+                                               options="{'editable': false}"/>
+                                    </div>
+                                </div>
+                            </group>
+                        </group>
+
+                        <!-- Summary Stats -->
+                        <group string="Summary">
+                            <group>
+                                <field name="processed_count" string="Processed"/>
+                                <field name="total_count" string="Total"/>
+                            </group>
+                            <group>
+                                <field name="sent_count" string="✅ Sent"/>
+                                <field name="no_email_count" string="📭 No Email"/>
+                                <field name="failed_count" string="❌ Errors"/>
+                            </group>
+                        </group>
+
+                        <!-- Results Table -->
+                        <notebook>
+                            <page string="All Results" name="all_results">
+                                <field name="result_ids" readonly="1" nolabel="1">
+                                    <tree decoration-success="status == 'sent'"
+                                          decoration-warning="status == 'no_email'"
+                                          decoration-danger="status == 'error'"
+                                          decoration-muted="status == 'pending'"
+                                          decoration-info="status == 'sending'">
+                                        <field name="status_icon" string=" " width="30px"/>
+                                        <field name="employee_name"/>
+                                        <field name="payslip_number"/>
+                                        <field name="employee_email"/>
+                                        <field name="status"/>
+                                        <field name="error_message"/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Failed Only" name="failed_only"
+                                  invisible="failed_count == 0 and no_email_count == 0">
+                                <field name="result_ids" readonly="1" nolabel="1"
+                                       domain="[('status', 'in', ['error', 'no_email'])]">
+                                    <tree decoration-warning="status == 'no_email'"
+                                          decoration-danger="status == 'error'">
+                                        <field name="status_icon" string=" " width="30px"/>
+                                        <field name="employee_name"/>
+                                        <field name="payslip_number"/>
+                                        <field name="employee_email"/>
+                                        <field name="status"/>
+                                        <field name="error_message"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+
+                        <!-- Success message when done -->
+                        <div class="alert alert-success" role="alert"
+                             invisible="state != 'done' or failed_count > 0 or no_email_count > 0">
+                            <strong>All emails sent successfully!</strong>
+                        </div>
+
+                        <!-- Warning message when done with issues -->
+                        <div class="alert alert-warning" role="alert"
+                             invisible="state != 'done' or (failed_count == 0 and no_email_count == 0)">
+                            <strong>Completed with some issues.</strong><br/>
+                            Check the "Failed Only" tab for details.
+                        </div>
+                    </div>
+                </sheet>
+
+                <footer>
+                    <!-- Confirm state buttons -->
+                    <button name="action_start_sending"
+                            string="Start Sending"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'confirm'"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"
+                            invisible="state != 'confirm'"/>
+
+                    <!-- Sending state buttons -->
+                    <button name="action_process_next"
+                            string="Continue"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'sending'"
+                            help="Process next email"/>
+                    <button name="action_process_all"
+                            string="Process All Remaining"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'sending'"
+                            help="Process all remaining emails at once"/>
+
+                    <!-- Done state buttons -->
+                    <button name="action_close"
+                            string="Close"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'done'"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open wizard (called from batch form) -->
+    <record id="action_batch_email_wizard" model="ir.actions.act_window">
+        <field name="name">Send Payslips by Email</field>
+        <field name="res_model">hr.payslip.batch.email.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{
+            'default_payslip_run_id': active_id,
+        }</field>
+    </record>
+</odoo>

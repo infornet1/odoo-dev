@@ -78,7 +78,14 @@
                         class="oe_highlight"
                         icon="fa-envelope"
                         invisible="not slip_ids"
-                        help="Send individual payslips to each employee in this batch via email"/>
+                        help="Send individual payslips to each employee in this batch via email (no progress)"/>
+                <button name="%(ueipab_payroll_enhancements.action_batch_email_wizard)d"
+                        type="action"
+                        string="Send Emails (with Progress)"
+                        class="btn-secondary"
+                        icon="fa-paper-plane"
+                        invisible="not slip_ids"
+                        help="Send emails with progress tracking and error reporting"/>
             </button>
             <!-- Add email template selector field after exchange rate -->
             <field name="exchange_rate" position="after">
