@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-29 14:45 UTC
+**Last Updated:** 2025-11-29 17:10 UTC
 
 ## Core Instructions
 
@@ -31,6 +31,51 @@
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
 | 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
 | 15 | Batch Email Progress Wizard | Testing | `ueipab_payroll_enhancements` | See below |
+| 16 | HRMS Dashboard Ack Widget | Development | `ueipab_hrms_dashboard_ack` | See below |
+
+---
+
+## HRMS Dashboard Acknowledgment Widget
+
+**Status:** Development | **Module:** `ueipab_hrms_dashboard_ack` | **Version:** 17.0.1.0.0
+
+**Purpose:** Adds payslip acknowledgment tracking widget to the HRMS Dashboard.
+
+**Architecture:**
+- Extends `hrms_dashboard` using Odoo's `patch()` mechanism (upgrade-safe)
+- Backend: `hr.employee.get_payslip_acknowledgment_stats()` method
+- Frontend: OWL component extension with new templates
+
+**Widget Features:**
+
+| Feature | Employee View | Manager View |
+|---------|---------------|--------------|
+| Personal ack stats | Total/Acknowledged/Pending | Same |
+| Progress bar | Personal % complete | Batch % complete |
+| Recent payslips list | Last 6 with status | N/A |
+| Batch overview | N/A | Latest batch stats |
+| Pending employees | N/A | Top 10 pending names |
+| Click actions | View own pending | View all pending |
+
+**Files:**
+```
+addons/ueipab_hrms_dashboard_ack/
+├── __manifest__.py
+├── models/hr_employee.py          # Backend stats methods
+├── static/src/
+│   ├── js/payslip_ack_widget.js   # OWL patch extension
+│   ├── xml/payslip_ack_templates.xml  # Widget UI templates
+│   └── css/payslip_ack.css        # Widget styling
+└── security/ir.model.access.csv
+```
+
+**Installation:**
+1. Go to Apps → Update Apps List
+2. Search "UEIPAB HRMS Dashboard"
+3. Install the module
+4. Refresh browser (Ctrl+Shift+R)
+
+**Dependencies:** `hrms_dashboard`, `ueipab_payroll_enhancements`
 
 ---
 
