@@ -154,3 +154,6 @@ sessions/
 # Docker volumes data (not needed in repo)
 odoo-web-data/
 odoo-db-data/
+
+# Production credentials (never commit)
+config/production.json

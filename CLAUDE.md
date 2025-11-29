@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-29 02:00 UTC
+**Last Updated:** 2025-11-29 13:45 UTC
 
 ## Core Instructions
 
@@ -347,10 +347,22 @@ Routes with `auth='public'` require database session.
 
 ## Production Environment
 
+**Config File:** `config/production.json` (gitignored - contains credentials)
+
+```json
+{
+  "production": {
+    "server": { "host": "10.124.0.3", "user": "root" },
+    "database": { "name": "DB_UEIPAB", "user": "odoo" },
+    "containers": { "odoo": "ueipab17", "postgres": "ueipab17_postgres_1" }
+  }
+}
 ```
-Server: 10.124.0.3
-Container: ueipab17
-Database: DB_UEIPAB
+
+**SSH Connection Pattern:**
+```bash
+sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
+  "docker exec ueipab17_postgres_1 psql -U odoo -d DB_UEIPAB -c 'SQL_QUERY'"
 ```
 
 **Contract Status:**
