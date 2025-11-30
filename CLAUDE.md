@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-29 21:40 UTC
+**Last Updated:** 2025-11-30 12:45 UTC
 
 ## Core Instructions
 
@@ -87,10 +87,15 @@ addons/ueipab_hrms_dashboard_ack/
 
 **Dependencies:** `hrms_dashboard`, `ueipab_payroll_enhancements`
 
+**Access Control:**
+- Widget only visible to users with payroll roles
+- Required groups: `hr_payroll.group_hr_payroll_manager` OR `hr_payroll.group_hr_payroll_user`
+- Regular employees without payroll access will NOT see the widget
+
 **Technical Notes:**
 - Does NOT use OWL template inheritance (t-inherit not supported for OWL components)
 - Uses DOM manipulation via `insertAdjacentHTML()` after component mounts
-- Widget only renders if employee has payslips (`stats.personal.total > 0`)
+- Widget only renders if user has payroll role AND has payslips (`stats.personal.total > 0`)
 
 ---
 

@@ -35,11 +35,27 @@ class HrEmployee(models.Model):
             [('user_id', '=', uid)], limit=1
         )
 
-        # Check if user is HR manager
+        # Check if user has any payroll role (Manager or User)
+        has_payroll_role = (
+            self.env.user.has_group('hr_payroll.group_hr_payroll_manager') or
+            self.env.user.has_group('hr_payroll.group_hr_payroll_user')
+        )
+
+        # If user has no payroll role, return empty stats (widget won't render)
+        if not has_payroll_role:
+            return {
+                'is_manager': False,
+                'has_payroll_role': False,
+                'personal': {'total': 0, 'acknowledged': 0, 'pending': 0, 'percentage': 0, 'recent': []},
+                'batch': {},
+            }
+
+        # Check if user is HR manager (for batch stats)
         is_manager = self.env.user.has_group('hr.group_hr_manager')
 
         result = {
             'is_manager': is_manager,
+            'has_payroll_role': True,
             'personal': self._get_personal_ack_stats(employee),
             'batch': self._get_batch_ack_stats() if is_manager else {},
         }
