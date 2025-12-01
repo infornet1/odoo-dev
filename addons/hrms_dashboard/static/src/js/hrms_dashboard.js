@@ -80,6 +80,16 @@ export class HrDashboard extends Component{
         var color = d3.scale.ordinal().range(colors);
         var data = await this.orm.call('hr.employee', 'get_dept_employee', [])
         if (data) {
+            // Check if there's any employee data to display (prevents NaN in pie chart)
+            var totalEmployees = d3.sum(data, function(d) { return d.value; });
+            if (totalEmployees === 0 || data.length === 0) {
+                d3.select(elem).append("div")
+                    .attr("class", "alert alert-info text-center")
+                    .style("margin", "20px")
+                    .text("No employee data available");
+                return;
+            }
+
             var segColor = {};
             var vis = d3.select(elem).append("svg:svg").data([data]).attr("width", w).attr("height", h).append("svg:g").attr("transform", "translate(" + r + "," + r + ")");
             var pie = d3.layout.pie().value(function(d){return d.value;});
@@ -283,6 +293,17 @@ export class HrDashboard extends Component{
             });
             // calculate total frequency by state for all segment.
             var sF = fData.map(function(d){return [d.l_month,d.total];});
+
+            // Check if there's any leave data to display (prevents NaN in pie chart)
+            var totalLeave = d3.sum(tF, function(d) { return d.leave; });
+            if (totalLeave === 0) {
+                d3.select(id).append("div")
+                    .attr("class", "alert alert-info text-center mt-3")
+                    .style("margin", "20px")
+                    .text("No leave data available for this period");
+                return;
+            }
+
             var hG = histoGram(sF); // create the histogram.
             var pC = pieChart(tF); // create the pie-chart.
             var leg = legend(tF);  // create the legend.
