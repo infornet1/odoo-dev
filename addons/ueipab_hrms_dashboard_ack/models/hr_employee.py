@@ -36,9 +36,10 @@ class HrEmployee(models.Model):
         )
 
         # Check if user has any payroll role (Manager or User)
+        # Note: Using hr_payroll_community groups (community edition)
         has_payroll_role = (
-            self.env.user.has_group('hr_payroll.group_hr_payroll_manager') or
-            self.env.user.has_group('hr_payroll.group_hr_payroll_user')
+            self.env.user.has_group('hr_payroll_community.group_hr_payroll_community_manager') or
+            self.env.user.has_group('hr_payroll_community.group_hr_payroll_community_user')
         )
 
         # If user has no payroll role, return empty stats (widget won't render)
@@ -118,20 +119,27 @@ class HrEmployee(models.Model):
         Returns:
             dict: Batch stats including latest batch info and overall stats
         """
-        # Get latest batches with payslips
+        # Get latest batches with payslips (confirmed states)
         batches = self.env['hr.payslip.run'].sudo().search([
             ('state', 'in', ['close', 'done', 'verify']),
         ], order='date_end desc', limit=5)
+
+        # Even without batches, calculate overall stats for all payslips
+        all_payslips = self.env['hr.payslip'].sudo().search([
+            ('state', 'in', ['done', 'paid']),
+        ])
+        overall_total = len(all_payslips)
+        overall_ack = len(all_payslips.filtered(lambda p: p.is_acknowledged))
 
         if not batches:
             return {
                 'latest_batch': {},
                 'recent_batches': [],
                 'overall': {
-                    'total': 0,
-                    'acknowledged': 0,
-                    'pending': 0,
-                    'percentage': 0,
+                    'total': overall_total,
+                    'acknowledged': overall_ack,
+                    'pending': overall_total - overall_ack,
+                    'percentage': round((overall_ack / overall_total * 100), 1) if overall_total > 0 else 0,
                 },
             }
 
@@ -168,14 +176,7 @@ class HrEmployee(models.Model):
                 'payslip_number': slip.number or slip.name,
             })
 
-        # Overall stats (all confirmed batches in last 3 months)
-        all_payslips = self.env['hr.payslip'].sudo().search([
-            ('state', 'in', ['done', 'paid']),
-            ('payslip_run_id', '!=', False),
-        ])
-        overall_total = len(all_payslips)
-        overall_ack = len(all_payslips.filtered(lambda p: p.is_acknowledged))
-
+        # Use already computed overall stats from above
         return {
             'latest_batch': batch_stats[0] if batch_stats else {},
             'recent_batches': batch_stats,

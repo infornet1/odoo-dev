@@ -90,13 +90,15 @@ addons/ueipab_hrms_dashboard_ack/
 
 **Access Control:**
 - Widget only visible to users with payroll roles
-- Required groups: `hr_payroll.group_hr_payroll_manager` OR `hr_payroll.group_hr_payroll_user`
+- Required groups: `hr_payroll_community.group_hr_payroll_community_manager` OR `hr_payroll_community.group_hr_payroll_community_user`
 - Regular employees without payroll access will NOT see the widget
 
 **Technical Notes:**
 - Does NOT use OWL template inheritance (t-inherit not supported for OWL components)
 - Uses DOM manipulation via `insertAdjacentHTML()` after component mounts
-- Widget only renders if user has payroll role AND has payslips (`stats.personal.total > 0`)
+- Widget renders in two modes:
+  - **Personal view:** For employees with payslips (`stats.personal.total > 0`)
+  - **Manager view:** For HR managers (`hr.group_hr_manager`) with batch overview stats
 
 ---
 
