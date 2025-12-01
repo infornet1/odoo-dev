@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-11-30 16:30 UTC
+**Last Updated:** 2025-12-01 12:00 UTC
 
 ## Core Instructions
 
@@ -471,13 +471,25 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 ## Module Versions
 
+### Testing Environment
+
 | Module | Version | Last Update |
 |--------|---------|-------------|
-| hr_payroll_community | v17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | v1.47.0 | 2025-11-29 |
-| ueipab_hr_contract | v17.0.2.1.0 | 2025-11-26 |
-| ueipab_ari_portal | v17.0.1.0.0 | 2025-11-26 |
-| hrms_dashboard | v17.0.1.0.0 | 2025-11-29 |
+| hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
+| ueipab_payroll_enhancements | 17.0.1.45.0 | 2025-12-01 |
+| ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
+| ueipab_ari_portal | 17.0.1.0.0 | 2025-11-26 |
+| hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
+| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | 2025-12-01 |
+
+### Production Environment
+
+| Module | Version | Status |
+|--------|---------|--------|
+| ueipab_payroll_enhancements | 17.0.1.44.0 | **Needs upgrade to 1.45.0** |
+| ueipab_hr_contract | 17.0.2.0.0 | Current |
+| hrms_dashboard | Not installed | Optional |
+| ueipab_hrms_dashboard_ack | Not installed | Optional |
 
 **OHRMS Core Modules (2025-11-29):**
 Installed from `ohrms_core-17.0.1.0.0.zip` - safe modules only (excluded `hr_payroll_community` and `hr_payroll_account_community` to preserve customizations):
@@ -489,16 +501,22 @@ Installed from `ohrms_core-17.0.1.0.0.zip` - safe modules only (excluded `hr_pay
 - `hr_leave_request_aliasing`, `hr_multi_company`
 - `oh_employee_creation_from_user`, `oh_employee_documents_expiry`
 
-**hrms_dashboard Bug Fix (2025-11-29):**
+**hrms_dashboard Bug Fixes (2025-12-01):**
 - **File:** `addons/hrms_dashboard/models/hr_employee.py:43`
-- **Bug:** `attendance_manual()` used `browse(request.session.uid)` assuming user_id == employee_id
+- **Bug 1:** `attendance_manual()` used `browse(request.session.uid)` assuming user_id == employee_id
 - **Fix:** Changed to `search([('user_id', '=', request.session.uid)])` to correctly find employee by user link
-- **Symptom:** "Record does not exist" error on check-in/check-out
+- **Bug 2:** D3 pie charts threw NaN errors when no data available
+- **Fix:** Added zero-data checks to show "No data available" message instead of broken charts
 
-**v1.47.0 Changes (2025-11-29):**
-- **Relación de Liquidación Report Fix:** Interest now uses historical monthly rates (accrual method) instead of latest rate
-- **Net Amount Fix:** Now calculated from Benefits - Deductions instead of simple USD conversion
-- Both reports ("Prestaciones Soc. Intereses" and "Relación de Liquidación") now show matching interest amounts
+**v1.45.0 Changes (2025-12-01):**
+- Batch email progress wizard with error tracking
+- Auto-populate exchange rate from BCV
+- Simplified Generate Payslips button (no confirmation required)
+- Batch email template selector and fix notifications
+- Recompute payslips after syncing dates
+- Include draft payslips in Total Net Payable
+- SSO 4.5% → 4% fix for V2 payslips
+- Interest calculation fix (accrual method) for Finiquito and Liquidación reports
 
 ---
 
@@ -567,6 +585,49 @@ sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
 **Contract Status:**
 - Production: 44 contracts (V2 structure assigned)
 - Testing: 46 contracts
+
+### Production Upgrade Procedure
+
+**Pending Upgrade:** `ueipab_payroll_enhancements` 1.44.0 → 1.45.0
+
+**Files to Copy:**
+```
+addons/ueipab_payroll_enhancements/
+├── __manifest__.py                    (modified)
+├── models/finiquito_report.py         (modified - interest fix)
+├── models/liquidacion_breakdown_report.py (modified - interest fix)
+├── models/liquidacion_breakdown_wizard.py (modified)
+├── security/ir.model.access.csv       (modified - wizard access)
+├── views/hr_payslip_run_view.xml      (modified - buttons)
+├── wizard/__init__.py                 (modified)
+├── wizard/batch_email_wizard.py       (NEW)
+└── wizard/batch_email_wizard_view.xml (NEW)
+```
+
+**Upgrade Steps:**
+```bash
+# 1. Backup production database
+sshpass -p '$PASSWORD' ssh root@10.124.0.3 \
+  "docker exec ueipab17_postgres_1 pg_dump -U odoo DB_UEIPAB > /backup/DB_UEIPAB_$(date +%Y%m%d).sql"
+
+# 2. Copy module files (from dev server)
+scp -r addons/ueipab_payroll_enhancements root@10.124.0.3:/path/to/extra-addons/
+
+# 3. Restart Odoo
+sshpass -p '$PASSWORD' ssh root@10.124.0.3 "docker restart ueipab17"
+
+# 4. Upgrade module via UI or shell
+# Apps → ueipab_payroll_enhancements → Upgrade
+```
+
+**Optional - HRMS Dashboard Installation:**
+```bash
+# Copy both modules
+scp -r addons/hrms_dashboard root@10.124.0.3:/path/to/extra-addons/
+scp -r addons/ueipab_hrms_dashboard_ack root@10.124.0.3:/path/to/extra-addons/
+
+# Install via Apps menu (hrms_dashboard first, then ueipab_hrms_dashboard_ack)
+```
 
 ---
 
