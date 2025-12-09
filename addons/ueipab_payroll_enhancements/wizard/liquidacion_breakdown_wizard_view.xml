@@ -7,10 +7,15 @@
         <field name="model">liquidacion.breakdown.wizard</field>
         <field name="arch" type="xml">
             <form string="Relación de Liquidación">
-                <div class="alert alert-info" role="alert">
+                <div class="alert alert-info" role="alert" invisible="is_estimation">
                     <strong>Liquidation Breakdown Report</strong><br/>
                     Generates a detailed breakdown showing all formula calculations for benefits and deductions.
                     This report helps employees understand exactly how their liquidation amount was calculated.
+                </div>
+                <div class="alert alert-warning" role="alert" invisible="not is_estimation">
+                    <strong>⚠ Modo Estimación Activo</strong><br/>
+                    Genera una proyección de liquidación con reducción global aplicada.
+                    El documento NO incluirá secciones de firma y mostrará marca de agua "ESTIMACIÓN".
                 </div>
                 <group>
                     <group>
@@ -21,7 +26,30 @@
                         <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
                     </group>
                 </group>
-                <group string="Exchange Rate Options (VEB Only)">
+
+                <!-- Estimation Mode Section (only available when VEB is selected) -->
+                <field name="is_veb_currency" invisible="1"/>
+                <group string="Modo Estimación (Opcional)" invisible="not is_veb_currency">
+                    <group>
+                        <field name="is_estimation" widget="boolean_toggle"/>
+                    </group>
+                    <group invisible="not is_estimation">
+                        <label for="reduction_percentage" string="Reducción Global (%)"/>
+                        <div class="o_row">
+                            <field name="reduction_percentage" class="oe_inline" style="width: 80px;"/>
+                            <span class="oe_inline">%</span>
+                        </div>
+                    </group>
+                </group>
+                <div class="alert alert-secondary" role="alert" invisible="not is_estimation">
+                    <small>
+                        <strong>Nota:</strong> Ingrese el porcentaje de reducción como número entero (ej: 48 para 48%).<br/>
+                        La reducción se aplica a todos los montos calculados (prestaciones y deducciones).<br/>
+                        Ejemplo: Una reducción del 10% mostrará el 90% de cada valor calculado.
+                    </small>
+                </div>
+
+                <group string="Exchange Rate Options (VEB Only)" invisible="is_estimation">
                     <group>
                         <field name="use_custom_rate"/>
                         <field name="custom_exchange_rate"
@@ -37,7 +65,7 @@
                                placeholder="Leave blank to use payslip date"/>
                     </group>
                 </group>
-                <div class="alert alert-warning" role="alert" invisible="not use_custom_rate">
+                <div class="alert alert-warning" role="alert" invisible="not use_custom_rate or is_estimation">
                     <strong>Custom Rate Active</strong><br/>
                     The report will use your custom rate (<field name="custom_exchange_rate"/> VEB/USD) instead of the automatic rate lookup.
                     This is useful when the payment date differs from the liquidation date.
@@ -48,9 +76,11 @@
                 </div>
                 <footer>
                     <button name="action_print_pdf" string="Generate PDF" type="object" class="btn-primary"
-                            invisible="payslip_count == 0"/>
+                            invisible="payslip_count == 0 or is_estimation"/>
+                    <button name="action_print_pdf" string="Generar Estimación PDF" type="object" class="btn-warning"
+                            invisible="payslip_count == 0 or not is_estimation"/>
                     <button name="action_export_xlsx" string="Export XLSX" type="object" class="btn-success"
-                            invisible="payslip_count == 0"/>
+                            invisible="payslip_count == 0 or is_estimation"/>
                     <button string="Cancel" special="cancel" class="btn-secondary"/>
                 </footer>
             </form>

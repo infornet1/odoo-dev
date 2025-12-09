@@ -21,6 +21,7 @@
 | 3 | Prestaciones Interest Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PRESTACIONES_INTEREST_REPORT.md) |
 | 4 | Venezuelan Payroll V2 | Production | `ueipab_payroll_enhancements` | [V2 Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md) |
 | 5 | Relacion Liquidacion Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/RELACION_BREAKDOWN_REPORT.md) |
+| 18 | Liquidacion Estimation Mode | Testing | `ueipab_payroll_enhancements` | See below |
 | 6 | Payslip Email Delivery | Production | `hr_payslip_monthly_report` | [Docs](documentation/SEND_MAIL_BUTTON_FIX_FINAL.md) |
 | 7 | Batch Email Template Selector | Production | `ueipab_payroll_enhancements` | - |
 | 8 | Comprobante de Pago Compacto | Production | `ueipab_payroll_enhancements` | - |
@@ -323,6 +324,58 @@ addons/ueipab_hrms_dashboard_fix/
 3. Cybrosys updates won't overwrite customizations
 4. Extension modules load AFTER originals via `depends`
 
+---
+
+## Liquidacion Estimation Mode
+
+**Status:** Testing | **Module:** `ueipab_payroll_enhancements` | **Version:** 17.0.1.46.0
+
+**Purpose:** Generate projection/estimation reports for liquidation with optional global % reduction.
+
+**Feature Overview:**
+- Adds "Modo Estimación" option to Relación de Liquidación wizard
+- Only available when VEB (local currency) is selected
+- Applies configurable global reduction % to all calculated amounts
+- Generates projection report without signature sections
+
+**Wizard Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_estimation` | Boolean | Enable estimation mode |
+| `reduction_percentage` | Float | Global reduction % (0-100) |
+| `is_veb_currency` | Computed | Technical field for view visibility |
+
+**PDF Output (Estimation Mode):**
+- Title: "ESTIMACIÓN DE LIQUIDACIÓN" (red)
+- Subtitle: "PROYECCIÓN - NO VÁLIDO COMO DOCUMENTO OFICIAL"
+- Watermark: "ESTIMACIÓN" (diagonal, semi-transparent)
+- Declaration section: Hidden
+- Signature sections: Hidden
+- Disclaimer box: Yellow warning about projection nature
+
+**Calculation:**
+```python
+# All amounts multiplied by reduction factor
+reduction_multiplier = (100 - reduction_percentage) / 100.0
+# Example: 48% reduction → amounts show 52% of calculated value
+```
+
+**Files Modified:**
+- `models/liquidacion_breakdown_wizard.py` - Added estimation fields and computed field
+- `models/liquidacion_breakdown_report.py` - Apply reduction to all amounts
+- `reports/liquidacion_breakdown_report.xml` - Conditional template sections
+- `wizard/liquidacion_breakdown_wizard_view.xml` - Estimation mode UI section
+
+**User Flow:**
+1. Open Relación de Liquidación wizard
+2. Select liquidation payslip(s)
+3. Select **VEB** currency (estimation only available for VEB)
+4. Enable "Modo Estimación" toggle
+5. Enter reduction percentage (e.g., 48 for 48%)
+6. Click "Generar Estimación PDF"
+
+---
+
 ### Upgrade Procedure (Current State)
 
 Until refactoring is complete, use this procedure when Cybrosys releases updates:
@@ -476,7 +529,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.45.0 | 2025-12-01 |
+| ueipab_payroll_enhancements | 17.0.1.46.0 | 2025-12-09 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_ari_portal | 17.0.1.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |

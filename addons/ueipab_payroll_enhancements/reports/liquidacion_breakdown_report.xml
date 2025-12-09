@@ -6,10 +6,27 @@
         <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report">
                 <t t-call="web.basic_layout">
-                    <div class="page" style="font-size: 7pt;">
+                    <div class="page" style="font-size: 7pt; position: relative;">
+
+                    <!-- ESTIMATION MODE: Watermark -->
+                    <t t-if="report.get('is_estimation')">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60pt; color: rgba(255, 0, 0, 0.08); font-weight: bold; white-space: nowrap; z-index: -1; pointer-events: none;">
+                            ESTIMACIÓN
+                        </div>
+                    </t>
+
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
-                        <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
+                        <!-- Dynamic title based on mode -->
+                        <t t-if="report.get('is_estimation')">
+                            <h3 style="margin: 0; padding: 0; font-size: 11pt; color: #d32f2f;">ESTIMACIÓN DE LIQUIDACIÓN</h3>
+                            <p style="margin: 2px 0 0 0; font-size: 7pt; color: #d32f2f; font-weight: bold;">
+                                PROYECCIÓN - NO VÁLIDO COMO DOCUMENTO OFICIAL
+                            </p>
+                        </t>
+                        <t t-else="">
+                            <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
+                        </t>
                         <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Nro: <t t-esc="report['payslip'].number"/> │ Fecha Liquidación: <t t-esc="report.get('date_to_str')"/></p>
                     </div>
 
@@ -166,37 +183,50 @@
                         </table>
                     </div>
 
-                    <!-- Declaration Section -->
-                    <div style="margin-top: 10px; font-size: 7pt; padding: 8px; background-color: #fff; border: 1px solid #ddd;">
-                        <p style="margin: 0; text-align: justify; line-height: 1.3;">
-                            <strong>DECLARACIÓN:</strong> El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de
-                            <strong><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('net_amount_formatted'))"/></strong>
-                            a su entera satisfacción por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
-                        </p>
-                    </div>
+                    <!-- Declaration Section (hidden in estimation mode) -->
+                    <t t-if="not report.get('is_estimation')">
+                        <div style="margin-top: 10px; font-size: 7pt; padding: 8px; background-color: #fff; border: 1px solid #ddd;">
+                            <p style="margin: 0; text-align: justify; line-height: 1.3;">
+                                <strong>DECLARACIÓN:</strong> El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de
+                                <strong><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('net_amount_formatted'))"/></strong>
+                                a su entera satisfacción por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
+                            </p>
+                        </div>
 
-                    <!-- Signatures Section -->
-                    <div style="margin-top: 15px;">
-                        <table style="width: 100%; font-size: 7pt;">
-                            <tr>
-                                <td style="width: 48%; text-align: center; vertical-align: bottom;">
-                                    <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
-                                        <strong><t t-esc="report.get('employee').name"/></strong><br/>
-                                        C.I.: <t t-esc="report.get('employee').identification_id or 'N/A'"/><br/>
-                                        Firma del Trabajador
-                                    </div>
-                                </td>
-                                <td style="width: 4%;"></td>
-                                <td style="width: 48%; text-align: center; vertical-align: bottom;">
-                                    <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
-                                        <strong>______________________________</strong><br/>
-                                        C.I.: __________________<br/>
-                                        Firma del Testigo
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                        <!-- Signatures Section (hidden in estimation mode) -->
+                        <div style="margin-top: 15px;">
+                            <table style="width: 100%; font-size: 7pt;">
+                                <tr>
+                                    <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                        <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
+                                            <strong><t t-esc="report.get('employee').name"/></strong><br/>
+                                            C.I.: <t t-esc="report.get('employee').identification_id or 'N/A'"/><br/>
+                                            Firma del Trabajador
+                                        </div>
+                                    </td>
+                                    <td style="width: 4%;"></td>
+                                    <td style="width: 48%; text-align: center; vertical-align: bottom;">
+                                        <div style="border-top: 1px solid #333; margin-top: 40px; padding-top: 5px;">
+                                            <strong>______________________________</strong><br/>
+                                            C.I.: __________________<br/>
+                                            Firma del Testigo
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </t>
+
+                    <!-- Estimation Mode Disclaimer (shown instead of declaration/signatures) -->
+                    <t t-if="report.get('is_estimation')">
+                        <div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 4px;">
+                            <p style="margin: 0; text-align: center; font-size: 8pt; color: #856404;">
+                                <strong>⚠ DOCUMENTO DE ESTIMACIÓN</strong><br/>
+                                Este documento es una proyección con fines informativos únicamente.<br/>
+                                No constituye un compromiso legal ni puede utilizarse como documento oficial.
+                            </p>
+                        </div>
+                    </t>
 
                     <!-- Notes Section -->
                     <div style="margin-top: 8px; font-size: 6pt; color: #666; padding: 5px; background-color: #f8f9fa; border-left: 2px solid #2196F3;">

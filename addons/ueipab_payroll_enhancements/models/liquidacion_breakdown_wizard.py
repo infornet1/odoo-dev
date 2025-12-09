@@ -4,6 +4,10 @@ Relación de Liquidación Wizard
 
 Generates detailed breakdown report showing all formula calculations
 for employee liquidation benefits and deductions.
+
+Supports two modes:
+1. Standard Mode: Official liquidation report with signatures
+2. Estimation Mode: Projection report with global % reduction (VEB only, no signatures)
 """
 
 from odoo import models, fields, api, _
@@ -61,6 +65,35 @@ class LiquidacionBreakdownWizard(models.TransientModel):
              'Use this to get rate from a different date (e.g., actual payment date)'
     )
 
+    is_veb_currency = fields.Boolean(
+        string='Is VEB Currency',
+        compute='_compute_is_veb_currency',
+        help='Technical field to check if VEB is selected'
+    )
+
+    # ========================================
+    # ESTIMATION MODE FIELDS
+    # ========================================
+
+    is_estimation = fields.Boolean(
+        string='Estimation Mode',
+        default=False,
+        help='Generate an estimation/projection report instead of official liquidation.\n'
+             'Estimation reports:\n'
+             '- Are displayed in VEB (local currency) only\n'
+             '- Apply a global % reduction to all amounts\n'
+             '- Hide signature sections (not valid as official document)\n'
+             '- Include "ESTIMACIÓN" watermark'
+    )
+
+    reduction_percentage = fields.Float(
+        string='Global Reduction %',
+        digits=(5, 2),
+        default=0.0,
+        help='Percentage to reduce all calculated amounts (0-100).\n'
+             'Example: 10% reduction means amounts show 90% of calculated value.'
+    )
+
     # ========================================
     # COMPUTED FIELDS
     # ========================================
@@ -70,6 +103,12 @@ class LiquidacionBreakdownWizard(models.TransientModel):
         """Count selected payslips."""
         for wizard in self:
             wizard.payslip_count = len(wizard.payslip_ids)
+
+    @api.depends('currency_id')
+    def _compute_is_veb_currency(self):
+        """Check if VEB currency is selected."""
+        for wizard in self:
+            wizard.is_veb_currency = wizard.currency_id.name == 'VEB' if wizard.currency_id else False
 
     # ========================================
     # BUSINESS METHODS
@@ -95,6 +134,9 @@ class LiquidacionBreakdownWizard(models.TransientModel):
             'use_custom_rate': self.use_custom_rate,
             'custom_exchange_rate': self.custom_exchange_rate if self.use_custom_rate else None,
             'rate_date': self.rate_date,
+            # Estimation mode parameters
+            'is_estimation': self.is_estimation,
+            'reduction_percentage': self.reduction_percentage if self.is_estimation else 0.0,
         }
 
         # Generate PDF report
@@ -139,6 +181,20 @@ class LiquidacionBreakdownWizard(models.TransientModel):
                 self.custom_exchange_rate = 0.0
                 self.rate_date = False
 
+    @api.onchange('is_estimation')
+    def _onchange_is_estimation(self):
+        """Reset reduction percentage when disabling estimation mode."""
+        if not self.is_estimation:
+            self.reduction_percentage = 0.0
+
+    @api.onchange('currency_id')
+    def _onchange_currency_reset_estimation(self):
+        """Reset estimation mode when switching away from VEB."""
+        if self.currency_id and self.currency_id.name != 'VEB':
+            if self.is_estimation:
+                self.is_estimation = False
+                self.reduction_percentage = 0.0
+
     @api.constrains('custom_exchange_rate', 'use_custom_rate')
     def _check_custom_rate(self):
         """Validate custom exchange rate."""
@@ -151,4 +207,18 @@ class LiquidacionBreakdownWizard(models.TransientModel):
                 if wizard.custom_exchange_rate > 1000:
                     raise ValidationError(
                         _('Exchange rate seems too high (>1000). Please verify the value.')
+                    )
+
+    @api.constrains('reduction_percentage', 'is_estimation')
+    def _check_reduction_percentage(self):
+        """Validate reduction percentage for estimation mode."""
+        for wizard in self:
+            if wizard.is_estimation:
+                if wizard.reduction_percentage < 0:
+                    raise ValidationError(
+                        _('Reduction percentage cannot be negative.')
+                    )
+                if wizard.reduction_percentage > 100:
+                    raise ValidationError(
+                        _('Reduction percentage cannot exceed 100%.')
                     )

@@ -39,6 +39,10 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         currency_id = data.get('currency_id') if data else self.env.ref('base.USD').id
         currency = self.env['res.currency'].browse(currency_id)
 
+        # Get estimation mode parameters
+        is_estimation = data.get('is_estimation', False) if data else False
+        reduction_percentage = data.get('reduction_percentage', 0.0) if data else 0.0
+
         # Generate report data for each payslip
         reports = []
         for payslip in payslips:
@@ -52,6 +56,9 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'data': data,
             'currency': currency,
             'reports': reports,
+            # Estimation mode flags for template
+            'is_estimation': is_estimation,
+            'reduction_percentage': reduction_percentage,
         }
 
     def _generate_breakdown(self, payslip, currency, data=None):
@@ -286,6 +293,31 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         # This ensures consistency when interest uses accrual method
         net_amount = total_benefits + total_deductions  # deductions are negative
 
+        # ========================================
+        # ESTIMATION MODE: Apply global reduction
+        # ========================================
+        is_estimation = data.get('is_estimation', False) if data else False
+        reduction_percentage = data.get('reduction_percentage', 0.0) if data else 0.0
+
+        if is_estimation and reduction_percentage > 0:
+            # Calculate reduction multiplier (e.g., 10% reduction = 0.90 multiplier)
+            reduction_multiplier = (100 - reduction_percentage) / 100.0
+
+            # Apply reduction to all benefit amounts
+            for benefit in benefits:
+                benefit['amount'] = benefit['amount'] * reduction_multiplier
+                benefit['amount_formatted'] = self._format_amount(benefit['amount'])
+
+            # Apply reduction to all deduction amounts (they are negative)
+            for deduction in deductions:
+                deduction['amount'] = deduction['amount'] * reduction_multiplier
+                deduction['amount_formatted'] = self._format_amount(abs(deduction['amount']))
+
+            # Recalculate totals after reduction
+            total_benefits = sum(b['amount'] for b in benefits)
+            total_deductions = sum(d['amount'] for d in deductions)
+            net_amount = total_benefits + total_deductions
+
         # Determine rate source for display (simplified - always "Tasa del DD/MM/YYYY")
         if use_custom and custom_rate:
             # Custom rate: show payslip date
@@ -334,6 +366,9 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             'net_amount_formatted': self._format_amount(net_amount),
             'salary_v2': salary_v2,
             'salary_v2_formatted': self._format_amount(salary_v2_display),
+            # Estimation mode flags
+            'is_estimation': is_estimation,
+            'reduction_percentage': reduction_percentage,
         }
 
     def _convert_currency(self, amount, from_currency, to_currency, date_ref, exchange_rate=None):

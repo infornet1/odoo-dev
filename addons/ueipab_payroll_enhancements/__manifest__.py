@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.45.0',
+    'version': '17.0.1.46.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
@@ -35,7 +35,7 @@ Reports Available:
   - Displays accumulated balance and interest earned
   - Supports USD and VEB currency display
   - Multiple payslip selection for batch reporting
-* Relación de Liquidación - NEW! FULLY WORKING
+* Relación de Liquidación - FULLY WORKING
   - Detailed breakdown of liquidation benefits and deductions
   - Shows all formula calculations for transparency
   - Displays progressive bono vacacional rate based on seniority
@@ -44,6 +44,10 @@ Reports Available:
   - Portrait Letter format (fits on one page)
   - Supports USD and VEB currency display
   - V1 and V2 liquidation structure compatibility
+  - NEW: Estimation Mode with global % reduction (VEB only)
+    * Generates projection reports without signature sections
+    * Applies configurable reduction percentage to all amounts
+    * Includes "ESTIMACIÓN" watermark and disclaimer
 * Payroll Taxes - Coming soon
 * Payroll Accounting - Coming soon
 * Liquidation Forms - Coming soon
