@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-12 16:00 UTC
+**Last Updated:** 2025-12-13 22:00 UTC
 
 ## Core Instructions
 
@@ -35,6 +35,7 @@
 | 16 | HRMS Dashboard Ack Widget | Testing | `ueipab_hrms_dashboard_ack` | See below |
 | 17 | Cybrosys Module Refactoring | Planned | Multiple | See below |
 | 19 | Payslip Ack Reminder System | Planned | `ueipab_payroll_enhancements` | See below |
+| 20 | V2 Payroll Accounting Config | Testing ✅ / Prod ❌ | Database config | See below |
 
 ---
 
@@ -515,6 +516,58 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | ARI | Variable % | From contract field |
 | Otras Deducciones | Fixed USD | From contract field |
 | INCES (Payroll) | 0.25% | **DISABLED** - pending legal |
+
+---
+
+## V2 Payroll Accounting Configuration
+
+**Status:** Testing ✅ | Production ❌ PENDING | **Updated:** 2025-12-13
+
+**Issue Found:** Production has NO payroll accounting configured for V2 structure. Payslips confirmed in production do NOT create journal entries.
+
+### Account Mapping
+
+| Purpose | Debit Account | Credit Account |
+|---------|---------------|----------------|
+| V2 Payroll (deductions + NET) | 5.1.01.10.001 (Nómina) | 2.1.01.01.002 (Ctas por pagar nómina) |
+| V2 Liquidation | 5.1.01.10.010 (Prestaciones) | 2.1.01.10.005 (Provisión Prestaciones) |
+
+### Rules Configuration Status
+
+| Rule Code | Testing | Production | Description |
+|-----------|---------|------------|-------------|
+| VE_SSO_DED_V2 | ✅ Configured | ❌ NOT SET | SSO 4% |
+| VE_PARO_DED_V2 | ✅ Configured | ❌ NOT SET | PARO 0.5% |
+| VE_FAOV_DED_V2 | ✅ Configured | ❌ NOT SET | FAOV 1% |
+| VE_ARI_DED_V2 | ✅ Configured | ❌ NOT SET | ARI Variable % |
+| VE_OTHER_DED_V2 | ✅ Configured | ❌ NOT SET | Otras Deducciones |
+| VE_NET_V2 | ✅ Configured | ❌ NOT SET | Net Salary |
+| VE_SALARY_V2, etc. | NOT SET | NOT SET | Earnings (no accounting needed) |
+| VE_TOTAL_DED_V2 | NOT SET | NOT SET | Summary (no accounting needed) |
+
+**Design Pattern:** Only deductions and NET create journal entries. Earnings rules do NOT post to accounting.
+
+### Production Fix Script
+
+**Script:** `scripts/configure_production_v2_payroll_accounting.py`
+
+**Run command:**
+```bash
+# SSH to production server
+sshpass -p '$PASSWORD' ssh root@10.124.0.3
+
+# Copy script to server
+scp scripts/configure_production_v2_payroll_accounting.py root@10.124.0.3:/tmp/
+
+# Run in Odoo shell
+docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http < /tmp/configure_production_v2_payroll_accounting.py
+```
+
+**Script Actions:**
+1. Verifies connection to DB_UEIPAB
+2. Creates account 2.1.01.01.002 if missing
+3. Configures accounting for all V2 deduction rules
+4. Verifies configuration
 
 ---
 
