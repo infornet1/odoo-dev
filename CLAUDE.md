@@ -725,6 +725,13 @@ sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
   "docker exec ueipab17_postgres_1 psql -U odoo -d DB_UEIPAB -c 'SQL_QUERY'"
 ```
 
+**SSH Rate Limiting Fix (2025-12-12):**
+- **Problem:** Parallel SSH connections from dev server got "Connection refused"
+- **Cause:** UFW had `ufw limit 22/tcp` rule (max 6 connections per 30s)
+- **Solution:** Whitelisted dev server IP for unlimited SSH access
+- **Rule Applied:** `ufw insert 1 allow from 10.124.0.2 to any port 22 comment 'Dev server SSH unlimited'`
+- **Result:** Parallel SSH calls now work; external IPs still rate-limited
+
 **Contract Status:**
 - Production: 44 contracts (V2 structure assigned)
 - Testing: 46 contracts
