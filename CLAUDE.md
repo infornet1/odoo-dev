@@ -646,6 +646,16 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - **Affected:** Both `es_VE` and `en_US` locale versions
 - **Template IDs:** Testing: 43, Production: 37
 
+**Email Template Salary Breakdown Fix (2025-12-15):**
+- **Problem:** Salary breakdown section was empty in delivered emails
+- **Root Cause:** Template used `filtered(lambda ...)` which doesn't work in QWeb email rendering
+- **Solution:** Added `get_line_amount(code)` helper method to `hr.payslip` model
+- **Method:** `object.get_line_amount('VE_SALARY_V2')` returns line total by code
+- **Files Modified:**
+  - `ueipab_payroll_enhancements/models/hr_payslip.py` - Added helper method
+  - `mail.template` ID 37 (Production) - Updated body_html
+- **Module Version:** 17.0.1.47.0
+
 **Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
 - Amount displayed in **VES (Bs.)** using payslip exchange rate
 - Title: "Confirmar Recepción Digital"
@@ -662,7 +672,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.46.0 | 2025-12-09 |
+| ueipab_payroll_enhancements | 17.0.1.47.0 | 2025-12-15 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_ari_portal | 17.0.1.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |

@@ -102,6 +102,28 @@ class HrPayslip(models.Model):
     )
 
     # ========================================
+    # EMAIL TEMPLATE HELPER METHODS
+    # ========================================
+
+    def get_line_amount(self, code):
+        """Get the amount of a payslip line by code.
+
+        Used in email templates where lambda expressions don't work in QWeb.
+        Returns the total amount for the line with the given code, or 0.0 if not found.
+
+        Args:
+            code: The salary rule code (e.g., 'VE_SALARY_V2', 'VE_SSO_DED_V2')
+
+        Returns:
+            float: The line total amount, or 0.0 if not found
+        """
+        self.ensure_one()
+        for line in self.line_ids:
+            if line.code == code:
+                return line.total
+        return 0.0
+
+    # ========================================
     # ACKNOWLEDGMENT METHODS
     # ========================================
 
