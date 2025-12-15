@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-13 22:00 UTC
+**Last Updated:** 2025-12-15 14:00 UTC
 
 ## Core Instructions
 
@@ -521,15 +521,15 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 ## V2 Payroll Accounting Configuration
 
-**Status:** Testing ✅ | Production ✅ | **Updated:** 2025-12-13
+**Status:** Testing ✅ | Production ✅ | **Updated:** 2025-12-15
 
-**Fixed:** Production V2 payroll accounting configured on 2025-12-13. V2 payslips now create journal entries correctly.
+**Fixed:** Production V2 payroll accounting configured on 2025-12-13, updated 2025-12-15. V2 payslips now create journal entries correctly.
 
 ### Account Mapping
 
 | Purpose | Debit Account | Credit Account |
 |---------|---------------|----------------|
-| V2 Payroll (deductions + NET) | 5.1.01.10.001 (Nómina) | 2.1.01.01.002 (Ctas por pagar nómina) |
+| V2 Payroll (deductions + NET) | 5.1.01.10.001 (Nómina) | 1.1.01.02.001 (Banco Venezuela) |
 | V2 Liquidation | 5.1.01.10.010 (Prestaciones) | 2.1.01.10.005 (Provisión Prestaciones) |
 
 ### Rules Configuration Status
@@ -547,18 +547,15 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 **Design Pattern:** Only deductions and NET create journal entries. Earnings rules do NOT post to accounting.
 
-### Production Configuration Log (2025-12-13)
+### Configuration Change Log
 
-**Script:** `scripts/configure_production_v2_payroll_accounting.py`
+**2025-12-15 - Credit Account Update:**
+- Changed credit account from `2.1.01.01.002` (Ctas por pagar nómina) to `1.1.01.02.001` (Banco Venezuela)
+- Applied to both Testing and Production environments
 
-**Actions Performed:**
-1. ✅ Created missing account `2.1.01.01.002` (Cuentas por pagar nómina) - ID: 1123
-2. ✅ Configured VE_SSO_DED_V2
-3. ✅ Configured VE_PARO_DED_V2
-4. ✅ Configured VE_FAOV_DED_V2
-5. ✅ Configured VE_ARI_DED_V2
-6. ✅ Configured VE_OTHER_DED_V2
-7. ✅ Configured VE_NET_V2
+**2025-12-13 - Initial Configuration:**
+- Created account `2.1.01.01.002` in Production (ID: 1123)
+- Configured all 6 V2 deduction/NET rules
 
 **Container Note:** Production uses container `0ef7d03db702_ueipab17` (not `ueipab17`)
 
