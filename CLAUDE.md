@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-15 14:00 UTC
+**Last Updated:** 2025-12-15 21:10 UTC
 
 ## Core Instructions
 
@@ -647,13 +647,25 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - **Template IDs:** Testing: 43, Production: 37
 
 **Email Template Salary Breakdown Fix (2025-12-15):**
-- **Problem:** Salary breakdown section was empty in delivered emails
-- **Root Cause:** Template used `filtered(lambda ...)` which doesn't work in QWeb email rendering
-- **Solution:** Added `get_line_amount(code)` helper method to `hr.payslip` model
-- **Method:** `object.get_line_amount('VE_SALARY_V2')` returns line total by code
+- **Problem:** Salary breakdown section was empty in delivered emails (DICIEMBRE15 batch)
+- **Root Cause:** Template used `filtered(lambda ...)` which gets silently stripped in QWeb email rendering
+- **Symptoms:** Working NOVIEMBRE30 emails had ~9KB body, broken emails only ~3KB
+- **Solution:**
+  1. Added `get_line_amount(code)` helper method to `hr.payslip` model
+  2. Replaced all `filtered(lambda l: l.code == 'CODE')` with `object.get_line_amount('CODE')`
+  3. Fixed via direct SQL update to `mail_template.body_html` JSONB field
+- **Template Update Method:** Direct PostgreSQL update (Odoo ORM wasn't persisting correctly)
+  ```sql
+  UPDATE mail_template SET body_html = (SELECT pg_read_file('/tmp/template.json')::jsonb) WHERE id = 37;
+  ```
 - **Files Modified:**
-  - `ueipab_payroll_enhancements/models/hr_payslip.py` - Added helper method
-  - `mail.template` ID 37 (Production) - Updated body_html
+  - `ueipab_payroll_enhancements/models/hr_payslip.py` - Added `get_line_amount()` helper
+  - `mail.template` ID 37 (Production), ID 43 (Testing) - Replaced body_html
+- **Template Features:**
+  - Uses `object.get_line_amount('VE_SALARY_V2')` instead of lambda filters
+  - Uses `object.exchange_rate_used or 1.0` for dynamic exchange rate
+  - Includes emojis: 💰📋📅👤🆔💳✅❌💵📧
+  - Both `en_US` and `es_VE` locales identical (22,900 chars each)
 - **Module Version:** 17.0.1.47.0
 
 **Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
