@@ -150,8 +150,14 @@ class PayslipAcknowledgmentController(http.Controller):
 
             # Show confirmation form
             period = f"{payslip.date_from.strftime('%d/%m/%Y')} - {payslip.date_to.strftime('%d/%m/%Y')}"
+            # Try NET lines first, then fallback to AGUINALDOS for Christmas bonus payslips
             net_line = payslip.line_ids.filtered(lambda l: l.code in ('NET', 'VE_NET_V2'))
-            net_amount = sum(net_line.mapped('total')) if net_line else 0.0
+            if net_line:
+                net_amount = sum(net_line.mapped('total'))
+            else:
+                # Fallback for Aguinaldos payslips (no NET line)
+                aguinaldo_line = payslip.line_ids.filtered(lambda l: l.code == 'AGUINALDOS')
+                net_amount = sum(aguinaldo_line.mapped('total')) if aguinaldo_line else payslip.net_wage
 
             # Convert to VES using exchange rate from payslip
             exchange_rate = payslip.exchange_rate_used or 1.0

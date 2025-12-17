@@ -690,12 +690,16 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - **Content:** Explains Aguinaldos - 1 month per LOTTT + 1 additional month by UEIPAB policy
 - **Acknowledgment Button:** Included (same as Payslip Email template)
 
-**Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
+**Payslip Acknowledgment Landing Page (Updated 2025-12-17):**
 - Amount displayed in **VES (Bs.)** using payslip exchange rate
 - Title: "Confirmar Recepción Digital"
 - Text: "Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital."
 - Button: "Confirmar Recepción Digital"
 - Audit trail: Records date, time, and IP address
+- **Aguinaldos Fix (2025-12-17):** Landing page now correctly shows amount for Aguinaldos payslips
+  - Checks for `NET`/`VE_NET_V2` lines first
+  - Falls back to `AGUINALDOS` line for Christmas bonus payslips
+  - File: `controllers/payslip_acknowledgment.py:153-160`
 
 ---
 
