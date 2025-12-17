@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-17 18:30 UTC
+**Last Updated:** 2025-12-17 22:35 UTC
 
 ## Core Instructions
 
@@ -142,6 +142,8 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 ### Phase 1: Manual Reminder Wizard (Implemented)
 
 **Access:** Payslip Batch Form → "Send Ack Reminders" button (fa-bell icon)
+
+**Known Issue (Pending Fix):** Email-related buttons are currently displayed as 4 separate buttons in the toolbar instead of being grouped under a dropdown menu. This causes UI clutter. A fix to consolidate into a dropdown is pending.
 
 **Wizard Features:**
 | Feature | Description |
