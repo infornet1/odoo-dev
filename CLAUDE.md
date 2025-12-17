@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-16 08:00 UTC
+**Last Updated:** 2025-12-16 09:30 UTC
 
 ## Core Instructions
 
@@ -623,7 +623,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 |----------|----------|
 | Payslip Compact Report | Regular payroll |
 | Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment **(DEFAULT)** |
-| Aguinaldos Email | December Christmas bonuses |
+| Aguinaldos Email - Christmas Bonus Delivery | December Christmas bonuses (Testing: 44, Production: 38) |
 
 **Syntax Rules:**
 - Headers (subject): Jinja2 `{{object.field}}`
@@ -668,6 +668,19 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
   - Includes emojis: 💰📋📅👤🆔💳✅❌💵📧
   - Both `en_US` and `es_VE` locales identical (22,900 chars each)
 - **Module Version:** 17.0.1.47.0
+
+**Aguinaldos Email Template (2025-12-16):**
+- **Template IDs:** Testing: 44, Production: 38 (NEW)
+- **Subject:** `🎄 Aguinaldos (Bono Navideño) │ Nro.: {{object.number}}{{ (" │ Lote: " + object.payslip_run_id.name) if object.payslip_run_id else "" }}`
+- **Email From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
+- **Email To:** `{{object.employee_id.work_email}}`
+- **Email CC:** `recursoshumanos@ueipab.edu.ve`
+- **Exchange Rate:** Uses `object.exchange_rate_used or 1.0` dynamically
+- **Technical Fix Applied:** Same as Payslip Email template
+  - Replaced `filtered(lambda l: l.code == 'VE_AGUINALDO_V2')` with `object.get_line_amount('VE_AGUINALDO_V2')`
+  - Replaced hardcoded rate `241.5780` with dynamic `object.exchange_rate_used or 1.0`
+- **Design:** Christmas theme with red/green gradient header
+- **Content:** Explains Aguinaldos (2 months salary, paid in 2 December installments per LOTTT)
 
 **Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
 - Amount displayed in **VES (Bs.)** using payslip exchange rate
