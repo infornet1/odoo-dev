@@ -27,26 +27,20 @@
                         <field name="payslip_run_id" invisible="1"/>
                         <field name="state" invisible="1"/>
                     </group>
-                    <group>
-                        <div class="row">
-                            <div class="col-4 text-center">
-                                <div class="badge bg-secondary fs-5 p-2">
-                                    <field name="total_count" nolabel="1" class="oe_inline"/> Total
-                                </div>
-                            </div>
-                            <div class="col-4 text-center">
-                                <div class="badge bg-success fs-5 p-2">
-                                    <field name="acknowledged_count" nolabel="1" class="oe_inline"/> ✅ Confirmados
-                                </div>
-                            </div>
-                            <div class="col-4 text-center">
-                                <div class="badge bg-warning fs-5 p-2">
-                                    <field name="pending_count" nolabel="1" class="oe_inline"/> ⏳ Pendientes
-                                </div>
-                            </div>
-                        </div>
-                    </group>
                 </group>
+
+                <!-- Stats badges - outside of group for proper layout -->
+                <div class="d-flex justify-content-center gap-3 my-3">
+                    <div class="badge bg-secondary fs-5 p-2">
+                        <field name="total_count" nolabel="1" class="oe_inline"/> Total
+                    </div>
+                    <div class="badge bg-success fs-5 p-2">
+                        <field name="acknowledged_count" nolabel="1" class="oe_inline"/> ✅ Confirmados
+                    </div>
+                    <div class="badge bg-warning fs-5 p-2">
+                        <field name="pending_count" nolabel="1" class="oe_inline"/> ⏳ Pendientes
+                    </div>
+                </div>
 
                 <notebook invisible="state == 'done'">
                     <page string="📋 Empleados Pendientes" name="pending">
