@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-15 21:10 UTC
+**Last Updated:** 2025-12-16 08:00 UTC
 
 ## Core Instructions
 
@@ -21,7 +21,7 @@
 | 3 | Prestaciones Interest Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PRESTACIONES_INTEREST_REPORT.md) |
 | 4 | Venezuelan Payroll V2 | Production | `ueipab_payroll_enhancements` | [V2 Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md) |
 | 5 | Relacion Liquidacion Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/RELACION_BREAKDOWN_REPORT.md) |
-| 18 | Liquidacion Estimation Mode | Testing | `ueipab_payroll_enhancements` | See below |
+| 18 | Liquidacion Estimation Mode | Production | `ueipab_payroll_enhancements` | See below |
 | 6 | Payslip Email Delivery | Production | `hr_payslip_monthly_report` | [Docs](documentation/SEND_MAIL_BUTTON_FIX_FINAL.md) |
 | 7 | Batch Email Template Selector | Production | `ueipab_payroll_enhancements` | - |
 | 8 | Comprobante de Pago Compacto | Production | `ueipab_payroll_enhancements` | - |
@@ -31,11 +31,12 @@
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
 | 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
-| 15 | Batch Email Progress Wizard | Testing | `ueipab_payroll_enhancements` | See below |
+| 15 | Batch Email Progress Wizard | Production | `ueipab_payroll_enhancements` | See below |
 | 16 | HRMS Dashboard Ack Widget | Testing | `ueipab_hrms_dashboard_ack` | See below |
 | 17 | Cybrosys Module Refactoring | Planned | Multiple | See below |
 | 19 | Payslip Ack Reminder System | Planned | `ueipab_payroll_enhancements` | See below |
 | 20 | V2 Payroll Accounting Config | Production | Database config | See below |
+| 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
 
 ---
 
@@ -221,7 +222,7 @@ def _cron_payslip_ack_reminder(self):
 
 ## Batch Email Progress Wizard
 
-**Status:** ✅ TESTING | **Deployed:** 2025-11-29 | **Module Version:** v1.45.0
+**Status:** ✅ PRODUCTION | **Deployed:** 2025-12-16 | **Module Version:** v1.47.0
 
 **Problem Solved:** When clicking "Send Payslips by Email" on batch form:
 - No progress indicator during sending
@@ -694,7 +695,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.44.0 | **Needs upgrade to 1.45.0** |
+| ueipab_payroll_enhancements | 17.0.1.47.0 | Current (synced 2025-12-16) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | Not installed | Optional |
 | ueipab_hrms_dashboard_ack | Not installed | Optional |
@@ -803,30 +804,40 @@ sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
 
 ### Production Upgrade Procedure
 
-**Pending Upgrade:** `ueipab_payroll_enhancements` 1.44.0 → 1.45.0
+**Last Sync:** 2025-12-16 - `ueipab_payroll_enhancements` 1.44.0 → 1.47.0 ✅
 
-**Files to Copy:**
-```
-addons/ueipab_payroll_enhancements/
-├── __manifest__.py                    (modified)
-├── models/finiquito_report.py         (modified - interest fix)
-├── models/liquidacion_breakdown_report.py (modified - interest fix)
-├── models/liquidacion_breakdown_wizard.py (modified)
-├── security/ir.model.access.csv       (modified - wizard access)
-├── views/hr_payslip_run_view.xml      (modified - buttons)
-├── wizard/__init__.py                 (modified)
-├── wizard/batch_email_wizard.py       (NEW)
-└── wizard/batch_email_wizard_view.xml (NEW)
+**Sync Method Used:**
+```bash
+# 1. Create tarball on dev server
+cd /opt/odoo-dev/addons
+tar -czvf /tmp/ueipab_payroll_enhancements.tar.gz ueipab_payroll_enhancements/
+
+# 2. Copy to production server
+scp /tmp/ueipab_payroll_enhancements.tar.gz root@10.124.0.3:/tmp/
+
+# 3. Backup old module on production (host filesystem)
+ssh root@10.124.0.3 "cd /home/vision/ueipab17/addons && \
+  mv ueipab_payroll_enhancements ueipab_payroll_enhancements.backup_20251216"
+
+# 4. Extract new module
+ssh root@10.124.0.3 "cd /home/vision/ueipab17/addons && \
+  tar -xzvf /tmp/ueipab_payroll_enhancements.tar.gz"
+
+# 5. Restart Odoo and upgrade
+ssh root@10.124.0.3 "docker restart ueipab17"
+# Then: Apps → ueipab_payroll_enhancements → Upgrade
 ```
 
-**Upgrade Steps:**
+**Production Module Path:** `/home/vision/ueipab17/addons` (mounted as `/mnt/extra-addons` in container)
+
+**Future Upgrade Steps:**
 ```bash
 # 1. Backup production database
 sshpass -p '$PASSWORD' ssh root@10.124.0.3 \
   "docker exec ueipab17_postgres_1 pg_dump -U odoo DB_UEIPAB > /backup/DB_UEIPAB_$(date +%Y%m%d).sql"
 
 # 2. Copy module files (from dev server)
-scp -r addons/ueipab_payroll_enhancements root@10.124.0.3:/path/to/extra-addons/
+scp -r addons/ueipab_payroll_enhancements root@10.124.0.3:/home/vision/ueipab17/addons/
 
 # 3. Restart Odoo
 sshpass -p '$PASSWORD' ssh root@10.124.0.3 "docker restart ueipab17"
@@ -894,6 +905,9 @@ Ctrl+Shift+R (browser hard reload)
 ### Email System
 - [Send Mail Fix](documentation/SEND_MAIL_BUTTON_FIX_FINAL.md)
 - [Phase 2 Decommission](documentation/PHASE2_EMAIL_DECOMMISSION_PLAN.md)
+
+### Known Issues
+- [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md) - 3DVision multi-currency rate inversion
 
 ### Infrastructure
 - [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
