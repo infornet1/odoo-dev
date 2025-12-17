@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-16 09:30 UTC
+**Last Updated:** 2025-12-17 10:00 UTC
 
 ## Core Instructions
 
@@ -669,18 +669,26 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
   - Both `en_US` and `es_VE` locales identical (22,900 chars each)
 - **Module Version:** 17.0.1.47.0
 
-**Aguinaldos Email Template (2025-12-16):**
-- **Template IDs:** Testing: 44, Production: 38 (NEW)
+**Aguinaldos Email Template (2025-12-17):**
+- **Template IDs:** Testing: 44, Production: 38
 - **Subject:** `🎄 Aguinaldos (Bono Navideño) │ Nro.: {{object.number}}{{ (" │ Lote: " + object.payslip_run_id.name) if object.payslip_run_id else "" }}`
 - **Email From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
 - **Email To:** `{{object.employee_id.work_email}}`
 - **Email CC:** `recursoshumanos@ueipab.edu.ve`
+- **Salary Rule Code:** `AGUINALDOS` (not VE_AGUINALDO_V2)
 - **Exchange Rate:** Uses `object.exchange_rate_used or 1.0` dynamically
-- **Technical Fix Applied:** Same as Payslip Email template
-  - Replaced `filtered(lambda l: l.code == 'VE_AGUINALDO_V2')` with `object.get_line_amount('VE_AGUINALDO_V2')`
-  - Replaced hardcoded rate `241.5780` with dynamic `object.exchange_rate_used or 1.0`
+- **Technical Implementation:**
+  - Uses `object.get_line_amount('AGUINALDOS')` for amounts
+  - Uses `object.contract_id.ueipab_salary_v2` for monthly salary reference
+  - Dynamic exchange rate (no hardcoded values)
 - **Design:** Christmas theme with red/green gradient header
-- **Content:** Explains Aguinaldos (2 months salary, paid in 2 December installments per LOTTT)
+- **Salary Breakdown Section:**
+  - Salario Base Mensual (Referencia): from contract
+  - Aguinaldo LOTTT (1 mes de salario)
+  - Aguinaldo Adicional UEIPAB (1 mes)
+  - Total Aguinaldos (2 meses)
+- **Content:** Explains Aguinaldos - 1 month per LOTTT + 1 additional month by UEIPAB policy
+- **Acknowledgment Button:** Included (same as Payslip Email template)
 
 **Payslip Acknowledgment Landing Page (Updated 2025-11-28):**
 - Amount displayed in **VES (Bs.)** using payslip exchange rate
