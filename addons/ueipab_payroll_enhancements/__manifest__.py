@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.47.0',
+    'version': '17.0.1.48.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
     'description': """
@@ -83,6 +83,7 @@ Use Cases:
         'wizard/finiquito_wizard_view.xml',
         'wizard/payslip_compact_wizard_view.xml',
         'wizard/batch_email_wizard_view.xml',
+        'wizard/ack_reminder_wizard_view.xml',
 
         # 3. Report Templates & Actions
         'reports/disbursement_list_report.xml',
@@ -93,6 +94,7 @@ Use Cases:
         'reports/payslip_compact_report.xml',
         'reports/report_actions.xml',
         'data/mail_template_payslip.xml',  # After reports (depends on action_report_payslip_compact)
+        'data/email_template_ack_reminder.xml',  # Acknowledgment reminder email template
 
         # 4. Views (which may inherit or use actions from above)
         'views/hr_payslip_employees_views.xml',

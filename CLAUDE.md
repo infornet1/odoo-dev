@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-17 10:00 UTC
+**Last Updated:** 2025-12-17 18:30 UTC
 
 ## Core Instructions
 
@@ -34,7 +34,7 @@
 | 15 | Batch Email Progress Wizard | Production | `ueipab_payroll_enhancements` | See below |
 | 16 | HRMS Dashboard Ack Widget | Testing | `ueipab_hrms_dashboard_ack` | See below |
 | 17 | Cybrosys Module Refactoring | Planned | Multiple | See below |
-| 19 | Payslip Ack Reminder System | Planned | `ueipab_payroll_enhancements` | See below |
+| 19 | Payslip Ack Reminder System | Testing | `ueipab_payroll_enhancements` | See below |
 | 20 | V2 Payroll Accounting Config | Production | Database config | See below |
 | 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
 
@@ -131,92 +131,68 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 
 ---
 
-## Planned: Payslip Acknowledgment Reminder System
+## Payslip Acknowledgment Reminder System
 
-**Status:** 📋 PLANNED | **Priority:** Medium | **Module:** `ueipab_payroll_enhancements`
+**Status:** ✅ TESTING | **Deployed:** 2025-12-17 | **Module Version:** v1.48.0
 
-**Problem:** Employees who receive payslip emails may forget to click the acknowledgment button. Currently there's no way to:
-- Send reminder emails to employees who haven't acknowledged
-- Automatically remind after X days
-- Track reminder history
+**Problem Solved:** Employees who receive payslip emails may forget to click the acknowledgment button.
 
-**Proposed Solution - Two Components:**
+**Solution Implemented:** Wizard-based reminder system with employee selection and result tracking.
 
-### 1. Manual Reminder Button (Batch Form)
+### Phase 1: Manual Reminder Wizard (Implemented)
 
-**Button:** "Send Reminder to Pending" on batch form header
+**Access:** Payslip Batch Form → "Send Ack Reminders" button (fa-bell icon)
 
-**Logic:**
-```python
-def action_send_reminder_to_pending(self):
-    """Send reminder email to employees who haven't acknowledged."""
-    pending = self.slip_ids.filtered(
-        lambda s: not s.is_acknowledged
-        and s.state in ['done', 'paid']
-        and s.employee_id.work_email
-    )
-    template = self.env.ref('ueipab_payroll_enhancements.email_template_payslip_ack_reminder')
-    for payslip in pending:
-        template.send_mail(payslip.id)
+**Wizard Features:**
+| Feature | Description |
+|---------|-------------|
+| Preview Stats | Shows Total, Confirmed (✅), Pending (⏳) badges |
+| Employee Table | List of pending employees with select/deselect toggles |
+| Email Status | Shows work email for each employee |
+| Reminder Count | Tracks how many reminders sent per payslip |
+| Select All/Deselect All | Bulk selection buttons |
+| Results Summary | Shows Sent/No Email/Failed counts after sending |
 
-    return {
-        'type': 'ir.actions.client',
-        'tag': 'display_notification',
-        'params': {
-            'message': f'Reminder sent to {len(pending)} employees',
-            'type': 'success',
-        }
-    }
-```
+**Wizard States:**
+1. **Preview** - Shows pending employees, allows selection
+2. **Sending** - Processing reminders (transitional)
+3. **Done** - Shows results with color-coded status per employee
 
-### 2. Automatic Cron Job (Daily Reminder)
+**Email Template:** `email_template_payslip_ack_reminder`
+- Subject: `⏰ Recordatorio: Confirmar recepción de comprobante │ {{object.number}}`
+- Body: Orange-themed reminder with payslip details and acknowledgment button
+- Shows reminder count (e.g., "Este es el recordatorio #2")
 
-**Cron:** Run daily at 9:00 AM
+**Tracking Fields (hr.payslip):**
+- `ack_reminder_count` - Number of reminders sent for this payslip
+- `ack_reminder_last_date` - Datetime of last reminder sent
 
-**Logic:**
-```python
-def _cron_payslip_ack_reminder(self):
-    """Send reminder to employees who haven't acknowledged after 3 days."""
-    threshold = fields.Date.today() - timedelta(days=3)
+**Files Created:**
+| File | Description |
+|------|-------------|
+| `wizard/ack_reminder_wizard.py` | TransientModels for wizard and line items |
+| `wizard/ack_reminder_wizard_view.xml` | Wizard form with notebook tabs |
+| `data/email_template_ack_reminder.xml` | Reminder email template |
 
-    pending = self.env['hr.payslip'].search([
-        ('is_acknowledged', '=', False),
-        ('state', 'in', ['done', 'paid']),
-        ('create_date', '<=', threshold),
-        # Optionally: limit to recent batches only
-    ])
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `models/hr_payslip.py` | Added tracking fields |
+| `views/hr_payslip_run_view.xml` | Added wizard button |
+| `security/ir.model.access.csv` | Added wizard access rules |
+| `__manifest__.py` | Version 1.48.0, added XML files |
 
-    template = self.env.ref('ueipab_payroll_enhancements.email_template_payslip_ack_reminder')
-    for payslip in pending:
-        if payslip.employee_id.work_email:
-            template.send_mail(payslip.id)
-```
+### Phase 2: Automatic Cron Job (Planned)
 
-**Configuration Options (Future):**
-- `reminder_days` - Days before first reminder (default: 3)
-- `max_reminders` - Maximum reminders per payslip (default: 2)
-- `reminder_interval` - Days between reminders (default: 3)
+**Status:** 📋 PLANNED | **Priority:** Low
 
-### Email Template (To Create)
+**Planned Features:**
+- Daily cron job at 9:00 AM
+- Auto-send reminders after X days of no acknowledgment
+- Configuration options: `reminder_days`, `max_reminders`, `reminder_interval`
 
-**Template ID:** `email_template_payslip_ack_reminder`
-
-**Subject:** `⏰ Recordatorio: Confirmar recepción de comprobante de pago`
-
-**Body:** Friendly reminder with:
-- Original payslip reference
-- Link to acknowledge
-- Note that this is a reminder
-
-### Files to Create/Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `models/hr_payslip_run.py` | Modify | Add `action_send_reminder_to_pending()` |
-| `views/hr_payslip_run_view.xml` | Modify | Add reminder button |
-| `data/email_template_ack_reminder.xml` | Create | Reminder email template |
-| `data/ir_cron_ack_reminder.xml` | Create | Cron job definition |
-| `models/hr_payslip.py` | Modify | Add `reminder_count`, `last_reminder_date` fields |
+**Files to Create:**
+- `data/ir_cron_ack_reminder.xml` - Cron job definition
 
 ---
 
@@ -710,7 +686,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.47.0 | 2025-12-15 |
+| ueipab_payroll_enhancements | 17.0.1.48.0 | 2025-12-17 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_ari_portal | 17.0.1.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |

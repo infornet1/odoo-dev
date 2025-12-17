@@ -102,6 +102,25 @@ class HrPayslip(models.Model):
     )
 
     # ========================================
+    # ACKNOWLEDGMENT REMINDER TRACKING FIELDS
+    # ========================================
+
+    ack_reminder_count = fields.Integer(
+        string='Reminder Count',
+        default=0,
+        copy=False,
+        readonly=True,
+        help='Number of acknowledgment reminders sent for this payslip.'
+    )
+
+    ack_reminder_last_date = fields.Datetime(
+        string='Last Reminder Date',
+        copy=False,
+        readonly=True,
+        help='Date and time when the last reminder was sent.'
+    )
+
+    # ========================================
     # EMAIL TEMPLATE HELPER METHODS
     # ========================================
 

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ack Reminder Wizard Form View -->
+    <record id="view_ack_reminder_wizard_form" model="ir.ui.view">
+        <field name="name">hr.payslip.ack.reminder.wizard.form</field>
+        <field name="model">hr.payslip.ack.reminder.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Send Acknowledgment Reminder">
+                <!-- Header with batch info -->
+                <div class="alert alert-warning" role="alert" invisible="state != 'preview'">
+                    <strong>⏰ Recordatorio de Confirmación</strong>
+                    <p class="mb-0">Se enviará un correo de recordatorio a los empleados que no han confirmado la recepción de su comprobante de pago.</p>
+                </div>
+
+                <div class="alert alert-success" role="alert" invisible="state != 'done'">
+                    <strong>✅ Proceso Completado</strong>
+                    <p class="mb-0">
+                        Enviados: <strong><field name="sent_count" nolabel="1" class="oe_inline"/></strong> |
+                        Sin Email: <strong><field name="no_email_count" nolabel="1" class="oe_inline"/></strong> |
+                        Fallidos: <strong><field name="failed_count" nolabel="1" class="oe_inline"/></strong>
+                    </p>
+                </div>
+
+                <group>
+                    <group>
+                        <field name="batch_name" readonly="1"/>
+                        <field name="payslip_run_id" invisible="1"/>
+                        <field name="state" invisible="1"/>
+                    </group>
+                    <group>
+                        <div class="row">
+                            <div class="col-4 text-center">
+                                <div class="badge bg-secondary fs-5 p-2">
+                                    <field name="total_count" nolabel="1" class="oe_inline"/> Total
+                                </div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="badge bg-success fs-5 p-2">
+                                    <field name="acknowledged_count" nolabel="1" class="oe_inline"/> ✅ Confirmados
+                                </div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="badge bg-warning fs-5 p-2">
+                                    <field name="pending_count" nolabel="1" class="oe_inline"/> ⏳ Pendientes
+                                </div>
+                            </div>
+                        </div>
+                    </group>
+                </group>
+
+                <notebook invisible="state == 'done'">
+                    <page string="📋 Empleados Pendientes" name="pending">
+                        <div class="mb-2" invisible="state != 'preview'">
+                            <button name="action_select_all" type="object" string="✅ Seleccionar Todos" class="btn-secondary btn-sm"/>
+                            <button name="action_deselect_all" type="object" string="❌ Deseleccionar Todos" class="btn-secondary btn-sm ms-2"/>
+                        </div>
+                        <field name="pending_line_ids" nolabel="1">
+                            <tree editable="bottom" create="false" delete="false">
+                                <field name="selected" widget="boolean_toggle" invisible="wizard_id.state == 'done'"/>
+                                <field name="employee_id" readonly="1"/>
+                                <field name="payslip_number" readonly="1"/>
+                                <field name="work_email" readonly="1"/>
+                                <field name="reminder_count" readonly="1" string="# Enviados"/>
+                                <field name="status" readonly="1" invisible="wizard_id.state == 'preview'"
+                                       decoration-success="status == 'sent'"
+                                       decoration-danger="status == 'failed'"
+                                       decoration-warning="status == 'no_email'"/>
+                                <field name="error_message" readonly="1" invisible="status != 'failed'"/>
+                                <field name="wizard_id" column_invisible="1"/>
+                                <field name="payslip_id" column_invisible="1"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+
+                <!-- Results summary when done -->
+                <group invisible="state != 'done'">
+                    <notebook>
+                        <page string="📊 Resumen de Resultados">
+                            <field name="pending_line_ids" nolabel="1" readonly="1">
+                                <tree create="false" delete="false">
+                                    <field name="employee_id"/>
+                                    <field name="payslip_number"/>
+                                    <field name="work_email"/>
+                                    <field name="reminder_count" string="# Total"/>
+                                    <field name="status"
+                                           decoration-success="status == 'sent'"
+                                           decoration-danger="status == 'failed'"
+                                           decoration-warning="status == 'no_email'"/>
+                                    <field name="error_message" optional="hide"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </group>
+
+                <footer invisible="state == 'done'">
+                    <button name="action_send_reminders" type="object"
+                            string="📧 Enviar Recordatorios" class="btn-primary"
+                            invisible="state != 'preview'"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+
+                <footer invisible="state != 'done'">
+                    <button string="Cerrar" class="btn-primary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open wizard -->
+    <record id="action_ack_reminder_wizard" model="ir.actions.act_window">
+        <field name="name">Send Ack Reminder</field>
+        <field name="res_model">hr.payslip.ack.reminder.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip_run"/>
+    </record>
+</odoo>

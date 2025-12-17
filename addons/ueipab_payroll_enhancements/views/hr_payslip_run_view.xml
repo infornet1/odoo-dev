@@ -86,6 +86,13 @@
                         icon="fa-paper-plane"
                         invisible="not slip_ids"
                         help="Send emails with progress tracking and error reporting"/>
+                <button name="%(ueipab_payroll_enhancements.action_ack_reminder_wizard)d"
+                        type="action"
+                        string="Send Ack Reminders"
+                        class="btn-secondary"
+                        icon="fa-bell"
+                        invisible="not slip_ids"
+                        help="Send reminder emails to employees who haven't acknowledged their payslips"/>
             </button>
             <!-- Add email template selector field after exchange rate -->
             <field name="exchange_rate" position="after">

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Acknowledgment Reminder Email Template -->
+    <record id="email_template_payslip_ack_reminder" model="mail.template">
+        <field name="name">Payslip Ack Reminder</field>
+        <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <!-- Jinja2 for headers -->
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="subject">⏰ Recordatorio: Confirmar recepción de comprobante │ {{object.number}}</field>
+
+        <!-- QWeb ONLY for body_html -->
+        <field name="body_html" type="html">
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9f9f9">
+                <div style="background:white;padding:30px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1)">
+                    <!-- Header with warning icon -->
+                    <div style="text-align:center;margin-bottom:25px">
+                        <div style="display:inline-block;background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%);color:white;padding:15px 25px;border-radius:8px;font-size:18px;font-weight:bold">
+                            ⏰ Recordatorio de Confirmación
+                        </div>
+                    </div>
+
+                    <p style="font-size:16px;color:#333;margin-bottom:20px">
+                        Estimado/a <strong t-out="object.employee_id.name"/>,
+                    </p>
+
+                    <p style="font-size:15px;color:#555;line-height:1.6;margin-bottom:20px">
+                        Le recordamos que aún <strong>no ha confirmado la recepción</strong> de su comprobante de pago.
+                    </p>
+
+                    <!-- Payslip Info Box -->
+                    <div style="background:#fff3e0;padding:20px;border-left:4px solid #ff9800;margin:25px 0;border-radius:4px">
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>📋 Comprobante:</strong> <t t-out="object.number"/>
+                        </p>
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>📅 Período:</strong>
+                            <t t-out="object.date_from" t-options='{"widget": "date"}'/> -
+                            <t t-out="object.date_to" t-options='{"widget": "date"}'/>
+                        </p>
+                        <t t-if="object.payslip_run_id">
+                            <p style="font-size:14px;color:#333;margin:5px 0">
+                                <strong>📁 Lote:</strong> <t t-out="object.payslip_run_id.name"/>
+                            </p>
+                        </t>
+                    </div>
+
+                    <!-- Acknowledgment Button -->
+                    <div style="text-align:center;margin:30px 0">
+                        <a t-att-href="object._get_acknowledgment_url()"
+                           style="display:inline-block;background:linear-gradient(135deg,#4caf50 0%,#388e3c 100%);color:white;padding:15px 35px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 4px 15px rgba(76,175,80,.3)">
+                            ✅ Confirmar Recepción Ahora
+                        </a>
+                    </div>
+
+                    <p style="font-size:13px;color:#666;text-align:center;margin:20px 0">
+                        Haga clic en el botón para confirmar que ha recibido y revisado su comprobante de pago.
+                    </p>
+
+                    <!-- Reminder count notice -->
+                    <t t-if="object.ack_reminder_count and object.ack_reminder_count > 0">
+                        <p style="font-size:12px;color:#999;text-align:center;margin:15px 0;font-style:italic">
+                            Este es el recordatorio #<t t-out="object.ack_reminder_count + 1"/>
+                        </p>
+                    </t>
+
+                    <div style="background:#e3f2fd;padding:15px;border-radius:4px;margin:25px 0">
+                        <p style="font-size:13px;color:#1565c0;margin:0;text-align:center">
+                            <strong>💬 ¿Tiene alguna duda?</strong><br/>
+                            Escriba a <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#1565c0">recursoshumanos@ueipab.edu.ve</a>
+                        </p>
+                    </div>
+
+                    <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0">
+                        <p style="font-size:15px;color:#333;margin:5px 0">Cordialmente,</p>
+                        <p style="font-size:15px;color:#333;margin:5px 0"><strong>Recursos Humanos</strong></p>
+                        <p style="font-size:14px;color:#555;margin:5px 0">Instituto Privado Andrés Bello</p>
+                    </div>
+                </div>
+            </div>
+        </field>
+    </record>
+</odoo>
