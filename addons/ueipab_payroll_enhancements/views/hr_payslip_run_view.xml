@@ -72,27 +72,25 @@
                         class="btn-primary"
                         icon="fa-print"
                         help="Generate ICF-compliant disbursement list report for finance approval"/>
-                <button name="action_send_batch_emails"
-                        type="object"
-                        string="Send Payslips by Email"
-                        class="oe_highlight"
-                        icon="fa-envelope"
-                        invisible="not slip_ids"
-                        help="Send individual payslips to each employee in this batch via email (no progress)"/>
-                <button name="%(ueipab_payroll_enhancements.action_batch_email_wizard)d"
-                        type="action"
-                        string="Send Emails (with Progress)"
-                        class="btn-secondary"
-                        icon="fa-paper-plane"
-                        invisible="not slip_ids"
-                        help="Send emails with progress tracking and error reporting"/>
-                <button name="%(ueipab_payroll_enhancements.action_ack_reminder_wizard)d"
-                        type="action"
-                        string="Send Ack Reminders"
-                        class="btn-secondary"
-                        icon="fa-bell"
-                        invisible="not slip_ids"
-                        help="Send reminder emails to employees who haven't acknowledged their payslips"/>
+
+                <!-- Email Actions - Compact button group -->
+                <div class="btn-group" invisible="not slip_ids">
+                    <button name="action_send_batch_emails"
+                            type="object"
+                            class="btn btn-secondary btn-sm"
+                            icon="fa-envelope"
+                            title="Send Payslips by Email (no progress)"/>
+                    <button name="%(ueipab_payroll_enhancements.action_batch_email_wizard)d"
+                            type="action"
+                            class="btn btn-secondary btn-sm"
+                            icon="fa-paper-plane"
+                            title="Send Emails (with Progress)"/>
+                    <button name="%(ueipab_payroll_enhancements.action_ack_reminder_wizard)d"
+                            type="action"
+                            class="btn btn-secondary btn-sm"
+                            icon="fa-bell"
+                            title="Send Ack Reminders"/>
+                </div>
             </button>
             <!-- Add email template selector field after exchange rate -->
             <field name="exchange_rate" position="after">

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-17 22:35 UTC
+**Last Updated:** 2025-12-17 22:50 UTC
 
 ## Core Instructions
 
@@ -143,7 +143,12 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 
 **Access:** Payslip Batch Form → "Send Ack Reminders" button (fa-bell icon)
 
-**Known Issue (Pending Fix):** Email-related buttons are currently displayed as 4 separate buttons in the toolbar instead of being grouped under a dropdown menu. This causes UI clutter. A fix to consolidate into a dropdown is pending.
+**UI Update (2025-12-17):** Email-related buttons are now grouped in a compact `btn-group` with icon-only buttons and tooltips:
+- 📧 Send Payslips by Email (fa-envelope)
+- ✈️ Send Emails with Progress (fa-paper-plane)
+- 🔔 Send Ack Reminders (fa-bell)
+
+**Note:** A true dropdown menu would require custom JavaScript/OWL component due to Odoo's validation requiring all `<button>` elements to have a `name` attribute. The current `btn-group` solution provides visual grouping without JavaScript overhead.
 
 **Wizard Features:**
 | Feature | Description |
