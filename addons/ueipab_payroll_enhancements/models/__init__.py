@@ -14,3 +14,4 @@ from . import liquidacion_breakdown_wizard
 from . import liquidacion_breakdown_report
 from . import finiquito_report
 from . import payslip_compact_report
+from . import aguinaldos_disbursement_report

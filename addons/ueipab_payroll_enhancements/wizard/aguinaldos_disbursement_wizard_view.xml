@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Aguinaldos Disbursement Report Wizard Form View -->
+    <record id="view_aguinaldos_disbursement_wizard_form" model="ir.ui.view">
+        <field name="name">hr.payslip.aguinaldos.disbursement.wizard.form</field>
+        <field name="model">hr.payslip.aguinaldos.disbursement.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Aguinaldos Disbursement Report">
+                <group>
+                    <group string="Report Settings">
+                        <field name="payslip_run_id" options="{'no_create': True}"/>
+                        <field name="currency_id" options="{'no_create': True}"/>
+                        <field name="output_format" widget="radio"/>
+                        <field name="include_draft"/>
+                    </group>
+                    <group string="Preview">
+                        <field name="payslip_count" readonly="1"/>
+                        <field name="total_aguinaldo" readonly="1" widget="monetary"
+                               options="{'currency_field': 'currency_id'}"/>
+                    </group>
+                </group>
+                <separator/>
+                <div class="alert alert-info" role="alert" style="margin-bottom: 0;">
+                    <p style="margin-bottom: 5px;">
+                        <strong>Aguinaldos Disbursement Report</strong>
+                    </p>
+                    <p style="margin-bottom: 0; font-size: 12px;">
+                        This report shows the Christmas Bonus (Aguinaldos) payment list for
+                        finance approval. It includes employee names, cedulas, salary reference,
+                        and aguinaldo amounts.
+                        <br/><br/>
+                        <strong>PDF:</strong> Print-ready format with signature columns.
+                        <br/>
+                        <strong>Excel:</strong> Spreadsheet format for data analysis.
+                    </p>
+                </div>
+                <footer>
+                    <button name="action_generate_report"
+                            string="Generate Report"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-download"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_aguinaldos_disbursement_wizard" model="ir.actions.act_window">
+        <field name="name">Aguinaldos Disbursement Report</field>
+        <field name="res_model">hr.payslip.aguinaldos.disbursement.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr_payroll_community.model_hr_payslip_run"/>
+        <field name="binding_view_types">form</field>
+    </record>
+
+    <!-- Menu Item under Payroll Reports -->
+    <menuitem id="menu_aguinaldos_disbursement_report"
+              name="Aguinaldos Disbursement"
+              parent="ueipab_payroll_enhancements.menu_payroll_reports"
+              action="action_aguinaldos_disbursement_wizard"
+              sequence="25"/>
+
+</odoo>

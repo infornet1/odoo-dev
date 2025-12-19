@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-17 22:50 UTC
+**Last Updated:** 2025-12-19 22:00 UTC
 
 ## Core Instructions
 
@@ -34,9 +34,10 @@
 | 15 | Batch Email Progress Wizard | Production | `ueipab_payroll_enhancements` | See below |
 | 16 | HRMS Dashboard Ack Widget | Testing | `ueipab_hrms_dashboard_ack` | See below |
 | 17 | Cybrosys Module Refactoring | Planned | Multiple | See below |
-| 19 | Payslip Ack Reminder System | Testing | `ueipab_payroll_enhancements` | See below |
+| 19 | Payslip Ack Reminder System | Production | `ueipab_payroll_enhancements` | See below |
 | 20 | V2 Payroll Accounting Config | Production | Database config | See below |
 | 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
+| 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
 
 ---
 
@@ -133,7 +134,7 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 
 ## Payslip Acknowledgment Reminder System
 
-**Status:** ✅ TESTING | **Deployed:** 2025-12-17 | **Module Version:** v1.48.0
+**Status:** ✅ PRODUCTION | **Deployed:** 2025-12-19 | **Module Version:** v1.49.1
 
 **Problem Solved:** Employees who receive payslip emails may forget to click the acknowledgment button.
 
@@ -252,6 +253,60 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 - All tests used `env.cr.rollback()` - no actual emails sent
 - Tested: wizard creation, progress tracking, no-email detection, error capture
 - Ready for manual testing in browser
+
+---
+
+## Aguinaldos Disbursement Report
+
+**Status:** ✅ PRODUCTION | **Deployed:** 2025-12-19 | **Module Version:** v1.49.1
+
+**Purpose:** Generate disbursement report specifically for Aguinaldos (Christmas Bonus) payslips.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| PDF Export | Portrait format with signature column |
+| Excel Export | Spreadsheet with employee data and totals |
+| Currency Selection | USD or VEB with dynamic exchange rate |
+| Batch Selection | Select specific Aguinaldos batch |
+| Draft Filter | Option to include/exclude draft payslips |
+
+### Excel Report Columns
+
+| Column | Description |
+|--------|-------------|
+| # | Sequence number |
+| CEDULA | Employee ID number |
+| EMPLEADO | Employee name |
+| EMAIL | Work email address |
+| SALARIO BASE | Monthly base salary (reference) |
+| AGUINALDO | Christmas bonus amount |
+
+### Wizard Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `payslip_run_id` | Many2one | Aguinaldos batch selection |
+| `currency_id` | Many2one | Report currency (USD/VEB) |
+| `output_format` | Selection | PDF or Excel |
+| `include_draft` | Boolean | Include draft payslips |
+| `payslip_count` | Computed | Number of payslips in batch |
+| `total_aguinaldo` | Computed | Sum of all Aguinaldos |
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `models/aguinaldos_disbursement_report.py` | Report parser (AbstractModel) |
+| `reports/aguinaldos_disbursement_report.xml` | QWeb template + paper format |
+| `wizard/aguinaldos_disbursement_wizard.py` | Wizard with PDF/Excel export |
+| `wizard/aguinaldos_disbursement_wizard_view.xml` | Wizard form + menu action |
+
+### Access
+
+- Menu: Payroll → Reports → Aguinaldos Disbursement Report
+- Or from any Aguinaldos batch form
 
 ---
 
@@ -528,8 +583,17 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | VE_NET_V2 | ✅ Configured | ✅ Configured | Net Salary |
 | VE_SALARY_V2, etc. | NOT SET | NOT SET | Earnings (no accounting needed) |
 | VE_TOTAL_DED_V2 | NOT SET | NOT SET | Summary (no accounting needed) |
+| AGUINALDOS | ✅ Configured | ✅ Configured | Christmas Bonus (added 2025-12-19) |
 
 **Design Pattern:** Only deductions and NET create journal entries. Earnings rules do NOT post to accounting.
+
+### AGUINALDOS Accounting (Added 2025-12-19)
+
+| Rule Code | Debit Account | Credit Account |
+|-----------|---------------|----------------|
+| AGUINALDOS | 5.1.01.10.001 (Nómina Docentes) | 1.1.01.02.001 (Banco Venezuela) |
+
+**Note:** Same accounts as VE_NET_V2 since Aguinaldos is a salary payment.
 
 ### Configuration Change Log
 
@@ -570,10 +634,10 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - Skips non-draft payslips with warning
 - Use case: Batch date range changed after payslips created
 
-**Total Net Payable (2025-11-27):**
+**Total Net Payable (Updated 2025-12-19):**
 - Shows sum of NET amounts for all payslips in batch
 - **Includes draft payslips** (critical for pre-validation)
-- Supports both V1 (`VE_NET`) and V2 (`VE_NET_V2`) structures
+- Supports V1 (`VE_NET`), V2 (`VE_NET_V2`), and Aguinaldos (`AGUINALDOS`) structures
 - Only excludes cancelled payslips
 
 **Exchange Rate Application:**
@@ -652,7 +716,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
   - Both `en_US` and `es_VE` locales identical (22,900 chars each)
 - **Module Version:** 17.0.1.47.0
 
-**Aguinaldos Email Template (2025-12-17):**
+**Aguinaldos Email Template (Updated 2025-12-19):**
 - **Template IDs:** Testing: 44, Production: 38
 - **Subject:** `🎄 Aguinaldos (Bono Navideño) │ Nro.: {{object.number}}{{ (" │ Lote: " + object.payslip_run_id.name) if object.payslip_run_id else "" }}`
 - **Email From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
@@ -661,15 +725,17 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 - **Salary Rule Code:** `AGUINALDOS` (not VE_AGUINALDO_V2)
 - **Exchange Rate:** Uses `object.exchange_rate_used or 1.0` dynamically
 - **Technical Implementation:**
-  - Uses `object.get_line_amount('AGUINALDOS')` for amounts
+  - Uses `object.get_line_amount('AGUINALDOS')` for total amount
+  - Uses `aguinaldo_portion = aguinaldo_total / 2.0` for 50/50 split
   - Uses `object.contract_id.ueipab_salary_v2` for monthly salary reference
   - Dynamic exchange rate (no hardcoded values)
 - **Design:** Christmas theme with red/green gradient header
-- **Salary Breakdown Section:**
+- **Salary Breakdown Section (Fixed 2025-12-19):**
   - Salario Base Mensual (Referencia): from contract
-  - Aguinaldo LOTTT (1 mes de salario)
-  - Aguinaldo Adicional UEIPAB (1 mes)
-  - Total Aguinaldos (2 meses)
+  - Aguinaldo LOTTT (50%): `aguinaldo_portion * exchange_rate`
+  - Aguinaldo Adicional UEIPAB (50%): `aguinaldo_portion * exchange_rate`
+  - Total Aguinaldos: `aguinaldo_total * exchange_rate`
+  - **Fix:** Math now adds up correctly (LOTTT + UEIPAB = Total)
 - **Content:** Explains Aguinaldos - 1 month per LOTTT + 1 additional month by UEIPAB policy
 - **Acknowledgment Button:** Included (same as Payslip Email template)
 
@@ -693,7 +759,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.48.0 | 2025-12-17 |
+| ueipab_payroll_enhancements | 17.0.1.49.1 | 2025-12-19 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_ari_portal | 17.0.1.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
@@ -703,7 +769,7 @@ contract.ueipab_other_deductions       # Fixed USD for loans/advances
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.47.0 | Current (synced 2025-12-16) |
+| ueipab_payroll_enhancements | 17.0.1.49.1 | Current (synced 2025-12-19) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | Not installed | Optional |
 | ueipab_hrms_dashboard_ack | Not installed | Optional |
@@ -812,7 +878,7 @@ sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
 
 ### Production Upgrade Procedure
 
-**Last Sync:** 2025-12-16 - `ueipab_payroll_enhancements` 1.44.0 → 1.47.0 ✅
+**Last Sync:** 2025-12-19 - `ueipab_payroll_enhancements` 1.47.0 → 1.49.1 ✅
 
 **Sync Method Used:**
 ```bash

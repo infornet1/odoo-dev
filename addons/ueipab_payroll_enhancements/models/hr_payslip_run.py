@@ -103,9 +103,9 @@ class HrPayslipRun(models.Model):
             # Sum the NET line from each payslip
             total = 0.0
             for slip in valid_slips:
-                # Find the NET salary rule line (supports V1: VE_NET and V2: VE_NET_V2)
+                # Find the NET salary rule line (supports V1: VE_NET, V2: VE_NET_V2, and AGUINALDOS)
                 net_line = slip.line_ids.filtered(
-                    lambda l: l.salary_rule_id.code in ('VE_NET', 'VE_NET_V2')
+                    lambda l: l.salary_rule_id.code in ('VE_NET', 'VE_NET_V2', 'AGUINALDOS')
                 )
                 if net_line:
                     # Should only be one NET line per payslip
