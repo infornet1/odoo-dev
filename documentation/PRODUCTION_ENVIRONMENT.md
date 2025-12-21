@@ -9,7 +9,7 @@
   "production": {
     "server": { "host": "10.124.0.3", "user": "root" },
     "database": { "name": "DB_UEIPAB", "user": "odoo" },
-    "containers": { "odoo": "ueipab17", "postgres": "ueipab17_postgres_1" }
+    "containers": { "odoo": "0ef7d03db702_ueipab17", "postgres": "ueipab17_postgres_1" }
   }
 }
 ```

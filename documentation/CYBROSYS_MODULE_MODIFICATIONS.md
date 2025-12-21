@@ -45,7 +45,7 @@ Analysis of all Cybrosys OHRMS modules to identify direct modifications that pos
 
 ### 3. `hrms_dashboard` (Cybrosys)
 
-**Status:** Testing ONLY | **NOT in Production** | **Version:** 17.0.1.0.2
+**Status:** Production | **Migrated:** 2025-12-21 | **Version:** 17.0.1.0.2
 
 | File | Changes | Description |
 |------|---------|-------------|

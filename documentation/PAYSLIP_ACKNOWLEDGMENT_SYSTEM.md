@@ -8,7 +8,7 @@ Complete system for tracking employee acknowledgment of payslip receipt, includi
 
 ## HRMS Dashboard Acknowledgment Widget
 
-**Status:** Testing | **Module:** `ueipab_hrms_dashboard_ack` | **Version:** 17.0.1.0.0
+**Status:** Production | **Module:** `ueipab_hrms_dashboard_ack` | **Version:** 17.0.1.0.0 | **Deployed:** 2025-12-21
 
 **Purpose:** Adds payslip acknowledgment tracking widget to the HRMS Dashboard.
 

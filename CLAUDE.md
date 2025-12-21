@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-20
+**Last Updated:** 2025-12-21
 
 ## Core Instructions
 
@@ -31,7 +31,7 @@
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
 | 14 | Duplicate Payslip Warning | Planned | `ueipab_payroll_enhancements` | See below |
 | 15 | Batch Email Progress Wizard | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BATCH_EMAIL_WIZARD.md) |
-| 16 | HRMS Dashboard Ack Widget | Testing | `ueipab_hrms_dashboard_ack` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
+| 16 | HRMS Dashboard Ack Widget | Production | `ueipab_hrms_dashboard_ack` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 17 | Cybrosys Module Refactoring | Planned | Multiple | [Docs](documentation/CYBROSYS_MODULE_MODIFICATIONS.md) |
 | 18 | Liquidacion Estimation Mode | Production | `ueipab_payroll_enhancements` | See below |
 | 19 | Payslip Ack Reminder System | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
@@ -145,7 +145,8 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.49.1 | Current (synced 2025-12-19) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| hrms_dashboard | - | NOT installed |
+| hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
+| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 
 ---
 
@@ -176,7 +177,7 @@ See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full d
 
 **Quick Reference:**
 - Server: `10.124.0.3`
-- Container: `ueipab17`
+- Container: `0ef7d03db702_ueipab17`
 - Database: `DB_UEIPAB`
 - Module Path: `/home/vision/ueipab17/addons`
 
