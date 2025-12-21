@@ -50,6 +50,7 @@ Analysis of all Cybrosys OHRMS modules to identify direct modifications that pos
 | File | Changes | Description |
 |------|---------|-------------|
 | `models/hr_employee.py:42-58` | ~17 lines | Bug fix: `attendance_manual()` search by `user_id` |
+| `models/hr_employee.py:345-347` | ~3 lines | Bug fix: `employee_leave_trend()` handle missing employee |
 | `static/src/js/hrms_dashboard.js:83-91` | ~9 lines | NaN fix: Employee pie chart zero-data check |
 | `static/src/js/hrms_dashboard.js:281-286` | ~6 lines | NaN fix: Leave percentage calculation |
 | `static/src/js/hrms_dashboard.js:297-305` | ~9 lines | NaN fix: Leave pie chart zero-data check |
@@ -67,6 +68,19 @@ Analysis of all Cybrosys OHRMS modules to identify direct modifications that pos
    - **Fix 2 (line 281-286):** `getLegend()` returns 0% if percentage calculation is NaN
    - **Fix 3 (line 297-305):** Checks `totalLeave === 0` before rendering leave pie chart
    - **Fallback:** Shows "No data available" message instead of broken chart
+
+3. **`employee_leave_trend()` Fix** (`hr_employee.py:345-347`) - Added 2025-12-21
+   - **Problem:** Dashboard crashed with `IndexError: list index out of range` when user has no linked employee
+   - **Fixed:** Added early return check `if not employee: return graph_result`
+   - **Impact:** Dashboard now loads properly for users without employee records
+
+**Important:** Dashboard requires `hr_employee.user_id` to be set for each employee. Run this query to find unlinked employees:
+```sql
+SELECT e.id, e.name, e.work_email, u.id as user_id, u.login
+FROM hr_employee e
+LEFT JOIN res_users u ON LOWER(e.work_email) = LOWER(u.login)
+WHERE e.user_id IS NULL AND e.active = true AND u.id IS NOT NULL;
+```
 
 **Migration to Production:**
 ```bash
