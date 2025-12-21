@@ -342,6 +342,9 @@ class HrEmployee(models.Model):
         uid = request.session.uid
         employee = self.env['hr.employee'].sudo().search_read(
             [('user_id', '=', uid)], limit=1)
+        if not employee:
+            # No employee linked to this user, return empty graph
+            return graph_result
         for month in month_list:
             vals = {
                 'l_month': month,
