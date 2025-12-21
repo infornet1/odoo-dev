@@ -115,18 +115,36 @@ patch(HrDashboard.prototype, {
         announcementsCol.classList.remove('col-lg-4');
         announcementsCol.classList.add('col-lg-2');
 
-        // Determine which view to show: personal (employee) or batch (manager)
-        const showPersonal = hasPersonalStats;
-        const showBatch = hasManagerStats && !hasPersonalStats;
+        // Determine which view to show:
+        // - Managers ALWAYS see Overview (even if they have personal payslips)
+        // - Regular employees see Personal view
+        const showBatch = hasManagerStats;  // Managers always see overview
+        const showPersonal = hasPersonalStats && !hasManagerStats;  // Employees see personal
 
         let widgetHtml;
 
         if (showBatch) {
-            // Manager view: Show batch/overall stats
+            // Manager view: Show batch/overall stats + personal summary
             const batchStats = stats.batch.overall;
             const pending = batchStats.pending;
             const iconClass = pending > 0 ? 'fa-clock-o' : 'fa-check-circle';
             const statusClass = pending > 0 ? 'ack-status-pending' : 'ack-status-complete';
+
+            // Build personal summary line for managers who have payslips
+            let personalSummaryHtml = '';
+            if (hasPersonalStats) {
+                const myPending = stats.personal.pending;
+                const myTotal = stats.personal.total;
+                const myAck = stats.personal.acknowledged;
+                const myIcon = myPending > 0 ? 'fa-clock-o text-warning' : 'fa-check-circle text-success';
+                const myStatus = myPending > 0 ? `${myPending} pending` : 'All done';
+                personalSummaryHtml = `
+                    <div class="ack-personal-summary" data-action="personal">
+                        <i class="fa ${myIcon}"></i>
+                        <span>My Status: ${myAck}/${myTotal} ${myPending === 0 ? '✓' : ''}</span>
+                    </div>
+                `;
+            }
 
             widgetHtml = `
                 <div class="col-md-4 col-lg-2 payslip_ack_widget_container">
@@ -154,6 +172,7 @@ patch(HrDashboard.prototype, {
                             <div class="ack-batch-info">
                                 <small class="text-muted">All batches (${batchStats.total} payslips)</small>
                             </div>
+                            ${personalSummaryHtml}
                         </div>
                     </div>
                 </div>
@@ -228,6 +247,12 @@ patch(HrDashboard.prototype, {
                 if (doneBox) {
                     doneBox.addEventListener('click', () => this.view_all_acknowledged_payslips());
                     doneBox.style.cursor = 'pointer';
+                }
+                // Personal summary click - shows manager's own payslips
+                const personalSummary = widget.querySelector('.ack-personal-summary');
+                if (personalSummary) {
+                    personalSummary.addEventListener('click', () => this.view_pending_personal_payslips());
+                    personalSummary.style.cursor = 'pointer';
                 }
             } else {
                 // Personal view: click shows user's payslips

@@ -178,6 +178,45 @@
     display: none; /* Hide batch name in compact view */
 }
 
+/* Batch Info Section */
+.ack-batch-info {
+    text-align: center;
+    margin-top: 6px;
+    padding-top: 6px;
+}
+
+.ack-batch-info small {
+    font-size: 9px;
+}
+
+/* Personal Summary Section (Manager View) */
+.ack-personal-summary {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-top: 1px dashed #dee2e6;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.ack-personal-summary:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    transform: translateX(2px);
+}
+
+.ack-personal-summary i {
+    font-size: 14px;
+}
+
+.ack-personal-summary span {
+    font-weight: 500;
+}
+
 /* Scrollbar styling */
 .payslip_ack_widget::-webkit-scrollbar {
     width: 3px;

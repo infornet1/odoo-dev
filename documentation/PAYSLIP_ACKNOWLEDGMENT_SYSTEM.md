@@ -68,8 +68,20 @@ addons/ueipab_hrms_dashboard_ack/
 - Does NOT use OWL template inheritance (t-inherit not supported for OWL components)
 - Uses DOM manipulation via `insertAdjacentHTML()` after component mounts
 - Widget renders in two modes:
-  - **Personal view:** For employees with payslips (`stats.personal.total > 0`)
-  - **Manager view:** For HR managers (`hr.group_hr_manager`) with batch overview stats
+  - **Manager view (Ack Overview):** For HR managers (`is_manager=true`) - ALWAYS shows batch overview stats
+    - Includes "My Status: X/Y" personal summary line if manager has payslips
+    - Click "Done" → All acknowledged payslips (all employees)
+    - Click "Pending" → All pending payslips (all employees)
+    - Click "My Status" → Manager's own pending payslips
+  - **Personal view (Payslip Ack):** For regular employees with payslips (`stats.personal.total > 0`)
+    - Shows only the employee's own acknowledgment stats
+    - Click "Done" → Employee's acknowledged payslips
+    - Click "Pending" → Employee's pending payslips
+
+**Enhanced Widget Logic (2025-12-21):**
+- Managers ALWAYS see Overview, even if they have personal payslips
+- Personal summary line added for managers who are also employees
+- Regular employees only see their personal stats
 
 ---
 
