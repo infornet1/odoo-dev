@@ -39,6 +39,20 @@ class AccountMove(models.Model):
     def _get_igtf(self, currency=None):
         self.ensure_one()
 
+        # Early return for new/unsaved records (prevents SQL IN () error during onchange)
+        # NewId records don't have real database IDs yet
+        if not self.id or not isinstance(self.id, int):
+            return 0
+
+        # Early return if no receivable/payable lines with real database IDs
+        receivable_payable_lines = self.line_ids.filtered(
+            lambda line: line.account_id.account_type in ('asset_receivable', 'liability_payable')
+        )
+        # Filter to only real integer IDs (exclude NewId)
+        real_ids = [lid for lid in receivable_payable_lines.ids if isinstance(lid, int)]
+        if not real_ids:
+            return 0
+
         def filter_partial_lines(line):
             move = line["aml"].move_id
             return move.payment_id and move.payment_id.is_igtf
