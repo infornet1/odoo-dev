@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.49.1',
+    'version': '17.0.1.50.0',
     'category': 'Human Resources/Payroll',
-    'summary': 'Enhanced payroll batch with total net, disbursement reports (PDF/Excel), liquidation breakdown, and custom reports menu',
+    'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
 UEIPAB Payroll Enhancements
 ============================
@@ -61,6 +61,16 @@ Use Cases:
 * Print detailed disbursement reports for finance approval
 * Generate prestaciones interest breakdown for labor law compliance
 * Flexible override for any special payroll scenario
+
+Advance Payment System (Pago Adelanto):
+---------------------------------------
+* Partial salary disbursement for financial constraints
+* Checkbox 'Es Pago Adelanto' with percentage field
+* Salary rules apply multiplier to earnings
+* Deductions recalculate on reduced amounts
+* Remainder payment linked to original advance batch
+* Reconciliation email template showing full payment history
+* Each batch posts independently with its exchange rate
     """,
     'author': 'UEIPAB',
     'website': 'https://ueipab.edu.ve',

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-21
+**Last Updated:** 2025-12-31
 
 ## Core Instructions
 
@@ -38,6 +38,75 @@
 | 20 | V2 Payroll Accounting Config | Production | Database config | See below |
 | 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
+| 23 | Advance Payment System (Pago Adelanto) | Testing | `ueipab_payroll_enhancements` | See below |
+
+---
+
+## Advance Payment System (Pago Adelanto)
+
+**Status:** Testing | **Version:** 17.0.1.50.0 | **Added:** 2025-12-31
+
+Allows partial salary disbursement when company needs to pay employees in installments due to financial constraints.
+
+### Business Use Case
+
+When company cannot pay full salary at once:
+1. **Advance Batch (e.g., 50%)**: Pay partial salary now
+2. **Remainder Batch (e.g., 50%)**: Pay remaining balance later
+
+Each batch:
+- Computes payslips with multiplied earnings
+- Deductions recalculate on reduced amounts
+- Posts with its own exchange rate
+- Clean, independent journal entries
+
+### Batch Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_advance_payment` | Boolean | Checkbox "Es Pago Adelanto" |
+| `advance_percentage` | Float | Percentage to pay (e.g., 50.0) |
+| `advance_total_amount` | Computed | Total advance amount |
+| `is_remainder_batch` | Boolean | Marks as remainder payment |
+| `advance_batch_id` | Many2one | Link to original advance batch |
+
+### Payslip Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `advance_amount` | Computed | Individual advance amount |
+
+### Salary Rules Behavior
+
+When `is_advance_payment = True`:
+```python
+# Earnings multiplied by advance_percentage
+VE_SALARY_V2 = contract.salary * (batch.advance_percentage / 100)
+VE_BONUS_V2 = contract.bonus * (batch.advance_percentage / 100)
+# Deductions auto-recalculate on reduced gross
+```
+
+### Email Templates
+
+| Template | Purpose |
+|----------|---------|
+| Payslip Email - Advance Payment - Employee Delivery | Full detailed advance notification |
+| Payslip Email - Remainder Payment - Reconciliation | Shows advance + remainder + total |
+
+### Accounting Treatment
+
+Each batch posts independently with its exchange rate:
+```
+Advance Batch (50% at rate 298):
+  DR 5.1.01.10.001  Bs. 14,900
+     CR 1.1.01.02.001  Bs. 14,900
+
+Remainder Batch (50% at rate 310):
+  DR 5.1.01.10.001  Bs. 15,500
+     CR 1.1.01.02.001  Bs. 15,500
+```
+
+No provisions or exchange difference accounts needed.
 
 ---
 
@@ -125,6 +194,8 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | Exchange Rate Application | Applies rate to all payslips in batch |
 | Email Sending | Template selector, notification popup |
 | Exchange Rate Auto-Population | From latest BCV rate or last batch |
+| Advance Payment | Partial salary disbursement with % multiplier |
+| Remainder Payment | Linked to original advance batch for reconciliation |
 
 ---
 
@@ -135,7 +206,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.49.1 | 2025-12-19 |
+| ueipab_payroll_enhancements | 17.0.1.50.0 | 2025-12-31 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 

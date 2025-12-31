@@ -1,5 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
+
+    <!-- ========================================
+         Template: Advance Payment Notification
+         ======================================== -->
+    <record id="email_template_advance_payment" model="mail.template">
+        <field name="name">Payslip Email - Advance Payment (Pago Adelanto)</field>
+        <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">⚡ PAGO ADELANTO │ {{ '%.0f' % (object.payslip_run_id.advance_percentage or 0) }}% │ Nro.: {{object.number}}{{ (' │ Lote: ' + object.payslip_run_id.name) if object.payslip_run_id else '' }}</field>
+
+        <field name="body_html" type="html">
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9f9f9">
+                <div style="background:white;padding:30px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1)">
+
+                    <!-- ADVANCE PAYMENT HEADER BANNER -->
+                    <div style="background:linear-gradient(135deg,#ff9800,#f57c00);color:white;padding:15px 20px;border-radius:6px;margin-bottom:25px;text-align:center">
+                        <h2 style="margin:0;font-size:20px">⚡ PAGO ADELANTO</h2>
+                        <p style="margin:5px 0 0;font-size:14px;opacity:0.9">
+                            <t t-out="int(object.payslip_run_id.advance_percentage)"/>% del salario neto
+                        </p>
+                    </div>
+
+                    <p style="font-size:16px;color:#333;margin-bottom:20px">
+                        Estimado/a <strong t-out="object.employee_id.name"/>,
+                    </p>
+
+                    <p style="font-size:15px;color:#555;line-height:1.6;margin-bottom:20px">
+                        Le informamos que se ha procesado un <strong>pago adelanto</strong> correspondiente
+                        al período <strong>
+                            <t t-out="object.date_from" t-options='{"widget": "date"}'/> -
+                            <t t-out="object.date_to" t-options='{"widget": "date"}'/>.
+                        </strong>
+                    </p>
+
+                    <!-- AMOUNT BOX -->
+                    <div style="background:#fff3e0;border:2px solid #ff9800;padding:20px;border-radius:8px;margin:25px 0;text-align:center">
+                        <p style="font-size:14px;color:#666;margin:0 0 10px;text-transform:uppercase">Monto Adelanto a Recibir</p>
+                        <p style="font-size:32px;font-weight:bold;color:#e65100;margin:0">
+                            $<t t-out="'{:,.2f}'.format(object.advance_amount)"/> USD
+                        </p>
+                        <p style="font-size:13px;color:#888;margin:10px 0 0">
+                            (<t t-out="int(object.payslip_run_id.advance_percentage)"/>% de $<t t-out="'{:,.2f}'.format(object.net_wage)"/> neto total)
+                        </p>
+                    </div>
+
+                    <!-- EXPLANATION NOTE -->
+                    <div style="background:#e3f2fd;padding:15px 20px;border-left:4px solid #2196f3;margin:25px 0;border-radius:4px">
+                        <p style="font-size:14px;color:#1565c0;margin:0 0 8px"><strong>ℹ️ Información Importante</strong></p>
+                        <p style="font-size:14px;color:#555;line-height:1.5;margin:0">
+                            Este pago representa un adelanto del <t t-out="int(object.payslip_run_id.advance_percentage)"/>%
+                            de su salario neto. El <t t-out="100 - int(object.payslip_run_id.advance_percentage)"/>% restante
+                            será procesado en un pago posterior según lo determine la administración.
+                        </p>
+                    </div>
+
+                    <!-- CONTACT BOX -->
+                    <div style="background:#e8f4f8;padding:15px 20px;border-left:4px solid #4267b2;margin:25px 0;border-radius:4px">
+                        <p style="font-size:14px;color:#333;margin:0 0 8px"><strong>💬 ¿Dudas o consultas?</strong></p>
+                        <p style="font-size:14px;color:#555;line-height:1.5;margin:0">
+                            Si tiene alguna duda por favor escribir a
+                            <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#4267b2;text-decoration:none">recursoshumanos@ueipab.edu.ve</a>
+                        </p>
+                    </div>
+
+                    <p style="font-size:13px;color:#777;font-style:italic;margin:25px 0">
+                        Este es un documento generado automáticamente.
+                    </p>
+
+                    <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0">
+                        <p style="font-size:15px;color:#333;margin:5px 0">Cordialmente,</p>
+                        <p style="font-size:15px;color:#333;margin:5px 0"><strong>Recursos Humanos</strong></p>
+                        <p style="font-size:14px;color:#555;margin:5px 0">Instituto Privado Andrés Bello</p>
+                    </div>
+                </div>
+            </div>
+        </field>
+
+        <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_payslip_compact'))]"/>
+        <field name="template_fs">ADELANTO_${(object.number or '').replace('/','_')}_${object.employee_id.name.replace(' ','_')}.pdf</field>
+    </record>
+
+    <!-- ========================================
+         Template: Compact Report (Original)
+         ======================================== -->
     <record id="email_template_edi_payslip_compact" model="mail.template">
         <field name="name">Payslip Compact Report</field>
         <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>

@@ -35,6 +35,14 @@ class HrPayslip(models.Model):
         help='Net amount of the payslip based on NET category lines.'
     )
 
+    advance_amount = fields.Monetary(
+        compute='_compute_advance_amount',
+        string='Monto Adelanto',
+        currency_field='currency_id',
+        store=True,
+        help='Monto a pagar como adelanto (neto × porcentaje del lote).'
+    )
+
     @api.depends('line_ids.total', 'line_ids.category_id')
     def _compute_net_wage(self):
         for payslip in self:
@@ -42,6 +50,26 @@ class HrPayslip(models.Model):
             for line in payslip.line_ids.filtered(lambda l: l.category_id.code == 'NET'):
                 net_total += line.total
             payslip.net_wage = net_total
+
+    @api.depends('net_wage', 'payslip_run_id.is_advance_payment', 'payslip_run_id.advance_percentage')
+    def _compute_advance_amount(self):
+        """Compute advance amount based on batch settings.
+
+        Business Logic:
+            - If batch has is_advance_payment=True: net_wage × (advance_percentage / 100)
+            - If batch has is_advance_payment=False: equals net_wage (100%)
+            - If no batch: equals net_wage
+
+        Used in:
+            - Email templates to show employee their advance amount
+            - Disbursement reports
+        """
+        for payslip in self:
+            if payslip.payslip_run_id and payslip.payslip_run_id.is_advance_payment:
+                percentage = payslip.payslip_run_id.advance_percentage or 100.0
+                payslip.advance_amount = payslip.net_wage * (percentage / 100.0)
+            else:
+                payslip.advance_amount = payslip.net_wage
 
     currency_id = fields.Many2one(
         'res.currency',

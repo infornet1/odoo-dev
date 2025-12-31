@@ -143,5 +143,53 @@
         </field>
     </record>
 
+    <!-- ========================================
+         Enhancement 4: Advance Payment Fields
+         ======================================== -->
+
+    <!-- Add Advance Payment section to form view -->
+    <record id="hr_payslip_run_form_advance_payment" model="ir.ui.view">
+        <field name="name">hr.payslip.run.form.advance.payment</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <!-- Add advance payment fields after email_template_id -->
+            <field name="email_template_id" position="after">
+                <field name="is_advance_payment"/>
+                <field name="advance_percentage"
+                       invisible="not is_advance_payment"
+                       widget="float"
+                       options="{'digits': [5, 2]}"/>
+                <field name="advance_total_amount"
+                       invisible="not is_advance_payment"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"
+                       class="fw-bold text-primary"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Add Advance Total to tree view when advance payment is active -->
+    <record id="hr_payslip_run_tree_advance_amount" model="ir.ui.view">
+        <field name="name">hr.payslip.run.tree.advance.amount</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="total_net_amount" position="after">
+                <field name="is_advance_payment" column_invisible="1"/>
+                <field name="advance_percentage"
+                       string="% Adelanto"
+                       optional="hide"/>
+                <field name="advance_total_amount"
+                       string="Total Adelanto"
+                       sum="Total Adelanto"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"
+                       optional="hide"/>
+            </field>
+        </field>
+    </record>
+
 
 </odoo>

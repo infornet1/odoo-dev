@@ -70,6 +70,33 @@ class HrPayslipRun(models.Model):
              'Available templates: Payslip Compact Report, Payslip Email - Employee Delivery, etc.'
     )
 
+    # ========================================
+    # ADVANCE PAYMENT FIELDS
+    # ========================================
+
+    is_advance_payment = fields.Boolean(
+        string='Es Pago Adelanto',
+        default=False,
+        help='Marcar si este lote es un pago adelanto parcial del salario. '
+             'Cuando está activo, se pagará solo el porcentaje indicado del neto.'
+    )
+
+    advance_percentage = fields.Float(
+        string='Porcentaje Adelanto (%)',
+        digits=(5, 2),
+        default=100.0,
+        help='Porcentaje del salario neto a pagar como adelanto. '
+             'Ejemplo: 50.0 = 50% del neto total.'
+    )
+
+    advance_total_amount = fields.Monetary(
+        string='Total Adelanto',
+        compute='_compute_advance_total_amount',
+        store=True,
+        currency_field='currency_id',
+        help='Monto total a desembolsar (total neto × porcentaje adelanto).'
+    )
+
     def _default_email_template(self):
         """Return default email template: 'Payslip Email - Employee Delivery'"""
         template = self.env['mail.template'].search([
@@ -136,6 +163,25 @@ class HrPayslipRun(models.Model):
             else:
                 # No payslips yet
                 batch.exchange_rate = 0.0
+
+    @api.depends('total_net_amount', 'advance_percentage', 'is_advance_payment')
+    def _compute_advance_total_amount(self):
+        """Compute total advance amount to disburse.
+
+        Business Logic:
+            - If is_advance_payment is True: total_net × (advance_percentage / 100)
+            - If is_advance_payment is False: equals total_net_amount (100%)
+            - Used for financial planning and disbursement reports
+
+        Technical Implementation:
+            - Depends on total_net_amount and advance_percentage
+            - Stored for reporting performance
+        """
+        for batch in self:
+            if batch.is_advance_payment and batch.advance_percentage:
+                batch.advance_total_amount = batch.total_net_amount * (batch.advance_percentage / 100.0)
+            else:
+                batch.advance_total_amount = batch.total_net_amount
 
     # ========================================
     # BUSINESS METHODS
