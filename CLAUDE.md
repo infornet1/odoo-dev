@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-01-02
 
 ## Core Instructions
 
@@ -206,7 +206,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.50.0 | 2025-12-31 |
+| ueipab_payroll_enhancements | 17.0.1.51.1 | 2026-01-02 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 

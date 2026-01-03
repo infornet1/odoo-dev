@@ -191,5 +191,27 @@
         </field>
     </record>
 
+    <!-- ========================================
+         Enhancement 5: Remainder Payment Fields
+         ======================================== -->
+
+    <!-- Add Remainder Payment section to form view -->
+    <record id="hr_payslip_run_form_remainder_payment" model="ir.ui.view">
+        <field name="name">hr.payslip.run.form.remainder.payment</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_form"/>
+        <field name="priority">51</field>
+        <field name="arch" type="xml">
+            <!-- Add remainder payment fields after advance fields -->
+            <field name="advance_total_amount" position="after">
+                <field name="is_remainder_batch"
+                       invisible="is_advance_payment"/>
+                <field name="advance_batch_id"
+                       invisible="not is_remainder_batch"
+                       options="{'no_create': True}"/>
+            </field>
+        </field>
+    </record>
+
 
 </odoo>

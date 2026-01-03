@@ -7,34 +7,118 @@
         <field name="arch" type="xml">
             <form string="Send Payslips by Email">
                 <!-- Header with state indicator -->
-                <header invisible="state == 'confirm'">
-                    <field name="state" widget="statusbar" statusbar_visible="confirm,sending,done"/>
+                <header invisible="state == 'select'">
+                    <field name="state" widget="statusbar" statusbar_visible="select,confirm,sending,done"/>
                 </header>
 
                 <sheet>
-                    <!-- CONFIRM STATE: Show options before starting -->
-                    <div invisible="state != 'confirm'">
+                    <!-- ========================================
+                         SELECT STATE: Choose employees to send to
+                         ======================================== -->
+                    <div invisible="state != 'select'">
                         <div class="oe_title">
-                            <h2>Send Payslips by Email</h2>
+                            <h2>Select Employees to Email</h2>
                         </div>
+
                         <group>
                             <group>
                                 <field name="payslip_run_id" readonly="1"/>
                                 <field name="email_template_id" options="{'no_create': True}"/>
                             </group>
                             <group>
-                                <field name="total_count" readonly="1"/>
+                                <field name="total_count" string="Total Employees"/>
+                                <field name="selected_count" string="Selected to Send"/>
                             </group>
                         </group>
-                        <div class="alert alert-info" role="alert">
-                            <strong>Ready to send!</strong><br/>
-                            Click "Start Sending" to begin sending emails to all employees in this batch.
-                            You will see real-time progress and any errors that occur.
+
+                        <!-- Selection Actions -->
+                        <div class="mb-3">
+                            <button name="action_select_all"
+                                    string="Select All"
+                                    type="object"
+                                    class="btn-secondary btn-sm me-2"
+                                    icon="fa-check-square-o"/>
+                            <button name="action_deselect_all"
+                                    string="Deselect All"
+                                    type="object"
+                                    class="btn-secondary btn-sm me-2"
+                                    icon="fa-square-o"/>
+                            <button name="action_select_with_email"
+                                    string="Select With Email Only"
+                                    type="object"
+                                    class="btn-secondary btn-sm"
+                                    icon="fa-envelope"/>
+                        </div>
+
+                        <!-- Employee Selection List -->
+                        <field name="selection_ids" nolabel="1">
+                            <tree editable="bottom"
+                                  decoration-muted="not has_email"
+                                  decoration-success="selected and has_email"
+                                  decoration-warning="selected and not has_email">
+                                <field name="selected" widget="boolean_toggle"/>
+                                <field name="employee_name" readonly="1"/>
+                                <field name="payslip_number" readonly="1" optional="hide"/>
+                                <field name="email_status" readonly="1"/>
+                                <field name="has_email" column_invisible="1"/>
+                                <field name="employee_email" column_invisible="1"/>
+                                <field name="payslip_id" column_invisible="1"/>
+                                <field name="payslip_id_int" column_invisible="1"/>
+                            </tree>
+                        </field>
+
+                        <div class="alert alert-info mt-3" role="alert">
+                            <strong>Instructions:</strong><br/>
+                            1. Select the employees you want to send emails to using the toggle<br/>
+                            2. Employees without email are highlighted and cannot receive emails<br/>
+                            3. Click "Continue" when ready to review before sending
                         </div>
                     </div>
 
-                    <!-- SENDING/DONE STATE: Show progress -->
-                    <div invisible="state == 'confirm'">
+                    <!-- ========================================
+                         CONFIRM STATE: Review before sending
+                         ======================================== -->
+                    <div invisible="state != 'confirm'">
+                        <div class="oe_title">
+                            <h2>Confirm Email Sending</h2>
+                        </div>
+
+                        <group>
+                            <group>
+                                <field name="payslip_run_id" readonly="1"/>
+                                <field name="email_template_id" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="selected_count" string="Employees to Email"/>
+                            </group>
+                        </group>
+
+                        <div class="alert alert-warning" role="alert">
+                            <strong>Ready to send emails to <field name="selected_count" nolabel="1" class="d-inline"/> employee(s).</strong><br/>
+                            Click "Send Emails Now" to send all selected emails.
+                        </div>
+
+                        <!-- Show selected employees summary -->
+                        <group string="Selected Employees" col="1">
+                            <field name="selection_ids" nolabel="1" readonly="1"
+                                   domain="[('selected', '=', True)]"
+                                   options="{'no_open': True}">
+                                <tree decoration-muted="not has_email" editable="bottom" create="false" delete="false">
+                                    <field name="employee_name" string="Employee"/>
+                                    <field name="employee_email" string="Email"/>
+                                    <field name="has_email" column_invisible="1"/>
+                                    <field name="payslip_id" column_invisible="1"/>
+                                    <field name="payslip_id_int" column_invisible="1"/>
+                                    <field name="selected" column_invisible="1"/>
+                                </tree>
+                            </field>
+                        </group>
+                    </div>
+
+                    <!-- ========================================
+                         SENDING/DONE STATE: Show progress
+                         ======================================== -->
+                    <div invisible="state not in ('sending', 'done')">
                         <div class="oe_title">
                             <h2 invisible="state != 'sending'">Sending Emails...</h2>
                             <h2 invisible="state != 'done'">Email Sending Complete</h2>
@@ -61,12 +145,12 @@
                         <group string="Summary">
                             <group>
                                 <field name="processed_count" string="Processed"/>
-                                <field name="total_count" string="Total"/>
+                                <field name="selected_count" string="Total Selected"/>
                             </group>
                             <group>
-                                <field name="sent_count" string="✅ Sent"/>
-                                <field name="no_email_count" string="📭 No Email"/>
-                                <field name="failed_count" string="❌ Errors"/>
+                                <field name="sent_count" string="Sent"/>
+                                <field name="no_email_count" string="No Email"/>
+                                <field name="failed_count" string="Errors"/>
                             </group>
                         </group>
 
@@ -121,32 +205,31 @@
                 </sheet>
 
                 <footer>
-                    <!-- Confirm state buttons -->
-                    <button name="action_start_sending"
-                            string="Start Sending"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state != 'confirm'"/>
-                    <button string="Cancel"
-                            class="btn-secondary"
-                            special="cancel"
-                            invisible="state != 'confirm'"/>
-
-                    <!-- Sending state buttons -->
-                    <button name="action_process_next"
+                    <!-- SELECT state buttons -->
+                    <button name="action_proceed_to_confirm"
                             string="Continue"
                             type="object"
                             class="btn-primary"
-                            invisible="state != 'sending'"
-                            help="Process next email"/>
-                    <button name="action_process_all"
-                            string="Process All Remaining"
+                            invisible="state != 'select'"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"
+                            invisible="state != 'select'"/>
+
+                    <!-- CONFIRM state buttons -->
+                    <button name="action_start_sending"
+                            string="Send Emails Now"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'confirm'"
+                            icon="fa-paper-plane"/>
+                    <button name="action_back_to_select"
+                            string="Back to Selection"
                             type="object"
                             class="btn-secondary"
-                            invisible="state != 'sending'"
-                            help="Process all remaining emails at once"/>
+                            invisible="state != 'confirm'"/>
 
-                    <!-- Done state buttons -->
+                    <!-- DONE state buttons -->
                     <button name="action_close"
                             string="Close"
                             type="object"

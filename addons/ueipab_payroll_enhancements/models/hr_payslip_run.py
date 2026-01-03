@@ -97,6 +97,25 @@ class HrPayslipRun(models.Model):
         help='Monto total a desembolsar (total neto × porcentaje adelanto).'
     )
 
+    # ========================================
+    # REMAINDER PAYMENT FIELDS
+    # ========================================
+
+    is_remainder_batch = fields.Boolean(
+        string='Es Pago Restante',
+        default=False,
+        help='Marcar si este lote es el pago restante de un adelanto previo. '
+             'Permite vincular con el lote de adelanto original para conciliación.'
+    )
+
+    advance_batch_id = fields.Many2one(
+        'hr.payslip.run',
+        string='Lote Adelanto Original',
+        domain="[('is_advance_payment', '=', True), ('id', '!=', id)]",
+        help='Seleccione el lote de adelanto original al que corresponde este pago restante. '
+             'Se usará para mostrar la conciliación completa en el correo al empleado.'
+    )
+
     def _default_email_template(self):
         """Return default email template: 'Payslip Email - Employee Delivery'"""
         template = self.env['mail.template'].search([
@@ -164,24 +183,23 @@ class HrPayslipRun(models.Model):
                 # No payslips yet
                 batch.exchange_rate = 0.0
 
-    @api.depends('total_net_amount', 'advance_percentage', 'is_advance_payment')
+    @api.depends('total_net_amount', 'is_advance_payment')
     def _compute_advance_total_amount(self):
         """Compute total advance amount to disburse.
 
         Business Logic:
-            - If is_advance_payment is True: total_net × (advance_percentage / 100)
-            - If is_advance_payment is False: equals total_net_amount (100%)
+            - Since salary rules already apply the advance percentage multiplier,
+              total_net_amount is already the reduced advance amount.
+            - advance_total_amount = total_net_amount (for display consistency)
             - Used for financial planning and disbursement reports
 
         Technical Implementation:
-            - Depends on total_net_amount and advance_percentage
+            - Depends on total_net_amount (which already has % applied via salary rules)
             - Stored for reporting performance
         """
         for batch in self:
-            if batch.is_advance_payment and batch.advance_percentage:
-                batch.advance_total_amount = batch.total_net_amount * (batch.advance_percentage / 100.0)
-            else:
-                batch.advance_total_amount = batch.total_net_amount
+            # total_net_amount already has advance % applied via salary rules
+            batch.advance_total_amount = batch.total_net_amount
 
     # ========================================
     # BUSINESS METHODS

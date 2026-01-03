@@ -1,6 +1,6 @@
 # Batch Email Progress Wizard
 
-**Status:** PRODUCTION | **Deployed:** 2025-12-16 | **Module Version:** v1.47.0
+**Status:** PRODUCTION | **Updated:** 2026-01-02 | **Module Version:** v1.51.1
 
 ## Problem Solved
 
@@ -9,15 +9,24 @@ When clicking "Send Payslips by Email" on batch form:
 - No feedback on success/failure per employee
 - No error reporting if emails fail
 - User doesn't know when process completes
+- **No control over which employees receive emails**
 
 ## Solution Implemented
 
-Progress wizard with real-time feedback.
+Enhanced progress wizard with employee selection and real-time feedback.
 
-**New Button:** "Send Emails (with Progress)" on batch form (alongside existing button)
+**Button:** "Send Emails (with Progress)" on batch form
 
 ## Wizard Features
 
+### Employee Selection (v1.51.1 Enhancement)
+- **Pre-send selection screen**: Choose which employees to email before sending
+- **Toggle controls**: Select/Deselect individual employees
+- **Bulk actions**: "Select All", "Deselect All", "Select With Email Only"
+- **Visual indicators**: Green checkmark for valid email, red X for missing email
+- **No automatic sending**: User must explicitly confirm before any emails are sent
+
+### Progress Tracking
 - Progress bar showing percentage complete
 - Real-time stats: Sent, No Email, Failed
 - Results table with status icons per employee
@@ -30,29 +39,82 @@ Progress wizard with real-time feedback.
 ```
 1. Open Payslip Batch form
 2. Click "Send Emails (with Progress)" button
-3. Select email template (defaults to batch template)
-4. Click "Start Sending"
-5. Click "Process All Remaining" to send all at once
-6. Review results in summary table
-7. Check "Failed Only" tab if issues occurred
+3. SELECT STATE: Choose employees to email
+   - Use toggles to select/deselect individuals
+   - Use bulk buttons: "Select All", "Deselect All", "Select With Email Only"
+   - Employees without email are highlighted and cannot receive emails
+   - Click "Continue" when ready
+4. CONFIRM STATE: Review selection
+   - Shows list of selected employees
+   - Click "Send Emails Now" to proceed
+   - Click "Back to Selection" to modify
+5. SENDING STATE: Emails are sent
+   - Progress bar updates in real-time
+   - Results table shows status per employee
+6. DONE STATE: Review results
+   - Summary of sent/failed/no-email counts
+   - "Failed Only" tab for troubleshooting
+   - Click "Close" to finish
 ```
 
-## Files Created
+## Wizard States
 
-- `wizard/batch_email_wizard.py` - Two TransientModels:
-  - `hr.payslip.batch.email.wizard` - Main wizard
-  - `hr.payslip.batch.email.result` - Per-payslip result tracking
-- `wizard/batch_email_wizard_view.xml` - Wizard form view with tabs
+| State | Description | Actions Available |
+|-------|-------------|-------------------|
+| `select` | Choose employees | Select All, Deselect All, Select With Email, Continue |
+| `confirm` | Review before sending | Send Emails Now, Back to Selection |
+| `sending` | Processing emails | (automatic) |
+| `done` | Complete | Close |
 
-## Files Modified
+## Technical Models
 
+### Main Wizard: `hr.payslip.batch.email.wizard`
+- `payslip_run_id`: Link to batch
+- `email_template_id`: Email template to use
+- `state`: Current wizard state
+- `selection_ids`: One2many to selection lines
+- `result_ids`: One2many to result lines
+- Progress counters: `processed_count`, `sent_count`, `failed_count`, `no_email_count`
+
+### Selection Model: `hr.payslip.batch.email.selection`
+- `wizard_id`: Link to wizard
+- `payslip_id`: Link to payslip (Many2one)
+- `payslip_id_int`: Payslip ID (Integer, for reliability across form submissions)
+- `employee_name`, `employee_email`: Cached employee data
+- `has_email`: Boolean for email availability
+- `selected`: Boolean toggle for sending
+
+### Result Model: `hr.payslip.batch.email.result`
+- `wizard_id`: Link to wizard
+- `payslip_id`: Link to payslip (Many2one)
+- `payslip_id_int`: Payslip ID (Integer, for reliability)
+- `employee_name`, `employee_email`: Cached data
+- `status`: pending, sending, sent, no_email, error
+- `error_message`: Captured error details
+
+## Files
+
+### Created
+- `wizard/batch_email_wizard.py` - Three TransientModels (wizard, selection, result)
+- `wizard/batch_email_wizard_view.xml` - Multi-state wizard form
+
+### Modified
 - `wizard/__init__.py` - Added import
-- `views/hr_payslip_run_view.xml` - Added button (action ID 850)
-- `security/ir.model.access.csv` - Added access rules
-- `__manifest__.py` - Updated version, added XML file
+- `views/hr_payslip_run_view.xml` - Added button
+- `security/ir.model.access.csv` - Access rules for all three models
+- `__manifest__.py` - Version updates
 
-## Testing Notes
+## Technical Notes
 
-- All tests used `env.cr.rollback()` - no actual emails sent
-- Tested: wizard creation, progress tracking, no-email detection, error capture
-- Ready for manual testing in browser
+### Transient Model Data Persistence
+The wizard uses integer fields (`payslip_id_int`) alongside Many2one fields to ensure reliable data persistence across form submissions in transient models. This prevents "Payslip not found" errors that can occur when Many2one relationships are lost during wizard state transitions.
+
+### Fallback Mechanism
+If payslip ID is missing, the code falls back to looking up the payslip from the batch using the employee name, ensuring emails can still be sent.
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v1.47.0 | 2025-12-16 | Initial release with progress tracking |
+| v1.51.1 | 2026-01-02 | Added employee selection before sending |
