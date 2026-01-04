@@ -38,13 +38,13 @@
 | 20 | V2 Payroll Accounting Config | Production | Database config | See below |
 | 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
-| 23 | Advance Payment System (Pago Adelanto) | Testing | `ueipab_payroll_enhancements` | See below |
+| 23 | Advance Payment System (Pago Adelanto) | Production | `ueipab_payroll_enhancements` | See below |
 
 ---
 
 ## Advance Payment System (Pago Adelanto)
 
-**Status:** Testing | **Version:** 17.0.1.50.0 | **Added:** 2025-12-31
+**Status:** Production | **Version:** 17.0.1.51.1 | **Deployed:** 2026-01-02
 
 Allows partial salary disbursement when company needs to pay employees in installments due to financial constraints.
 
@@ -86,12 +86,12 @@ VE_BONUS_V2 = contract.bonus * (batch.advance_percentage / 100)
 # Deductions auto-recalculate on reduced gross
 ```
 
-### Email Templates
+### Email Templates (Synced to Production 2026-01-02)
 
-| Template | Purpose |
-|----------|---------|
-| Payslip Email - Advance Payment - Employee Delivery | Full detailed advance notification |
-| Payslip Email - Remainder Payment - Reconciliation | Shows advance + remainder + total |
+| Template | Purpose | Prod ID |
+|----------|---------|---------|
+| Payslip Email - Advance Payment - Employee Delivery | Full detailed advance notification | 44 |
+| Payslip Email - Remainder Payment - Reconciliation | Shows advance + remainder + total | 45 |
 
 ### Accounting Treatment
 
