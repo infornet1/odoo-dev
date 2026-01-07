@@ -177,7 +177,13 @@ class HrPayslipRun(models.Model):
         for batch in self:
             if batch.slip_ids:
                 # Get exchange rate from first payslip
-                first_slip = batch.slip_ids.sorted(lambda s: s.id)[0]
+                # Filter to only real records (with integer IDs) to avoid NewId sorting errors
+                real_slips = batch.slip_ids.filtered(lambda s: isinstance(s.id, int))
+                if real_slips:
+                    first_slip = real_slips.sorted(lambda s: s.id)[0]
+                else:
+                    # Fallback to first slip if all are unsaved
+                    first_slip = batch.slip_ids[0]
                 batch.exchange_rate = first_slip.exchange_rate_used or 0.0
             else:
                 # No payslips yet

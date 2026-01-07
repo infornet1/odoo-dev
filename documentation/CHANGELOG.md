@@ -6,6 +6,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-01-07 - Payslip Batch Delete Fix (NewId Sorting Error)
+
+**Fixed TypeError when deleting payslips from batch UI:**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Deleting payslip from batch view caused `TypeError: '<' not supported between instances of 'NewId' and 'NewId'` |
+| **Root Cause** | `_compute_exchange_rate` sorted payslips by `s.id`, but during onchange operations unsaved records have `NewId` objects that can't be compared |
+| **Solution** | Filter to only saved records (with integer IDs) before sorting, with fallback for unsaved slips |
+| **File Changed** | `hr_payslip_run.py` line 180 |
+| **Version** | 17.0.1.51.2 |
+
+**Fix Applied:**
+```python
+# Before (broken)
+first_slip = batch.slip_ids.sorted(lambda s: s.id)[0]
+
+# After (fixed)
+real_slips = batch.slip_ids.filtered(lambda s: isinstance(s.id, int))
+if real_slips:
+    first_slip = real_slips.sorted(lambda s: s.id)[0]
+else:
+    first_slip = batch.slip_ids[0]  # Fallback for unsaved slips
+```
+
 ### 2025-11-27 - Password Reset URL Fix (dbfilter)
 
 **Fixed invitation/password reset email links returning 404:**
