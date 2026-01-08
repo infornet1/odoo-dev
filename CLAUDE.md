@@ -78,15 +78,16 @@ Each batch:
 
 ### Salary Rules Behavior
 
-When `is_advance_payment = True`:
+When `is_advance_payment = True` OR `is_remainder_batch = True`:
 ```python
 # Earnings multiplied by advance_percentage
 VE_SALARY_V2 = contract.salary * (batch.advance_percentage / 100)
+VE_EXTRABONUS_V2 = contract.extrabonus * (batch.advance_percentage / 100)
 VE_BONUS_V2 = contract.bonus * (batch.advance_percentage / 100)
 # Deductions auto-recalculate on reduced gross
 ```
 
-### Email Templates (Synced to Production 2026-01-02)
+### Email Templates (Synced to Production 2026-01-08)
 
 | Template | Purpose | Prod ID |
 |----------|---------|---------|

@@ -6,32 +6,32 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
-### 2026-01-08 - Remainder Payment Email Template Fix
+### 2026-01-08 - Salary Rules & Email Template Fix for Remainder Batches
 
-**Fixed email template "Payslip Email - Remainder Payment - Reconciliation":**
+**Fixed salary rules not applying percentage to remainder batches:**
 
 | Item | Details |
 |------|---------|
-| **Template** | ID 45 (prod) / ID 66 (testing) |
-| **Changes** | 1. Fixed percentage calculations to show actual 50% portions |
-|              | 2. Removed "Tasa de Cambio Actual" display section |
-|              | 3. Template now shows advance + remainder with respective exchange rates |
-| **Synced** | Testing environment synced with production |
+| **Problem** | Remainder batches (is_remainder_batch=True) computed at 100% instead of 50% |
+| **Root Cause** | Salary rules only checked `is_advance_payment`, not `is_remainder_batch` |
+| **Solution** | Updated condition to check both flags |
+| **Rules Fixed** | VE_SALARY_V2, VE_EXTRABONUS_V2, VE_BONUS_V2 |
 
-**Template Calculation Fix:**
-```xml
-<!-- Before: showed full net_wage amounts -->
-<t t-set="adv_usd" t-value="advance_slip.net_wage"/>
+**Salary Rule Fix:**
+```python
+# Before (only advance batches got percentage)
+if payslip.payslip_run_id and payslip.payslip_run_id.is_advance_payment:
 
-<!-- After: shows actual percentage portions -->
-<t t-set="adv_usd" t-value="adv_net_full * (adv_pct / 100.0)"/>
-<t t-set="rest_usd" t-value="current_net * (current_pct / 100.0)"/>
+# After (both advance AND remainder batches get percentage)
+if payslip.payslip_run_id and (payslip.payslip_run_id.is_advance_payment or payslip.payslip_run_id.is_remainder_batch):
 ```
 
-**Display Format:**
-- ⚡ Adelanto (50%) - USD, Exchange Rate, Bs.
-- ✅ Restante (50%) - USD, Exchange Rate, Bs.
-- 💰 TOTAL PAGADO (100%) - Combined totals
+**Email Template Updated (ID 45 prod / ID 66 testing):**
+- Removed percentage multiplication (salary rules now handle it)
+- Uses `net_wage` directly: `<t t-set="rest_usd" t-value="object.net_wage or 0.0"/>`
+- Removed "Tasa de Cambio Actual" section
+
+**Synced:** Both production and testing environments updated
 
 ### 2026-01-07 - Payslip Batch Delete Fix (NewId Sorting Error)
 
