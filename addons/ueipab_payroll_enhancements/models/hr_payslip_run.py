@@ -116,6 +116,39 @@ class HrPayslipRun(models.Model):
              'Se usará para mostrar la conciliación completa en el correo al empleado.'
     )
 
+    # ========================================
+    # ONCHANGE METHODS
+    # ========================================
+
+    @api.onchange('is_remainder_batch', 'advance_batch_id')
+    def _onchange_remainder_batch(self):
+        """Auto-calculate remaining percentage when linking to advance batch.
+
+        Business Logic:
+            - When user checks 'Es Pago Restante' and selects an advance batch
+            - System automatically calculates: remaining% = 100% - advance%
+            - Example: If advance batch was 50%, remainder is set to 50%
+            - This ensures email templates calculate amounts correctly
+
+        User Flow:
+            1. User creates new batch (e.g., DICIEMBRE31.2)
+            2. User checks 'Es Pago Restante'
+            3. User selects 'DICIEMBRE31' (50% advance) from dropdown
+            4. System automatically sets advance_percentage = 50 (100 - 50)
+
+        Technical Implementation:
+            - Triggers on change of is_remainder_batch or advance_batch_id
+            - Reads advance_percentage from linked advance batch
+            - Sets this batch's advance_percentage to the remaining amount
+        """
+        if self.is_remainder_batch and self.advance_batch_id:
+            # Calculate remaining percentage: 100% - advance%
+            advance_pct = self.advance_batch_id.advance_percentage or 0
+            self.advance_percentage = 100.0 - advance_pct
+        elif not self.is_remainder_batch:
+            # Reset to default when unchecking remainder batch
+            self.advance_percentage = 100.0
+
     def _default_email_template(self):
         """Return default email template: 'Payslip Email - Employee Delivery'"""
         template = self.env['mail.template'].search([

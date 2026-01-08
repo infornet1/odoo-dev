@@ -6,6 +6,33 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-01-08 - Remainder Payment Email Template Fix
+
+**Fixed email template "Payslip Email - Remainder Payment - Reconciliation":**
+
+| Item | Details |
+|------|---------|
+| **Template** | ID 45 (prod) / ID 66 (testing) |
+| **Changes** | 1. Fixed percentage calculations to show actual 50% portions |
+|              | 2. Removed "Tasa de Cambio Actual" display section |
+|              | 3. Template now shows advance + remainder with respective exchange rates |
+| **Synced** | Testing environment synced with production |
+
+**Template Calculation Fix:**
+```xml
+<!-- Before: showed full net_wage amounts -->
+<t t-set="adv_usd" t-value="advance_slip.net_wage"/>
+
+<!-- After: shows actual percentage portions -->
+<t t-set="adv_usd" t-value="adv_net_full * (adv_pct / 100.0)"/>
+<t t-set="rest_usd" t-value="current_net * (current_pct / 100.0)"/>
+```
+
+**Display Format:**
+- ⚡ Adelanto (50%) - USD, Exchange Rate, Bs.
+- ✅ Restante (50%) - USD, Exchange Rate, Bs.
+- 💰 TOTAL PAGADO (100%) - Combined totals
+
 ### 2026-01-07 - Payslip Batch Delete Fix (NewId Sorting Error)
 
 **Fixed TypeError when deleting payslips from batch UI:**

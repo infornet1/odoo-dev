@@ -51,25 +51,28 @@ class HrPayslip(models.Model):
                 net_total += line.total
             payslip.net_wage = net_total
 
-    @api.depends('net_wage', 'payslip_run_id.is_advance_payment', 'payslip_run_id.advance_percentage')
+    @api.depends('net_wage')
     def _compute_advance_amount(self):
-        """Compute advance amount based on batch settings.
+        """Compute advance amount based on net wage.
 
         Business Logic:
-            - If batch has is_advance_payment=True: net_wage × (advance_percentage / 100)
-            - If batch has is_advance_payment=False: equals net_wage (100%)
-            - If no batch: equals net_wage
+            - advance_amount = net_wage (always)
+            - Salary rules already apply advance_percentage multiplier to earnings
+            - So net_wage is already the reduced/advance amount
+            - No need to apply percentage again here
+
+        Note:
+            Previously this method applied percentage again, causing double-counting.
+            Example: If advance was 50%, salary rules give net_wage = 167.26 (50% of 334.52)
+            Old logic: advance_amount = 167.26 * 0.5 = 83.63 (WRONG)
+            New logic: advance_amount = 167.26 (CORRECT)
 
         Used in:
             - Email templates to show employee their advance amount
             - Disbursement reports
         """
         for payslip in self:
-            if payslip.payslip_run_id and payslip.payslip_run_id.is_advance_payment:
-                percentage = payslip.payslip_run_id.advance_percentage or 100.0
-                payslip.advance_amount = payslip.net_wage * (percentage / 100.0)
-            else:
-                payslip.advance_amount = payslip.net_wage
+            payslip.advance_amount = payslip.net_wage
 
     currency_id = fields.Many2one(
         'res.currency',
