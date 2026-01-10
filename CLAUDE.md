@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-01-07
+**Last Updated:** 2026-01-10
 
 ## Core Instructions
 
@@ -163,15 +163,17 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 
 ## V2 Payroll Accounting Configuration
 
-**Status:** Production | **Updated:** 2025-12-15
+**Status:** Production | **Updated:** 2026-01-10
 
 | Purpose | Debit Account | Credit Account |
 |---------|---------------|----------------|
-| V2 Payroll | 5.1.01.10.001 (Nomina) | 1.1.01.02.001 (Banco Venezuela) |
-| V2 Liquidation | 5.1.01.10.010 (Prestaciones) | 2.1.01.10.005 (Provision Prestaciones) |
+| V2 Payroll (NOMINA_VE_V2) | 5.1.01.10.001 (Nomina) | 1.1.01.02.001 (Banco Venezuela) |
+| V2 Liquidation (LIQUID_VE_V2) | 5.1.01.10.010 (Prestaciones) | 2.1.01.10.005 (Provision Prestaciones) |
 | AGUINALDOS | 5.1.01.10.001 (Nomina) | 1.1.01.02.001 (Banco Venezuela) |
 
 **Design Pattern:** Only deductions and NET create journal entries. Earnings rules do NOT post to accounting.
+
+**Important:** At minimum, the `*_NET_*` rule in each structure MUST have both debit and credit accounts configured, otherwise payslips cannot be confirmed (error: "choose Debit and Credit account for at least one salary rule").
 
 ---
 

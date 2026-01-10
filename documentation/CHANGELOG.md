@@ -6,6 +6,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-01-10 - LIQUID_VE_V2 Accounting Configuration Fix
+
+**Fixed payslip confirmation error for Liquidación Venezolana V2:**
+
+| Item | Details |
+|------|---------|
+| **Problem** | SLIP/313 (STEFANY ROMERO) could not be confirmed: "choose Debit and Credit account for at least one salary rule" |
+| **Root Cause** | `LIQUID_VE_V2` structure had no accounting accounts configured on any salary rules |
+| **Solution** | Configured `LIQUID_NET_V2` rule with debit/credit accounts |
+| **Affected Structure** | LIQUID_VE_V2 (Liquidación Venezolana V2) |
+
+**Accounts Configured:**
+
+| Rule | Debit Account | Credit Account |
+|------|---------------|----------------|
+| LIQUID_NET_V2 | 5.1.01.10.010 (Prestaciones sociales) | 2.1.01.10.005 (Provisión Prestaciones Sociales) |
+
+**Environment Comparison:**
+- **Testing:** All 14 rules have accounting configured (more comprehensive)
+- **Production:** Only NET rule configured (minimum required - follows design pattern)
+
+**Note:** Per Odoo payroll accounting design, only NET/deduction rules need accounting. Earnings rules should NOT post to accounting.
+
+---
+
 ### 2026-01-08 - Salary Rules & Email Template Fix for Remainder Batches
 
 **Fixed salary rules not applying percentage to remainder batches:**
