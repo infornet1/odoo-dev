@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-01-10
+**Last Updated:** 2026-01-14
 
 ## Core Instructions
 
@@ -44,7 +44,7 @@
 
 ## Advance Payment System (Pago Adelanto)
 
-**Status:** Production | **Version:** 17.0.1.51.2 | **Deployed:** 2026-01-02
+**Status:** Production | **Version:** 17.0.1.52.1 | **Deployed:** 2026-01-14
 
 Allows partial salary disbursement when company needs to pay employees in installments due to financial constraints.
 
@@ -217,7 +217,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.52.1 | Current (synced 2026-01-08) |
+| ueipab_payroll_enhancements | 17.0.1.52.1 | Current (synced 2026-01-14) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
