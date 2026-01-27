@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-01-27
 
 ## Core Instructions
 
@@ -39,6 +39,7 @@
 | 21 | Invoice Currency Rate Bug | Documented | `tdv_multi_currency_account` | [Docs](documentation/INVOICE_CURRENCY_RATE_BUG.md) |
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
 | 23 | Advance Payment System (Pago Adelanto) | Production | `ueipab_payroll_enhancements` | See below |
+| 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
 
 ---
 
