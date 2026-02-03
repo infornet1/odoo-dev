@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-01-27
+**Last Updated:** 2026-02-03
 
 ## Core Instructions
 
@@ -40,6 +40,7 @@
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
 | 23 | Advance Payment System (Pago Adelanto) | Production | `ueipab_payroll_enhancements` | See below |
 | 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
+| 25 | Email Bounce Processor | Planned | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
 
 ---
 
@@ -271,6 +272,37 @@ docker restart odoo-dev-web
 
 ---
 
+## Email Bounce Processor
+
+**Status:** Planned | **Type:** Phase 1 (Script) + Phase 2 (Odoo Module)
+
+Automated detection and cleanup of bounced emails from Freescout (READ-ONLY source). Freescout database is never modified.
+
+### Phase 1 - Standalone Script (Current Priority)
+
+- **Script:** `scripts/daily_bounce_processor.py` (cron daily)
+- **Source:** Freescout MySQL (read-only) for bounce detection
+- **Target:** Production Odoo via XML-RPC (`res.partner` + `mailing.contact`)
+- **Notify:** HTML report to `soporte@ueipab.edu.ve`
+- **Log:** `scripts/bounce_logs/bounce_log.csv` (queryable history)
+- **State:** `scripts/bounce_state.json` (tracks last processed ID)
+
+**Multi-email handling:** Contacts with multiple emails separated by `;` are handled surgically -- only the bounced email is removed, the rest are preserved.
+
+### Phase 2 - Odoo Module (Future, with WhatsApp Agent)
+
+- **Module:** `ueipab_bounce_log` (extends Contacts app, not a standalone app)
+- **Menu:** `Contacts > Bounce Log` (direct submenu)
+- **Model:** `mail.bounce.log` with resolution workflow
+- **Resolution:** Two actions per bounce record:
+  - "Restaurar Email Original" -- re-enable old email (temporary issue fixed)
+  - "Aplicar Nuevo Email" -- apply customer's new email
+- **WhatsApp Integration:** Agent queries pending bounces, contacts customer via WhatsApp, updates record on reply
+
+See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
+
+---
+
 ## Documentation Index
 
 ### Core Systems
@@ -293,6 +325,7 @@ docker restart odoo-dev-web
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
 - [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
+- [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
 
 ### Liquidation
 - [V1 Complete Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md)
