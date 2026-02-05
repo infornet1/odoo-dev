@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tree View -->
+    <record id="mail_bounce_log_view_tree" model="ir.ui.view">
+        <field name="name">mail.bounce.log.tree</field>
+        <field name="model">mail.bounce.log</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="state == 'pending'"
+                  decoration-warning="state in ('notified', 'contacted')"
+                  decoration-success="state == 'resolved'">
+                <field name="bounce_date" string="Fecha"/>
+                <field name="bounced_email" string="Email Rebotado"/>
+                <field name="partner_id" string="Contacto"/>
+                <field name="bounce_reason" string="Razon"/>
+                <field name="state" string="Estado" widget="badge"
+                       decoration-danger="state == 'pending'"
+                       decoration-warning="state in ('notified', 'contacted')"
+                       decoration-success="state == 'resolved'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="mail_bounce_log_view_form" model="ir.ui.view">
+        <field name="name">mail.bounce.log.form</field>
+        <field name="model">mail.bounce.log</field>
+        <field name="arch" type="xml">
+            <form string="Bounce Log">
+                <header>
+                    <button name="action_mark_notified" type="object"
+                            string="Marcar Notificado" class="btn-secondary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_mark_contacted" type="object"
+                            string="Marcar Contactado" class="btn-secondary"
+                            invisible="state not in ('pending', 'notified')"/>
+                    <button name="action_restore_original" type="object"
+                            string="Restaurar Email Original" class="btn-primary"
+                            invisible="state == 'resolved'"
+                            confirm="Se re-agregara el email rebotado al contacto. Continuar?"/>
+                    <button name="action_apply_new_email" type="object"
+                            string="Aplicar Nuevo Email" class="btn-primary"
+                            invisible="state == 'resolved'"
+                            confirm="Se agregara el email nuevo al contacto. Continuar?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,notified,contacted,resolved"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Informacion del Rebote">
+                            <field name="bounce_date"/>
+                            <field name="bounced_email"/>
+                            <field name="bounce_reason"/>
+                        </group>
+                        <group string="Contacto">
+                            <field name="partner_id"/>
+                            <field name="partner_email"/>
+                            <field name="mailing_contact_id"/>
+                        </group>
+                    </group>
+                    <group string="Resolucion" invisible="state == 'resolved'">
+                        <group>
+                            <field name="new_email"
+                                   placeholder="Email nuevo proporcionado por el cliente"/>
+                        </group>
+                    </group>
+                    <group string="Resultado de Resolucion" invisible="state != 'resolved'">
+                        <group>
+                            <field name="new_email" readonly="1"/>
+                            <field name="resolved_date"/>
+                            <field name="resolved_by"/>
+                        </group>
+                    </group>
+                    <group string="Detalle Tecnico">
+                        <field name="bounce_detail" nolabel="1"
+                               placeholder="Error DSN original del servidor de correo"/>
+                        <field name="freescout_conversation_id"/>
+                    </group>
+                    <group string="WhatsApp (Futuro)" invisible="not whatsapp_contacted">
+                        <field name="whatsapp_contacted"/>
+                        <field name="whatsapp_contact_date"/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="mail_bounce_log_view_search" model="ir.ui.view">
+        <field name="name">mail.bounce.log.search</field>
+        <field name="model">mail.bounce.log</field>
+        <field name="arch" type="xml">
+            <search string="Bounce Log">
+                <field name="bounced_email"/>
+                <field name="partner_id"/>
+                <field name="new_email"/>
+                <separator/>
+                <filter name="filter_pending" string="Pendiente"
+                        domain="[('state', '=', 'pending')]"/>
+                <filter name="filter_notified" string="Notificado"
+                        domain="[('state', '=', 'notified')]"/>
+                <filter name="filter_contacted" string="Contactado"
+                        domain="[('state', '=', 'contacted')]"/>
+                <filter name="filter_resolved" string="Resuelto"
+                        domain="[('state', '=', 'resolved')]"/>
+                <separator/>
+                <filter name="filter_this_month" string="Este Mes"
+                        domain="[('bounce_date', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%%Y-%%m-%%d')),
+                                 ('bounce_date', '&lt;', (context_today() + relativedelta(months=1, day=1)).strftime('%%Y-%%m-%%d'))]"/>
+                <filter name="filter_last_month" string="Mes Anterior"
+                        domain="[('bounce_date', '&gt;=', (context_today() - relativedelta(months=1, day=1)).strftime('%%Y-%%m-%%d')),
+                                 ('bounce_date', '&lt;', (context_today() - relativedelta(day=1)).strftime('%%Y-%%m-%%d'))]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_reason" string="Razon"
+                            context="{'group_by': 'bounce_reason'}"/>
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Contacto"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_month" string="Mes"
+                            context="{'group_by': 'bounce_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="mail_bounce_log_action" model="ir.actions.act_window">
+        <field name="name">Bounce Log</field>
+        <field name="res_model">mail.bounce.log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="mail_bounce_log_view_search"/>
+        <field name="context">{'search_default_filter_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay registros de rebote
+            </p>
+            <p>
+                Los registros de email rebotado aparecen aqui cuando el procesador
+                de rebotes detecta emails que no pudieron ser entregados.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu under Contacts -->
+    <menuitem id="menu_mail_bounce_log"
+              name="Bounce Log"
+              parent="contacts.menu_contacts"
+              action="mail_bounce_log_action"
+              sequence="5"/>
+
+</odoo>

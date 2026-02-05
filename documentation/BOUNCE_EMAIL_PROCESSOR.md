@@ -1,6 +1,6 @@
 # Email Bounce Processor
 
-**Status:** Planned | **Type:** Standalone Script + Future Odoo Module
+**Status:** Testing (Phase 1) | **Type:** Standalone Script + Odoo Module
 
 ## Overview
 
@@ -8,21 +8,38 @@ Automated system to detect bounced emails from Freescout, clean up Odoo contacts
 
 ## Goals
 
-1. **Detect & Remove**: Read bounced emails from Freescout MySQL (read-only) and surgically remove only the bounced email from Odoo contacts (`res.partner` and `mailing.contact`)
-2. **Flag to Support**: Send HTML report email to `soporte@ueipab.edu.ve` with affected contact details and Odoo links
-3. **Mailing List Cleanup**: Also remove bounced email from `mailing.contact` records to prevent future campaign failures
+1. **Detect & Clean**: Read bounced emails from Freescout MySQL (read-only) and surgically remove only the bounced email from Representante-tagged Odoo contacts (`res.partner` and `mailing.contact`)
+2. **Flag for Review**: Non-Representante bounces are flagged for manual review (not auto-cleaned)
+3. **Mailing List Cleanup**: Also remove bounced email from `mailing.contact` records linked to Representante partners
+4. **Audit Trail**: Maintain CSV log and chatter notes on all affected contacts
+
+## 3-Tier Processing Logic
+
+| Tier | Condition | Action |
+|------|-----------|--------|
+| **CLEAN** | Bounced email belongs to a partner with Representante tag (ID 25 or 26) | Remove email from `res.partner` + `mailing.contact`, post chatter note |
+| **FLAG** | Bounced email exists in Odoo but partner is NOT tagged as Representante | Log for manual review (no auto-modification) |
+| **NOT FOUND** | Bounced email not found in Odoo at all | CSV log only |
+
+**Scope filters:**
+- Only processes bounces from last **180 days** (6-month rolling window)
+- Representante tags: `Representante` (ID 25), `Representante PDVSA` (ID 26)
 
 ## Architecture
 
 ```
 Freescout MySQL ──(READ-ONLY)──> daily_bounce_processor.py
                                         │
-                                        ├──(XML-RPC WRITE)──> Production Odoo
-                                        │   ├── res.partner (remove bounced email)
-                                        │   ├── mailing.contact (remove bounced email)
-                                        │   └── chatter note (audit trail)
+                                        ├── TIER 1: CLEAN (Representante)
+                                        │   ├──(XML-RPC WRITE)──> res.partner (remove bounced email)
+                                        │   ├──(XML-RPC WRITE)──> mailing.contact (remove bounced email)
+                                        │   └──(XML-RPC WRITE)──> chatter note (audit trail)
                                         │
-                                        ├──(SMTP)──> soporte@ueipab.edu.ve (report)
+                                        ├── TIER 2: FLAG (non-Representante)
+                                        │   └──(LOCAL)──> CSV log + report section
+                                        │
+                                        ├── TIER 3: NOT FOUND
+                                        │   └──(LOCAL)──> CSV log only
                                         │
                                         └──(LOCAL)──> bounce_log.csv (queryable history)
                                                       bounce_state.json (last processed ID)
@@ -45,26 +62,26 @@ Freescout MySQL ──(READ-ONLY)──> daily_bounce_processor.py
 ### Script Flow
 
 1. **Read Freescout MySQL** (read-only connection)
-   - Query Type 1: Standalone DSN bounce conversations
-   - Query Type 2: Inline bounce threads (postmaster@/mailer-daemon@)
-   - Extract bounced email addresses from HTML body
+   - Query Type 1: Standalone DSN bounce conversations (subject LIKE `%Undelivered%` or `%Delivery Status%`)
+   - Query Type 2: Inline bounce threads (from `postmaster@` or `mailer-daemon@`)
+   - Date filter: only bounces from last 180 days (`BOUNCE_WINDOW_DAYS`)
+   - Extract bounced email addresses from HTML body (supports Google, Outlook, MailChannels formats)
+   - Deduplicate: only process first occurrence of each email
    - Skip already-processed conversations (via `bounce_state.json`)
 
-2. **Connect to Production Odoo via XML-RPC**
-   - Search `res.partner` by bounced email
-   - Search `mailing.contact` by bounced email
-   - For each match: surgically remove only the bounced email, preserve others
-   - Log old email in contact's chatter (internal note) for audit trail
+2. **Connect to Odoo via XML-RPC** (production or testing)
+   - For each bounced email, search `res.partner` by email (ilike)
+   - Check partner tags to determine tier:
+     - **Representante/Representante PDVSA** → TIER 1: CLEAN (remove email, clean mailing.contact, post chatter)
+     - **Other tags or no tags** → TIER 2: FLAG (log for review, no modification)
+   - If no partner found, search `mailing.contact`:
+     - Found → FLAG for review
+     - Not found → TIER 3: NOT FOUND (CSV log only)
 
-3. **Send Report to soporte@ueipab.edu.ve**
-   - HTML formatted email with:
-     - Contact name + removed email + bounce reason
-     - Direct Odoo link: `/web#id=XXX&model=res.partner&view_type=form`
-     - Summary statistics
-
-4. **Update Local State**
-   - Append to `bounce_log.csv`
+3. **Update Local State**
+   - Append to `bounce_log.csv` (with action column: cleaned/flagged/not_found)
    - Save last processed ID to `bounce_state.json`
+   - Print detailed report with separate sections per tier
 
 ### Multi-Email Handling
 
@@ -101,8 +118,10 @@ Fecha: 03/02/2026 07:00
 ### CSV Log Format
 
 ```csv
-date,bounced_email,partner_id,partner_name,mailing_contact_id,bounce_reason,freescout_conversation_id
-2026-02-03,maria@hotmail.com,1234,Maria Lopez,567,mailbox_full,8901
+date,bounced_email,partner_id,partner_name,mailing_contact_id,bounce_reason,freescout_conversation_id,action,tags,notes
+2026-02-05,maria@hotmail.com,1234,Maria Lopez,,mailbox_full,8901,cleaned,Representante,res.partner cleaned
+2026-02-05,staff@ueipab.edu.ve,2711,MONICA MOSQUEDA,,mailbox_full,33301,flagged,,Flagged for review (res.partner)
+2026-02-05,unknown@example.com,,,,,34071,not_found,,Not found in Odoo
 ```
 
 Support team can query via terminal or open in Excel/Google Sheets.
@@ -117,13 +136,65 @@ python3 /opt/odoo-dev/scripts/daily_bounce_processor.py
 0 7 * * * python3 /opt/odoo-dev/scripts/daily_bounce_processor.py >> /var/log/bounce_processor.log 2>&1
 ```
 
+### Testing Notes (2026-02-03)
+
+Phase 1 script verified in testing environment (`localhost:8019`, db=`testing`):
+
+- **TEST_MODE**: Uses 4 simulated bounces (no Freescout connection needed)
+- **DRY_RUN=True**: Prints what WOULD change, creates CSV with `[DRY_RUN]` prefix
+- **DRY_RUN=False**: Verified live modifications:
+  - Single-email partner: email field cleared correctly
+  - Multi-email partner: only bounced email removed, others preserved (`keep.this@example.com;also.keep@example.com`)
+  - Mailing contact: email field cleared correctly
+  - Non-existent email: correctly reported as "Not found"
+  - Chatter notes posted with proper HTML formatting (audit trail)
+  - `bounce_state.json` created with last processed conversation ID
+  - `bounce_log.csv` created with all entries
+
+**Auth note**: XML-RPC authentication requires an API key (not password) due to `login_user_detail` module incompatibility with XML-RPC context. A patch was applied to that module to handle the `request.httprequest` RuntimeError gracefully.
+
+### Production Dry Run Results (2026-02-05)
+
+Script executed with `DRY_RUN=True` against production (`DB_UEIPAB`) using 3-tier logic:
+
+- **429 total bounces** detected from Freescout (6-month window)
+- **49 unique emails** after deduplication
+
+| Tier | Count | Description |
+|------|-------|-------------|
+| CLEAN | 23 partners, 27 mailing contacts | Representante-tagged, auto-cleaned |
+| FLAG | 15 records | Non-Representante, manual review needed |
+| NOT FOUND | 13 emails | Not in Odoo at all |
+
+**Key findings:**
+- 9 of 23 Representante partners will have **empty email** after cleaning (single-email contacts) → priority for WhatsApp outreach
+- RAFAEL DUERTO (#2786) has **both** emails bouncing → will lose all email contact
+- 6 PDVSA domain bounces (`pdvsa.com`, `petropiar.pdvsa.com`) due to DNS failures
+- Flagged records include staff (`@ueipab.edu.ve`) and contacts tagged "Inactivo"
+
+Full CSV export: `/home/ftpuser/odoo-dev/bounce_dry_run_2026-02-05.csv`
+
 ---
 
-## Phase 2: Odoo Module (Future)
+## Phase 2: Odoo Module (Installed in Testing)
 
-**Module:** `ueipab_bounce_log` | **Depends:** `contacts`, `mail`
+**Module:** `ueipab_bounce_log` | **Version:** 17.0.1.0.0 | **Depends:** `contacts`, `mail`, `mass_mailing`
 
-To be implemented alongside the WhatsApp AI agent integration. The module extends the existing Contacts app (not a standalone app).
+The module extends the existing Contacts app (not a standalone app). WhatsApp AI agent integration is planned for a future phase.
+
+### Testing Notes (2026-02-03)
+
+Module installed and verified in testing environment (`localhost:8019`, db=`testing`):
+
+- **Menu:** `Contacts > Bounce Log` confirmed visible (parent: Contactos, sequence 5)
+- **Security:** Admin (full CRUD), Internal User (read-only) -- verified via `ir.model.access`
+- **State transitions:** pending → notified → contacted → resolved -- all work correctly
+- **Restaurar Email Original:** Re-appends bounced email using `;` separator, posts chatter note on partner
+- **Aplicar Nuevo Email:** Appends new email using `;` separator, requires `new_email` field (UserError if empty)
+- **Error handling:** Correctly prevents resolving already-resolved records, prevents applying without new email
+- **Chatter audit trail:** Internal notes posted on `res.partner` with bounce details and resolution info
+- **SQL constraint:** UNIQUE(freescout_conversation_id, bounced_email) prevents duplicate imports
+- **Views:** Tree (with badge decorations), Form (with statusbar + resolution buttons), Search (with filters and group-by)
 
 ### Menu Location
 

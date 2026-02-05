@@ -40,7 +40,7 @@
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | See below |
 | 23 | Advance Payment System (Pago Adelanto) | Production | `ueipab_payroll_enhancements` | See below |
 | 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
-| 25 | Email Bounce Processor | Planned | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
+| 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
 
 ---
 
@@ -214,6 +214,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_payroll_enhancements | 17.0.1.52.1 | 2026-01-08 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
+| ueipab_bounce_log | 17.0.1.0.0 | 2026-02-03 |
 
 ### Production Environment
 
@@ -274,7 +275,7 @@ docker restart odoo-dev-web
 
 ## Email Bounce Processor
 
-**Status:** Planned | **Type:** Phase 1 (Script) + Phase 2 (Odoo Module)
+**Status:** Testing | **Type:** Phase 1 (Script) + Phase 2 (Odoo Module)
 
 Automated detection and cleanup of bounced emails from Freescout (READ-ONLY source). Freescout database is never modified.
 
@@ -283,15 +284,18 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 - **Script:** `scripts/daily_bounce_processor.py` (cron daily)
 - **Source:** Freescout MySQL (read-only) for bounce detection
 - **Target:** Production Odoo via XML-RPC (`res.partner` + `mailing.contact`)
-- **Notify:** HTML report to `soporte@ueipab.edu.ve`
 - **Log:** `scripts/bounce_logs/bounce_log.csv` (queryable history)
 - **State:** `scripts/bounce_state.json` (tracks last processed ID)
 
+**3-Tier Logic:** CLEAN (Representante tags 25/26 → auto-remove email) | FLAG (non-Representante → manual review) | NOT FOUND (CSV log only)
+
+**Scope:** Last 180 days, Representante/Representante PDVSA contacts only for auto-cleaning.
+
 **Multi-email handling:** Contacts with multiple emails separated by `;` are handled surgically -- only the bounced email is removed, the rest are preserved.
 
-### Phase 2 - Odoo Module (Future, with WhatsApp Agent)
+### Phase 2 - Odoo Module (Installed in Testing)
 
-- **Module:** `ueipab_bounce_log` (extends Contacts app, not a standalone app)
+- **Module:** `ueipab_bounce_log` v17.0.1.0.0 (extends Contacts app, not a standalone app)
 - **Menu:** `Contacts > Bounce Log` (direct submenu)
 - **Model:** `mail.bounce.log` with resolution workflow
 - **Resolution:** Two actions per bounce record:

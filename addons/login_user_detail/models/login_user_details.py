@@ -36,7 +36,10 @@ class LoginUserDetail(models.Model):
     @api.model
     def _check_credentials(self, password, user_agent_env):
         result = super(LoginUserDetail, self)._check_credentials(password, user_agent_env)
-        ip_address = request.httprequest.environ['REMOTE_ADDR']
+        try:
+            ip_address = request.httprequest.environ['REMOTE_ADDR']
+        except (AttributeError, RuntimeError):
+            return result
         vals = {'name': self.name,
                 'ip_address': ip_address
                 }
