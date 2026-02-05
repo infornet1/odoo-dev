@@ -5,9 +5,11 @@ Daily Bounce Processor - Phase 1
 Detects bounced emails from Freescout (READ-ONLY) and cleans up Odoo contacts.
 Supports TEST_MODE (simulated data) and DRY_RUN (no modifications).
 
-3-Tier Logic:
-  - CLEAN: Bounced email belongs to a Representante partner -> remove from res.partner + mailing.contact
-  - FLAG:  Bounced email exists in Odoo but NOT a Representante -> create mail.bounce.log record for review
+3-Tier Logic (reason + tag based):
+  - CLEAN: Representante partner + PERMANENT failure (invalid_address, domain_not_found)
+           -> remove from res.partner + mailing.contact
+  - FLAG:  Temporary failure (mailbox_full, rejected, other) OR non-Representante
+           -> log for manual review, no auto-modification
   - LOG:   Bounced email not found in Odoo -> CSV log only
 
 Usage:
@@ -15,7 +17,7 @@ Usage:
 
 Author: Claude Code Assistant
 Date: 2026-02-03
-Updated: 2026-02-05 (tag filter, 3-tier logic, 6-month window)
+Updated: 2026-02-05 (reason-based tier logic: only permanent failures auto-cleaned)
 """
 
 import csv
@@ -65,6 +67,11 @@ FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
 
 # Representante tag IDs (res.partner.category)
 REPRESENTANTE_TAG_IDS = [25, 26]  # 25=Representante, 26=Representante PDVSA
+
+# Permanent bounce reasons: safe to auto-clean (email will never work again)
+PERMANENT_REASONS = {'invalid_address', 'domain_not_found'}
+# Temporary bounce reasons: flag for review (customer may fix the issue)
+TEMPORARY_REASONS = {'mailbox_full', 'rejected', 'other'}
 
 # Time window: only process bounces from last N days
 BOUNCE_WINDOW_DAYS = 180  # 6 months
@@ -145,6 +152,8 @@ class BounceProcessor:
         print(f"  Odoo:      {ODOO_URL} / {ODOO_DB}")
         print(f"  Tags:      {REPRESENTANTE_TAG_IDS} (Representante, Representante PDVSA)")
         print(f"  Window:    Last {BOUNCE_WINDOW_DAYS} days (>= {cutoff_date})")
+        print(f"  CLEAN:     Representante + permanent ({', '.join(sorted(PERMANENT_REASONS))})")
+        print(f"  FLAG:      Temporary ({', '.join(sorted(TEMPORARY_REASONS))}) or non-Representante")
         print()
 
         self.load_state()
@@ -472,19 +481,29 @@ class BounceProcessor:
                 else:
                     non_rep_partners.append(p)
 
-            # TIER 1: CLEAN Representante partners
-            for partner in rep_partners:
-                tag_names = self._get_partner_tags(partner.get('category_id', []))
-                self._clean_partner(partner, email, reason, reason_text, conv_id, tag_names)
+            is_permanent = reason in PERMANENT_REASONS
 
-            # Also clean mailing.contact if any Representante partner was found
-            if rep_partners:
-                self._search_and_clean_mailing_contacts(email, reason, reason_text, conv_id)
+            # TIER 1: CLEAN only Representante + permanent failure
+            if is_permanent:
+                for partner in rep_partners:
+                    tag_names = self._get_partner_tags(partner.get('category_id', []))
+                    self._clean_partner(partner, email, reason, reason_text, conv_id, tag_names)
 
-            # TIER 2: FLAG non-Representante partners
+                # Also clean mailing.contact if any Representante partner was cleaned
+                if rep_partners:
+                    self._search_and_clean_mailing_contacts(email, reason, reason_text, conv_id)
+            else:
+                # Temporary failure: FLAG even Representante partners
+                for partner in rep_partners:
+                    tag_names = self._get_partner_tags(partner.get('category_id', []))
+                    self._flag_partner(partner, email, reason, reason_text, conv_id, tag_names,
+                                       flag_reason='temporary')
+
+            # TIER 2: FLAG non-Representante partners (any reason)
             for partner in non_rep_partners:
                 tag_names = self._get_partner_tags(partner.get('category_id', []))
-                self._flag_partner(partner, email, reason, reason_text, conv_id, tag_names)
+                self._flag_partner(partner, email, reason, reason_text, conv_id, tag_names,
+                                   flag_reason='non-representante')
 
             if not rep_partners and not non_rep_partners:
                 # Email found via ilike but didn't actually match any partner
@@ -625,12 +644,17 @@ class BounceProcessor:
 
     # ---- TIER 2: FLAG (non-Representante) ---------------------------------
 
-    def _flag_partner(self, partner, email, reason, reason_text, conv_id, tag_names):
-        """Flag a non-Representante partner's bounce for review."""
+    def _flag_partner(self, partner, email, reason, reason_text, conv_id, tag_names,
+                      flag_reason='non-representante'):
+        """Flag a partner's bounce for review (temporary failure or non-Representante)."""
         tags_str = ', '.join(tag_names) if tag_names else '(sin etiquetas)'
         prefix = "[DRY_RUN] " if DRY_RUN else ""
+        if flag_reason == 'temporary':
+            detail = f"Temporary bounce ({reason}) - flagged for review"
+        else:
+            detail = "Not Representante - flagged for review"
         print(f"  -> {prefix}FLAG res.partner #{partner['id']} ({partner['name']}) [{tags_str}]")
-        print(f"     Not Representante - flagged for review")
+        print(f"     {detail}")
 
         self.results['flagged'].append({
             'partner_id': partner['id'],
@@ -642,6 +666,7 @@ class BounceProcessor:
             'conversation_id': conv_id,
             'tags': tag_names,
             'source': 'res.partner',
+            'flag_reason': flag_reason,
         })
 
     def _flag_mailing_contact_only(self, email, reason, reason_text, conv_id, contacts):
@@ -813,7 +838,7 @@ class BounceProcessor:
         print("=" * 70)
 
         if partners:
-            print(f"\nCLEANED - Representante partners ({len(partners)}):")
+            print(f"\nCLEANED - Permanent failures, Representante ({len(partners)}):")
             for p in partners:
                 tags = ', '.join(p.get('tags', []))
                 multi = ' [MULTI]' if ';' in (p.get('old_email_field') or '') else ''
@@ -827,14 +852,26 @@ class BounceProcessor:
                       f"removed {m['email']} [{m['reason']}]")
 
         if flagged:
-            print(f"\nFLAGGED - For review ({len(flagged)}):")
-            for fl in flagged:
-                tags = ', '.join(fl.get('tags', [])) or '(sin etiquetas)'
-                name = fl.get('partner_name') or fl.get('source', '')
-                pid = fl.get('partner_id') or ''
-                pid_str = f" (#{pid})" if pid else ''
-                print(f"  - {name}{pid_str}: "
-                      f"{fl['bounced_email']} [{fl['reason']}] ({tags})")
+            # Separate temporary Representante from non-Representante flags
+            temp_flags = [f for f in flagged if f.get('flag_reason') == 'temporary']
+            nonrep_flags = [f for f in flagged if f.get('flag_reason') != 'temporary']
+
+            if temp_flags:
+                print(f"\nFLAGGED - Temporary bounce, Representante ({len(temp_flags)}):")
+                for fl in temp_flags:
+                    tags = ', '.join(fl.get('tags', [])) or '(sin etiquetas)'
+                    print(f"  - {fl['partner_name']} (#{fl['partner_id']}): "
+                          f"{fl['bounced_email']} [{fl['reason']}] ({tags})")
+
+            if nonrep_flags:
+                print(f"\nFLAGGED - Non-Representante / mailing.contact only ({len(nonrep_flags)}):")
+                for fl in nonrep_flags:
+                    tags = ', '.join(fl.get('tags', [])) or '(sin etiquetas)'
+                    name = fl.get('partner_name') or fl.get('source', '')
+                    pid = fl.get('partner_id') or ''
+                    pid_str = f" (#{pid})" if pid else ''
+                    print(f"  - {name}{pid_str}: "
+                          f"{fl['bounced_email']} [{fl['reason']}] ({tags})")
 
         if not_found:
             print(f"\nNOT FOUND in Odoo ({len(not_found)}):")
@@ -852,11 +889,17 @@ class BounceProcessor:
         print("\n" + "=" * 70)
         print("SUMMARY")
         print("=" * 70)
+        flagged = self.results['flagged']
+        temp_count = sum(1 for f in flagged if f.get('flag_reason') == 'temporary')
+        nonrep_count = len(flagged) - temp_count
+
         print(f"  Total bounces processed:     {len(self.results['processed'])}")
-        print(f"  CLEANED (Representante):")
+        print(f"  CLEANED (permanent + Representante):")
         print(f"    Partners cleaned:          {len(self.results['partners_cleaned'])}")
         print(f"    Mailing contacts cleaned:  {len(self.results['mailing_contacts_cleaned'])}")
-        print(f"  FLAGGED (for review):        {len(self.results['flagged'])}")
+        print(f"  FLAGGED (for review):        {len(flagged)}")
+        print(f"    Temporary (Representante): {temp_count}")
+        print(f"    Non-Representante/other:   {nonrep_count}")
         print(f"  NOT FOUND in Odoo:           {len(self.results['not_found'])}")
         print(f"  Errors:                      {len(self.results['errors'])}")
 

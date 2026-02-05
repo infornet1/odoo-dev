@@ -13,13 +13,15 @@ Automated system to detect bounced emails from Freescout, clean up Odoo contacts
 3. **Mailing List Cleanup**: Also remove bounced email from `mailing.contact` records linked to Representante partners
 4. **Audit Trail**: Maintain CSV log and chatter notes on all affected contacts
 
-## 3-Tier Processing Logic
+## 3-Tier Processing Logic (Reason + Tag Based)
 
 | Tier | Condition | Action |
 |------|-----------|--------|
-| **CLEAN** | Bounced email belongs to a partner with Representante tag (ID 25 or 26) | Remove email from `res.partner` + `mailing.contact`, post chatter note |
-| **FLAG** | Bounced email exists in Odoo but partner is NOT tagged as Representante | Log for manual review (no auto-modification) |
+| **CLEAN** | Representante partner + **permanent** failure (`invalid_address`, `domain_not_found`) | Remove email from `res.partner` + `mailing.contact`, post chatter note |
+| **FLAG** | **Temporary** failure (`mailbox_full`, `rejected`, `other`) regardless of tags, OR non-Representante partner (any reason) | Log for manual review (no auto-modification) |
 | **NOT FOUND** | Bounced email not found in Odoo at all | CSV log only |
+
+**Key design decision:** Temporary failures like `mailbox_full` are NEVER auto-cleaned because the customer may fix the issue (clear inbox, respond to WhatsApp outreach). Only permanent failures where the email will never work again are auto-cleaned.
 
 **Scope filters:**
 - Only processes bounces from last **180 days** (6-month rolling window)
@@ -155,22 +157,23 @@ Phase 1 script verified in testing environment (`localhost:8019`, db=`testing`):
 
 ### Production Dry Run Results (2026-02-05)
 
-Script executed with `DRY_RUN=True` against production (`DB_UEIPAB`) using 3-tier logic:
+Script executed with `DRY_RUN=True` against production (`DB_UEIPAB`) using reason-based 3-tier logic:
 
 - **429 total bounces** detected from Freescout (6-month window)
 - **49 unique emails** after deduplication
 
 | Tier | Count | Description |
 |------|-------|-------------|
-| CLEAN | 23 partners, 27 mailing contacts | Representante-tagged, auto-cleaned |
-| FLAG | 15 records | Non-Representante, manual review needed |
+| CLEAN | 11 partners, 12 mailing contacts | Representante + permanent failure (invalid_address/domain_not_found) |
+| FLAG (temporary) | 13 records | Representante + temporary failure (mailbox_full/other) |
+| FLAG (non-rep) | 14 records | Non-Representante or mailing.contact only |
 | NOT FOUND | 13 emails | Not in Odoo at all |
 
 **Key findings:**
-- 9 of 23 Representante partners will have **empty email** after cleaning (single-email contacts) → priority for WhatsApp outreach
-- RAFAEL DUERTO (#2786) has **both** emails bouncing → will lose all email contact
-- 6 PDVSA domain bounces (`pdvsa.com`, `petropiar.pdvsa.com`) due to DNS failures
-- Flagged records include staff (`@ueipab.edu.ve`) and contacts tagged "Inactivo"
+- Only **permanent** failures auto-cleaned: 6 invalid_address + 5 domain_not_found (all PDVSA)
+- 13 Representante partners with **mailbox_full** flagged for review (customer may fix/respond)
+- All PDVSA domain bounces (`pdvsa.com`, `petropiar.pdvsa.com`) are permanent (DNS dead) → safe to clean
+- Flagged non-Representante includes staff (`@ueipab.edu.ve`), "Inactivo" tagged, and orphan mailing.contacts
 
 Full CSV export: `/home/ftpuser/odoo-dev/bounce_dry_run_2026-02-05.csv`
 

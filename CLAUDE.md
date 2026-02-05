@@ -287,9 +287,12 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 - **Log:** `scripts/bounce_logs/bounce_log.csv` (queryable history)
 - **State:** `scripts/bounce_state.json` (tracks last processed ID)
 
-**3-Tier Logic:** CLEAN (Representante tags 25/26 → auto-remove email) | FLAG (non-Representante → manual review) | NOT FOUND (CSV log only)
+**3-Tier Logic (reason + tag based):**
+- CLEAN: Representante + permanent failure (`invalid_address`, `domain_not_found`) → auto-remove email
+- FLAG: Temporary failure (`mailbox_full`, `rejected`, `other`) or non-Representante → manual review
+- NOT FOUND: CSV log only
 
-**Scope:** Last 180 days, Representante/Representante PDVSA contacts only for auto-cleaning.
+**Scope:** Last 180 days. Only permanent failures are auto-cleaned (temporary = customer may fix it).
 
 **Multi-email handling:** Contacts with multiple emails separated by `;` are handled surgically -- only the bounced email is removed, the rest are preserved.
 
