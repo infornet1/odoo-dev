@@ -12,12 +12,17 @@ Supports TEST_MODE (simulated data) and DRY_RUN (no modifications).
            -> log for manual review, no auto-modification
   - LOG:   Bounced email not found in Odoo -> CSV log only
 
+Post-processing:
+  - Creates mail.bounce.log records in Odoo (testing) for each processed bounce
+  - Updates Freescout conversations with tier prefix, bounced email as customer,
+    internal note, and status change (active or closed)
+
 Usage:
     python3 /opt/odoo-dev/scripts/daily_bounce_processor.py
 
 Author: Claude Code Assistant
 Date: 2026-02-03
-Updated: 2026-02-05 (reason-based tier logic: only permanent failures auto-cleaned)
+Updated: 2026-02-06 (Freescout post-processing + Odoo bounce log creation)
 """
 
 import csv
@@ -82,6 +87,13 @@ STATE_FILE = os.path.join(SCRIPT_DIR, 'bounce_state.json')
 LOG_DIR = os.path.join(SCRIPT_DIR, 'bounce_logs')
 CSV_LOG_FILE = os.path.join(LOG_DIR, 'bounce_log.csv')
 
+# Odoo bounce log creation
+CREATE_BOUNCE_LOG = True  # Create mail.bounce.log records in Odoo
+
+# Freescout post-processing (MySQL writes)
+FREESCOUT_POSTPROCESS = True  # Update Freescout conversations after processing
+FREESCOUT_BASE_URL = 'https://freescout.ueipab.edu.ve'
+
 # ============================================================================
 # Test Bounce Data (used when TEST_MODE = True)
 # ============================================================================
@@ -128,6 +140,9 @@ class BounceProcessor:
         self.uid = None
         self.models = None
         self.state = {}
+        self.freescout_conn = None       # Persistent Freescout MySQL connection
+        self.freescout_admin_id = None   # Freescout admin user ID for notes
+        self.freescout_updates = {}      # conv_id -> update info for post-processing
         self.results = {
             'processed': [],
             'partners_cleaned': [],
@@ -135,6 +150,8 @@ class BounceProcessor:
             'flagged': [],          # non-Representante bounces for review
             'not_found': [],
             'errors': [],
+            'bounce_logs_created': [],  # mail.bounce.log records created
+            'freescout_updated': [],    # Freescout conversations updated
         }
 
     # ---- Main orchestrator ------------------------------------------------
@@ -154,6 +171,8 @@ class BounceProcessor:
         print(f"  Window:    Last {BOUNCE_WINDOW_DAYS} days (>= {cutoff_date})")
         print(f"  CLEAN:     Representante + permanent ({', '.join(sorted(PERMANENT_REASONS))})")
         print(f"  FLAG:      Temporary ({', '.join(sorted(TEMPORARY_REASONS))}) or non-Representante")
+        print(f"  Bounce Log:  {CREATE_BOUNCE_LOG} (create mail.bounce.log in Odoo)")
+        print(f"  FS Postproc: {FREESCOUT_POSTPROCESS} (update Freescout conversations)")
         print()
 
         self.load_state()
@@ -182,10 +201,17 @@ class BounceProcessor:
         for bounce in bounces:
             self.process_bounce(bounce)
 
+        # Freescout post-processing (MySQL writes)
+        if FREESCOUT_POSTPROCESS and self.freescout_updates:
+            self._apply_freescout_postprocessing()
+
         self.save_state()
         self.write_csv_log()
         self.generate_report()
         self.print_summary()
+
+        # Close Freescout connection if open
+        self._close_freescout_connection()
 
     # ---- State management -------------------------------------------------
 
@@ -225,11 +251,47 @@ class BounceProcessor:
         else:
             return self._query_freescout()
 
-    def _query_freescout(self):
+    def _connect_freescout(self):
+        """Open and return persistent Freescout MySQL connection."""
+        if self.freescout_conn and self.freescout_conn.open:
+            return self.freescout_conn
         try:
             import pymysql
         except ImportError:
             print("ERROR: pymysql not installed. Run: pip install pymysql")
+            return None
+
+        try:
+            self.freescout_conn = pymysql.connect(
+                host=FREESCOUT_DB_HOST,
+                user=FREESCOUT_DB_USER,
+                password=FREESCOUT_DB_PASSWORD,
+                database=FREESCOUT_DB_NAME,
+                charset='utf8mb4',
+                cursorclass=pymysql.cursors.DictCursor,
+            )
+            # Get admin user ID for note authorship
+            with self.freescout_conn.cursor() as cursor:
+                cursor.execute("SELECT id FROM users ORDER BY id LIMIT 1")
+                row = cursor.fetchone()
+                self.freescout_admin_id = row['id'] if row else 1
+            print(f"Connected to Freescout MySQL (admin user_id={self.freescout_admin_id})")
+            return self.freescout_conn
+        except Exception as e:
+            print(f"ERROR connecting to Freescout MySQL: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _close_freescout_connection(self):
+        """Close Freescout MySQL connection if open."""
+        if self.freescout_conn and self.freescout_conn.open:
+            self.freescout_conn.close()
+            print("Freescout MySQL connection closed.")
+
+    def _query_freescout(self):
+        conn = self._connect_freescout()
+        if not conn:
             return []
 
         bounces = []
@@ -238,15 +300,6 @@ class BounceProcessor:
         cutoff_date = (datetime.now() - timedelta(days=BOUNCE_WINDOW_DAYS)).strftime('%Y-%m-%d')
 
         try:
-            conn = pymysql.connect(
-                host=FREESCOUT_DB_HOST,
-                user=FREESCOUT_DB_USER,
-                password=FREESCOUT_DB_PASSWORD,
-                database=FREESCOUT_DB_NAME,
-                charset='utf8mb4',
-                cursorclass=pymysql.cursors.DictCursor,
-            )
-
             with conn.cursor() as cursor:
                 # Type 1: Standalone DSN conversations (with date filter)
                 cursor.execute("""
@@ -295,8 +348,6 @@ class BounceProcessor:
                         })
                         if row['thread_id'] > self.state.get('last_thread_id', 0):
                             self.state['last_thread_id'] = row['thread_id']
-
-            conn.close()
 
         except Exception as e:
             print(f"ERROR querying Freescout: {e}")
@@ -441,6 +492,108 @@ class BounceProcessor:
         )
         return [t['name'] for t in tags]
 
+    # ---- Bounce log creation (Odoo) --------------------------------------
+
+    def _create_bounce_log_record(self, bounced_email, reason, reason_text,
+                                  conv_id, tier, partner_id=None,
+                                  mailing_contact_id=None):
+        """Create a mail.bounce.log record in Odoo via XML-RPC."""
+        if not CREATE_BOUNCE_LOG:
+            return None
+
+        vals = {
+            'bounced_email': bounced_email,
+            'bounce_reason': reason,
+            'bounce_detail': (reason_text or '')[:500],
+            'freescout_conversation_id': conv_id,
+            'action_tier': tier,
+        }
+        if partner_id:
+            vals['partner_id'] = partner_id
+        if mailing_contact_id:
+            vals['mailing_contact_id'] = mailing_contact_id
+
+        prefix = "[DRY_RUN] " if DRY_RUN else ""
+        print(f"     {prefix}Creating mail.bounce.log: tier={tier}, "
+              f"partner={partner_id or 'N/A'}, mc={mailing_contact_id or 'N/A'}")
+
+        if DRY_RUN:
+            self.results['bounce_logs_created'].append({
+                'bounced_email': bounced_email, 'tier': tier,
+                'conv_id': conv_id, 'record_id': None,
+            })
+            return None
+
+        try:
+            record_id = self.models.execute_kw(
+                ODOO_DB, self.uid, ODOO_PASSWORD,
+                'mail.bounce.log', 'create',
+                [vals]
+            )
+            print(f"     Created mail.bounce.log #{record_id}")
+            self.results['bounce_logs_created'].append({
+                'bounced_email': bounced_email, 'tier': tier,
+                'conv_id': conv_id, 'record_id': record_id,
+            })
+            return record_id
+        except Exception as e:
+            print(f"     WARNING: Could not create bounce log: {e}")
+            self.results['errors'].append({
+                'email': bounced_email, 'model': 'mail.bounce.log',
+                'error': str(e),
+            })
+            return None
+
+    # ---- Freescout update accumulation ------------------------------------
+
+    def _accumulate_freescout_update(self, conv_id, tier, bounced_email,
+                                     reason, partner_id=None,
+                                     partner_name=None,
+                                     remaining_emails=None,
+                                     bounce_log_id=None,
+                                     mailing_contact_id=None):
+        """Accumulate a Freescout conversation update for post-processing."""
+        if not FREESCOUT_POSTPROCESS:
+            return
+
+        tier_config = {
+            'clean': {
+                'prefix': '[LIMPIADO]',
+                'status': 1,  # Active
+                'action_desc': 'Email removido automaticamente del contacto Odoo',
+            },
+            'flag': {
+                'prefix': '[REVISION]',
+                'status': 1,  # Active
+                'action_desc': 'Marcado para revision manual',
+            },
+            'not_found': {
+                'prefix': '[NO ENCONTRADO]',
+                'status': 3,  # Closed
+                'action_desc': 'Email no encontrado en Odoo',
+            },
+        }
+
+        config = tier_config.get(tier, tier_config['flag'])
+
+        # Only store first update per conversation (dedup)
+        if conv_id in self.freescout_updates:
+            return
+
+        self.freescout_updates[conv_id] = {
+            'tier': tier,
+            'prefix': config['prefix'],
+            'conv_status': config['status'],
+            'action_desc': config['action_desc'],
+            'bounced_email': bounced_email,
+            'reason': reason,
+            'partner_id': partner_id,
+            'partner_name': partner_name,
+            'remaining_emails': remaining_emails,
+            'bounce_log_id': bounce_log_id,
+            'mailing_contact_id': mailing_contact_id,
+        }
+
     # ---- Per-bounce processing (3-tier) -----------------------------------
 
     def process_bounce(self, bounce):
@@ -578,6 +731,19 @@ class BounceProcessor:
                 current_email, new_email, conv_id
             )
 
+        # Create bounce log record
+        log_id = self._create_bounce_log_record(
+            email, reason, reason_text, conv_id, 'clean',
+            partner_id=partner['id'])
+
+        # Accumulate Freescout update
+        self._accumulate_freescout_update(
+            conv_id, 'clean', email, reason,
+            partner_id=partner['id'],
+            partner_name=partner['name'],
+            remaining_emails=new_email or None,
+            bounce_log_id=log_id)
+
         self.results['partners_cleaned'].append({
             'partner_id': partner['id'],
             'partner_name': partner['name'],
@@ -656,6 +822,18 @@ class BounceProcessor:
         print(f"  -> {prefix}FLAG res.partner #{partner['id']} ({partner['name']}) [{tags_str}]")
         print(f"     {detail}")
 
+        # Create bounce log record
+        log_id = self._create_bounce_log_record(
+            email, reason, reason_text, conv_id, 'flag',
+            partner_id=partner['id'])
+
+        # Accumulate Freescout update
+        self._accumulate_freescout_update(
+            conv_id, 'flag', email, reason,
+            partner_id=partner['id'],
+            partner_name=partner['name'],
+            bounce_log_id=log_id)
+
         self.results['flagged'].append({
             'partner_id': partner['id'],
             'partner_name': partner['name'],
@@ -679,6 +857,18 @@ class BounceProcessor:
             print(f"  -> {prefix}FLAG mailing.contact #{mc['id']} ({mc['name']})")
             print(f"     No linked partner - flagged for review")
 
+            # Create bounce log record
+            log_id = self._create_bounce_log_record(
+                email, reason, reason_text, conv_id, 'flag',
+                mailing_contact_id=mc['id'])
+
+            # Accumulate Freescout update
+            self._accumulate_freescout_update(
+                conv_id, 'flag', email, reason,
+                partner_name=mc.get('name'),
+                mailing_contact_id=mc['id'],
+                bounce_log_id=log_id)
+
             self.results['flagged'].append({
                 'partner_id': None,
                 'partner_name': None,
@@ -695,6 +885,16 @@ class BounceProcessor:
 
     def _handle_not_found(self, email, conv_id):
         print(f"  -> Not found in Odoo (neither res.partner nor mailing.contact)")
+
+        # Create bounce log record (no partner/mailing contact link)
+        log_id = self._create_bounce_log_record(
+            email, 'other', '', conv_id, 'not_found')
+
+        # Accumulate Freescout update
+        self._accumulate_freescout_update(
+            conv_id, 'not_found', email, 'other',
+            bounce_log_id=log_id)
+
         self.results['not_found'].append({
             'email': email,
             'conversation_id': conv_id,
@@ -768,6 +968,162 @@ class BounceProcessor:
             )
             self._note_subtype_id = ids[0]['res_id'] if ids else False
         return self._note_subtype_id
+
+    # ---- Freescout post-processing (MySQL writes) -------------------------
+
+    def _apply_freescout_postprocessing(self):
+        """Apply accumulated updates to Freescout conversations via MySQL."""
+        if not self.freescout_updates:
+            return
+
+        print("\n" + "-" * 70)
+        print("FREESCOUT POST-PROCESSING")
+        print("-" * 70)
+
+        if TEST_MODE:
+            print("TEST_MODE: Skipping Freescout post-processing (no real connection).")
+            for conv_id, info in self.freescout_updates.items():
+                print(f"  Would update conv #{conv_id}: "
+                      f"subject={info['prefix']}..., status={'Active' if info['conv_status'] == 1 else 'Closed'}")
+            return
+
+        conn = self._connect_freescout()
+        if not conn:
+            print("ERROR: Cannot connect to Freescout for post-processing.")
+            return
+
+        reason_labels = {
+            'mailbox_full': 'Buzon lleno',
+            'invalid_address': 'Direccion invalida',
+            'domain_not_found': 'Dominio no encontrado',
+            'rejected': 'Rechazado por servidor',
+            'other': 'Otro',
+        }
+
+        for conv_id, info in self.freescout_updates.items():
+            prefix = "[DRY_RUN] " if DRY_RUN else ""
+            try:
+                with conn.cursor() as cursor:
+                    # Read current subject
+                    cursor.execute(
+                        "SELECT subject FROM conversations WHERE id = %s",
+                        (conv_id,))
+                    row = cursor.fetchone()
+                    if not row:
+                        print(f"  {prefix}Conv #{conv_id}: NOT FOUND in Freescout, skipping")
+                        continue
+
+                    current_subject = row['subject'] or ''
+                    tier_prefix = info['prefix']
+
+                    # Skip if already prefixed
+                    if current_subject.startswith('[LIMPIADO]') or \
+                       current_subject.startswith('[REVISION]') or \
+                       current_subject.startswith('[NO ENCONTRADO]'):
+                        new_subject = current_subject
+                    else:
+                        new_subject = f"{tier_prefix} {current_subject}"
+
+                    status_label = 'Active' if info['conv_status'] == 1 else 'Closed'
+                    print(f"  {prefix}Conv #{conv_id}: subject=\"{new_subject[:60]}...\", "
+                          f"status={status_label}, customer={info['bounced_email']}")
+
+                    if DRY_RUN:
+                        # Build note body for logging
+                        note_body = self._build_freescout_note_html(info, reason_labels)
+                        print(f"  {prefix}Would insert internal note on conv #{conv_id}")
+                        self.results['freescout_updated'].append({
+                            'conv_id': conv_id, 'tier': info['tier'],
+                            'prefix': tier_prefix, 'dry_run': True,
+                        })
+                        continue
+
+                    # UPDATE conversation: subject, customer_email, status
+                    cursor.execute("""
+                        UPDATE conversations
+                        SET subject = %s,
+                            customer_email = %s,
+                            status = %s,
+                            updated_at = NOW()
+                        WHERE id = %s
+                    """, (new_subject, info['bounced_email'],
+                          info['conv_status'], conv_id))
+
+                    # INSERT internal note thread
+                    note_body = self._build_freescout_note_html(info, reason_labels)
+                    cursor.execute("""
+                        INSERT INTO threads
+                            (conversation_id, type, body, state, status,
+                             source_via, source_type,
+                             created_by_user_id, user_id,
+                             created_at, updated_at)
+                        VALUES (%s, 3, %s, 2, 6, 2, 2, %s, %s, NOW(), NOW())
+                    """, (conv_id, note_body,
+                          self.freescout_admin_id, self.freescout_admin_id))
+
+                    # Update threads_count
+                    cursor.execute("""
+                        UPDATE conversations
+                        SET threads_count = threads_count + 1
+                        WHERE id = %s
+                    """, (conv_id,))
+
+                conn.commit()
+                print(f"  Conv #{conv_id}: Updated successfully")
+
+                self.results['freescout_updated'].append({
+                    'conv_id': conv_id, 'tier': info['tier'],
+                    'prefix': tier_prefix, 'dry_run': False,
+                })
+
+            except Exception as e:
+                print(f"  ERROR updating conv #{conv_id}: {e}")
+                self.results['errors'].append({
+                    'email': info['bounced_email'],
+                    'model': 'freescout',
+                    'error': str(e),
+                })
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
+        print(f"\nFreescout post-processing complete: "
+              f"{len(self.results['freescout_updated'])} conversations updated.")
+
+    def _build_freescout_note_html(self, info, reason_labels):
+        """Build internal note HTML for a Freescout conversation."""
+        reason_label = reason_labels.get(info['reason'], info['reason'])
+        now = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+        # Odoo contact link
+        odoo_contact_html = 'N/A'
+        if info.get('partner_id'):
+            odoo_url = (f"{ODOO_URL}/web#id={info['partner_id']}"
+                        f"&model=res.partner&view_type=form")
+            odoo_contact_html = (
+                f'<a href="{odoo_url}">'
+                f'{info.get("partner_name", "")} (#{info["partner_id"]})</a>')
+
+        # Bounce log link
+        bounce_log_html = 'N/A'
+        if info.get('bounce_log_id'):
+            bl_url = (f"{ODOO_URL}/web#id={info['bounce_log_id']}"
+                      f"&model=mail.bounce.log&view_type=form")
+            bounce_log_html = f'<a href="{bl_url}">Ver registro</a>'
+
+        remaining = info.get('remaining_emails') or 'N/A'
+
+        return (
+            f"<b>Bounce Processor - Accion Automatica</b><br/>"
+            f"<b>Email rebotado:</b> {info['bounced_email']}<br/>"
+            f"<b>Razon:</b> {reason_label}<br/>"
+            f"<b>Accion:</b> {info['action_desc']}<br/>"
+            f"<b>Contacto Odoo:</b> {odoo_contact_html}<br/>"
+            f"<b>Emails restantes:</b> {remaining}<br/>"
+            f"<b>Bounce Log Odoo:</b> {bounce_log_html}<br/>"
+            f"<b>Fecha:</b> {now}"
+        )
 
     # ---- CSV log ----------------------------------------------------------
 
@@ -883,6 +1239,22 @@ class BounceProcessor:
             for err in errors:
                 print(f"  - {err['email']} ({err['model']}): {err['error']}")
 
+        # Bounce log records created
+        bl_created = self.results['bounce_logs_created']
+        if bl_created:
+            print(f"\nBOUNCE LOG RECORDS ({len(bl_created)}):")
+            for bl in bl_created:
+                rid = bl.get('record_id') or '(dry-run)'
+                print(f"  - {bl['bounced_email']} -> mail.bounce.log #{rid} [{bl['tier']}]")
+
+        # Freescout post-processing
+        fs_updated = self.results['freescout_updated']
+        if fs_updated:
+            print(f"\nFREESCOUT UPDATES ({len(fs_updated)}):")
+            for fs in fs_updated:
+                dr = " [DRY_RUN]" if fs.get('dry_run') else ""
+                print(f"  - Conv #{fs['conv_id']}: {fs['prefix']} [{fs['tier']}]{dr}")
+
     # ---- Summary ----------------------------------------------------------
 
     def print_summary(self):
@@ -901,6 +1273,8 @@ class BounceProcessor:
         print(f"    Temporary (Representante): {temp_count}")
         print(f"    Non-Representante/other:   {nonrep_count}")
         print(f"  NOT FOUND in Odoo:           {len(self.results['not_found'])}")
+        print(f"  Bounce logs created:         {len(self.results['bounce_logs_created'])}")
+        print(f"  Freescout convs updated:     {len(self.results['freescout_updated'])}")
         print(f"  Errors:                      {len(self.results['errors'])}")
 
         if DRY_RUN:

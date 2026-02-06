@@ -13,6 +13,11 @@
                 <field name="bounced_email" string="Email Rebotado"/>
                 <field name="partner_id" string="Contacto"/>
                 <field name="bounce_reason" string="Razon"/>
+                <field name="action_tier" string="Accion" widget="badge"
+                       decoration-success="action_tier == 'clean'"
+                       decoration-warning="action_tier == 'flag'"
+                       decoration-info="action_tier == 'not_found'"
+                       optional="show"/>
                 <field name="state" string="Estado" widget="badge"
                        decoration-danger="state == 'pending'"
                        decoration-warning="state in ('notified', 'contacted')"
@@ -51,6 +56,7 @@
                             <field name="bounce_date"/>
                             <field name="bounced_email"/>
                             <field name="bounce_reason"/>
+                            <field name="action_tier"/>
                         </group>
                         <group string="Contacto">
                             <field name="partner_id"/>
@@ -75,6 +81,7 @@
                         <field name="bounce_detail" nolabel="1"
                                placeholder="Error DSN original del servidor de correo"/>
                         <field name="freescout_conversation_id"/>
+                        <field name="freescout_url" widget="url"/>
                     </group>
                     <group string="WhatsApp (Futuro)" invisible="not whatsapp_contacted">
                         <field name="whatsapp_contacted"/>
@@ -108,6 +115,13 @@
                 <filter name="filter_resolved" string="Resuelto"
                         domain="[('state', '=', 'resolved')]"/>
                 <separator/>
+                <filter name="filter_tier_clean" string="Limpiado"
+                        domain="[('action_tier', '=', 'clean')]"/>
+                <filter name="filter_tier_flag" string="Revision"
+                        domain="[('action_tier', '=', 'flag')]"/>
+                <filter name="filter_tier_not_found" string="No Encontrado"
+                        domain="[('action_tier', '=', 'not_found')]"/>
+                <separator/>
                 <filter name="filter_this_month" string="Este Mes"
                         domain="[('bounce_date', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%%Y-%%m-%%d')),
                                  ('bounce_date', '&lt;', (context_today() + relativedelta(months=1, day=1)).strftime('%%Y-%%m-%%d'))]"/>
@@ -120,6 +134,8 @@
                             context="{'group_by': 'bounce_reason'}"/>
                     <filter name="group_state" string="Estado"
                             context="{'group_by': 'state'}"/>
+                    <filter name="group_tier" string="Accion del Script"
+                            context="{'group_by': 'action_tier'}"/>
                     <filter name="group_partner" string="Contacto"
                             context="{'group_by': 'partner_id'}"/>
                     <filter name="group_month" string="Mes"

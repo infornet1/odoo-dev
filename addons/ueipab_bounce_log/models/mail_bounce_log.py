@@ -47,6 +47,13 @@ class MailBounceLog(models.Model):
 
     # Source tracking
     freescout_conversation_id = fields.Integer('Freescout Conversation ID')
+    freescout_url = fields.Char(
+        'Freescout Link', compute='_compute_freescout_url', store=False)
+    action_tier = fields.Selection([
+        ('clean', 'Limpiado'),
+        ('flag', 'Revision'),
+        ('not_found', 'No Encontrado'),
+    ], string='Accion del Script')
 
     # Future: WhatsApp agent fields
     whatsapp_contacted = fields.Boolean('Contactado por WhatsApp')
@@ -57,6 +64,17 @@ class MailBounceLog(models.Model):
          'UNIQUE(freescout_conversation_id, bounced_email)',
          'Ya existe un registro de rebote para esta conversacion y email.'),
     ]
+
+    @api.depends('freescout_conversation_id')
+    def _compute_freescout_url(self):
+        for rec in self:
+            if rec.freescout_conversation_id:
+                rec.freescout_url = (
+                    f'https://freescout.ueipab.edu.ve/conversation/'
+                    f'{rec.freescout_conversation_id}'
+                )
+            else:
+                rec.freescout_url = False
 
     def _append_email_to_field(self, record, field_name, email):
         """Append an email to a multi-email field using ; separator."""

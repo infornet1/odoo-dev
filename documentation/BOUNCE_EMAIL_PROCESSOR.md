@@ -47,7 +47,7 @@ Freescout MySQL ──(READ-ONLY)──> daily_bounce_processor.py
                                                       bounce_state.json (last processed ID)
 ```
 
-**Critical Rule:** The script NEVER writes, updates, or deletes anything in the Freescout database.
+**Note:** As of v1.1.0, the script optionally writes to Freescout for post-processing (subject prefix, internal note, status change). Controlled by `FREESCOUT_POSTPROCESS` flag.
 
 ## Phase 1: Standalone Script (Current)
 
@@ -181,7 +181,7 @@ Full CSV export: `/home/ftpuser/odoo-dev/bounce_dry_run_2026-02-05.csv`
 
 ## Phase 2: Odoo Module (Installed in Testing)
 
-**Module:** `ueipab_bounce_log` | **Version:** 17.0.1.0.0 | **Depends:** `contacts`, `mail`, `mass_mailing`
+**Module:** `ueipab_bounce_log` | **Version:** 17.0.1.1.0 | **Depends:** `contacts`, `mail`, `mass_mailing`
 
 The module extends the existing Contacts app (not a standalone app). WhatsApp AI agent integration is planned for a future phase.
 
@@ -247,6 +247,10 @@ class MailBounceLog(models.Model):
 
     # Source tracking
     freescout_conversation_id = fields.Integer('Freescout Conversation ID')
+    freescout_url          = fields.Char(compute='_compute_freescout_url')  # v1.1.0
+    action_tier            = fields.Selection([                              # v1.1.0
+        ('clean', 'Limpiado'), ('flag', 'Revision'), ('not_found', 'No Encontrado'),
+    ], string='Accion del Script')
 
     # Future: WhatsApp agent fields
     whatsapp_contacted     = fields.Boolean('Contactado por WhatsApp')
@@ -315,12 +319,19 @@ Existing CSV log data from Phase 1 can be imported into the Odoo model as a one-
 | Bounce thread content | `threads` | Extract bounced email + reason |
 | Customer email | `customers` / `emails` | Cross-reference with Odoo |
 
-### What We NEVER Do
+### What We NEVER Do (Phase 1 - prior to v1.1.0)
 
-- Insert, update, or delete any Freescout records
-- Mark conversations as processed in Freescout
-- Close or modify Freescout conversations
-- Create Freescout tags, notes, or any other data
+- ~~Insert, update, or delete any Freescout records~~ (v1.1.0 adds optional post-processing)
+- Mark conversations as processed in Freescout (state file used instead)
+
+### Freescout Post-Processing (v1.1.0, optional)
+
+When `FREESCOUT_POSTPROCESS = True`, after all bounces are processed:
+- **Subject prefix:** `[LIMPIADO]`, `[REVISION]`, or `[NO ENCONTRADO]`
+- **Customer email:** Set to the bounced email address
+- **Status:** Active (1) for CLEAN/FLAG, Closed (3) for NOT FOUND
+- **Internal note:** HTML note with Odoo contact link, bounce log link, action details
+- All writes are skipped in DRY_RUN mode
 
 State tracking is handled entirely via the local `bounce_state.json` file.
 

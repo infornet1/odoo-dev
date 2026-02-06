@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-02-06
 
 ## Core Instructions
 
@@ -214,7 +214,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_payroll_enhancements | 17.0.1.52.1 | 2026-01-08 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
-| ueipab_bounce_log | 17.0.1.0.0 | 2026-02-03 |
+| ueipab_bounce_log | 17.0.1.1.0 | 2026-02-06 |
 
 ### Production Environment
 
@@ -298,12 +298,17 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ### Phase 2 - Odoo Module (Installed in Testing)
 
-- **Module:** `ueipab_bounce_log` v17.0.1.0.0 (extends Contacts app, not a standalone app)
+- **Module:** `ueipab_bounce_log` v17.0.1.1.0 (extends Contacts app, not a standalone app)
 - **Menu:** `Contacts > Bounce Log` (direct submenu)
 - **Model:** `mail.bounce.log` with resolution workflow
+- **New fields (v1.1.0):**
+  - `action_tier` -- Selection (Limpiado/Revision/No Encontrado) showing script tier action
+  - `freescout_url` -- Computed clickable link to Freescout conversation
 - **Resolution:** Two actions per bounce record:
   - "Restaurar Email Original" -- re-enable old email (temporary issue fixed)
   - "Aplicar Nuevo Email" -- apply customer's new email
+- **Script integration:** Script auto-creates `mail.bounce.log` records via XML-RPC with tier, partner link, and Freescout conversation ID
+- **Freescout post-processing:** Script updates Freescout conversations with `[LIMPIADO]`/`[REVISION]`/`[NO ENCONTRADO]` prefix, internal note with bidirectional Odoo links, and status change
 - **WhatsApp Integration:** Agent queries pending bounces, contacts customer via WhatsApp, updates record on reply
 
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
