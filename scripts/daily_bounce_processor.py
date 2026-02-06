@@ -559,17 +559,17 @@ class BounceProcessor:
         tier_config = {
             'clean': {
                 'prefix': '[LIMPIADO]',
-                'status': 1,  # Active
+                'status': 3,  # Closed - resolution handled in Odoo
                 'action_desc': 'Email removido automaticamente del contacto Odoo',
             },
             'flag': {
                 'prefix': '[REVISION]',
-                'status': 1,  # Active
-                'action_desc': 'Marcado para revision manual',
+                'status': 3,  # Closed - resolution handled in Odoo
+                'action_desc': 'Marcado para revision manual en Odoo',
             },
             'not_found': {
                 'prefix': '[NO ENCONTRADO]',
-                'status': 3,  # Closed
+                'status': 3,  # Closed - no action possible
                 'action_desc': 'Email no encontrado en Odoo',
             },
         }
