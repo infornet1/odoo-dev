@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.0.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.1.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -79,6 +79,8 @@ Stores configuration for each business process (skill).
 | `model_name` | Char | AI model (default: `claude-haiku-4-5-20251001`) |
 | `max_turns` | Integer | Max customer replies before closing |
 | `timeout_hours` | Integer | Hours to wait before timeout |
+| `reminder_interval_hours` | Integer | Hours between reminders (default: 24) |
+| `max_reminders` | Integer | Max reminders before timeout (default: 2) |
 | `source_model` | Char | Linked Odoo model name |
 | `greeting_template` | Text | Optional greeting template |
 
@@ -97,18 +99,25 @@ Tracks each WhatsApp conversation with a customer.
 | `agent_message_ids` | One2many | WhatsApp messages |
 | `turn_count` | Integer | Computed: inbound message count |
 | `resolution_summary` | Text | Summary when resolved |
+| `reminder_count` | Integer | Reminders sent (resets on reply) |
+| `last_reminder_date` | Datetime | When last reminder was sent |
+| `verification_email_sent_date` | Datetime | When verification email was sent |
+| `verification_email_recipient` | Char | Email address being verified |
 
 **State Machine:**
 
 ```
 draft -> waiting (action_start: send greeting)
-waiting -> active (incoming reply received)
+waiting -> active (incoming reply received, reminder_count reset)
 active -> waiting (AI response sent)
-waiting -> resolved (skill detects resolution)
-waiting -> timeout (no reply after timeout_hours)
+waiting -> waiting (reminder sent, reminder_count incremented)
+waiting -> resolved (skill detects resolution OR email reply detected)
+waiting -> timeout (no reply after all reminders exhausted)
 active -> failed (max_turns reached)
 failed/timeout -> waiting (action_retry)
 ```
+
+**Reminder Timing (defaults):** 24h wait → reminder 1 → 24h → reminder 2 → 24h → timeout (72h total)
 
 ### ai.agent.message
 
@@ -134,6 +143,7 @@ class MySkill:
     def get_context(self, conversation): ...
     def get_system_prompt(self, conversation, context): ...
     def get_greeting(self, conversation, context): ...
+    def get_reminder_message(self, conversation, context, reminder_count): ...
     def process_ai_response(self, conversation, ai_response, context): ...
     def on_resolve(self, conversation, resolution_data): ...
 ```
@@ -165,7 +175,7 @@ class MySkill:
 | Cron | Interval | Purpose |
 |------|----------|---------|
 | AI Agent: Poll WhatsApp Messages | 5 min | Fetch new received messages (fallback to webhook) |
-| AI Agent: Check Conversation Timeouts | 1 hour | Mark waiting conversations as timeout |
+| AI Agent: Check Conversation Timeouts | 1 hour | Send reminders or timeout waiting conversations |
 
 ## Security
 
@@ -218,6 +228,44 @@ By default, `ai_agent.dry_run = True`. In this mode:
 - Messages are recorded with placeholder content
 
 Set `ai_agent.dry_run = False` in System Parameters to enable live mode.
+
+## WhatsApp Reminders
+
+When a customer doesn't reply, the system sends periodic reminders before giving up:
+
+1. Initial greeting sent → wait `reminder_interval_hours` (default: 24h)
+2. No reply → send reminder 1 (gentle follow-up) → wait again
+3. No reply → send reminder 2 (final notice) → wait again
+4. No reply → timeout (conversation closed)
+
+Each skill provides two reminder tones via `get_reminder_message()`:
+- **First reminder** (count=0): gentle follow-up ("Le escribimos nuevamente...")
+- **Last reminder** (count=1+): final notice ("Le contactamos por ultima vez...")
+
+When a customer replies at any point, `reminder_count` resets to 0.
+
+## Freescout Email Verification Detection
+
+Bridge script that detects when customers reply to verification emails in Freescout and auto-resolves conversations.
+
+**Script:** `scripts/ai_agent_email_checker.py`
+
+**Flow:**
+1. Query Odoo for conversations with `verification_email_sent_date` set + state=`waiting`
+2. Query Freescout threads WHERE `from` LIKE `%recipient_email%` AND `type=1` (customer reply) AND `created_at > verification_date`
+3. For matches → call `action_resolve_via_email()` via XML-RPC
+4. Resolution sends farewell WhatsApp + triggers bounce log restore
+
+**Execution:**
+```bash
+# Manual
+python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py
+
+# Cron (every 15 minutes)
+*/15 * * * * python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py >> /var/log/ai_agent_email_checker.log 2>&1
+```
+
+**Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials). `DRY_RUN=True` by default.
 
 ## Cost Estimates
 

@@ -216,7 +216,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.1.0 | 2026-02-06 |
-| ueipab_ai_agent | 17.0.1.0.0 | 2026-02-07 |
+| ueipab_ai_agent | 17.0.1.1.0 | 2026-02-07 |
 
 ### Production Environment
 
@@ -340,7 +340,7 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete d
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.0.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.1.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
 
@@ -353,11 +353,11 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 ### Skills
 
-| Skill Code | Name | Source Model | Max Turns | Timeout |
-|-----------|------|-------------|-----------|---------|
-| `bounce_resolution` | Resolucion de Rebotes | `mail.bounce.log` | 5 | 48h |
-| `bill_reminder` | Recordatorio de Factura | `account.move` | 3 | 72h |
-| `billing_support` | Soporte de Facturacion | `res.partner` | 4 | 24h |
+| Skill Code | Name | Source Model | Max Turns | Timeout | Reminder |
+|-----------|------|-------------|-----------|---------|----------|
+| `bounce_resolution` | Resolucion de Rebotes | `mail.bounce.log` | 5 | 48h | 24h / 2 |
+| `bill_reminder` | Recordatorio de Factura | `account.move` | 3 | 72h | 24h / 2 |
+| `billing_support` | Soporte de Facturacion | `res.partner` | 4 | 24h | 24h / 2 |
 
 ### Key Models
 
@@ -368,6 +368,20 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 | `ai.agent.message` | Message log (sent + received) |
 | `ai.agent.whatsapp.service` | MassivaMóvil API abstraction |
 | `ai.agent.claude.service` | Anthropic API abstraction |
+
+### Conversation Features (v1.1.0)
+
+**WhatsApp Reminders:** Automatic follow-ups when customer doesn't reply.
+- Configurable per skill: `reminder_interval_hours` (default 24h), `max_reminders` (default 2)
+- Effective total wait = (max_reminders + 1) x interval (default: 72h)
+- Two tones per skill: gentle follow-up → final notice
+- `reminder_count` resets on customer reply
+
+**Freescout Email Verification Detection:** Bridge script detects email replies.
+- Script: `scripts/ai_agent_email_checker.py` (cron every 15 min)
+- Queries Freescout for customer replies to verification emails
+- Auto-resolves conversations + triggers bounce log restore
+- Sends farewell WhatsApp to customer
 
 ### System Parameters
 

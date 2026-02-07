@@ -20,6 +20,7 @@
                        decoration-success="state == 'resolved'"
                        decoration-info="state == 'active'"/>
                 <field name="turn_count"/>
+                <field name="reminder_count" optional="hide"/>
                 <field name="last_message_date"/>
                 <field name="last_sender"/>
                 <field name="create_date" string="Creada"/>
@@ -61,6 +62,8 @@
                         <group string="Seguimiento">
                             <field name="last_message_date"/>
                             <field name="last_sender"/>
+                            <field name="reminder_count"/>
+                            <field name="last_reminder_date"/>
                             <field name="create_date" string="Fecha Creacion"/>
                             <field name="resolved_date"/>
                         </group>
@@ -69,6 +72,10 @@
                         <group string="Origen">
                             <field name="source_model"/>
                             <field name="source_id"/>
+                        </group>
+                        <group string="Verificacion Email" invisible="not verification_email_sent_date">
+                            <field name="verification_email_sent_date"/>
+                            <field name="verification_email_recipient"/>
                         </group>
                     </group>
                     <notebook>

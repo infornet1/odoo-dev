@@ -39,6 +39,8 @@
                         <group string="Limites">
                             <field name="max_turns"/>
                             <field name="timeout_hours"/>
+                            <field name="reminder_interval_hours"/>
+                            <field name="max_reminders"/>
                         </group>
                     </group>
                     <notebook>

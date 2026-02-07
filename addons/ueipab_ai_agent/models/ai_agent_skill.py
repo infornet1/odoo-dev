@@ -17,6 +17,12 @@ class AiAgentSkill(models.Model):
     max_turns = fields.Integer('Max Turnos', default=5)
     timeout_hours = fields.Integer('Timeout (horas)', default=48)
 
+    # Reminder configuration
+    reminder_interval_hours = fields.Integer('Intervalo Recordatorio (horas)', default=24,
+        help='Horas entre cada recordatorio cuando el cliente no responde.')
+    max_reminders = fields.Integer('Max Recordatorios', default=2,
+        help='Cantidad maxima de recordatorios antes de cerrar por timeout.')
+
     # WhatsApp template
     greeting_template = fields.Text('Plantilla Saludo Inicial')
 

@@ -44,6 +44,14 @@ class AiAgentConversation(models.Model):
     last_message_date = fields.Datetime('Ultimo Mensaje')
     last_sender = fields.Selection([('agent', 'Agente'), ('customer', 'Cliente')], string='Ultimo Remitente')
 
+    # Reminder tracking
+    reminder_count = fields.Integer('Recordatorios Enviados', default=0)
+    last_reminder_date = fields.Datetime('Ultimo Recordatorio')
+
+    # Verification email tracking
+    verification_email_sent_date = fields.Datetime('Verificacion Enviada')
+    verification_email_recipient = fields.Char('Email Verificado')
+
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
         for rec in self:
@@ -129,6 +137,7 @@ class AiAgentConversation(models.Model):
             'state': 'active',
             'last_message_date': fields.Datetime.now(),
             'last_sender': 'customer',
+            'reminder_count': 0,
         })
 
         # Check turn limit
@@ -172,8 +181,33 @@ class AiAgentConversation(models.Model):
         action = skill_handler.process_ai_response(self, ai_content, context)
 
         if action.get('resolve'):
+            # Send farewell message before resolving
+            farewell = action.get('farewell_message')
+            if farewell:
+                if dry_run:
+                    _logger.info("DRY_RUN: Would send farewell WhatsApp to %s: %s",
+                                 self.phone, farewell[:100])
+                    wa_msg_id = 0
+                else:
+                    wa_service = self.env['ai.agent.whatsapp.service']
+                    result = wa_service.send_message(self.phone, farewell)
+                    wa_msg_id = result.get('message_id', 0)
+
+                self.env['ai.agent.message'].create({
+                    'conversation_id': self.id,
+                    'direction': 'outbound',
+                    'body': farewell,
+                    'whatsapp_message_id': wa_msg_id,
+                    'ai_input_tokens': input_tokens,
+                    'ai_output_tokens': output_tokens,
+                })
+
             self.action_resolve(action.get('summary', ''), action.get('resolution_data'))
             return
+
+        # Handle intermediate actions (e.g., send verification email)
+        if action.get('send_verification_email'):
+            self._send_verification_email(action['send_verification_email'])
 
         # Send AI response via WhatsApp
         response_text = action.get('message', ai_content)
@@ -201,6 +235,52 @@ class AiAgentConversation(models.Model):
             'last_message_date': fields.Datetime.now(),
             'last_sender': 'agent',
         })
+
+    def _send_verification_email(self, recipient_email):
+        """Send a verification email to check if the customer's email is working."""
+        self.ensure_one()
+        icp = self.env['ir.config_parameter'].sudo()
+        dry_run = self._is_dry_run()
+
+        email_from = icp.get_param(
+            'ai_agent.verification_email_from',
+            'Colegio Andrés Bello - Soporte <soporte@ueipab.edu.ve>',
+        )
+        institution = icp.get_param('ai_agent.institution_display_name', 'UEIPAB')
+        first_name = (self.partner_id.name or '').split()[0] if self.partner_id.name else 'Estimado/a'
+
+        subject = f'{institution} - Correo de verificación'
+        body_html = (
+            f'<p>Hola {first_name},</p>'
+            f'<p>Este es un correo de verificación enviado desde {institution} para '
+            f'confirmar que su correo electrónico está recibiendo nuestros mensajes correctamente.</p>'
+            f'<p>Si recibe este correo, por favor confírmenos por WhatsApp que lo recibió.</p>'
+            f'<p>Saludos cordiales,<br/>{institution} - Soporte</p>'
+        )
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would send verification email to %s from %s",
+                         recipient_email, email_from)
+        else:
+            mail = self.env['mail.mail'].sudo().create({
+                'subject': subject,
+                'body_html': body_html,
+                'email_from': email_from,
+                'email_to': recipient_email,
+                'auto_delete': True,
+            })
+            mail.send()
+            _logger.info("Verification email sent to %s for conversation %s",
+                         recipient_email, self.id)
+
+        self.write({
+            'verification_email_sent_date': fields.Datetime.now(),
+            'verification_email_recipient': recipient_email,
+        })
+
+        self.message_post(body=_(
+            "Correo de verificación enviado a %s%s."
+        ) % (recipient_email, " (DRY RUN)" if dry_run else ""))
 
     def action_resolve(self, summary='', resolution_data=None):
         """Mark conversation as resolved and trigger skill callback."""
@@ -239,6 +319,102 @@ class AiAgentConversation(models.Model):
             raise UserError(_("Solo se puede reintentar conversaciones en estado Fallida o Timeout."))
         self.write({'state': 'waiting'})
         self.message_post(body=_("Conversacion reabierta para reintento."))
+
+    def _send_reminder(self):
+        """Send a WhatsApp reminder to the customer."""
+        self.ensure_one()
+        skill_handler = get_skill(self.skill_id.code)
+        if not skill_handler:
+            _logger.error("No skill handler for code: %s", self.skill_id.code)
+            return
+
+        context = skill_handler.get_context(self)
+        reminder_text = skill_handler.get_reminder_message(self, context, self.reminder_count)
+
+        dry_run = self._is_dry_run()
+        wa_service = self.env['ai.agent.whatsapp.service']
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would send reminder WhatsApp to %s: %s",
+                         self.phone, reminder_text[:100])
+            wa_msg_id = 0
+        else:
+            result = wa_service.send_message(self.phone, reminder_text)
+            wa_msg_id = result.get('message_id', 0)
+
+        self.env['ai.agent.message'].create({
+            'conversation_id': self.id,
+            'direction': 'outbound',
+            'body': reminder_text,
+            'whatsapp_message_id': wa_msg_id,
+        })
+
+        self.write({
+            'reminder_count': self.reminder_count + 1,
+            'last_reminder_date': fields.Datetime.now(),
+            'last_message_date': fields.Datetime.now(),
+            'last_sender': 'agent',
+        })
+
+        self.message_post(body=_(
+            "Recordatorio %d/%d enviado por WhatsApp%s."
+        ) % (self.reminder_count, self.skill_id.max_reminders or 2,
+             " (DRY RUN)" if dry_run else ""))
+
+    def action_resolve_via_email(self, email_body_preview=''):
+        """Resolve conversation because customer replied to verification email.
+
+        Called via XML-RPC from the email checker bridge script.
+        Returns True if resolved, False if conversation was not eligible.
+        """
+        self.ensure_one()
+        if self.state != 'waiting' or not self.verification_email_sent_date:
+            return False
+
+        # Send farewell WhatsApp
+        skill_handler = get_skill(self.skill_id.code)
+        context = skill_handler.get_context(self) if skill_handler else {}
+        first_name = context.get('first_name', 'estimado/a')
+        institution = context.get('institution', 'UEIPAB')
+
+        farewell = (
+            f"{first_name}, hemos recibido su respuesta por correo electronico. "
+            f"Su direccion de correo ha sido verificada exitosamente. "
+            f"Gracias por su colaboracion. Saludos desde {institution}."
+        )
+
+        dry_run = self._is_dry_run()
+        wa_service = self.env['ai.agent.whatsapp.service']
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would send farewell WhatsApp to %s: %s",
+                         self.phone, farewell[:100])
+            wa_msg_id = 0
+        else:
+            result = wa_service.send_message(self.phone, farewell)
+            wa_msg_id = result.get('message_id', 0)
+
+        self.env['ai.agent.message'].create({
+            'conversation_id': self.id,
+            'direction': 'outbound',
+            'body': farewell,
+            'whatsapp_message_id': wa_msg_id,
+        })
+
+        summary = 'Cliente respondio al correo de verificacion.'
+        if email_body_preview:
+            summary += f' Preview: {email_body_preview[:200]}'
+
+        self.action_resolve(
+            summary=summary,
+            resolution_data={'action': 'restore'},
+        )
+
+        self.message_post(body=_(
+            "Conversacion resuelta automaticamente: respuesta detectada en correo electronico%s."
+        ) % (" (DRY RUN)" if dry_run else ""))
+
+        return True
 
     @api.model
     def _cron_poll_messages(self):
@@ -288,16 +464,33 @@ class AiAgentConversation(models.Model):
 
     @api.model
     def _cron_check_timeouts(self):
-        """Cron: check for conversations that have timed out."""
+        """Cron: check waiting conversations for reminders or timeout.
+
+        Logic per conversation:
+        1. If last_message_date + reminder_interval < now AND reminder_count < max_reminders
+           → send a reminder
+        2. If reminder_count >= max_reminders AND last_message_date + reminder_interval < now
+           → timeout
+        """
+        from datetime import timedelta
         conversations = self.search([
             ('state', '=', 'waiting'),
         ])
 
         now = fields.Datetime.now()
         for conv in conversations:
-            timeout_hours = conv.skill_id.timeout_hours or 48
-            if conv.last_message_date:
-                from datetime import timedelta
-                deadline = conv.last_message_date + timedelta(hours=timeout_hours)
-                if now > deadline:
-                    conv.action_timeout()
+            skill = conv.skill_id
+            interval_hours = skill.reminder_interval_hours or 24
+            max_reminders = skill.max_reminders if skill.max_reminders >= 0 else 2
+
+            if not conv.last_message_date:
+                continue
+
+            deadline = conv.last_message_date + timedelta(hours=interval_hours)
+            if now <= deadline:
+                continue
+
+            if conv.reminder_count < max_reminders:
+                conv._send_reminder()
+            else:
+                conv.action_timeout()
