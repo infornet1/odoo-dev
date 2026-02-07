@@ -158,6 +158,7 @@ odoo-db-data/
 # Production credentials (never commit)
 config/production.json
 config/whatsapp_massiva.json
+config/anthropic_api.json
 
 # Bounce processor auto-generated files
 scripts/bounce_state.json

@@ -298,9 +298,11 @@ Pendiente → Soporte Notificado → Cliente Contactado → Resuelto
 
 Extends `ueipab_bounce_log` module to automate bounce resolution via WhatsApp conversations with customers.
 
-**Provider:** MassivaMóvil WhatsApp API (`whatsapp.massivamovil.com`)
-**Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
-**Account:** +584148321963 (connected), Plan 500 WhatsApp
+**WhatsApp Provider:** MassivaMóvil API (`whatsapp.massivamovil.com`)
+**AI Model:** Claude Haiku 4.5 via Anthropic API (~$0.005/conversation)
+**Config files (gitignored):**
+- `/opt/odoo-dev/config/whatsapp_massiva.json` - MassivaMóvil credentials + account
+- `/opt/odoo-dev/config/anthropic_api.json` - Claude API key + model config
 
 **Integration Flow:**
 1. Query `mail.bounce.log` for records in `pending` state

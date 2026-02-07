@@ -325,6 +325,15 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete d
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
 - **Full API docs:** OpenAPI spec at `GET /api` (requires dashboard session cookie)
 
+### Claude AI API (Anthropic)
+
+- **Config:** `/opt/odoo-dev/config/anthropic_api.json` (gitignored)
+- **API Key:** `sk-ant-api03-*` (stored in config file)
+- **Model:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) - $1/$5 per MTok
+- **Use case:** AI backbone for WhatsApp bounce resolution agent (~$0.005 per conversation)
+- **Status:** Key valid, needs credit top-up at `console.anthropic.com/settings/billing`
+- **Billing:** $5 minimum covers ~1,000 bounce conversations with Haiku 4.5
+
 ---
 
 ## Documentation Index
