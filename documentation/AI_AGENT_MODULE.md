@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.1.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.2.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -161,6 +161,7 @@ class MySkill:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `ai_agent.dry_run` | `True` | No real API calls when True |
+| `ai_agent.active_db` | (auto: current db) | Only this database processes crons. Prevents double-processing when both testing and production share the same WhatsApp account. |
 | `ai_agent.whatsapp_api_secret` | (from config) | MassivaMóvil API secret |
 | `ai_agent.whatsapp_account_id` | (from config) | WhatsApp account unique ID |
 | `ai_agent.whatsapp_account_phone` | (from config) | Connected phone number |
@@ -273,6 +274,86 @@ python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py
 ```
 
 **Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials via pymysql). `DRY_RUN=True` by default.
+
+## Production Deployment Architecture
+
+### Split-Server Design
+
+The AI Agent system spans two servers. This is by design.
+
+```
+Dev Server (Freescout host)                   Production Server (10.124.0.3)
+├── Freescout MySQL (localhost)                ├── Odoo (Docker: ueipab17)
+├── Scripts (crontab)                          │   ├── ueipab_ai_agent module
+│   ├── daily_bounce_processor.py              │   ├── Crons (poll + timeouts)
+│   └── ai_agent_email_checker.py              │   ├── Webhook endpoint
+│       ├── reads Freescout (localhost)         │   ├── WhatsApp API → MassivaMóvil
+│       └── calls Odoo ── XML-RPC ────────────→│   └── Claude API → Anthropic
+│       └── writes Freescout (post-processing) │
+└── Config files (/opt/odoo-dev/config/)       └── Config: /home/vision/ueipab17/config/
+```
+
+**Key rule:** Scripts ALWAYS run on the dev server (where Freescout is hosted). They reach production Odoo via XML-RPC (`TARGET_ENV=production`). They CANNOT run on the production server because Freescout MySQL is not accessible from there.
+
+### Config File Loading
+
+The `_load_api_configs` post-init hook searches for config files in order:
+
+1. `AI_AGENT_CONFIG_DIR` environment variable (if set)
+2. `/opt/odoo-dev/config/` (dev server)
+3. `/home/vision/ueipab17/config/` (production server)
+
+For production deployment, copy config files to `/home/vision/ueipab17/config/` on the production server before installing/upgrading the module.
+
+### Environment Safeguard (`ai_agent.active_db`)
+
+Both testing and production share the same WhatsApp account (+584148321963). To prevent double-processing (duplicate reminders, polls racing for messages):
+
+- `ai_agent.active_db` system parameter stores the database name authorized to run crons
+- Auto-set to current database on first install
+- Both `_cron_poll_messages` and `_cron_check_timeouts` check this before processing
+- If mismatch → skip with warning log, zero processing
+
+**When going live in production:**
+1. Set `ai_agent.active_db = 'DB_UEIPAB'` on production Odoo
+2. Set `ai_agent.active_db = ''` (empty) or leave as `'testing'` on testing Odoo — crons will self-skip
+3. Set `ai_agent.dry_run = 'False'` on production only
+4. Update scripts: `TARGET_ENV=production` in crontab
+
+**To return to testing:** reverse the `active_db` values.
+
+### Production Migration Checklist (DO NOT EXECUTE - reference only)
+
+```
+Pre-deployment:
+[ ] Copy config files to production: /home/vision/ueipab17/config/
+    - whatsapp_massiva.json
+    - anthropic_api.json
+[ ] Ensure ueipab_bounce_log module is installed on production
+[ ] Sync ueipab_ai_agent module to production addons path
+
+Module installation:
+[ ] Install/upgrade ueipab_ai_agent on production Odoo
+[ ] Verify ir.config_parameter values loaded (WhatsApp + Claude keys)
+[ ] Set ai_agent.dry_run = 'True' (keep dry until verified)
+[ ] Set ai_agent.active_db = 'DB_UEIPAB'
+
+Webhook setup:
+[ ] Configure MassivaMóvil webhook: https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
+
+Testing environment lockout:
+[ ] Set ai_agent.active_db = '' on testing Odoo (disable crons)
+[ ] Verify testing crons log "Skipping cron processing" warning
+
+Script deployment:
+[ ] Update ai_agent_email_checker.py: TARGET_ENV='production'
+[ ] Update daily_bounce_processor.py: TARGET_ENV='production' (if not already)
+[ ] Add crontab entries on dev server
+
+Go live:
+[ ] Set ai_agent.dry_run = 'False' on production
+[ ] Monitor first conversations end-to-end
+```
 
 ## Cost Estimates
 

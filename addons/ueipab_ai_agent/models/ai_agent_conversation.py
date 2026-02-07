@@ -75,6 +75,27 @@ class AiAgentConversation(models.Model):
     def _is_dry_run(self):
         return self.env['ir.config_parameter'].sudo().get_param('ai_agent.dry_run', 'True').lower() == 'true'
 
+    @api.model
+    def _is_active_environment(self):
+        """Check if this database is the active environment for AI Agent processing.
+
+        Prevents double-processing when both testing and production share the
+        same WhatsApp account. If ai_agent.active_db is set and doesn't match
+        the current database name, all cron processing is skipped.
+        """
+        active_db = self.env['ir.config_parameter'].sudo().get_param('ai_agent.active_db', '')
+        if not active_db:
+            return True  # Not configured = allow processing
+        current_db = self.env.cr.dbname
+        if active_db != current_db:
+            _logger.warning(
+                "AI Agent: active_db='%s' but current db='%s'. "
+                "Skipping cron processing to prevent double-processing. "
+                "Set ai_agent.active_db='%s' in System Parameters to enable.",
+                active_db, current_db, current_db)
+            return False
+        return True
+
     def action_start(self):
         """Send greeting message and activate conversation."""
         self.ensure_one()
@@ -419,6 +440,9 @@ class AiAgentConversation(models.Model):
     @api.model
     def _cron_poll_messages(self):
         """Cron: poll WhatsApp API for incoming messages (fallback to webhook)."""
+        if not self._is_active_environment():
+            return
+
         wa_service = self.env['ai.agent.whatsapp.service']
         dry_run = self.env['ir.config_parameter'].sudo().get_param(
             'ai_agent.dry_run', 'True'
@@ -472,6 +496,9 @@ class AiAgentConversation(models.Model):
         2. If reminder_count >= max_reminders AND last_message_date + reminder_interval < now
            → timeout
         """
+        if not self._is_active_environment():
+            return
+
         from datetime import timedelta
         conversations = self.search([
             ('state', '=', 'waiting'),

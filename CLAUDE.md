@@ -216,7 +216,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.1.0 | 2026-02-06 |
-| ueipab_ai_agent | 17.0.1.1.0 | 2026-02-07 |
+| ueipab_ai_agent | 17.0.1.2.0 | 2026-02-07 |
 
 ### Production Environment
 
@@ -340,7 +340,7 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete d
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.1.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.2.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
 
@@ -369,6 +369,12 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 | `ai.agent.whatsapp.service` | MassivaMóvil API abstraction |
 | `ai.agent.claude.service` | Anthropic API abstraction |
 
+### Production Architecture (v1.2.0)
+
+Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on dev server (where Freescout MySQL lives). They reach production Odoo via XML-RPC (`TARGET_ENV=production`). Config files searched in order: env var `AI_AGENT_CONFIG_DIR`, `/opt/odoo-dev/config/`, `/home/vision/ueipab17/config/`.
+
+**Environment safeguard:** `ai_agent.active_db` parameter prevents double-processing when both environments share the same WhatsApp account. Set to the database name that should process crons (e.g., `DB_UEIPAB` for production). The other environment's crons self-skip.
+
 ### Conversation Features (v1.1.0)
 
 **WhatsApp Reminders:** Automatic follow-ups when customer doesn't reply.
@@ -389,6 +395,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 | Key | Description |
 |-----|-------------|
 | `ai_agent.dry_run` | `True` (default) = no real API calls |
+| `ai_agent.active_db` | Database name authorized to run crons (prevents double-processing) |
 | `ai_agent.whatsapp_api_secret` | MassivaMóvil API secret |
 | `ai_agent.whatsapp_account_id` | WhatsApp account unique ID |
 | `ai_agent.claude_api_key` | Anthropic API key |
