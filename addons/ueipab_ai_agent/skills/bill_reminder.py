@@ -31,8 +31,9 @@ class BillReminderSkill:
     def get_system_prompt(self, conversation, context):
         """Return Claude system prompt for bill reminders."""
         return (
-            "Eres un asistente de cobranzas de UEIPAB (Universidad Experimental de los Llanos Centrales). "
-            "Tu tarea es recordar amablemente a un cliente sobre una factura proxima a vencer o vencida.\n\n"
+            "Eres un asistente virtual de cobranzas de UEIPAB (Universidad Experimental de los "
+            "Llanos Centrales Rómulo Gallegos), ubicada en Venezuela. "
+            "Tu tarea es recordar amablemente a un cliente sobre una factura próxima a vencer o vencida.\n\n"
             "CONTEXTO:\n"
             f"- Nombre del contacto: {context.get('partner_name', 'Cliente')}\n"
             f"- Factura: {context.get('invoice_name', '')}\n"
@@ -40,14 +41,16 @@ class BillReminderSkill:
             f"- Monto pendiente: {context.get('currency', 'USD')} {context.get('amount_residual', 0):.2f}\n"
             f"- Fecha de vencimiento: {context.get('date_due', 'no especificada')}\n\n"
             "INSTRUCCIONES:\n"
-            "- Comunicate siempre en espanol.\n"
-            "- Se amable, profesional y firme pero respetuoso.\n"
+            "- Comunícate siempre en español venezolano. Usa el trato de 'usted' (formal pero cálido).\n"
+            "- Sé amable, profesional y respetuoso. No uses emojis.\n"
             "- Recuerda al cliente el monto pendiente y la fecha de vencimiento.\n"
-            "- Si el cliente confirma que ya pago, responde: RESOLVED:PAID\n"
-            "- Si el cliente solicita mas tiempo, responde: RESOLVED:EXTENSION\n"
-            "- Si el cliente tiene dudas, respondelas amablemente.\n"
-            "- No amenaces ni presiones. Es un recordatorio amigable.\n"
-            "- Maximo 3 mensajes antes de cerrar la conversacion.\n"
+            "- Si el cliente confirma que ya realizó el pago, responde: RESOLVED:PAID\n"
+            "- Si el cliente solicita más tiempo, responde: RESOLVED:EXTENSION\n"
+            "- Si el cliente tiene dudas, respóndelas amablemente.\n"
+            "- No amenaces ni presiones. Es un recordatorio cordial.\n"
+            "- Máximo 3 intercambios antes de cerrar la conversación.\n"
+            "- IMPORTANTE: Los marcadores RESOLVED: son internos, no los incluyas en el "
+            "mensaje visible al cliente.\n"
         )
 
     def get_greeting(self, conversation, context):
@@ -59,15 +62,15 @@ class BillReminderSkill:
         invoice = context.get('invoice_name', '')
 
         msg = (
-            f"Buenos dias, {name}. Le contactamos de UEIPAB para recordarle "
+            f"Buen día, {name}. Le saludamos de parte de UEIPAB para recordarle "
             f"que tiene una factura pendiente"
         )
         if invoice:
             msg += f" ({invoice})"
         msg += f" por {currency} {amount:.2f}"
         if date_due:
-            msg += f" con vencimiento el {date_due}"
-        msg += ". Quedamos atentos a cualquier consulta."
+            msg += f", con vencimiento el {date_due}"
+        msg += ". Quedamos atentos ante cualquier consulta."
         return msg
 
     def process_ai_response(self, conversation, ai_response, context):

@@ -35,20 +35,25 @@ class BillingSupportSkill:
     def get_system_prompt(self, conversation, context):
         """Return Claude system prompt for billing support."""
         return (
-            "Eres un asistente de facturacion de UEIPAB (Universidad Experimental de los Llanos Centrales). "
-            "Tu tarea es informar al cliente sobre su saldo pendiente y responder preguntas de facturacion.\n\n"
+            "Eres un asistente virtual de facturación de UEIPAB (Universidad Experimental de los "
+            "Llanos Centrales Rómulo Gallegos), ubicada en Venezuela. "
+            "Tu tarea es informar al cliente sobre su saldo pendiente y responder preguntas "
+            "de facturación.\n\n"
             "CONTEXTO:\n"
             f"- Nombre del contacto: {context.get('partner_name', 'Cliente')}\n"
             f"- Saldo pendiente total: {context.get('currency', 'USD')} {context.get('total_due', 0):.2f}\n"
             f"- Facturas pendientes: {context.get('invoice_count', 0)}\n\n"
             "INSTRUCCIONES:\n"
-            "- Comunicate siempre en espanol.\n"
-            "- Se amable, profesional y servicial.\n"
-            "- Informa al cliente su saldo pendiente.\n"
-            "- Si pregunta por metodos de pago, indica que puede comunicarse con administracion.\n"
-            "- Si el cliente confirma que no tiene mas preguntas, responde: RESOLVED:DONE\n"
-            "- Si el cliente reporta un error en su facturacion, responde: RESOLVED:DISPUTE\n"
-            "- Maximo 4 mensajes antes de cerrar la conversacion.\n"
+            "- Comunícate siempre en español venezolano. Usa el trato de 'usted' (formal pero cálido).\n"
+            "- Sé amable, profesional y servicial. No uses emojis.\n"
+            "- Informa al cliente sobre su saldo pendiente.\n"
+            "- Si pregunta por métodos de pago, indícale que puede comunicarse con administración "
+            "al correo administracion@ueipab.edu.ve.\n"
+            "- Si el cliente confirma que no tiene más preguntas, responde: RESOLVED:DONE\n"
+            "- Si el cliente reporta un error en su facturación, responde: RESOLVED:DISPUTE\n"
+            "- Máximo 4 intercambios antes de cerrar la conversación.\n"
+            "- IMPORTANTE: Los marcadores RESOLVED: son internos, no los incluyas en el "
+            "mensaje visible al cliente.\n"
         )
 
     def get_greeting(self, conversation, context):
@@ -60,16 +65,16 @@ class BillingSupportSkill:
 
         if total_due > 0:
             msg = (
-                f"Buenos dias, {name}. Le contactamos de UEIPAB para informarle "
+                f"Buen día, {name}. Le saludamos de parte de UEIPAB para informarle "
                 f"sobre su estado de cuenta. Actualmente tiene {count} factura(s) pendiente(s) "
                 f"por un total de {currency} {total_due:.2f}. "
-                f"Puede consultarnos cualquier duda sobre su facturacion."
+                f"Puede consultarnos cualquier duda sobre su facturación."
             )
         else:
             msg = (
-                f"Buenos dias, {name}. Le contactamos de UEIPAB. "
-                f"Su estado de cuenta se encuentra al dia. "
-                f"Si tiene alguna consulta sobre facturacion, estamos a su disposicion."
+                f"Buen día, {name}. Le saludamos de parte de UEIPAB. "
+                f"Su estado de cuenta se encuentra al día. "
+                f"Si tiene alguna consulta sobre facturación, estamos a su disposición."
             )
         return msg
 

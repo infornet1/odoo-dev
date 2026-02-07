@@ -3,39 +3,39 @@
     <data noupdate="1">
 
         <record id="skill_bounce_resolution" model="ai.agent.skill">
-            <field name="name">Resolucion de Rebotes</field>
+            <field name="name">Resolución de Rebotes</field>
             <field name="code">bounce_resolution</field>
-            <field name="description">Contactar clientes cuyo email reboto para obtener un correo alternativo o confirmar que el actual funciona.</field>
+            <field name="description">Contactar representantes o clientes cuyo correo electrónico rebotó, para obtener un correo alternativo o confirmar que el actual funciona.</field>
             <field name="source_model">mail.bounce.log</field>
             <field name="model_name">claude-haiku-4-5-20251001</field>
             <field name="max_turns">5</field>
             <field name="timeout_hours">48</field>
-            <field name="system_prompt">Eres un asistente de UEIPAB que contacta clientes para resolver problemas de correo electronico rebotado. Comunicate en espanol, se amable y conciso.</field>
-            <field name="greeting_template">Buenos dias, {nombre}. Le contactamos de UEIPAB porque su correo {email} esta presentando problemas de entrega. Podria proporcionarnos un correo alternativo?</field>
+            <field name="system_prompt">Eres un asistente virtual de UEIPAB que contacta representantes para resolver problemas de correo electrónico rebotado. Comunícate en español venezolano con trato de usted, sé amable y conciso.</field>
+            <field name="greeting_template">Buen día, {nombre}. Le saludamos de parte de UEIPAB. Su correo {email} está presentando inconvenientes de entrega. ¿Nos podría facilitar un correo alternativo?</field>
         </record>
 
         <record id="skill_bill_reminder" model="ai.agent.skill">
             <field name="name">Recordatorio de Factura</field>
             <field name="code">bill_reminder</field>
-            <field name="description">Enviar recordatorios amigables sobre facturas proximas a vencer o vencidas.</field>
+            <field name="description">Enviar recordatorios cordiales sobre facturas próximas a vencer o vencidas.</field>
             <field name="source_model">account.move</field>
             <field name="model_name">claude-haiku-4-5-20251001</field>
             <field name="max_turns">3</field>
             <field name="timeout_hours">72</field>
-            <field name="system_prompt">Eres un asistente de cobranzas de UEIPAB. Envias recordatorios amigables sobre facturas pendientes. Comunicate en espanol, se profesional y respetuoso.</field>
-            <field name="greeting_template">Buenos dias, {nombre}. Le contactamos de UEIPAB para recordarle sobre su factura pendiente por {monto}.</field>
+            <field name="system_prompt">Eres un asistente virtual de cobranzas de UEIPAB. Envías recordatorios cordiales sobre facturas pendientes. Comunícate en español venezolano con trato de usted, sé profesional y respetuoso.</field>
+            <field name="greeting_template">Buen día, {nombre}. Le saludamos de parte de UEIPAB para recordarle sobre su factura pendiente por {monto}.</field>
         </record>
 
         <record id="skill_billing_support" model="ai.agent.skill">
-            <field name="name">Soporte de Facturacion</field>
+            <field name="name">Soporte de Facturación</field>
             <field name="code">billing_support</field>
-            <field name="description">Informar a clientes sobre su saldo pendiente y responder consultas de facturacion.</field>
+            <field name="description">Informar a clientes sobre su saldo pendiente y responder consultas de facturación.</field>
             <field name="source_model">res.partner</field>
             <field name="model_name">claude-haiku-4-5-20251001</field>
             <field name="max_turns">4</field>
             <field name="timeout_hours">24</field>
-            <field name="system_prompt">Eres un asistente de facturacion de UEIPAB. Informas a clientes sobre su estado de cuenta y respondes consultas de facturacion. Comunicate en espanol.</field>
-            <field name="greeting_template">Buenos dias, {nombre}. Le contactamos de UEIPAB para informarle sobre su estado de cuenta.</field>
+            <field name="system_prompt">Eres un asistente virtual de facturación de UEIPAB. Informas a clientes sobre su estado de cuenta y respondes consultas de facturación. Comunícate en español venezolano con trato de usted.</field>
+            <field name="greeting_template">Buen día, {nombre}. Le saludamos de parte de UEIPAB para informarle sobre su estado de cuenta.</field>
         </record>
 
     </data>
