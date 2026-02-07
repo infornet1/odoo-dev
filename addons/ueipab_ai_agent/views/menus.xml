@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- AI Agent parent menu under Contacts -->
+    <menuitem id="menu_ai_agent_root"
+              name="AI Agent"
+              parent="contacts.menu_contacts"
+              sequence="10"/>
+
+    <!-- Conversaciones -->
+    <menuitem id="menu_ai_agent_conversations"
+              name="Conversaciones"
+              parent="menu_ai_agent_root"
+              action="ai_agent_conversation_action"
+              sequence="1"/>
+
+    <!-- Configuracion de Skills -->
+    <menuitem id="menu_ai_agent_skills"
+              name="Configuracion de Skills"
+              parent="menu_ai_agent_root"
+              action="ai_agent_skill_action"
+              sequence="2"
+              groups="group_ai_agent_manager"/>
+
+    <!-- Extend Bounce Log form view to add WhatsApp button -->
+    <record id="mail_bounce_log_form_inherit_ai_agent" model="ir.ui.view">
+        <field name="name">mail.bounce.log.form.inherit.ai.agent</field>
+        <field name="model">mail.bounce.log</field>
+        <field name="inherit_id" ref="ueipab_bounce_log.mail_bounce_log_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add WhatsApp button in header -->
+            <xpath expr="//header/button[@name='action_mark_notified']" position="before">
+                <button name="action_start_whatsapp" string="Iniciar WhatsApp"
+                        type="object" class="btn-primary"
+                        icon="fa-whatsapp"
+                        invisible="state == 'resolved'"
+                        confirm="Se iniciara una conversacion WhatsApp con el contacto. Continuar?"/>
+            </xpath>
+            <!-- Add AI conversation fields in the WhatsApp section -->
+            <xpath expr="//field[@name='whatsapp_contacted']" position="after">
+                <field name="ai_conversation_id"/>
+                <field name="ai_conversation_state" widget="badge"
+                       decoration-warning="ai_conversation_state in ('waiting', 'timeout')"
+                       decoration-success="ai_conversation_state == 'resolved'"
+                       decoration-info="ai_conversation_state == 'active'"
+                       decoration-danger="ai_conversation_state == 'failed'"
+                       invisible="not ai_conversation_id"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

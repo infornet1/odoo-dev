@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ai_agent_skill_user,ai.agent.skill.user,model_ai_agent_skill,group_ai_agent_user,1,0,0,0
+access_ai_agent_skill_manager,ai.agent.skill.manager,model_ai_agent_skill,group_ai_agent_manager,1,1,1,1
+access_ai_agent_conversation_user,ai.agent.conversation.user,model_ai_agent_conversation,group_ai_agent_user,1,0,0,0
+access_ai_agent_conversation_manager,ai.agent.conversation.manager,model_ai_agent_conversation,group_ai_agent_manager,1,1,1,1
+access_ai_agent_message_user,ai.agent.message.user,model_ai_agent_message,group_ai_agent_user,1,0,0,0
+access_ai_agent_message_manager,ai.agent.message.manager,model_ai_agent_message,group_ai_agent_manager,1,1,1,1
+access_ai_agent_start_wizard_user,ai.agent.start.conversation.wizard.user,model_ai_agent_start_conversation_wizard,group_ai_agent_user,1,1,1,1
+access_ai_agent_start_wizard_manager,ai.agent.start.conversation.wizard.manager,model_ai_agent_start_conversation_wizard,group_ai_agent_manager,1,1,1,1

@@ -41,6 +41,7 @@
 | 23 | Advance Payment System (Pago Adelanto) | Production | `ueipab_payroll_enhancements` | See below |
 | 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
 | 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
+| 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 
 ---
 
@@ -215,6 +216,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.1.0 | 2026-02-06 |
+| ueipab_ai_agent | 17.0.1.0.0 | 2026-02-07 |
 
 ### Production Environment
 
@@ -309,7 +311,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
   - "Aplicar Nuevo Email" -- apply customer's new email
 - **Script integration:** Script auto-creates `mail.bounce.log` records via XML-RPC with tier, partner link, and Freescout conversation ID
 - **Freescout post-processing:** Script updates Freescout conversations with `[LIMPIADO]`/`[REVISION]`/`[NO ENCONTRADO]` prefix, internal note with bidirectional Odoo links, and status change
-- **WhatsApp Integration (Planned):** AI agent via MassivaMóvil WhatsApp API queries pending bounces, contacts customer via WhatsApp, updates record on reply
+- **WhatsApp Integration:** Implemented via `ueipab_ai_agent` module. "Iniciar WhatsApp" button on bounce log form launches AI-powered conversation to resolve bounced emails. See [AI Agent Module](documentation/AI_AGENT_MODULE.md).
 
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
 
@@ -331,8 +333,63 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete d
 - **API Key:** `sk-ant-api03-*` (stored in config file)
 - **Model:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) - $1/$5 per MTok
 - **Use case:** AI backbone for WhatsApp bounce resolution agent (~$0.005 per conversation)
-- **Status:** Key valid, needs credit top-up at `console.anthropic.com/settings/billing`
-- **Billing:** $5 minimum covers ~1,000 bounce conversations with Haiku 4.5
+- **Status:** Active ($5 credit loaded 2026-02-07)
+- **Billing:** $5 covers ~1,000 bounce conversations with Haiku 4.5
+
+---
+
+## AI Agent Module (ueipab_ai_agent)
+
+**Status:** Testing | **Version:** 17.0.1.0.0 | **Installed:** 2026-02-07
+
+Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
+
+### Architecture
+
+- **Skills:** Pluggable handlers for different business processes (bounce resolution, bill reminders, billing support)
+- **Conversations:** Track WhatsApp exchanges with customers, linked to source records
+- **Services:** Abstract models wrapping MassivaMóvil WhatsApp API and Anthropic Claude API
+- **Webhook/Cron:** Receive incoming WhatsApp messages via webhook or 5-min polling cron
+
+### Skills
+
+| Skill Code | Name | Source Model | Max Turns | Timeout |
+|-----------|------|-------------|-----------|---------|
+| `bounce_resolution` | Resolucion de Rebotes | `mail.bounce.log` | 5 | 48h |
+| `bill_reminder` | Recordatorio de Factura | `account.move` | 3 | 72h |
+| `billing_support` | Soporte de Facturacion | `res.partner` | 4 | 24h |
+
+### Key Models
+
+| Model | Description |
+|-------|-------------|
+| `ai.agent.skill` | Skill configuration (prompt, model, limits) |
+| `ai.agent.conversation` | Conversation tracking with state machine |
+| `ai.agent.message` | Message log (sent + received) |
+| `ai.agent.whatsapp.service` | MassivaMóvil API abstraction |
+| `ai.agent.claude.service` | Anthropic API abstraction |
+
+### System Parameters
+
+| Key | Description |
+|-----|-------------|
+| `ai_agent.dry_run` | `True` (default) = no real API calls |
+| `ai_agent.whatsapp_api_secret` | MassivaMóvil API secret |
+| `ai_agent.whatsapp_account_id` | WhatsApp account unique ID |
+| `ai_agent.claude_api_key` | Anthropic API key |
+| `ai_agent.claude_model` | Default Claude model |
+
+### Menu Location
+
+`Contactos > AI Agent > Conversaciones / Configuracion de Skills`
+
+### Integration with Bounce Log
+
+- `mail.bounce.log` extended with `ai_conversation_id` field
+- "Iniciar WhatsApp" button on bounce log form → opens wizard → creates conversation
+- Conversation resolution triggers bounce log actions (apply new email, restore original)
+
+See [Full Documentation](documentation/AI_AGENT_MODULE.md) for complete details.
 
 ---
 
@@ -359,6 +416,7 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete d
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
 - [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
 - [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
+- [AI Agent Module](documentation/AI_AGENT_MODULE.md)
 
 ### Liquidation
 - [V1 Complete Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md)

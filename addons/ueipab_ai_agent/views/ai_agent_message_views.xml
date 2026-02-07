@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Message Tree View (standalone, for debugging) -->
+    <record id="ai_agent_message_view_tree" model="ir.ui.view">
+        <field name="name">ai.agent.message.tree</field>
+        <field name="model">ai.agent.message</field>
+        <field name="arch" type="xml">
+            <tree create="false" delete="false">
+                <field name="conversation_id"/>
+                <field name="timestamp"/>
+                <field name="direction" widget="badge"
+                       decoration-info="direction == 'outbound'"
+                       decoration-success="direction == 'inbound'"/>
+                <field name="body"/>
+                <field name="whatsapp_message_id" optional="hide"/>
+                <field name="ai_input_tokens" optional="hide"/>
+                <field name="ai_output_tokens" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+</odoo>

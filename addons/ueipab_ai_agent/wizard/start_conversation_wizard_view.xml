@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="start_conversation_wizard_view_form" model="ir.ui.view">
+        <field name="name">ai.agent.start.conversation.wizard.form</field>
+        <field name="model">ai.agent.start.conversation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Iniciar Conversacion WhatsApp">
+                <group>
+                    <field name="skill_id"/>
+                    <field name="partner_id"/>
+                    <field name="phone"/>
+                    <field name="source_model" invisible="1"/>
+                    <field name="source_id" invisible="1"/>
+                </group>
+                <footer>
+                    <button name="action_start" string="Iniciar Conversacion"
+                            type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

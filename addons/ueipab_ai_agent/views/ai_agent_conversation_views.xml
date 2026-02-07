@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Conversation Tree View -->
+    <record id="ai_agent_conversation_view_tree" model="ir.ui.view">
+        <field name="name">ai.agent.conversation.tree</field>
+        <field name="model">ai.agent.conversation</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="state == 'failed'"
+                  decoration-warning="state in ('waiting', 'timeout')"
+                  decoration-success="state == 'resolved'"
+                  decoration-muted="state == 'draft'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="skill_id"/>
+                <field name="phone"/>
+                <field name="state" widget="badge"
+                       decoration-danger="state == 'failed'"
+                       decoration-warning="state in ('waiting', 'timeout')"
+                       decoration-success="state == 'resolved'"
+                       decoration-info="state == 'active'"/>
+                <field name="turn_count"/>
+                <field name="last_message_date"/>
+                <field name="last_sender"/>
+                <field name="create_date" string="Creada"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Conversation Form View -->
+    <record id="ai_agent_conversation_view_form" model="ir.ui.view">
+        <field name="name">ai.agent.conversation.form</field>
+        <field name="model">ai.agent.conversation</field>
+        <field name="arch" type="xml">
+            <form string="Conversacion AI">
+                <header>
+                    <button name="action_start" string="Iniciar Conversacion"
+                            type="object" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_force_resolve" string="Resolver Manualmente"
+                            type="object" class="btn-secondary"
+                            invisible="state not in ('active', 'waiting')"
+                            confirm="Esta seguro de resolver esta conversacion manualmente?"/>
+                    <button name="action_retry" string="Reintentar"
+                            type="object" class="btn-secondary"
+                            invisible="state not in ('failed', 'timeout')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,waiting,resolved"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Conversacion">
+                            <field name="skill_id"/>
+                            <field name="partner_id"/>
+                            <field name="phone"/>
+                            <field name="turn_count"/>
+                        </group>
+                        <group string="Seguimiento">
+                            <field name="last_message_date"/>
+                            <field name="last_sender"/>
+                            <field name="create_date" string="Fecha Creacion"/>
+                            <field name="resolved_date"/>
+                        </group>
+                    </group>
+                    <group invisible="source_model == ''">
+                        <group string="Origen">
+                            <field name="source_model"/>
+                            <field name="source_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Mensajes">
+                            <field name="agent_message_ids" mode="tree" readonly="1">
+                                <tree decoration-info="direction == 'outbound'"
+                                      decoration-success="direction == 'inbound'"
+                                      create="false" delete="false">
+                                    <field name="timestamp"/>
+                                    <field name="direction" widget="badge"
+                                           decoration-info="direction == 'outbound'"
+                                           decoration-success="direction == 'inbound'"/>
+                                    <field name="body"/>
+                                    <field name="whatsapp_message_id" optional="hide"/>
+                                    <field name="ai_input_tokens" optional="hide"/>
+                                    <field name="ai_output_tokens" optional="hide"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Resolucion" invisible="state != 'resolved'">
+                            <group>
+                                <field name="resolved_date"/>
+                                <field name="resolution_summary"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Conversation Search View -->
+    <record id="ai_agent_conversation_view_search" model="ir.ui.view">
+        <field name="name">ai.agent.conversation.search</field>
+        <field name="model">ai.agent.conversation</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Conversaciones">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="phone"/>
+                <field name="skill_id"/>
+                <separator/>
+                <filter name="filter_draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_active" string="Activa" domain="[('state', 'in', ('active', 'waiting'))]"/>
+                <filter name="filter_resolved" string="Resuelta" domain="[('state', '=', 'resolved')]"/>
+                <filter name="filter_timeout" string="Timeout" domain="[('state', '=', 'timeout')]"/>
+                <filter name="filter_failed" string="Fallida" domain="[('state', '=', 'failed')]"/>
+                <separator/>
+                <group expand="0" string="Agrupar Por">
+                    <filter name="group_skill" string="Skill" context="{'group_by': 'skill_id'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Conversation Action -->
+    <record id="ai_agent_conversation_action" model="ir.actions.act_window">
+        <field name="name">Conversaciones</field>
+        <field name="res_model">ai.agent.conversation</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="ai_agent_conversation_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay conversaciones de AI Agent.
+            </p>
+            <p>
+                Las conversaciones se crean automaticamente o desde registros
+                de rebote de email, facturas, y otros documentos.
+            </p>
+        </field>
+    </record>
+
+</odoo>
