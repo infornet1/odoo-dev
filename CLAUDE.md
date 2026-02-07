@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-02-07
 
 ## Core Instructions
 
@@ -309,9 +309,21 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
   - "Aplicar Nuevo Email" -- apply customer's new email
 - **Script integration:** Script auto-creates `mail.bounce.log` records via XML-RPC with tier, partner link, and Freescout conversation ID
 - **Freescout post-processing:** Script updates Freescout conversations with `[LIMPIADO]`/`[REVISION]`/`[NO ENCONTRADO]` prefix, internal note with bidirectional Odoo links, and status change
-- **WhatsApp Integration:** Agent queries pending bounces, contacts customer via WhatsApp, updates record on reply
+- **WhatsApp Integration (Planned):** AI agent via MassivaMóvil WhatsApp API queries pending bounces, contacts customer via WhatsApp, updates record on reply
 
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
+
+### WhatsApp API (MassivaMóvil)
+
+- **Provider:** MassivaMóvil (`whatsapp.massivamovil.com`)
+- **Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
+- **Auth:** API secret key param (not OAuth), key name `ueipab1`
+- **Account:** +584148321963 (connected), Plan 500 WhatsApp (433/500 sends used)
+- **Send:** `POST /api/send/whatsapp` (multipart/form-data) - `secret`, `account`, `recipient`, `message`
+- **Validate:** `GET /api/validate/whatsapp` - `secret`, `unique`, `phone`
+- **Receive:** `GET /api/get/wa.received` (polling) or webhook (POST to callback URL)
+- **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
+- **Full API docs:** OpenAPI spec at `GET /api` (requires dashboard session cookie)
 
 ---
 

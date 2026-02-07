@@ -4,7 +4,7 @@
 
 ## Overview
 
-Automated system to detect bounced emails from Freescout, clean up Odoo contacts, notify support team, and maintain a queryable bounce history. Freescout is treated as a **READ-ONLY** source -- the script never writes to the Freescout database.
+Automated system to detect bounced emails from Freescout, clean up Odoo contacts, notify support team, and maintain a queryable bounce history. Freescout is treated as a read-only source for bounce detection; optional post-processing writes subject prefixes, internal notes, and closes conversations. WhatsApp AI agent integration (via MassivaMóvil API) is planned for automated customer outreach.
 
 ## Goals
 
@@ -294,14 +294,45 @@ Pendiente → Soporte Notificado → Cliente Contactado → Resuelto
 - Resolution section with both action buttons
 - Technical detail (raw DSN error)
 
-### WhatsApp AI Agent Integration (Future)
+### WhatsApp AI Agent Integration (Planned)
 
-When implemented, the WhatsApp agent will:
+Extends `ueipab_bounce_log` module to automate bounce resolution via WhatsApp conversations with customers.
+
+**Provider:** MassivaMóvil WhatsApp API (`whatsapp.massivamovil.com`)
+**Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
+**Account:** +584148321963 (connected), Plan 500 WhatsApp
+
+**Integration Flow:**
 1. Query `mail.bounce.log` for records in `pending` state
 2. Look up contact's phone/mobile from `res.partner`
-3. Send WhatsApp message asking for new/alternative email
-4. On customer reply: update `new_email`, trigger "Aplicar Nuevo Email" action
-5. Set state to `Resuelto`
+3. Send WhatsApp message via `POST /api/send/whatsapp` asking for new/alternative email
+4. Receive replies via webhook (`POST` to Odoo controller) or polling (`GET /api/get/wa.received`)
+5. On customer reply: update `new_email`, trigger "Aplicar Nuevo Email" action
+6. Set state to `Resuelto`
+
+**API Endpoints Used:**
+
+| Action | Method | Endpoint | Key Params |
+|--------|--------|----------|------------|
+| Send message | POST | `/send/whatsapp` | `secret`, `account` (unique_id), `recipient`, `message` |
+| Validate number | GET | `/validate/whatsapp` | `secret`, `unique`, `phone` |
+| Get received | GET | `/get/wa.received` | `secret`, `limit`, `page` |
+| Get single msg | GET | `/get/wa.message` | `secret`, `id`, `type` |
+
+**Webhook Payload (incoming WhatsApp):**
+```
+POST callback_url
+  secret: "WEBHOOK_SECRET"
+  type: "whatsapp"
+  data[id]: 2
+  data[wid]: "+584148321963"      // our account
+  data[phone]: "+584121234567"    // sender phone
+  data[message]: "Hello World!"
+  data[attachment]: "url or null"
+  data[timestamp]: 1645684231
+```
+
+**Approach:** Start with polling (simpler, no public URL needed for testing), add webhook for production real-time responses.
 
 ### Migration Path
 
@@ -329,7 +360,7 @@ Existing CSV log data from Phase 1 can be imported into the Odoo model as a one-
 When `FREESCOUT_POSTPROCESS = True`, after all bounces are processed:
 - **Subject prefix:** `[LIMPIADO]`, `[REVISION]`, or `[NO ENCONTRADO]`
 - **Customer email:** Set to the bounced email address
-- **Status:** Active (1) for CLEAN/FLAG, Closed (3) for NOT FOUND
+- **Status:** Closed (3) for all tiers (Odoo is the single resolution workspace)
 - **Internal note:** HTML note with Odoo contact link, bounce log link, action details
 - All writes are skipped in DRY_RUN mode
 

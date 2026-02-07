@@ -78,10 +78,14 @@
                         </group>
                     </group>
                     <group string="Detalle Tecnico">
-                        <field name="bounce_detail" nolabel="1"
+                        <field name="bounce_detail" nolabel="1" colspan="2"
                                placeholder="Error DSN original del servidor de correo"/>
-                        <field name="freescout_conversation_id"/>
-                        <field name="freescout_url" widget="url"/>
+                        <group>
+                            <field name="freescout_conversation_id"/>
+                        </group>
+                        <group>
+                            <field name="freescout_url" widget="url"/>
+                        </group>
                     </group>
                     <group string="WhatsApp (Futuro)" invisible="not whatsapp_contacted">
                         <field name="whatsapp_contacted"/>
