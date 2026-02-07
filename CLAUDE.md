@@ -382,6 +382,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - Queries Freescout for customer replies to verification emails
 - Auto-resolves conversations + triggers bounce log restore
 - Sends farewell WhatsApp to customer
+- Freescout post-processing: `[RESUELTO-AI]` prefix, internal note with Odoo links, close conversation
 
 ### System Parameters
 

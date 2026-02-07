@@ -255,6 +255,13 @@ Bridge script that detects when customers reply to verification emails in Freesc
 2. Query Freescout threads WHERE `from` LIKE `%recipient_email%` AND `type=1` (customer reply) AND `created_at > verification_date`
 3. For matches → call `action_resolve_via_email()` via XML-RPC
 4. Resolution sends farewell WhatsApp + triggers bounce log restore
+5. Post-process Freescout conversation (see below)
+
+**Freescout Post-Processing (per resolved conversation):**
+- **Subject prefix:** `[RESUELTO-AI]` prepended to conversation subject
+- **Internal note:** HTML note with links to Odoo contact, bounce log, and AI conversation
+- **Status:** Closed (3) — Odoo is the single resolution workspace
+- Skips conversations already prefixed with `[LIMPIADO]`, `[REVISION]`, `[NO ENCONTRADO]`, or `[RESUELTO-AI]`
 
 **Execution:**
 ```bash
@@ -265,7 +272,7 @@ python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py
 */15 * * * * python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py >> /var/log/ai_agent_email_checker.log 2>&1
 ```
 
-**Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials). `DRY_RUN=True` by default.
+**Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials via pymysql). `DRY_RUN=True` by default.
 
 ## Cost Estimates
 
