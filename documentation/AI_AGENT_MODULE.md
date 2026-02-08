@@ -230,6 +230,29 @@ By default, `ai_agent.dry_run = True`. In this mode:
 
 Set `ai_agent.dry_run = False` in System Parameters to enable live mode.
 
+## Contact Schedule
+
+Glenda only initiates outbound WhatsApp messages during allowed hours (Venezuela, GMT-4):
+
+| Day | Start | End |
+|-----|-------|-----|
+| Monday - Friday | 06:30 | 20:30 |
+| Saturday - Sunday | 09:30 | 19:00 |
+
+**Behavior:**
+- **Cron-initiated outbound** (reminders, timeouts, poll processing): Blocked outside schedule. Crons skip silently and retry next run.
+- **Customer-initiated replies** (webhook): Glenda responds anytime. If the customer is messaging, they're awake.
+- **Edge case**: Glenda sends reminder at 20:20, customer replies at 20:45 (after cutoff). Webhook processes the reply immediately -- conversation continues. But if the customer doesn't reply and the next cron fires at 21:00, it skips until morning.
+
+**Configurable via System Parameters:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `ai_agent.schedule_weekday_start` | `06:30` | Weekday start (HH:MM, VET) |
+| `ai_agent.schedule_weekday_end` | `20:30` | Weekday end (HH:MM, VET) |
+| `ai_agent.schedule_weekend_start` | `09:30` | Weekend start (HH:MM, VET) |
+| `ai_agent.schedule_weekend_end` | `19:00` | Weekend end (HH:MM, VET) |
+
 ## WhatsApp Reminders
 
 When a customer doesn't reply, the system sends periodic reminders before giving up:

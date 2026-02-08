@@ -96,6 +96,43 @@ class AiAgentConversation(models.Model):
             return False
         return True
 
+    @api.model
+    def _is_within_schedule(self):
+        """Check if current Venezuela time is within the allowed contact schedule.
+
+        Schedule (configurable via system parameters):
+        - Weekdays (Mon-Fri): 06:30 - 20:30
+        - Weekends (Sat-Sun): 09:30 - 19:00
+
+        Cron jobs skip processing outside this window so Glenda never
+        initiates contact when customers are likely sleeping.
+        """
+        from datetime import datetime, timezone, timedelta
+
+        VE_TZ = timezone(timedelta(hours=-4))
+        now_ve = datetime.now(VE_TZ)
+        current_time = now_ve.strftime('%H:%M')
+        weekday = now_ve.weekday()  # 0=Monday, 6=Sunday
+
+        ICP = self.env['ir.config_parameter'].sudo()
+
+        if weekday < 5:  # Monday-Friday
+            start = ICP.get_param('ai_agent.schedule_weekday_start', '06:30')
+            end = ICP.get_param('ai_agent.schedule_weekday_end', '20:30')
+        else:  # Saturday-Sunday
+            start = ICP.get_param('ai_agent.schedule_weekend_start', '09:30')
+            end = ICP.get_param('ai_agent.schedule_weekend_end', '19:00')
+
+        if start <= current_time <= end:
+            return True
+
+        day_name = now_ve.strftime('%A')
+        _logger.info(
+            "AI Agent: Outside schedule (%s %s, allowed %s-%s VET). "
+            "Skipping cron processing.",
+            day_name, current_time, start, end)
+        return False
+
     def action_start(self):
         """Send greeting message and activate conversation."""
         self.ensure_one()
@@ -442,6 +479,8 @@ class AiAgentConversation(models.Model):
         """Cron: poll WhatsApp API for incoming messages (fallback to webhook)."""
         if not self._is_active_environment():
             return
+        if not self._is_within_schedule():
+            return
 
         wa_service = self.env['ai.agent.whatsapp.service']
         dry_run = self.env['ir.config_parameter'].sudo().get_param(
@@ -497,6 +536,8 @@ class AiAgentConversation(models.Model):
            → timeout
         """
         if not self._is_active_environment():
+            return
+        if not self._is_within_schedule():
             return
 
         from datetime import timedelta

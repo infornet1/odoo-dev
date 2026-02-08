@@ -375,6 +375,14 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Environment safeguard:** `ai_agent.active_db` parameter prevents double-processing when both environments share the same WhatsApp account. Set to the database name that should process crons (e.g., `DB_UEIPAB` for production). The other environment's crons self-skip.
 
+### Contact Schedule
+
+Glenda only initiates contact during allowed hours (VET, GMT-4):
+- Weekdays: 06:30 - 20:30
+- Weekends: 09:30 - 19:00
+- Cron-initiated outbound (reminders, timeouts, polls) blocked outside schedule
+- Customer-initiated replies (webhook) processed anytime
+
 ### Conversation Features (v1.1.0)
 
 **WhatsApp Reminders:** Automatic follow-ups when customer doesn't reply.

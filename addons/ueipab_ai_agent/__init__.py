@@ -79,3 +79,19 @@ def _load_api_configs(env):
         db_name = env.cr.dbname
         ICP.set_param('ai_agent.active_db', db_name)
         _logger.info("AI Agent: active_db set to '%s' (current database)", db_name)
+
+    # Set schedule defaults (Venezuela, GMT-4)
+    schedule_defaults = {
+        'ai_agent.schedule_weekday_start': '06:30',
+        'ai_agent.schedule_weekday_end': '20:30',
+        'ai_agent.schedule_weekend_start': '09:30',
+        'ai_agent.schedule_weekend_end': '19:00',
+    }
+    for key, default in schedule_defaults.items():
+        if not ICP.get_param(key):
+            ICP.set_param(key, default)
+    _logger.info("AI Agent: Schedule params set (weekday %s-%s, weekend %s-%s VET)",
+                 ICP.get_param('ai_agent.schedule_weekday_start'),
+                 ICP.get_param('ai_agent.schedule_weekday_end'),
+                 ICP.get_param('ai_agent.schedule_weekend_start'),
+                 ICP.get_param('ai_agent.schedule_weekend_end'))
