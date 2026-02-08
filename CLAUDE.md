@@ -421,13 +421,14 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 3. Module saves `escalation_date` + `escalation_reason` on conversation
 4. Conversation continues in `waiting` state (intermediate action, not terminal)
 
-**Escalation Bridge:** `scripts/ai_agent_escalation_bridge.py` (cron every 5 min)
+**Escalation Bridge:** `scripts/ai_agent_escalation_bridge.py`
 - Queries Odoo for conversations with `escalation_date` but no Freescout ticket
 - Creates Freescout support ticket via direct MySQL (unassigned, for team pickup)
 - Sends WhatsApp notification to "ueipab soporte" group (`584142337463-1586178983@g.us`)
 - Updates Odoo with Freescout ticket number
 - `DRY_RUN=True` by default, same safety pattern as other bridge scripts
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
+- **Cron:** `/etc/cron.d/ai_agent_escalation` — every 5 min, logs to `scripts/logs/escalation_bridge.log`
 
 ### System Parameters
 
