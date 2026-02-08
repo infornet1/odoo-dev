@@ -6,6 +6,37 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-02-08 - Contact Data Sync Fix (Bounce Log + Partner Emails)
+
+**Fixed cross-reference inconsistencies between Odoo, Freescout bounces, Customers sheet, and Akdemia.**
+
+**Category A — 7 not-found bounce logs linked to correct partners:**
+- Linked bounce logs #30, #32, #33, #46, #54, #56, #58 to their matching partners
+- Updated `action_tier` from `not_found` to `flag` (temporary) or `clean` (permanent)
+- Appended bounced emails to partner email fields (multi-email `;` pattern)
+- Contacts: DAIRILYS CHAURAN, ANTONIO MARTINEZ, MARIA APONTE, DOALBERT NUÑEZ, FRANCIA LORETO, CASTO GONZALEZ, GLORIA MILLAN
+
+**Category B — MIGUEL MARIN #3663:**
+- Added `susanaquijada102@gmail.com` as secondary email in Odoo (mother's email from Akdemia)
+- Updated Customers Google Sheet row 128 to include both emails
+
+**Category C — SORELIS MAITA #3669:**
+- Flagged for manual mobile lookup (no phone/mobile in any data source)
+- Glenda cannot WhatsApp without mobile number
+
+**Category D — Perdomo duplicates cleanup:**
+- Deleted 3 irrelevant bounce logs (#27, #28, #29) — staff, not Representante
+- Archived 2 duplicate partners (#3612 Alberto J Perdomo, #3676 Gustavo Perdomo)
+- Added `perdomo.gustavo@gmail.com` as secondary email on real user #7
+
+**Category E — 8 orphan bounces:** No action (no match in any data source)
+
+**Verification:** 37 bounce logs total, 29 linked to partners, 8 orphans as expected.
+
+**Scripts:** `scripts/contact_data_sync_fix.py`, `scripts/contact_sync_comparison.py`
+
+---
+
 ### 2026-01-10 - LIQUID_VE_V2 Accounting Configuration Fix
 
 **Fixed payslip confirmation error for Liquidación Venezolana V2:**

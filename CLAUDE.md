@@ -315,6 +315,18 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
 
+### Contact Data Sync Fix (2026-02-08)
+
+Cross-reference analysis of Odoo, Freescout, Customers sheet, and Akdemia revealed sync inconsistencies. Fixed via `scripts/contact_data_sync_fix.py`:
+
+- **7 not-found bounce logs** linked to correct partners (bounced email existed in Sheets but Odoo had different email)
+- **MIGUEL MARIN #3663:** Added mother's email (`susanaquijada102@gmail.com`) as secondary in Odoo + Customers sheet
+- **SORELIS MAITA #3669:** Flagged for manual mobile lookup (no phone in any source)
+- **Perdomo duplicates:** 3 bounce logs deleted, 2 duplicate partners archived (#3612, #3676)
+- **8 orphan bounces:** No match in any source, left as `not_found`
+
+**Post-fix stats:** 37 bounce logs, 29 linked to partners, 8 orphans. Comparison script: `scripts/contact_sync_comparison.py`.
+
 ### WhatsApp API (MassivaMóvil)
 
 - **Provider:** MassivaMóvil (`whatsapp.massivamovil.com`)

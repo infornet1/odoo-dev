@@ -1,0 +1,65 @@
+SYNC DIAGNOSTIC REPORT: Representante / Representante PDVSA Contacts
+Generated: 2026-02-08 10:17
+Source of truth: TESTING (after sync fixes applied 2026-02-08)
+======================================================================
+
+Summary:
+  Testing contacts:    316
+  Production contacts: 315
+  In both (by name):   314
+  Only in testing:     1
+  Only in production:  0
+  With differences:    9
+
+--- ONLY IN TESTING (1) - Need to create in production ---
+  - DANMARYS BARRIOS | ID: 2305 | VAT: V18678124 | Email: sofiadiegollo@gmail.com;danmabarrios@gmail.com | Mobile: +58 414 7860214
+
+--- FIELD DIFFERENCES (9 contacts) ---
+--- Direction: TESTING → PRODUCTION (testing is source of truth) ---
+
+  ANTONIO MARTINEZ (Test ID: 2174, Prod ID: 2174) [same]
+    email   : TEST='neumo.martinez@gmail.com;antonyfeli5@gmail.com'        PROD='neumo.martinez@gmail.com'
+
+  CASTO GONZALEZ (Test ID: 2255, Prod ID: 2255) [same]
+    email   : TEST='gonzalezcju2543@gmail.com;marianyicastellanos@gmail... PROD='gonzalezcju2543@gmail.com'
+
+  DAIRILYS CHAURAN (Test ID: 2294, Prod ID: 2294) [same]
+    email   : TEST='dairilyschauran@gmail.com;ajlopezo36@gmail.com'        PROD='dairilyschauran@gmail.com'
+
+  DOALBERT NUÑEZ (Test ID: 2341, Prod ID: 2341) [same]
+    email   : TEST='franhielysflores@gmail.com;doalbert@gmail.com;franh... PROD='franhielysflores@gmail.com;doalbert@gmail.com'
+
+  FRANCIA LORETO (Test ID: 2417, Prod ID: 2417) [same]
+    email   : TEST='fradicor@gmail.com;loretof@pdvsa.com'                  PROD='fradicor@gmail.com'
+
+  GLORIA MILLAN (Test ID: 2450, Prod ID: 2450) [same]
+    email   : TEST='damarinm@ueipab.edu.ve;millangloria86@gmail.com'       PROD='damarinm@ueipab.edu.ve'
+
+  IRIS DE GUEDEZ (Test ID: 2811, Prod ID: 2503) [MISMATCH test=2811 prod=2503]
+    phone   : TEST=''                                                      PROD='4263024090'
+    vat     : TEST='J297058842'                                            PROD='V8965347'
+
+  MARIA APONTE (Test ID: 2659, Prod ID: 2659) [same]
+    email   : TEST='apontemarivict@gmail.com;apontemb@pdvsa.com'           PROD='apontemarivict@gmail.com'
+
+  MIGUEL MARIN (Test ID: 3663, Prod ID: 3663) [same]
+    email   : TEST='marin.p.miguel.a.90@gmail.com;susanaquijada102@gmai... PROD='marin.p.miguel.a.90@gmail.com'
+
+--- SYNC ACTIONS NEEDED (Testing → Production) ---
+
+  CREATE in production (1):
+    - DANMARYS BARRIOS (test ID 2305)
+
+  UPDATE in production (9):
+    - ANTONIO MARTINEZ (ID 2174): update email
+    - CASTO GONZALEZ (ID 2255): update email
+    - DAIRILYS CHAURAN (ID 2294): update email
+    - DOALBERT NUÑEZ (ID 2341): update email
+    - FRANCIA LORETO (ID 2417): update email
+    - GLORIA MILLAN (ID 2450): update email
+    - IRIS DE GUEDEZ (ID 2811): update phone, vat
+    - MARIA APONTE (ID 2659): update email
+    - MIGUEL MARIN (ID 3663): update email
+
+  Total sync actions: 10
+
