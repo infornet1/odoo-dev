@@ -217,7 +217,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
-| ueipab_ai_agent | 17.0.1.3.0 | 2026-02-08 |
+| ueipab_ai_agent | 17.0.1.4.0 | 2026-02-08 |
 
 ### Production Environment
 
@@ -355,7 +355,7 @@ Cross-reference analysis of Odoo, Freescout, Customers sheet, and Akdemia reveal
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.3.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.4.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
 
@@ -412,6 +412,22 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Auto-resolves conversations + triggers bounce log restore
 - Sends farewell WhatsApp to customer
 - Freescout post-processing: `[RESUELTO-AI]` prefix, internal note with Odoo links, close conversation
+
+### Escalation Feature (v1.4.0)
+
+**Off-topic request handling:** When customer asks about something outside bounce resolution (constancias, invoices, data changes), Glenda:
+1. Acknowledges the request politely (visible to customer)
+2. Includes `ACTION:ESCALATE:description` marker (invisible to customer)
+3. Module saves `escalation_date` + `escalation_reason` on conversation
+4. Conversation continues in `waiting` state (intermediate action, not terminal)
+
+**Escalation Bridge:** `scripts/ai_agent_escalation_bridge.py` (cron every 5 min)
+- Queries Odoo for conversations with `escalation_date` but no Freescout ticket
+- Creates Freescout support ticket via direct MySQL (unassigned, for team pickup)
+- Sends WhatsApp notification to "ueipab soporte" group (`584142337463-1586178983@g.us`)
+- Updates Odoo with Freescout ticket number
+- `DRY_RUN=True` by default, same safety pattern as other bridge scripts
+- Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
 
 ### System Parameters
 
@@ -503,6 +519,7 @@ python3 scripts/akdemia_email_sync.py --skip-sheets       # skip Google Sheets
 - PATH B: Email verification checker → customer replies to verification email
 - PATH C: Akdemia sync → tech support updated email in Akdemia
 - PATH D: Manual → staff clicks "Restaurar" or "Aplicar Nuevo" in Odoo
+- PATH E: Escalation → customer asks off-topic, Freescout ticket created, conversation continues
 
 ### Mailing Contact Sync (v1.2.0)
 

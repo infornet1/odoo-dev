@@ -52,6 +52,12 @@ class AiAgentConversation(models.Model):
     verification_email_sent_date = fields.Datetime('Verificacion Enviada')
     verification_email_recipient = fields.Char('Email Verificado')
 
+    # Escalation tracking
+    escalation_date = fields.Datetime('Fecha Escalacion')
+    escalation_reason = fields.Text('Razon Escalacion')
+    escalation_freescout_id = fields.Integer('Freescout Ticket #')
+    escalation_notified = fields.Boolean('Equipo Notificado', default=False)
+
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
         for rec in self:
@@ -263,9 +269,12 @@ class AiAgentConversation(models.Model):
             self.action_resolve(action.get('summary', ''), action.get('resolution_data'))
             return
 
-        # Handle intermediate actions (e.g., send verification email)
+        # Handle intermediate actions (e.g., send verification email, escalation)
         if action.get('send_verification_email'):
             self._send_verification_email(action['send_verification_email'])
+
+        if action.get('escalate'):
+            self._handle_escalation(action['escalate'])
 
         # Send AI response via WhatsApp
         response_text = action.get('message', ai_content)
@@ -339,6 +348,26 @@ class AiAgentConversation(models.Model):
         self.message_post(body=_(
             "Correo de verificación enviado a %s%s."
         ) % (recipient_email, " (DRY RUN)" if dry_run else ""))
+
+    def _handle_escalation(self, reason):
+        """Log escalation for bridge script to create Freescout ticket + notify group."""
+        self.ensure_one()
+        # Append if multiple escalations in same conversation
+        existing = self.escalation_reason or ''
+        timestamp = fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
+        new_entry = f"[{timestamp}] {reason}"
+        updated = f"{existing}\n{new_entry}".strip() if existing else new_entry
+
+        vals = {'escalation_reason': updated}
+        if not self.escalation_date:
+            vals['escalation_date'] = fields.Datetime.now()
+            vals['escalation_notified'] = False
+        self.write(vals)
+
+        self.message_post(body=_(
+            "Escalacion registrada: %s. Pendiente creacion de ticket en Freescout."
+        ) % reason)
+        _logger.info("Conversation %s: escalation — %s", self.id, reason)
 
     def action_resolve(self, summary='', resolution_data=None):
         """Mark conversation as resolved and trigger skill callback."""

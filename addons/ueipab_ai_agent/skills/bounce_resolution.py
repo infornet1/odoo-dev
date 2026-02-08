@@ -67,6 +67,11 @@ class BounceResolutionSkill:
             "  El sistema enviará el correo automáticamente. SIEMPRE incluye el marcador.\n"
             "- Si el cliente confirma que recibió el correo de verificación, responde: RESOLVED:RESTORE\n"
             "- Si el cliente no desea proporcionar otro correo, responde: RESOLVED:DECLINED\n"
+            "- Si el cliente solicita algo fuera del tema del correo electrónico "
+            "(constancia de estudios, factura, cambio de datos, información de pagos, etc.), "
+            "infórmale amablemente que has registrado su solicitud y que nuestro equipo de soporte "
+            "le contactará al respecto. Luego retoma el tema del correo. "
+            "Incluye al final de tu respuesta: ACTION:ESCALATE:breve descripcion del requerimiento\n"
             "- No reveles detalles técnicos del rebote a menos que el cliente pregunte.\n"
             "- Máximo 4-5 intercambios antes de cerrar la conversación.\n"
             "- IMPORTANTE: Los marcadores RESOLVED: y ACTION: son comandos internos del sistema. "
@@ -112,6 +117,12 @@ class BounceResolutionSkill:
 
     def _extract_visible_text(self, ai_response):
         """Extract visible text before any internal marker (RESOLVED: or ACTION:)."""
+        # ACTION:ESCALATE: has free-form description, match it first
+        esc_match = re.search(r'ACTION:ESCALATE:', ai_response)
+        if esc_match:
+            text = ai_response[:esc_match.start()].strip()
+            return text if text else None
+        # Original pattern for RESOLVED:xxx and ACTION:VERIFY_EMAIL
         match = re.search(r'(?:RESOLVED|ACTION):\S+', ai_response)
         if match:
             text = ai_response[:match.start()].strip()
@@ -120,6 +131,16 @@ class BounceResolutionSkill:
 
     def process_ai_response(self, conversation, ai_response, context):
         """Parse AI response for resolution signals and actions."""
+        # Check for ACTION:ESCALATE: (intermediate, conversation continues)
+        escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', ai_response, re.MULTILINE)
+        if escalate_match:
+            escalation_desc = escalate_match.group(1).strip()
+            visible_text = self._extract_visible_text(ai_response)
+            return {
+                'message': visible_text or ai_response,
+                'escalate': escalation_desc,
+            }
+
         # Check for ACTION:VERIFY_EMAIL (intermediate action, no resolution)
         if 'ACTION:VERIFY_EMAIL' in ai_response:
             visible_text = self._extract_visible_text(ai_response)

@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.2.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.4.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -103,6 +103,10 @@ Tracks each WhatsApp conversation with a customer.
 | `last_reminder_date` | Datetime | When last reminder was sent |
 | `verification_email_sent_date` | Datetime | When verification email was sent |
 | `verification_email_recipient` | Char | Email address being verified |
+| `escalation_date` | Datetime | When first escalation was triggered |
+| `escalation_reason` | Text | Timestamped escalation descriptions (appended) |
+| `escalation_freescout_id` | Integer | Freescout ticket number (set by bridge) |
+| `escalation_notified` | Boolean | Whether support group was notified |
 
 **State Machine:**
 
@@ -110,6 +114,7 @@ Tracks each WhatsApp conversation with a customer.
 draft -> waiting (action_start: send greeting)
 waiting -> active (incoming reply received, reminder_count reset)
 active -> waiting (AI response sent)
+active -> waiting (escalation: AI detects off-topic request, logs it, continues)
 waiting -> waiting (reminder sent, reminder_count incremented)
 waiting -> resolved (skill detects resolution OR email reply detected)
 waiting -> timeout (no reply after all reminders exhausted)
@@ -152,7 +157,7 @@ class MySkill:
 
 | Code | Purpose | Resolution Triggers |
 |------|---------|-------------------|
-| `bounce_resolution` | Ask for new email when old one bounced | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED` |
+| `bounce_resolution` | Ask for new email when old one bounced | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
 | `bill_reminder` | Friendly invoice due date reminder | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
 | `billing_support` | Balance inquiry and billing Q&A | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
 
@@ -298,6 +303,78 @@ python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py
 
 **Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials via pymysql). `DRY_RUN=True` by default.
 
+## Escalation (v1.4.0)
+
+When a customer asks Glenda about something outside bounce resolution (constancias, invoices, data changes, etc.), the system escalates gracefully without ending the conversation.
+
+### Flow
+
+```
+Customer: "Necesito una constancia de estudios"
+    │
+    ├─ 1. Claude includes ACTION:ESCALATE:Solicita constancia in response
+    │     (visible text tells customer "he registrado su solicitud")
+    │
+    ├─ 2. Odoo module (immediate, during action_process_reply):
+    │     - Parse marker, extract description
+    │     - Save escalation_date + escalation_reason on conversation
+    │     - Send visible response to customer via WhatsApp
+    │     - Conversation stays in 'waiting' (Glenda continues bounce resolution)
+    │
+    └─ 3. Bridge script (cron every 5 min on dev server):
+          - Query Odoo for conversations with escalation_date but no freescout ticket
+          - Create Freescout conversation via direct MySQL
+          - Send WhatsApp to "ueipab soporte" group with ticket details
+          - Update Odoo conversation with Freescout ticket number
+```
+
+### Marker Format
+
+```
+ACTION:ESCALATE:description text here (free-form, single line, captured to end of line)
+```
+
+**Key behavior:** Intermediate action — conversation stays in `waiting`, Glenda continues bounce resolution. Multiple escalations in the same conversation are appended with timestamps.
+
+### Bridge Script
+
+**Script:** `scripts/ai_agent_escalation_bridge.py`
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `DRY_RUN` | `True` | No real API calls when True |
+| `TARGET_ENV` | `testing` | Target Odoo environment |
+| `WA_GROUP_ID` | `584142337463-1586178983@g.us` | "ueipab soporte" WhatsApp group |
+
+**Execution:**
+```bash
+# Manual dry run
+python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py
+
+# Cron (every 5 minutes)
+*/5 * * * * python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py >> /var/log/ai_agent_escalation_bridge.log 2>&1
+```
+
+**WhatsApp group message format:**
+```
+📋 *Nuevo Ticket de Soporte #NNN*
+Cliente: PARTNER_NAME
+Telefono: +58XXXXXXXXXX
+Motivo: escalation description
+🔗 Freescout: https://soporte.ueipab.edu.ve/conversation/NNN
+🔗 Odoo: ODOO_URL/web#id=XXX&model=ai.agent.conversation
+```
+
+### Bounce Log Resolution Paths (5 total)
+
+| Path | Trigger | Action |
+|------|---------|--------|
+| A | Glenda WhatsApp → customer gives new email | `RESOLVED:new@email.com` |
+| B | Email verification checker → customer replies to verification email | `RESOLVED:RESTORE` via bridge |
+| C | Akdemia sync → tech support updated email in Akdemia | Auto-resolve via script |
+| D | Manual → staff clicks "Restaurar" or "Aplicar Nuevo" in Odoo | Direct action |
+| E | Escalation → customer asks off-topic question | `ACTION:ESCALATE:desc` (intermediate, Freescout ticket created) |
+
 ## Production Deployment Architecture
 
 ### Split-Server Design
@@ -370,8 +447,9 @@ Testing environment lockout:
 
 Script deployment:
 [ ] Update ai_agent_email_checker.py: TARGET_ENV='production'
+[ ] Update ai_agent_escalation_bridge.py: TARGET_ENV='production'
 [ ] Update daily_bounce_processor.py: TARGET_ENV='production' (if not already)
-[ ] Add crontab entries on dev server
+[ ] Add crontab entries on dev server (email_checker 15min, escalation_bridge 5min)
 
 Go live:
 [ ] Set ai_agent.dry_run = 'False' on production

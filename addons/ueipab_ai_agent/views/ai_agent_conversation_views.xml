@@ -78,6 +78,16 @@
                             <field name="verification_email_recipient"/>
                         </group>
                     </group>
+                    <group string="Escalacion" invisible="not escalation_date">
+                        <group>
+                            <field name="escalation_date"/>
+                            <field name="escalation_freescout_id"/>
+                            <field name="escalation_notified"/>
+                        </group>
+                        <group>
+                            <field name="escalation_reason"/>
+                        </group>
+                    </group>
                     <notebook>
                         <page string="Mensajes">
                             <field name="agent_message_ids" mode="tree" readonly="1">
@@ -127,6 +137,7 @@
                 <filter name="filter_resolved" string="Resuelta" domain="[('state', '=', 'resolved')]"/>
                 <filter name="filter_timeout" string="Timeout" domain="[('state', '=', 'timeout')]"/>
                 <filter name="filter_failed" string="Fallida" domain="[('state', '=', 'failed')]"/>
+                <filter name="filter_escalated" string="Escaladas" domain="[('escalation_date', '!=', False)]"/>
                 <separator/>
                 <group expand="0" string="Agrupar Por">
                     <filter name="group_skill" string="Skill" context="{'group_by': 'skill_id'}"/>
