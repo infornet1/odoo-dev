@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-08
 
 ## Core Instructions
 
@@ -470,17 +470,53 @@ Daily automated extraction of student/parent data from Akdemia student managemen
 - **Key cedula columns:** AH = parent 1 cedula, BK = parent 2 cedula
 - **Data starts:** Row 4 (rows 1-2 are school name/year)
 
-### Planned: Akdemia Email Change Detection
+### Akdemia Email Sync Script (Implemented 2026-02-08)
 
-Daily pipeline after Akdemia scrape:
-1. Parse parent emails from downloaded XLS
-2. Compare with `res.partner.email` in Odoo (match by cedula/name)
-3. If email changed in Akdemia → update Odoo `res.partner.email`
-4. If active `ai.agent.conversation` exists for that partner → auto-resolve
-5. If `mail.bounce.log` exists → mark as resolved
-6. Update Akdemia2526 sheet tab for visibility
+**Script:** `scripts/akdemia_email_sync.py`
+**Safety:** `DRY_RUN=True`, `TARGET_ENV=testing` by default. Use `--live` to apply.
 
-**Script:** `scripts/akdemia_email_sync.py` (to be implemented)
+Daily pipeline after Akdemia scrape — closes the loop when tech support updates an email in Akdemia without Glenda knowing:
+
+1. **Phase 1:** Get XLS (`--file` manual, or latest from downloads/historical dir)
+2. **Phase 2:** Parse XLS → parent email map by cedula (287 parents, 3 parent sets per student)
+3. **Phase 3:** Compare with unresolved `mail.bounce.log` records (match `partner.vat` → Akdemia cedula)
+4. **Phase 4:** Auto-resolve: `action_apply_new_email()` on bounce log + `action_resolve()` on AI conversation + update `mailing.contact` by email match
+5. **Phase 5:** Update Akdemia2526 Google Sheet tab with fresh XLS data
+
+**Dry run results (Sep 2025 XLS):** 14 email changes detected (PDVSA domains → gmail/hotmail)
+
+**Usage:**
+```bash
+python3 scripts/akdemia_email_sync.py                    # dry run
+python3 scripts/akdemia_email_sync.py --live              # apply changes
+python3 scripts/akdemia_email_sync.py --file /path.xls    # specific file
+python3 scripts/akdemia_email_sync.py --skip-sheets       # skip Google Sheets
+```
+
+**Bounce log resolution paths (4 total):**
+- PATH A: Glenda WhatsApp → customer gives new email
+- PATH B: Email verification checker → customer replies to verification email
+- PATH C: Akdemia sync → tech support updated email in Akdemia
+- PATH D: Manual → staff clicks "Restaurar" or "Aplicar Nuevo" in Odoo
+
+### Mailing Contact Sync (v1.2.0)
+
+**Gap discovered 2026-02-08:** Bounce resolution updated `res.partner.email` but NOT `mailing.contact`. Production has 350 mailing contacts across 3 lists (Toda la comunidad=239, Grupo1=110, Newsletter=1). 28 of 37 bounced emails exist in `mailing.contact` — campaigns would re-bounce to stale emails.
+
+**Fix (3 parts):**
+- **Part A (Module):** `ueipab_bounce_log` `_resolve_record()` now searches `mailing.contact` by bounced email and updates/removes as needed
+- **Part B (Script):** `akdemia_email_sync.py` also updates `mailing.contact` via XML-RPC during resolution
+- **Part C (Testing sync):** Import production mailing lists/contacts into testing for parity
+
+**CRITICAL:** Never touch `todalacomunidad@ueipab.edu.ve` — that email holds all `@ueipab.edu.ve` institutional users, not parents.
+
+### Production Mailing Lists
+
+| List | ID | Contacts | Purpose |
+|------|----|----------|---------|
+| Toda la comunidad | 2 | 239 | All parent emails for school campaigns |
+| Grupo1 | 3 | 110 | Subset of parents (specific grade group) |
+| Newsletter | 1 | 1 | General newsletter |
 
 ---
 
