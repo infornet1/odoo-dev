@@ -390,6 +390,20 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Environment safeguard:** `ai_agent.active_db` parameter prevents double-processing when both environments share the same WhatsApp account. Set to the database name that should process crons (e.g., `DB_UEIPAB` for production). The other environment's crons self-skip.
 
+### Testing Environment Status (2026-02-08)
+
+| Setting | Value | Notes |
+|---------|-------|-------|
+| `ai_agent.dry_run` | `True` | Flip to `False` for live testing |
+| `ai_agent.active_db` | `testing` | Crons run in this env |
+| Poll WhatsApp Messages cron | `active=True` | Processes customer replies every 5 min |
+| Check Conversation Timeouts cron | `active=False` | No auto-reminders, no auto-timeouts |
+| Escalation bridge cron | Running (system) | `/etc/cron.d/ai_agent_escalation`, every 5 min, DRY_RUN=True |
+
+**Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
+
+**Bounce logs ready:** 30 with partner + mobile, 0 active conversations. All stale test conversations cleaned up.
+
 ### Contact Schedule
 
 Glenda only initiates contact during allowed hours (VET, GMT-4):

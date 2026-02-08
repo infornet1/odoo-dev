@@ -178,10 +178,20 @@ class MySkill:
 
 ## Cron Jobs
 
+### Odoo Module Crons (inside Docker)
+
+| Cron | Interval | Active (testing) | Purpose |
+|------|----------|-------------------|---------|
+| AI Agent: Poll WhatsApp Messages | 5 min | Yes | Fetch new received messages (fallback to webhook) |
+| AI Agent: Check Conversation Timeouts | 1 hour | **No** | Send reminders or timeout waiting conversations |
+
+**Operational model:** Poll cron processes customer replies automatically. Timeout cron is kept disabled during supervised testing — no unsolicited reminders or auto-timeouts. Conversations are started manually via "Iniciar WhatsApp" button.
+
+### System Crons (dev server /etc/cron.d/)
+
 | Cron | Interval | Purpose |
 |------|----------|---------|
-| AI Agent: Poll WhatsApp Messages | 5 min | Fetch new received messages (fallback to webhook) |
-| AI Agent: Check Conversation Timeouts | 1 hour | Send reminders or timeout waiting conversations |
+| `ai_agent_escalation` | 5 min | Bridge: creates Freescout tickets + WhatsApp group notifications for escalated conversations |
 
 ## Security
 
