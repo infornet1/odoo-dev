@@ -1,0 +1,54 @@
+BOUNCE LOG IMPORT REPORT
+Generated: 2026-02-07
+========================
+
+Source: Freescout MySQL (173 active mailer-daemon conversations)
+Target: Odoo testing (mail.bounce.log)
+Method: One record per unique bounced email, most recent Freescout conversation
+
+RESULTS:
+  Total unique emails: 37
+  Pre-existing (skipped): 1 (perdomo.gustavo@gmail.com)
+  Created: 37
+    Representante (AI Agent candidates): 22
+    Not Found in Odoo: 15
+    Non-Representante: 0
+
+REPRESENTANTE BOUNCE LOGS (22) - AI Agent Candidates:
+  Tier=CLEAN (10) - permanent failures, auto-cleanable:
+    #34 arelysdemorillo08@gmail.com    | invalid_address  | ARELIS DE MORILLO (#2182) | 2x
+    #41 duerto88@gmail.com             | invalid_address  | RAFAEL DUERTO (#2786) | 1x
+    #43 edgardojje@gmail.com           | invalid_address  | EDGARDO JIMENEZ (#2353) | 1x
+    #51 gonzalezmt@pdvsa.com           | domain_not_found | MARIA V. GONZALEZ (#2674) | 7x
+    #52 jbisleidymata@gmail.com        | invalid_address  | BISLEIBYS MATA (#3638) | 1x
+    #55 maitasorelisdejesu@gmail.com   | invalid_address  | SORELIS MAITA (#3669) | 2x
+    #57 marin.p.miguel.a.90@gmail.com  | invalid_address  | MIGUEL MARIN (#3663) | 1x
+    #60 puertabs@petropiar.pdvsa.com   | domain_not_found | BETZIMAR PUERTA (#2222) | 7x
+    #61 salazaramc@petropiar.pdvsa.com | domain_not_found | ANYELYS SALAZAR (#2177) | 7x
+    #62 valeraat@pdvsa.com             | domain_not_found | ANALY VALERA (#2156) | 7x
+    #64 vargashr@pdvsa.com             | domain_not_found | ANA GUEVARA (#2152) | 7x
+
+  Tier=FLAG (12) - temporary failures, need review:
+    #31 alegnah163@gmail.com                       | mailbox_full | ANGELA GONZALEZ (#2164) | 3x
+    #39 dayanacperdomo@gmail.com                   | mailbox_full | DAYANA PERDOMO (#2318) | 9x
+    #40 domin.anuel0608@gmail.com                  | mailbox_full | DANIEL DOMINGUEZ (#3699) | 7x
+    #42 eddarodrigueztineo@gmail.com               | mailbox_full | EDDA RODRIGUEZ (#2352) | 9x
+    #47 freddyaquiles@gmail.com                    | mailbox_full | FREDDY GONZALEZ (#2421) | 9x
+    #48 galvisanais@gmail.com                      | mailbox_full | ANAIS GALVIS (#2155) | 1x
+    #50 gomesangelica83@gmail.com                  | mailbox_full | ANGELICA GOMES (#2165) | 7x
+    #53 josmelrodriguez1987@gmail.com              | mailbox_full | MAGDA HERRERA (#2648) | 7x
+    #59 pintocarmen674@gmail.com                   | mailbox_full | RAFAEL DUERTO (#2786) | 7x
+    #65 vasquezmaryory36@gmail.com                 | mailbox_full | MARYORY VASQUEZ (#3659) | 3x
+    #66 williamjose.velasquezgonzalez@gmail.com    | mailbox_full | WILLIANS VELASQUEZ (#2918) | 3x
+
+NOT FOUND IN ODOO (15):
+    #30 ajlopezo36@gmail.com | #32 antonyfeli5@gmail.com | #33 apontemb@pdvsa.com
+    #35 avvae_238@hotmail.com | #36 bompartt70@gmail.com | #37 condalesl@petrocedeno.pdvsa.com
+    #38 dagoberto.abarca@ueipab.edu.ve | #44 elviram511@gmail.com | #45 espinat.22@gmail.com
+    #46 franhielys@gmail.com | #49 goitel@pdvsa.com | #54 loretof@pdvsa.com
+    #56 marianyicastellanos@gmail.com | #58 millangloria86@gmail.com | #63 vanehdez90@gmail.com
+
+SAFETY STATUS:
+  ai_agent.dry_run = True (NO real API calls)
+  AI Agent crons: DISABLED (active=false)
+  Both Poll and Timeout crons will NOT run until manually enabled
