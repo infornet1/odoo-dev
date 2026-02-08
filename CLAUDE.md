@@ -42,6 +42,7 @@
 | 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
 | 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
 | 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
+| 27 | Akdemia Data Pipeline | In Progress | Script + Cron | See below |
 
 ---
 
@@ -432,6 +433,54 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Conversation resolution triggers bounce log actions (apply new email, restore original)
 
 See [Full Documentation](documentation/AI_AGENT_MODULE.md) for complete details.
+
+---
+
+## Akdemia Data Pipeline
+
+**Status:** In Progress | **Type:** Script + Cron
+
+Daily automated extraction of student/parent data from Akdemia student management system, with email change detection to auto-resolve AI agent conversations.
+
+### Existing Infrastructure (odoo_api_bridge)
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| Akdemia Scraper | `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` | Playwright-based, working |
+| Cron Wrapper | `/var/www/dev/odoo_api_bridge/scripts/customer_matching_wrapper.sh` | Configured, daily 6AM VET |
+| Cron Job | `/etc/cron.d/customer_matching` | Active |
+| Daily Script | `scripts/customer_matching_daily.py` | **NOT YET CREATED** |
+| Downloads Dir | `/var/www/dev/odoo_api_bridge/akdemia_downloads/` | Empty (last run Sep 2025) |
+| Historical XLS | `customer_matching/data/xls_uploads/2025/09/` | 10+ files from Sep 2025 |
+
+### Akdemia Scraper Details
+
+- **Platform:** `https://edge.akdemia.com` (Playwright headless Chromium)
+- **Credentials:** `gustavo.perdomo@ueipab.edu.ve` (hardcoded in scraper)
+- **Output:** Excel file `lista_de_estudiantes{date}-{hash}.xls`
+- **Data:** Student name, cedula, grade, section, parent name/email/phone, payment status, balance
+- **Google Sheets target:** Currently PVT2526, needs to also update Akdemia2526
+
+### Akdemia2526 Sheet Structure
+
+- **Spreadsheet:** `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA` (Customer Database Odoo)
+- **Tab:** `Akdemia2526` (227 rows, headers in row 3)
+- **Key email columns:** AU = `Correo electrónico de Representante` (parent 1), BX = same (parent 2)
+- **Key name columns:** AB/AE = parent 1 name/surname, BE/BH = parent 2 name/surname
+- **Key cedula columns:** AH = parent 1 cedula, BK = parent 2 cedula
+- **Data starts:** Row 4 (rows 1-2 are school name/year)
+
+### Planned: Akdemia Email Change Detection
+
+Daily pipeline after Akdemia scrape:
+1. Parse parent emails from downloaded XLS
+2. Compare with `res.partner.email` in Odoo (match by cedula/name)
+3. If email changed in Akdemia → update Odoo `res.partner.email`
+4. If active `ai.agent.conversation` exists for that partner → auto-resolve
+5. If `mail.bounce.log` exists → mark as resolved
+6. Update Akdemia2526 sheet tab for visibility
+
+**Script:** `scripts/akdemia_email_sync.py` (to be implemented)
 
 ---
 
