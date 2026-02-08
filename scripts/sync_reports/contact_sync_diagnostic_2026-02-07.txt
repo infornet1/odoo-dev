@@ -1,0 +1,76 @@
+SYNC DIAGNOSTIC REPORT: Representante / Representante PDVSA Contacts
+Generated: 2026-02-07
+=====================================================================
+
+Summary:
+  Production contacts: 315
+  Testing contacts:    311
+  In both (by name):   309
+  Only in production:  5
+  Only in testing:     1
+
+--- ONLY IN PRODUCTION (5) - Need to create in testing ---
+  - ANNELYS SANTOYO | VAT: V18205513 | Email: sannelys1@gmail.com | Mobile: +58 424-3038336
+  - CARLOS SALAZAR | VAT: V12075876 | Email: dorirms@gmail.com | Mobile: +58 414 7791864
+  - DANIEL DOMINGUEZ | VAT: V17592159 | Email: domin.anuel0608@gmail.com | Mobile: +58 424 8704922
+  - JESUS LA CRUZ | VAT: V18454199 | Email: sannelys1@gmail.com | Mobile: +58 424 3038336
+  - NEYLA DIAZ | VAT: V12017075 | Email: neyladiaz4@gmail.com | Mobile: +58 424-8390732
+
+--- ONLY IN TESTING (1) - Review needed ---
+  - DANMARYS BARRIOS | VAT: V18678124 | Email: sofiadiegollo@gmail.com;danmabarrios@gmail.com | Mobile: +58 414 7860214
+
+--- FIELD DIFFERENCES (12 contacts) ---
+
+  AMADA MELENDEZ (ID: 2149)
+    email   : TEST='lajimenez@ueipab.edu.ve'                PROD='lajimenez@ueipab.edu.ve;amadamelendez26@gmail.com'
+
+  AMIRA KHATIB (ID: 2151)
+    email   : TEST='kamira1975@hotmail.com'                 PROD='kamira1975@hotmail.com;amirakhatib1975@gmail.com'
+
+  ARGENIS GARCIA (ID: 2184)
+    email   : TEST='imgarciaf@ueipab.edu.ve'                PROD='imgarciaf@ueipab.edu.ve;figuerahd@gmail.com'
+
+  BETZIMAR PUERTA (ID: 2222)
+    email   : TEST='puertabs@petropiar.pdvsa.com'           PROD='puertabs@petropiar.pdvsa.com;jbisleibymata@gmail.com'
+
+  DOALBERT NUÑEZ (ID: 2341)
+    email   : TEST='franhielysflores@gmail.com'             PROD='franhielysflores@gmail.com;doalbert@gmail.com'
+
+  EDUARDO RANGEL (ID: 2357)
+    email   : TEST='aerangel@ueipab.edu.ve'                 PROD='eduardo.jose.rangel79@gmail.com'
+
+  IRIAN HERRERA (ID: 2500)
+    email   : TEST='joselynherrera05@gmail.com'             PROD='joselynherrera05@gmail.com;joselynh0511@gmail.com'
+
+  LISMER BARRIOS (ID: 2617)
+    email   : TEST=''                                       PROD='maestrialismer.barrios@gmail.com'
+
+  OSNAYDA SANTAMARIA (ID: 2762)
+    email   : TEST='Aripao2001@gmail.com'                   PROD='aripao2001@gmail.com;osnaydasantamaria@gmail.com'
+
+  VANESSA BRITO (ID: 3671)
+    email   : TEST='viloriafabianna@gmail.com'              PROD='viloriafabianna@gmail.com;vanessa.dbv@gmail.com'
+
+  VANESSA HERNANDEZ (ID: 2898)
+    email   : TEST='vanehdezmarchan@gmail.com'              PROD='vanehdezmarchan@gmail.com;hdezvane90@gmail.com'
+
+  YAIRO BLONDELL (ID: 3672)
+    vat     : TEST='V-14725186'                             PROD='V14725186'
+    email   : TEST=''                                       PROD='yblondell@gmail.com'
+
+--- TOTALS ---
+  Contacts with differences: 12 / 309
+  Contacts to create in testing: 5
+  Contacts only in testing (review): 1
+  Total sync actions needed: 17
+
+--- PATTERNS OBSERVED ---
+  1. Most differences are EMAIL fields where production has additional
+     secondary emails (semicolon-separated) added after testing DB was cloned.
+  2. Some contacts had email removed in testing (bounce processing?) but
+     production still has the original or updated email.
+  3. EDUARDO RANGEL: production email completely changed (institutional → personal).
+  4. YAIRO BLONDELL: VAT format difference (V-14725186 vs V14725186) + missing email.
+  5. DANMARYS BARRIOS: exists only in testing - may have been deleted/merged in production.
+  6. 5 new contacts were created in production after the last DB clone.
+  7. Contact IDs match between environments - direct ID-based sync is safe.
