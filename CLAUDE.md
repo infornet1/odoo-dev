@@ -217,7 +217,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
-| ueipab_ai_agent | 17.0.1.4.0 | 2026-02-08 |
+| ueipab_ai_agent | 17.0.1.5.0 | 2026-02-08 |
 
 ### Production Environment
 
@@ -396,11 +396,13 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 |---------|-------|-------|
 | `ai_agent.dry_run` | `True` | Flip to `False` for live testing |
 | `ai_agent.active_db` | `testing` | Crons run in this env |
+| `ai_agent.credits_ok` | `True` | Kill switch (auto-managed by Credit Guard) |
 | Poll WhatsApp Messages cron | `active=True` | Processes customer replies every 5 min |
 | Check Conversation Timeouts cron | `active=False` | No auto-reminders, no auto-timeouts |
+| Credit Guard cron | `active=True` | Checks WA + Claude credits every 30 min |
 | Escalation bridge cron | Running (system) | `/etc/cron.d/ai_agent_escalation`, every 5 min, DRY_RUN=True |
 
-**Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
+**Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
 **Bounce logs ready:** 30 with partner + mobile, 0 active conversations. All stale test conversations cleaned up.
 
@@ -457,6 +459,11 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 | `ai_agent.whatsapp_send_interval` | Anti-spam interval in seconds between sends (default 120) |
 | `ai_agent.claude_api_key` | Anthropic API key |
 | `ai_agent.claude_model` | Default Claude model |
+| `ai_agent.credits_ok` | Kill switch — `False` blocks all outbound API calls |
+| `ai_agent.wa_sends_threshold` | Min remaining WA sends before alert (default 50) |
+| `ai_agent.claude_spend_limit_usd` | Max cumulative USD spend before alert (default 4.50) |
+| `ai_agent.claude_input_rate` | $/token for input (default 0.000001) |
+| `ai_agent.claude_output_rate` | $/token for output (default 0.000005) |
 
 ### Menu Location
 

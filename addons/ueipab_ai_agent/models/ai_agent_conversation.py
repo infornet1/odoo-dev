@@ -1,5 +1,7 @@
 import logging
 
+import requests
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -591,3 +593,111 @@ class AiAgentConversation(models.Model):
                 conv._send_reminder()
             else:
                 conv.action_timeout()
+
+    @api.model
+    def _cron_check_credits(self):
+        """Cron: check MassivaMóvil + Anthropic credit levels.
+
+        Sets ai_agent.credits_ok = False if either service is low,
+        sends email alert to soporte + gustavo.
+        """
+        if not self._is_active_environment():
+            return
+
+        ICP = self.env['ir.config_parameter'].sudo()
+        wa_ok, wa_detail = self._check_whatsapp_credits()
+        claude_ok, claude_detail = self._check_claude_credits()
+
+        credits_ok = wa_ok and claude_ok
+        was_ok = ICP.get_param('ai_agent.credits_ok', 'True').lower() == 'true'
+
+        if not credits_ok and was_ok:
+            # Transition OK → NOT OK: kill switch + alert
+            ICP.set_param('ai_agent.credits_ok', 'False')
+            self._send_credit_alert(wa_ok, wa_detail, claude_ok, claude_detail)
+            _logger.warning("Credit Guard: KILL SWITCH activated — outbound disabled")
+        elif credits_ok and not was_ok:
+            # Transition NOT OK → OK: auto-recover
+            ICP.set_param('ai_agent.credits_ok', 'True')
+            _logger.info("Credit Guard: credits restored, re-enabling AI Agent")
+
+    def _check_whatsapp_credits(self):
+        """Check MassivaMóvil subscription remaining sends.
+
+        Returns (ok: bool, detail: str).
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        threshold = int(ICP.get_param('ai_agent.wa_sends_threshold', '50'))
+        try:
+            wa_service = self.env['ai.agent.whatsapp.service']
+            config = wa_service._get_config()
+            url = config['base_url'].rstrip('/') + '/get/subscription'
+            resp = requests.get(url, params={'secret': config['secret']}, timeout=15)
+            resp.raise_for_status()
+            data = resp.json().get('data', {})
+            usage = data.get('usage', {}).get('wa_send', {})
+            used = int(usage.get('used', 0))
+            limit = int(usage.get('limit', 0))
+            remaining = limit - used
+            detail = f"WhatsApp: {remaining}/{limit} envios restantes (umbral: {threshold})"
+            return (remaining >= threshold, detail)
+        except Exception as e:
+            detail = f"WhatsApp: error al consultar suscripcion — {e}"
+            _logger.error("Credit Guard: %s", detail)
+            return (False, detail)  # Fail-safe: treat error as depleted
+
+    def _check_claude_credits(self):
+        """Check Anthropic spend by aggregating token usage from ai.agent.message.
+
+        Returns (ok: bool, detail: str).
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        spend_limit = float(ICP.get_param('ai_agent.claude_spend_limit_usd', '4.50'))
+        input_rate = float(ICP.get_param('ai_agent.claude_input_rate', '0.000001'))
+        output_rate = float(ICP.get_param('ai_agent.claude_output_rate', '0.000005'))
+
+        # Aggregate all token usage
+        self.env.cr.execute("""
+            SELECT COALESCE(SUM(ai_input_tokens), 0),
+                   COALESCE(SUM(ai_output_tokens), 0)
+            FROM ai_agent_message
+            WHERE ai_input_tokens > 0 OR ai_output_tokens > 0
+        """)
+        total_in, total_out = self.env.cr.fetchone()
+        spend = (total_in * input_rate) + (total_out * output_rate)
+
+        detail = (f"Claude: ${spend:.4f} USD gastados "
+                  f"(limite: ${spend_limit:.2f}, "
+                  f"tokens: {total_in:,} in / {total_out:,} out)")
+        return (spend < spend_limit, detail)
+
+    def _send_credit_alert(self, wa_ok, wa_detail, claude_ok, claude_detail):
+        """Send email alert when credits are low."""
+        problems = []
+        if not wa_ok:
+            problems.append(wa_detail)
+        if not claude_ok:
+            problems.append(claude_detail)
+
+        items_html = ''.join(f'<li>{p}</li>' for p in problems)
+        body_html = (
+            '<h3>AI Agent — Alerta de Creditos</h3>'
+            '<p>El sistema de AI Agent ha sido <strong>desactivado automaticamente</strong> '
+            'por creditos insuficientes:</p>'
+            f'<ul>{items_html}</ul>'
+            '<p>Todas las conversaciones de WhatsApp y consultas a Claude AI '
+            'han sido pausadas hasta que se recarguen los creditos.</p>'
+            '<p><strong>Accion requerida:</strong> Recargar creditos en el servicio '
+            'afectado. El sistema se reactivara automaticamente en el proximo chequeo (30 min).</p>'
+        )
+
+        mail = self.env['mail.mail'].sudo().create({
+            'subject': '[UEIPAB] AI Agent — Creditos Agotados',
+            'body_html': body_html,
+            'email_from': 'soporte@ueipab.edu.ve',
+            'email_to': 'soporte@ueipab.edu.ve',
+            'email_cc': 'gustavo.perdomo@ueipab.edu.ve',
+            'auto_delete': True,
+        })
+        mail.send()
+        _logger.warning("Credit Guard: ALERT sent — %s", '; '.join(problems))

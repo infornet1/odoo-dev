@@ -37,6 +37,14 @@ class ClaudeService(models.AbstractModel):
         Returns:
             dict with 'content', 'input_tokens', 'output_tokens'
         """
+        # Credit guard kill switch
+        credits_ok = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.credits_ok', 'True').lower() == 'true'
+        if not credits_ok:
+            _logger.warning("Credit Guard: Claude API call blocked — credits depleted")
+            raise UserError(_("AI Agent desactivado: creditos insuficientes. "
+                              "Contacte soporte@ueipab.edu.ve."))
+
         config = self._get_config()
         url = config['base_url'].rstrip('/') + '/messages'
 

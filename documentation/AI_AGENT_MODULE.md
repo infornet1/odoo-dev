@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.4.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.5.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -175,6 +175,72 @@ class MySkill:
 | `ai_agent.claude_base_url` | (from config) | Anthropic API base URL |
 | `ai_agent.claude_model` | `claude-haiku-4-5-20251001` | Default AI model |
 | `ai_agent.claude_anthropic_version` | `2023-06-01` | API version header |
+| `ai_agent.credits_ok` | `True` | Kill switch — `False` blocks all outbound API calls |
+| `ai_agent.wa_sends_threshold` | `50` | Minimum remaining WA sends before alert/kill switch |
+| `ai_agent.claude_spend_limit_usd` | `4.50` | Max cumulative USD spend before alert (90% of $5) |
+| `ai_agent.claude_input_rate` | `0.000001` | $/token for Haiku 4.5 input ($1/MTok) |
+| `ai_agent.claude_output_rate` | `0.000005` | $/token for Haiku 4.5 output ($5/MTok) |
+
+## Credit Guard (v1.5.0)
+
+Automatic monitoring of API credit levels with kill switch to prevent mid-conversation failures when credits are exhausted.
+
+### Problem
+
+Both external APIs have finite credits:
+- **MassivaMóvil** (WhatsApp): Plan 500 sends/month, subscription-based
+- **Anthropic** (Claude AI): Prepaid credit ($5 loaded), usage-based
+
+Without monitoring, Glenda could exhaust credits mid-conversation, leaving customers hanging with no response.
+
+### How It Works
+
+```
+Cron (every 30 min) → _cron_check_credits()
+    │
+    ├─ 1. Check MassivaMóvil: GET /api/get/subscription
+    │     → remaining = wa_send.limit - wa_send.used
+    │     → alert if remaining < threshold (default 50)
+    │
+    ├─ 2. Check Anthropic: aggregate ai.agent.message tokens → calculate USD
+    │     → Haiku 4.5: $0.000001/input_tok + $0.000005/output_tok
+    │     → alert if spend > limit (default $4.50 of $5.00)
+    │
+    ├─ 3. If either depleted (transition OK → NOT OK):
+    │     → Set ai_agent.credits_ok = False (kill switch)
+    │     → Send email alert to soporte + gustavo
+    │
+    └─ 4. If both OK and currently disabled (transition NOT OK → OK):
+          → Set ai_agent.credits_ok = True (auto-recover)
+```
+
+### Kill Switch Enforcement
+
+Checked at service level in every API call, blocking ALL paths (manual, webhook, cron):
+
+- `whatsapp_service.send_message()` → raises `UserError` if `credits_ok=False`
+- `claude_service.generate_response()` → raises `UserError` if `credits_ok=False`
+
+### Email Alert
+
+Sent only on OK → NOT OK transition (not repeated every 30 min):
+- **To:** `soporte@ueipab.edu.ve`
+- **CC:** `gustavo.perdomo@ueipab.edu.ve`
+- **Subject:** `[UEIPAB] AI Agent — Creditos Agotados`
+- **Body:** Lists which service is depleted with remaining/limit details
+
+### Design Decisions
+
+1. **Fail-safe:** If MassivaMóvil API errors during check, treat as depleted (block outbound rather than risk sending with no credits)
+2. **Auto-recover:** When credits are replenished and next cron check passes, `credits_ok` flips back to `True` automatically
+3. **One alert per transition:** Email sent only on state change, not every check cycle
+4. **No schedule check:** Credit monitoring runs 24/7 (not restricted to contact hours)
+
+### Important: Cumulative Claude Spend
+
+Claude spend is calculated by summing ALL `ai.agent.message` tokens across ALL conversations. This is a **cumulative lifetime total**, not per-billing-cycle.
+
+**When topping up credits:** If you add more Anthropic credit (e.g., $5 more → $10 total), you MUST increase `ai_agent.claude_spend_limit_usd` proportionally (e.g., from `4.50` to `9.50`). Otherwise the old spend still counts toward the old limit.
 
 ## Cron Jobs
 
@@ -184,8 +250,9 @@ class MySkill:
 |------|----------|-------------------|---------|
 | AI Agent: Poll WhatsApp Messages | 5 min | Yes | Fetch new received messages (fallback to webhook) |
 | AI Agent: Check Conversation Timeouts | 1 hour | **No** | Send reminders or timeout waiting conversations |
+| AI Agent: Credit Guard | 30 min | Yes | Check WA + Claude credit levels, kill switch + email alert |
 
-**Operational model:** Poll cron processes customer replies automatically. Timeout cron is kept disabled during supervised testing — no unsolicited reminders or auto-timeouts. Conversations are started manually via "Iniciar WhatsApp" button.
+**Operational model:** Poll cron processes customer replies automatically. Timeout cron is kept disabled during supervised testing — no unsolicited reminders or auto-timeouts. Credit Guard runs continuously to monitor API credit levels. Conversations are started manually via "Iniciar WhatsApp" button.
 
 ### System Crons (dev server /etc/cron.d/)
 
@@ -421,7 +488,7 @@ Both testing and production share the same WhatsApp account (+584148321963). To 
 
 - `ai_agent.active_db` system parameter stores the database name authorized to run crons
 - Auto-set to current database on first install
-- Both `_cron_poll_messages` and `_cron_check_timeouts` check this before processing
+- All three module crons (`_cron_poll_messages`, `_cron_check_timeouts`, `_cron_check_credits`) check this before processing
 - If mismatch → skip with warning log, zero processing
 
 **When going live in production:**
@@ -461,6 +528,11 @@ Script deployment:
 [ ] Update daily_bounce_processor.py: TARGET_ENV='production' (if not already)
 [ ] Add crontab entries on dev server (email_checker 15min, escalation_bridge 5min)
 
+Credit Guard:
+[ ] Verify Credit Guard cron is active (Settings > Technical > Scheduled Actions)
+[ ] Set ai_agent.claude_spend_limit_usd based on loaded credit (default 4.50 = 90% of $5)
+[ ] Manually trigger _cron_check_credits() once to verify WA + Claude checks pass
+
 Go live:
 [ ] Set ai_agent.dry_run = 'False' on production
 [ ] Monitor first conversations end-to-end
@@ -471,4 +543,5 @@ Go live:
 Using Claude Haiku 4.5 at $1/$5 per MTok:
 - Average bounce resolution: ~3 messages, ~$0.005 per conversation
 - $5 credit covers ~1,000 conversations
-- WhatsApp: limited by MassivaMóvil plan (currently 67 sends remaining on Plan 500)
+- WhatsApp: limited by MassivaMóvil Plan 500 (500 sends/month)
+- Credit Guard alerts at 90% spend ($4.50) or <50 WA sends remaining

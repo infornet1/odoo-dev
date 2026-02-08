@@ -86,6 +86,14 @@ class WhatsAppService(models.AbstractModel):
         Respects anti-spam throttling interval between sends.
         Returns dict with message_id on success.
         """
+        # Credit guard kill switch
+        credits_ok = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.credits_ok', 'True').lower() == 'true'
+        if not credits_ok:
+            _logger.warning("Credit Guard: WhatsApp send blocked — credits depleted")
+            raise UserError(_("AI Agent desactivado: creditos insuficientes. "
+                              "Contacte soporte@ueipab.edu.ve."))
+
         global _last_send_time
         config = self._get_config()
         url = config['base_url'].rstrip('/') + '/send/whatsapp'
