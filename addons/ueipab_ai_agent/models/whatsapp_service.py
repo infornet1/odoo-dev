@@ -1,13 +1,18 @@
 import json
 import logging
 import re
+import time
 
 import requests
 
-from odoo import models, _
+from odoo import models, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
+
+# Module-level last-send timestamp for anti-spam throttling.
+# Shared across all service instances within the same worker process.
+_last_send_time = 0.0
 
 
 class WhatsAppService(models.AbstractModel):
@@ -45,11 +50,43 @@ class WhatsAppService(models.AbstractModel):
             return '+58' + cleaned
         return '+' + cleaned
 
+    def _get_send_interval(self):
+        """Get anti-spam send interval in seconds from config.
+
+        MassivaMóvil recommends 120-140 second intervals between sends
+        to avoid WhatsApp flagging the phone number as SPAM.
+        Returns the minimum interval (default 120s).
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        return int(ICP.get_param('ai_agent.whatsapp_send_interval', '120'))
+
+    def _throttle_send(self):
+        """Wait if needed to respect the anti-spam send interval.
+
+        Uses module-level timestamp so throttling works across all
+        send_message() calls within the same Odoo worker process.
+        """
+        global _last_send_time
+        interval = self._get_send_interval()
+        if interval <= 0:
+            return
+
+        now = time.time()
+        elapsed = now - _last_send_time
+        if elapsed < interval:
+            wait = interval - elapsed
+            _logger.info(
+                "WhatsApp throttle: waiting %.0fs (interval=%ds, elapsed=%.0fs)",
+                wait, interval, elapsed)
+            time.sleep(wait)
+
     def send_message(self, phone, message):
         """Send a WhatsApp message via MassivaMóvil API.
 
+        Respects anti-spam throttling interval between sends.
         Returns dict with message_id on success.
         """
+        global _last_send_time
         config = self._get_config()
         url = config['base_url'].rstrip('/') + '/send/whatsapp'
         normalized_phone = self._normalize_phone(phone)
@@ -61,6 +98,9 @@ class WhatsAppService(models.AbstractModel):
             'type': 'text',
             'message': message,
         }
+
+        # Anti-spam throttle: wait if last send was too recent
+        self._throttle_send()
 
         _logger.info("WhatsApp send to %s (%d chars)", normalized_phone, len(message))
 
@@ -76,6 +116,9 @@ class WhatsAppService(models.AbstractModel):
             error_msg = result.get('message', 'Unknown error')
             _logger.error("WhatsApp API returned error: %s", error_msg)
             raise UserError(_("Error de WhatsApp API: %s") % error_msg)
+
+        # Record send time for throttling
+        _last_send_time = time.time()
 
         _logger.info("WhatsApp message sent successfully to %s", normalized_phone)
         return {'message_id': result.get('data', {}).get('id', 0)}

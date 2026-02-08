@@ -80,6 +80,21 @@ def _load_api_configs(env):
         ICP.set_param('ai_agent.active_db', db_name)
         _logger.info("AI Agent: active_db set to '%s' (current database)", db_name)
 
+    # Anti-spam send interval (MassivaMóvil recommendation: 120-140s between sends)
+    if wa_config_path:
+        try:
+            with open(wa_config_path, 'r') as f:
+                wa_cfg_reload = json.load(f)
+            anti_spam = wa_cfg_reload.get('anti_spam', {})
+            interval = anti_spam.get('min_interval_seconds', 120)
+            ICP.set_param('ai_agent.whatsapp_send_interval', str(interval))
+            _logger.info("AI Agent: WhatsApp send interval set to %ds", interval)
+        except Exception as e:
+            _logger.warning("AI Agent: Could not load anti-spam config: %s", e)
+
+    if not ICP.get_param('ai_agent.whatsapp_send_interval'):
+        ICP.set_param('ai_agent.whatsapp_send_interval', '120')
+
     # Set schedule defaults (Venezuela, GMT-4)
     schedule_defaults = {
         'ai_agent.schedule_weekday_start': '06:30',

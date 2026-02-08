@@ -216,8 +216,8 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_payroll_enhancements | 17.0.1.52.1 | 2026-01-08 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
-| ueipab_bounce_log | 17.0.1.1.0 | 2026-02-06 |
-| ueipab_ai_agent | 17.0.1.2.0 | 2026-02-07 |
+| ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
+| ueipab_ai_agent | 17.0.1.3.0 | 2026-02-08 |
 
 ### Production Environment
 
@@ -301,7 +301,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ### Phase 2 - Odoo Module (Installed in Testing)
 
-- **Module:** `ueipab_bounce_log` v17.0.1.1.0 (extends Contacts app, not a standalone app)
+- **Module:** `ueipab_bounce_log` v17.0.1.2.0 (extends Contacts app, not a standalone app)
 - **Menu:** `Contacts > Bounce Log` (direct submenu)
 - **Model:** `mail.bounce.log` with resolution workflow
 - **New fields (v1.1.0):**
@@ -333,7 +333,9 @@ Cross-reference analysis of Odoo, Freescout, Customers sheet, and Akdemia reveal
 - **Provider:** MassivaMóvil (`whatsapp.massivamovil.com`)
 - **Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
 - **Auth:** API secret key param (not OAuth), key name `ueipab1`
-- **Account:** +584148321963 (connected), Plan 500 WhatsApp (433/500 sends used)
+- **Primary Account:** +584248944898 (Glenda customer contact)
+- **Backup Account:** +584148321963 (switch if primary flagged as SPAM)
+- **Anti-spam:** Min 120s, max 140s between sends (MassivaMóvil recommended to avoid WhatsApp SPAM flag)
 - **Send:** `POST /api/send/whatsapp` (multipart/form-data) - `secret`, `account`, `recipient`, `message`
 - **Validate:** `GET /api/validate/whatsapp` - `secret`, `unique`, `phone`
 - **Receive:** `GET /api/get/wa.received` (polling) or webhook (POST to callback URL)
@@ -353,7 +355,7 @@ Cross-reference analysis of Odoo, Freescout, Customers sheet, and Akdemia reveal
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.2.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.3.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
 
@@ -419,6 +421,9 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 | `ai_agent.active_db` | Database name authorized to run crons (prevents double-processing) |
 | `ai_agent.whatsapp_api_secret` | MassivaMóvil API secret |
 | `ai_agent.whatsapp_account_id` | WhatsApp account unique ID |
+| `ai_agent.whatsapp_account_phone` | WhatsApp account phone number |
+| `ai_agent.whatsapp_base_url` | MassivaMóvil API base URL |
+| `ai_agent.whatsapp_send_interval` | Anti-spam interval in seconds between sends (default 120) |
 | `ai_agent.claude_api_key` | Anthropic API key |
 | `ai_agent.claude_model` | Default Claude model |
 
