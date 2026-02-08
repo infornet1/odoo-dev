@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Bounce Log',
-    'version': '17.0.1.1.0',
+    'version': '17.0.1.2.0',
     'category': 'Contacts',
     'summary': 'Email bounce tracking and resolution workflow for Contacts',
     'description': """
@@ -16,6 +16,7 @@ Features:
 * Resolution workflow: Restore original email or apply new email
 * State tracking: Pending → Notified → Contacted → Resolved
 * Chatter audit trail on partner records
+* Mailing contact sync: resolution updates mailing.contact records by email match
 * Future: WhatsApp AI agent integration
 """,
     'author': 'UEIPAB',

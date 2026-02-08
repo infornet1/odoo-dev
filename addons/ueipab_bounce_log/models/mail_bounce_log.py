@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
+import logging
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
+
+# Institutional email — must NEVER be modified by bounce resolution
+PROTECTED_EMAILS = {'todalacomunidad@ueipab.edu.ve'}
 
 
 class MailBounceLog(models.Model):
@@ -87,8 +94,21 @@ class MailBounceLog(models.Model):
         else:
             record[field_name] = email.strip()
 
+    def _remove_email_from_field(self, record, field_name, email_to_remove):
+        """Remove a specific email from a multi-email field (;-separated)."""
+        current = (record[field_name] or '').strip()
+        if not current:
+            return
+        emails = [e.strip() for e in current.split(';') if e.strip()]
+        remaining = [e for e in emails if e.lower() != email_to_remove.strip().lower()]
+        record[field_name] = ';'.join(remaining)
+
     def _resolve_record(self, email_to_add):
-        """Common resolution logic for both restore and apply actions."""
+        """Common resolution logic for both restore and apply actions.
+
+        Updates: res.partner, linked mailing.contact (if any), and ALL
+        mailing.contact records that match the bounced email by search.
+        """
         self.ensure_one()
         if self.state == 'resolved':
             raise UserError(_('Este registro ya fue resuelto.'))
@@ -113,16 +133,73 @@ class MailBounceLog(models.Model):
                 subtype_xmlid='mail.mt_note',
             )
 
-        # Update mailing contact
+        # Update directly linked mailing contact (if any)
         if self.mailing_contact_id:
             self._append_email_to_field(
                 self.mailing_contact_id, 'email', email_to_add)
+
+        # Search and update ALL mailing.contact records with the bounced email
+        self._sync_mailing_contacts(email_to_add)
 
         self.write({
             'state': 'resolved',
             'resolved_date': fields.Datetime.now(),
             'resolved_by': self.env.uid,
         })
+
+    def _sync_mailing_contacts(self, new_email):
+        """Find all mailing.contact records with the bounced email and update them.
+
+        For 'apply new email': replaces bounced email with new email.
+        For 'restore original': re-adds the bounced email (no-op if already there).
+        Skips protected institutional emails.
+        """
+        self.ensure_one()
+        bounced = self.bounced_email
+        if not bounced:
+            return
+
+        # Skip if bounced email is protected
+        if bounced.strip().lower() in PROTECTED_EMAILS:
+            return
+
+        MailingContact = self.env['mailing.contact'].sudo()
+        mc_records = MailingContact.search([('email', 'ilike', bounced)])
+
+        if not mc_records:
+            return
+
+        is_new_email = new_email.strip().lower() != bounced.strip().lower()
+        already_linked = self.mailing_contact_id.id if self.mailing_contact_id else False
+        updated_ids = []
+
+        for mc in mc_records:
+            # Skip protected emails
+            if mc.email and mc.email.strip().lower() in PROTECTED_EMAILS:
+                continue
+            # Skip if already handled above via direct link
+            if mc.id == already_linked:
+                continue
+
+            # Verify the bounced email actually appears in this contact
+            mc_emails = [e.strip().lower() for e in (mc.email or '').split(';') if e.strip()]
+            if bounced.strip().lower() not in mc_emails:
+                continue
+
+            if is_new_email:
+                # Replace bounced email with new one
+                self._remove_email_from_field(mc, 'email', bounced)
+                self._append_email_to_field(mc, 'email', new_email)
+            else:
+                # Restore: just ensure it's present (already there = no-op)
+                self._append_email_to_field(mc, 'email', new_email)
+
+            updated_ids.append(mc.id)
+
+        if updated_ids:
+            _logger.info(
+                "Bounce log #%d: updated %d mailing.contact(s) %s: %s → %s",
+                self.id, len(updated_ids), updated_ids, bounced, new_email)
 
     def action_restore_original(self):
         """Re-add the original bounced email back to the contact."""

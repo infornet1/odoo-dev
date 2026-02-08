@@ -68,6 +68,9 @@ SHEETS_CREDENTIALS = '/opt/odoo-dev/config/google_sheets_credentials.json'
 SPREADSHEET_ID = '1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA'
 AKDEMIA_TAB = 'Akdemia2526'
 
+# Protected emails — must NEVER be modified by any sync operation
+PROTECTED_EMAILS = {'todalacomunidad@ueipab.edu.ve'}
+
 # XLS column names (header row 2 = index 2)
 # Parent 1 (Representante)
 P1_NAME = 'Nombre de Representante'
@@ -335,19 +338,101 @@ def find_email_changes(models, uid, parent_map):
 # Phase 4: Auto-Resolve Changes
 # ============================================================================
 
+def _remove_bounced_email(email_field, bounced_email):
+    """Remove a specific email from a ;-separated field."""
+    if not email_field:
+        return ''
+    emails = [e.strip() for e in email_field.split(';') if e.strip()]
+    remaining = [e for e in emails if e.lower() != bounced_email.strip().lower()]
+    return ';'.join(remaining)
+
+
+def _append_email(email_field, new_email):
+    """Append email to ;-separated field, avoiding duplicates."""
+    current = (email_field or '').strip()
+    if not current:
+        return new_email.strip()
+    emails = [e.strip() for e in current.split(';') if e.strip()]
+    if new_email.strip().lower() not in [e.lower() for e in emails]:
+        emails.append(new_email.strip())
+    return ';'.join(emails)
+
+
+def sync_mailing_contacts(models, uid, bounced_email, new_email):
+    """Find and update mailing.contact records that have the bounced email.
+
+    Replaces the bounced email with the new email in each matching contact.
+    Skips protected institutional emails.
+    Returns number of contacts updated.
+    """
+    if not bounced_email or bounced_email.strip().lower() in PROTECTED_EMAILS:
+        return 0
+
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    try:
+        mc_ids = models.execute_kw(
+            ODOO_DB, uid, ODOO_PASSWORD,
+            'mailing.contact', 'search',
+            [[('email', 'ilike', bounced_email)]]
+        )
+        if not mc_ids:
+            return 0
+
+        mc_records = models.execute_kw(
+            ODOO_DB, uid, ODOO_PASSWORD,
+            'mailing.contact', 'read',
+            [mc_ids],
+            {'fields': ['id', 'name', 'email']}
+        )
+
+        updated = 0
+        for mc in mc_records:
+            # Skip protected emails
+            if mc.get('email') and mc['email'].strip().lower() in PROTECTED_EMAILS:
+                continue
+
+            # Verify the bounced email actually appears
+            mc_emails = [e.strip().lower() for e in (mc.get('email') or '').split(';') if e.strip()]
+            if bounced_email.strip().lower() not in mc_emails:
+                continue
+
+            # Replace bounced → new
+            updated_field = _remove_bounced_email(mc['email'], bounced_email)
+            updated_field = _append_email(updated_field, new_email)
+
+            print(f"  {prefix}Updating mailing.contact #{mc['id']} ({mc.get('name', '')}): "
+                  f"'{mc['email']}' → '{updated_field}'")
+
+            if not DRY_RUN:
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mailing.contact', 'write',
+                    [[mc['id']], {'email': updated_field}]
+                )
+            updated += 1
+
+        return updated
+
+    except Exception as e:
+        print(f"  WARNING: Error syncing mailing contacts: {e}")
+        return 0
+
+
 def apply_changes(models, uid, changes):
-    """Apply detected email changes to Odoo bounce logs and conversations."""
+    """Apply detected email changes to Odoo bounce logs, conversations, and mailing contacts."""
     print_header("Phase 4: Auto-Resolve Detected Changes")
 
     if not changes:
         print("  No changes to apply.")
         return
 
-    results = {'resolved_bls': 0, 'resolved_convs': 0, 'errors': 0}
+    results = {'resolved_bls': 0, 'resolved_convs': 0, 'updated_mcs': 0, 'errors': 0}
 
     for ch in changes:
         bl_id = ch['bounce_log_id']
         new_email = ch['akdemia_new_email']
+        bounced_email = ch['bounced_email']
         prefix = "[DRY_RUN] " if DRY_RUN else ""
 
         print(f"--- BL#{bl_id} ({ch['partner_name']}) ---")
@@ -362,7 +447,8 @@ def apply_changes(models, uid, changes):
                     [[bl_id], {'new_email': new_email}]
                 )
 
-                # Step 2: Trigger action_apply_new_email (appends email + sets resolved)
+                # Step 2: Trigger action_apply_new_email
+                # (appends email to partner + updates mailing.contact via module + sets resolved)
                 models.execute_kw(
                     ODOO_DB, uid, ODOO_PASSWORD,
                     'mail.bounce.log', 'action_apply_new_email',
@@ -373,12 +459,20 @@ def apply_changes(models, uid, changes):
             except Exception as e:
                 print(f"  ERROR resolving bounce log #{bl_id}: {e}")
                 results['errors'] += 1
+                # Even if module resolution fails, try mailing contact sync directly
+                mc_count = sync_mailing_contacts(models, uid, bounced_email, new_email)
+                results['updated_mcs'] += mc_count
                 continue
         else:
             print(f"  {prefix}Would call action_apply_new_email on BL#{bl_id}")
             results['resolved_bls'] += 1
 
-        # Step 3: Find and resolve linked AI agent conversation
+        # Step 3: Sync mailing contacts (belt-and-suspenders — module may handle this,
+        # but script also does it for environments where module is not installed yet)
+        mc_count = sync_mailing_contacts(models, uid, bounced_email, new_email)
+        results['updated_mcs'] += mc_count
+
+        # Step 4: Find and resolve linked AI agent conversation
         print(f"  {prefix}Checking for linked AI conversation...")
         try:
             convs = search_read(models, uid, 'ai.agent.conversation',
@@ -408,6 +502,7 @@ def apply_changes(models, uid, changes):
 
     print(f"  Results: {results['resolved_bls']} bounce logs, "
           f"{results['resolved_convs']} conversations resolved, "
+          f"{results['updated_mcs']} mailing contacts updated, "
           f"{results['errors']} errors")
 
     return results
