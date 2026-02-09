@@ -25,6 +25,7 @@ class BounceResolutionSkill:
             'bounce_reason': '',
             'partner_name': conversation.partner_id.name or '',
             'first_name': get_first_name(conversation.partner_id.name),
+            'remaining_emails': [],
         }
         ctx.update(self._get_agent_config(conversation))
         if conversation.source_model == 'mail.bounce.log' and conversation.source_id:
@@ -35,6 +36,11 @@ class BounceResolutionSkill:
                     bounce_log._fields['bounce_reason'].selection
                 ).get(bounce_log.bounce_reason, bounce_log.bounce_reason or '')
                 ctx['bounce_log_id'] = bounce_log.id
+                # Check if partner has other emails besides the bounced one
+                all_emails = conversation.partner_id.email or ''
+                parts = [e.strip() for e in all_emails.replace(',', ';').split(';') if e.strip()]
+                bounced_lower = (bounce_log.bounced_email or '').lower()
+                ctx['remaining_emails'] = [e for e in parts if e.lower() != bounced_lower]
         return ctx
 
     def get_system_prompt(self, conversation, context):
@@ -42,24 +48,51 @@ class BounceResolutionSkill:
         agent_name = context.get('agent_name', 'Asistente Virtual')
         institution = context.get('institution', 'UEIPAB')
         first_name = context.get('first_name', 'Cliente')
+        remaining = context.get('remaining_emails', [])
+
+        # Build multi-email context section
+        if remaining:
+            remaining_list = ', '.join(remaining)
+            email_context = (
+                f"- Correo con problemas: {context.get('bounced_email', 'desconocido')}\n"
+                f"- Otros correos vigentes del contacto: {remaining_list}\n"
+                f"- Razón del rebote: {context.get('bounce_reason', 'desconocida')}\n"
+            )
+            multi_email_instructions = (
+                "- El contacto tiene otros correos vigentes además del que rebotó. "
+                "El correo con problemas será retirado de nuestros registros. "
+                "Tu objetivo es confirmar que el cliente está conforme con sus otros correos "
+                "y ofrecerle agregar uno adicional si lo desea.\n"
+                "- Si el cliente está conforme con sus correos actuales y no desea agregar otro, "
+                "responde: RESOLVED:REMOVE_ONLY\n"
+                "- Si el cliente quiere agregar un correo nuevo además de los que ya tiene, "
+                "confírmalo repitiéndolo y responde: RESOLVED:nuevo@email.com\n"
+            )
+        else:
+            email_context = (
+                f"- Correo con problemas: {context.get('bounced_email', 'desconocido')}\n"
+                f"- Razón del rebote: {context.get('bounce_reason', 'desconocida')}\n"
+            )
+            multi_email_instructions = (
+                "- El contacto NO tiene otros correos registrados. "
+                "Es importante obtener un correo alternativo.\n"
+                "- Si el cliente proporciona un email nuevo, confírmalo repitiéndolo y responde "
+                "EXACTAMENTE con el formato: RESOLVED:nuevo@email.com\n"
+            )
+
         return (
             f"Eres {agent_name}, asistente de {institution}, ubicado en Venezuela. "
             "Tu tarea es contactar amablemente a un representante o cliente cuyo correo electrónico "
             "está presentando problemas de entrega.\n\n"
             "CONTEXTO:\n"
             f"- Nombre del contacto: {first_name}\n"
-            f"- Correo con problemas: {context.get('bounced_email', 'desconocido')}\n"
-            f"- Razón del rebote: {context.get('bounce_reason', 'desconocida')}\n\n"
+            f"{email_context}\n"
             "INSTRUCCIONES:\n"
             "- Comunícate siempre en español venezolano, de forma cercana y cálida.\n"
             f"- Dirígete al cliente por su nombre ({first_name}).\n"
             "- Sé amable, profesional y conciso. No uses emojis.\n"
-            "- Explica brevemente que su correo está presentando problemas para recibir "
-            f"comunicaciones de {institution}.\n"
-            "- Pregunta si nos puede facilitar un correo electrónico alternativo.\n"
-            "- Si el cliente proporciona un email nuevo, confírmalo repitiéndolo y responde "
-            "EXACTAMENTE con el formato: RESOLVED:nuevo@email.com\n"
-            "- Si el cliente dice que su correo actual ya funciona (liberó espacio, lo arregló, etc.) "
+            f"{multi_email_instructions}"
+            "- Si el cliente dice que su correo actual (el que rebotó) ya funciona (liberó espacio, lo arregló, etc.) "
             "o pide que le envíes un correo para verificar, DEBES responder con tu mensaje al cliente "
             "seguido del marcador ACTION:VERIFY_EMAIL al final. Ejemplo:\n"
             "  'Perfecto Alberto, le envío un correo de verificación para confirmar. "
@@ -85,7 +118,19 @@ class BounceResolutionSkill:
         email = context.get('bounced_email', 'su correo')
         agent_name = context.get('agent_name', 'Asistente Virtual')
         institution = context.get('institution', 'UEIPAB')
+        remaining = context.get('remaining_emails', [])
         saludo = get_ve_greeting()
+
+        if remaining:
+            remaining_list = ', '.join(remaining)
+            return (
+                f"{saludo}, {first_name}! Le escribe {agent_name} desde {institution}. "
+                f"Nos comunicamos con usted porque hemos detectado que su correo electrónico "
+                f"({email}) está presentando inconvenientes para recibir nuestras comunicaciones. "
+                f"Vamos a retirar ese correo de nuestros registros. "
+                f"Sus otros correos ({remaining_list}) se mantienen sin cambios. "
+                f"¿Desea agregar algún otro correo adicional o está conforme con los que tiene?"
+            )
         return (
             f"{saludo}, {first_name}! Le escribe {agent_name} desde {institution}. "
             f"Nos comunicamos con usted porque hemos detectado que su correo electrónico "
@@ -162,6 +207,13 @@ class BounceResolutionSkill:
                     'summary': 'Cliente confirma recepcion de correo de verificacion. Email restaurado.',
                     'resolution_data': {'action': 'restore'},
                 }
+            elif resolution_value == 'REMOVE_ONLY':
+                return {
+                    'resolve': True,
+                    'farewell_message': farewell,
+                    'summary': 'Correo rebotado retirado. Cliente conforme con correos restantes.',
+                    'resolution_data': {'action': 'remove_only'},
+                }
             elif resolution_value == 'DECLINED':
                 return {
                     'resolve': True,
@@ -206,6 +258,38 @@ class BounceResolutionSkill:
         elif action == 'restore':
             bounce_log.action_restore_original()
             _logger.info("Bounce log %d: restored original email via AI agent", bounce_log.id)
+
+        elif action == 'remove_only':
+            # Remove bounced email, keep remaining. No new email to add.
+            from odoo import fields as odoo_fields
+            if bounce_log.partner_id:
+                bounce_log._remove_email_from_field(
+                    bounce_log.partner_id, 'email', bounce_log.bounced_email)
+                bounce_log.partner_id.message_post(
+                    body=(
+                        '<strong>Bounce Log - Email retirado</strong><br/>'
+                        f'Email retirado: <code>{bounce_log.bounced_email}</code><br/>'
+                        'Cliente conforme con correos restantes.<br/>'
+                        'Resuelto por: AI Agent (Glenda)'
+                    ),
+                    message_type='comment',
+                    subtype_xmlid='mail.mt_note',
+                )
+            # Remove from mailing.contact too
+            bounced_lower = (bounce_log.bounced_email or '').lower()
+            mc_records = conversation.env['mailing.contact'].sudo().search(
+                [('email', 'ilike', bounce_log.bounced_email)])
+            for mc in mc_records:
+                mc_emails = [e.strip().lower() for e in (mc.email or '').split(';') if e.strip()]
+                if bounced_lower in mc_emails:
+                    bounce_log._remove_email_from_field(mc, 'email', bounce_log.bounced_email)
+            bounce_log.write({
+                'state': 'resolved',
+                'resolved_date': odoo_fields.Datetime.now(),
+                'resolved_by': conversation.env.uid,
+            })
+            _logger.info("Bounce log %d: bounced email removed, customer OK with remaining emails",
+                         bounce_log.id)
 
         elif action == 'declined':
             bounce_log.write({'state': 'contacted'})
