@@ -182,11 +182,44 @@ def get_freescout_conversation(fs_conn, conversation_id):
     """
     with fs_conn.cursor() as cursor:
         cursor.execute(
-            "SELECT id, number, subject, status, user_id, mailbox_id "
+            "SELECT id, number, subject, status, user_id, mailbox_id, "
+            "customer_id, customer_email "
             "FROM conversations WHERE id = %s LIMIT 1",
             (conversation_id,),
         )
         return cursor.fetchone()
+
+
+def find_freescout_customer(fs_conn, email):
+    """Find a Freescout customer by email address.
+
+    Returns dict with customer_id, first_name, last_name, email or None.
+    Looks up the emails table which maps email addresses to customers.
+    """
+    if not email:
+        return None
+    with fs_conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT e.customer_id, e.email, c.first_name, c.last_name "
+            "FROM emails e JOIN customers c ON e.customer_id = c.id "
+            "WHERE e.email = %s LIMIT 1",
+            (email.strip().lower(),),
+        )
+        return cursor.fetchone()
+
+
+def update_conversation_customer(fs_conn, conversation_id, customer_id, customer_email):
+    """Update a Freescout conversation's customer_id and customer_email.
+
+    Used to replace mailer-daemon@googlemail.com with the actual person
+    on DSN bounce conversations, so support staff see the real customer.
+    """
+    with fs_conn.cursor() as cursor:
+        cursor.execute(
+            "UPDATE conversations SET customer_id = %s, customer_email = %s, "
+            "updated_at = NOW(), user_updated_at = NOW() WHERE id = %s",
+            (customer_id, customer_email, conversation_id),
+        )
 
 
 # ============================================================================
@@ -312,7 +345,8 @@ def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''
 # ============================================================================
 
 def close_related_conversations(fs_conn, admin_id, search_email, primary_fs_id,
-                                partner_name, odoo_bl_url):
+                                partner_name, odoo_bl_url,
+                                real_customer=None):
     """Close other active Freescout conversations that mention an email address.
 
     Searches three places for the email:
@@ -320,13 +354,17 @@ def close_related_conversations(fs_conn, admin_id, search_email, primary_fs_id,
     - conversation customer_email (verification email replies from new address)
     - thread from field (reply sender address)
 
+    If real_customer is provided (dict with customer_id, email), also reassigns
+    DSN conversations from mailer-daemon to the actual customer.
+
     Returns count of conversations closed.
     """
     prefix = "[DRY_RUN] " if DRY_RUN else ""
 
     with fs_conn.cursor() as cursor:
         cursor.execute("""
-            SELECT DISTINCT c.id, c.number, c.subject, c.mailbox_id
+            SELECT DISTINCT c.id, c.number, c.subject, c.mailbox_id,
+                   c.customer_email, c.customer_id
             FROM conversations c
             LEFT JOIN threads t ON t.conversation_id = c.id
             WHERE c.status = 1
@@ -363,20 +401,33 @@ def close_related_conversations(fs_conn, admin_id, search_email, primary_fs_id,
                     # Get Closed folder (type=60) for this conversation's mailbox
                     closed_folder = get_freescout_folder(
                         fs_conn, r['mailbox_id'], 60)
+
+                    # Reassign DSN conversations from mailer-daemon to real customer
+                    customer_fields = ""
+                    customer_params = []
+                    if real_customer and r.get('customer_email', '').lower() == 'mailer-daemon@googlemail.com':
+                        customer_fields = ", customer_id = %s, customer_email = %s"
+                        customer_params = [real_customer['customer_id'], real_customer['email']]
+                        logger.info("    #%d: reassigning customer from mailer-daemon → %s",
+                                    r['number'], real_customer['email'])
+
                     if closed_folder:
                         cursor.execute(
                             "UPDATE conversations SET subject = %s, status = 3, "
-                            "folder_id = %s, closed_at = NOW(), closed_by_user_id = %s, "
-                            "updated_at = NOW(), user_updated_at = NOW() WHERE id = %s",
-                            (new_subject, closed_folder, admin_id, r['id']),
+                            "folder_id = %s, closed_at = NOW(), closed_by_user_id = %s"
+                            + customer_fields +
+                            ", updated_at = NOW(), user_updated_at = NOW() WHERE id = %s",
+                            (new_subject, closed_folder, admin_id,
+                             *customer_params, r['id']),
                         )
                     else:
                         cursor.execute(
                             "UPDATE conversations SET subject = %s, status = 3, "
-                            "closed_at = NOW(), closed_by_user_id = %s, "
-                            "updated_at = NOW(), user_updated_at = NOW() "
+                            "closed_at = NOW(), closed_by_user_id = %s"
+                            + customer_fields +
+                            ", updated_at = NOW(), user_updated_at = NOW() "
                             "WHERE id = %s",
-                            (new_subject, admin_id, r['id']),
+                            (new_subject, admin_id, *customer_params, r['id']),
                         )
                     cursor.execute("""
                         INSERT INTO threads
@@ -460,6 +511,28 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     fs_db_id = fs_conv['id']
     primary_already_done = fs_conv['subject'] and fs_conv['subject'].startswith('[RESUELTO-AI]')
 
+    # --- Look up real customer for DSN conversation reassignment ---
+    real_customer = None
+    if bounced_email:
+        real_customer = find_freescout_customer(fs_conn, bounced_email)
+        if real_customer:
+            logger.info("  Real customer for '%s': #%d (%s %s)",
+                        bounced_email, real_customer['customer_id'],
+                        real_customer['first_name'], real_customer['last_name'])
+
+    # Reassign primary conversation if it's a mailer-daemon DSN
+    fs_customer_email = (fs_conv.get('customer_email') or '').lower()
+    if real_customer and fs_customer_email == 'mailer-daemon@googlemail.com':
+        print(f"  {prefix}Reassigning primary #{fs_conv['number']} customer: "
+              f"mailer-daemon → {real_customer['email']} "
+              f"({real_customer['first_name']} {real_customer['last_name']})")
+        if not DRY_RUN:
+            update_conversation_customer(
+                fs_conn, fs_db_id,
+                real_customer['customer_id'], real_customer['email'],
+            )
+            fs_conn.commit()
+
     # Already processed? Still run related-conversations cleanup, then skip rest
     if primary_already_done:
         logger.info("  Freescout #%d primary already processed", fs_conv_number)
@@ -469,6 +542,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         if bounced_email:
             related_closed = close_related_conversations(
                 fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
+                real_customer=real_customer,
             )
             if related_closed:
                 print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
@@ -476,6 +550,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         if new_email and new_email.lower() != bounced_email:
             related_new = close_related_conversations(
                 fs_conn, admin_id, new_email, fs_db_id, partner_name, odoo_bl_url,
+                real_customer=real_customer,
             )
             if related_new:
                 print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
@@ -641,6 +716,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     if bounced_email:
         related_closed = close_related_conversations(
             fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
+            real_customer=real_customer,
         )
         if related_closed:
             print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
@@ -649,6 +725,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     if new_email and new_email.lower() != bounced_email:
         related_new = close_related_conversations(
             fs_conn, admin_id, new_email, fs_db_id, partner_name, odoo_bl_url,
+            real_customer=real_customer,
         )
         if related_new:
             print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")

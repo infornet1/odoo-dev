@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-09
 
 ## Core Instructions
 
@@ -463,8 +463,9 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
    - **Email IN Akdemia:** Subject = `[RESUELTO-AI] Se requiere actualización de correo electrónico en Akdemia`, assign to Alejandra Lopez (user_id=6), keep Active
    - **Email NOT in Akdemia:** Subject = `[RESUELTO-AI] {original}`, status = Closed
    - Internal note with resolution summary, Odoo links
-4. **Close related conversations:** search `threads.body` for bounced email across ALL active Freescout conversations — DSN conversations use `customer_email=mailer-daemon@googlemail.com`, so the bounced address only appears in thread body. Each related conversation gets `[RESUELTO-AI]` prefix, closed, and internal note added.
-5. Update Customers tab (Google Sheets): remove bounced email from semicolon-separated list in column J
+4. **Reassign DSN conversation customer:** DSN bounce conversations have `customer_email=mailer-daemon@googlemail.com` (Customer #29 "Mail Delivery Subsystem"). Bridge looks up real customer via Freescout `emails` table and reassigns the conversation to the actual parent before closing.
+5. **Close related conversations:** search `threads.body` for bounced email across ALL active Freescout conversations — DSN conversations use `customer_email=mailer-daemon@googlemail.com`, so the bounced address only appears in thread body. Each related conversation gets `[RESUELTO-AI]` prefix, closed, customer reassigned (if DSN), and internal note added.
+6. Update Customers tab (Google Sheets): remove bounced email from semicolon-separated list in column J
 
 **Key details:**
 - `DRY_RUN=True` by default, `--live` to apply, `--skip-sheets` to skip Google Sheets, `--id N` to target a single bounce log
@@ -472,6 +473,7 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Alejandra (Freescout user_id=6): assigned when bounced email exists in Akdemia for manual platform cleanup
 - Customers tab matching: column A = partner VAT, column J = email (semicolon-separated)
 - Related cleanup catches all DSN Delay + Failure conversations for the same bounced email (e.g., ANALY had 6 extra besides the linked one)
+- **DSN customer reassignment:** Uses Freescout `emails` table (email → customer_id) to find real customer, then updates `customer_id` + `customer_email` on conversation. Backfill: 16 conversations reassigned from "Mail Delivery Subsystem" to actual parents.
 
 ### WhatsApp Health Monitor (v1.7.0)
 
