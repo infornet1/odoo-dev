@@ -33,13 +33,25 @@ class AiAgentDashboard(models.TransientModel):
     claude_input_rate = fields.Float('Tasa Input ($/token)', digits=(10, 6), default=0.000001)
     claude_output_rate = fields.Float('Tasa Output ($/token)', digits=(10, 6), default=0.000005)
 
-    # ── Tareas Programadas ──────────────────────────────────────────
+    # ── Tareas Programadas (Odoo crons) ─────────────────────────────
     cron_poll_active = fields.Boolean('Poll WhatsApp Activo')
-    cron_poll_nextcall = fields.Datetime('Poll Proxima Ejecucion', readonly=True)
+    cron_poll_nextcall = fields.Datetime('Proxima Ejecucion', readonly=True)
+    cron_poll_lastcall = fields.Datetime('Ultima Ejecucion', readonly=True)
+    cron_poll_interval = fields.Char('Intervalo', readonly=True)
+
     cron_timeout_active = fields.Boolean('Timeouts Activo')
-    cron_timeout_nextcall = fields.Datetime('Timeouts Proxima Ejecucion', readonly=True)
+    cron_timeout_nextcall = fields.Datetime('Proxima Ejecucion', readonly=True)
+    cron_timeout_lastcall = fields.Datetime('Ultima Ejecucion', readonly=True)
+    cron_timeout_interval = fields.Char('Intervalo', readonly=True)
+
     cron_credits_active = fields.Boolean('Credit Guard Activo')
-    cron_credits_nextcall = fields.Datetime('Credit Guard Proxima Ejecucion', readonly=True)
+    cron_credits_nextcall = fields.Datetime('Proxima Ejecucion', readonly=True)
+    cron_credits_lastcall = fields.Datetime('Ultima Ejecucion', readonly=True)
+    cron_credits_interval = fields.Char('Intervalo', readonly=True)
+
+    # ── Tareas Programadas (System crons — informational) ─────────
+    sys_cron_escalation_info = fields.Char('Escalation Bridge', readonly=True)
+    sys_cron_wa_health_info = fields.Char('WA Health Monitor', readonly=True)
 
     # ── Horario de Contacto ─────────────────────────────────────────
     schedule_weekday_start = fields.Char('Lun-Vie Inicio', default='06:30')
@@ -135,18 +147,34 @@ class AiAgentDashboard(models.TransientModel):
             'cron_timeout': 'ueipab_ai_agent.ir_cron_check_conversation_timeouts',
             'cron_credits': 'ueipab_ai_agent.ir_cron_check_credits',
         }
+        interval_labels = {
+            'minutes': 'minuto(s)',
+            'hours': 'hora(s)',
+            'days': 'dia(s)',
+            'weeks': 'semana(s)',
+            'months': 'mes(es)',
+        }
         for prefix, xml_id in cron_map.items():
-            active_field = f'{prefix}_active'
-            next_field = f'{prefix}_nextcall'
             try:
                 cron = self.env.ref(xml_id, raise_if_not_found=False)
                 if cron:
-                    if active_field in fields_list:
-                        res[active_field] = cron.active
-                    if next_field in fields_list:
-                        res[next_field] = cron.nextcall
+                    if f'{prefix}_active' in fields_list:
+                        res[f'{prefix}_active'] = cron.active
+                    if f'{prefix}_nextcall' in fields_list:
+                        res[f'{prefix}_nextcall'] = cron.nextcall
+                    if f'{prefix}_lastcall' in fields_list:
+                        res[f'{prefix}_lastcall'] = cron.lastcall
+                    if f'{prefix}_interval' in fields_list:
+                        label = interval_labels.get(cron.interval_type, cron.interval_type)
+                        res[f'{prefix}_interval'] = f"cada {cron.interval_number} {label}"
             except Exception:
                 pass
+
+        # ── System crons (host-level, not in Docker) ────────────────
+        if 'sys_cron_escalation_info' in fields_list:
+            res['sys_cron_escalation_info'] = 'cada 5 min — /etc/cron.d/ai_agent_escalation'
+        if 'sys_cron_wa_health_info' in fields_list:
+            res['sys_cron_wa_health_info'] = 'cada 15 min — /etc/cron.d/ai_agent_wa_health'
 
         # ── Live stats ──────────────────────────────────────────────
         if 'claude_total_spend' in fields_list or 'claude_total_input_tokens' in fields_list:
