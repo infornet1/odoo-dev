@@ -181,4 +181,9 @@ class WhatsAppService(models.AbstractModel):
         if result.get('status') != 200:
             return []
 
-        return result.get('data', {}).get('messages', [])
+        data = result.get('data', [])
+        # API returns data as a list of messages directly
+        if isinstance(data, list):
+            return data
+        # Fallback for dict format
+        return data.get('messages', [])

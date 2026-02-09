@@ -529,7 +529,9 @@ class AiAgentConversation(models.Model):
             return
 
         for msg in messages:
-            phone = wa_service._normalize_phone(msg.get('phone', ''))
+            # API uses 'recipient' for the other party's phone, 'phone' from webhook
+            raw_phone = msg.get('recipient') or msg.get('phone', '')
+            phone = wa_service._normalize_phone(raw_phone)
             body = msg.get('message', '')
             wa_id = msg.get('id', 0)
 
