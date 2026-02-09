@@ -311,14 +311,14 @@ def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''
 # Main Logic
 # ============================================================================
 
-def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
+def close_related_conversations(fs_conn, admin_id, search_email, primary_fs_id,
                                 partner_name, odoo_bl_url):
-    """Close other active Freescout conversations that mention the bounced email.
+    """Close other active Freescout conversations that mention an email address.
 
-    DSN conversations have customer_email=mailer-daemon@googlemail.com, so the
-    bounced address only appears in the thread body. This searches thread bodies
-    for the bounced email and closes any matching active conversations that
-    weren't already processed.
+    Searches three places for the email:
+    - thread body (DSN conversations where bounced address appears in body)
+    - conversation customer_email (verification email replies from new address)
+    - thread from field (reply sender address)
 
     Returns count of conversations closed.
     """
@@ -328,25 +328,27 @@ def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
         cursor.execute("""
             SELECT DISTINCT c.id, c.number, c.subject, c.mailbox_id
             FROM conversations c
-            JOIN threads t ON t.conversation_id = c.id
+            LEFT JOIN threads t ON t.conversation_id = c.id
             WHERE c.status = 1
               AND c.id != %s
               AND c.subject NOT LIKE '[RESUELTO-AI]%%'
-              AND t.body LIKE %s
-        """, (primary_fs_id, f'%{bounced_email}%'))
+              AND (t.body LIKE %s
+                   OR c.customer_email LIKE %s
+                   OR t.`from` LIKE %s)
+        """, (primary_fs_id, f'%{search_email}%', f'%{search_email}%', f'%{search_email}%'))
         related = cursor.fetchall()
 
     if not related:
         return 0
 
-    print(f"  {prefix}Found {len(related)} related active conversation(s) for '{bounced_email}':")
+    print(f"  {prefix}Found {len(related)} related active conversation(s) for '{search_email}':")
     for r in related:
         print(f"    #{r['number']} (id={r['id']}): {r['subject'][:70]}")
 
     now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
     note_body = (
-        f"<p><strong>Cerrado automaticamente</strong> — el email rebotado "
-        f"<code>{bounced_email}</code> de <strong>{partner_name}</strong> "
+        f"<p><strong>Cerrado automaticamente</strong> — el email "
+        f"<code>{search_email}</code> de <strong>{partner_name}</strong> "
         f"ha sido resuelto.</p>"
         f"<p><strong>Fecha:</strong> {now_str}</p>"
         f'<p><a href="{odoo_bl_url}">Ver bounce log en Odoo</a></p>'
@@ -462,14 +464,22 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         logger.info("  Freescout #%d primary already processed", fs_conv_number)
         # Build odoo_bl_url for related cleanup
         odoo_bl_url = f"{ODOO_URL}/web#id={bl_id}&model=mail.bounce.log&view_type=form"
+        any_closed = 0
         if bounced_email:
             related_closed = close_related_conversations(
                 fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
             )
             if related_closed:
-                print(f"  {prefix}Closed {related_closed} related Freescout conversation(s)")
-                return 'processed'
-        return 'skipped'
+                print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
+                any_closed += related_closed
+        if new_email and new_email.lower() != bounced_email:
+            related_new = close_related_conversations(
+                fs_conn, admin_id, new_email, fs_db_id, partner_name, odoo_bl_url,
+            )
+            if related_new:
+                print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
+                any_closed += related_new
+        return 'processed' if any_closed else 'skipped'
 
     original_subject = fs_conv['subject'] or 'Delivery Status Notification'
 
@@ -623,7 +633,15 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
         )
         if related_closed:
-            print(f"  {prefix}Closed {related_closed} related Freescout conversation(s)")
+            print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
+
+    # Also close conversations mentioning the NEW email (e.g. verification email replies)
+    if new_email and new_email.lower() != bounced_email:
+        related_new = close_related_conversations(
+            fs_conn, admin_id, new_email, fs_db_id, partner_name, odoo_bl_url,
+        )
+        if related_new:
+            print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
 
     # --- Step 6: Update Customers Google Sheet ---
     if spreadsheet and partner_vat and bounced_email:
