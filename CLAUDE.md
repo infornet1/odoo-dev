@@ -457,19 +457,21 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 **Cron:** `/etc/cron.d/ai_agent_resolution` — every 5 min, logs to `scripts/logs/resolution_bridge.log`
 
 **Flow for each resolved bounce log with Freescout conversation:**
-1. Check if already processed (subject starts with `[RESUELTO-AI]`) → skip
+1. Check if already processed (subject starts with `[RESUELTO-AI]`) → skip primary, but still run related cleanup
 2. Check Akdemia2526 tab for bounced email
 3. Update Freescout conversation:
    - **Email IN Akdemia:** Subject = `[RESUELTO-AI] Se requiere actualización de correo electrónico en Akdemia`, assign to Alejandra Lopez (user_id=6), keep Active
    - **Email NOT in Akdemia:** Subject = `[RESUELTO-AI] {original}`, status = Closed
    - Internal note with resolution summary, Odoo links
-4. Update Customers tab (Google Sheets): remove bounced email from semicolon-separated list in column J
+4. **Close related conversations:** search `threads.body` for bounced email across ALL active Freescout conversations — DSN conversations use `customer_email=mailer-daemon@googlemail.com`, so the bounced address only appears in thread body. Each related conversation gets `[RESUELTO-AI]` prefix, closed, and internal note added.
+5. Update Customers tab (Google Sheets): remove bounced email from semicolon-separated list in column J
 
 **Key details:**
-- `DRY_RUN=True` by default, `--live` to apply, `--skip-sheets` to skip Google Sheets
+- `DRY_RUN=True` by default, `--live` to apply, `--skip-sheets` to skip Google Sheets, `--id N` to target a single bounce log
 - Idempotent: checks `[RESUELTO-AI]` prefix to skip already-processed conversations
 - Alejandra (Freescout user_id=6): assigned when bounced email exists in Akdemia for manual platform cleanup
 - Customers tab matching: column A = partner VAT, column J = email (semicolon-separated)
+- Related cleanup catches all DSN Delay + Failure conversations for the same bounced email (e.g., ANALY had 6 extra besides the linked one)
 
 ### WhatsApp Health Monitor (v1.7.0)
 
