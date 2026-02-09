@@ -218,7 +218,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
-| ueipab_ai_agent | 17.0.1.7.0 | 2026-02-09 |
+| ueipab_ai_agent | 17.0.1.8.0 | 2026-02-09 |
 
 ### Production Environment
 
@@ -441,7 +441,7 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 **Escalation Bridge:** `scripts/ai_agent_escalation_bridge.py`
 - Queries Odoo for conversations with `escalation_date` but no Freescout ticket
 - Creates Freescout support ticket via direct MySQL (unassigned, for team pickup)
-- Sends WhatsApp notification to "ueipab soporte" group (`584142337463-1586178983@g.us`)
+- Sends WhatsApp notification to "ueipab soporte" group (`1594720028@g.us`)
 - Updates Odoo with Freescout ticket number
 - `DRY_RUN=True` by default, same safety pattern as other bridge scripts
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket

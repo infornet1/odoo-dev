@@ -75,7 +75,7 @@ FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '1gczp1S@3!')
 FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
 
 # WhatsApp support group for notifications
-WA_GROUP_ID = '584142337463-1586178983@g.us'
+WA_GROUP_ID = '1594720028@g.us'  # ueipab soporte
 
 # State + log files
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

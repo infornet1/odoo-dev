@@ -69,7 +69,7 @@ FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
 FREESCOUT_BASE_URL = 'https://soporte.ueipab.edu.ve'
 
 # WhatsApp group for notifications
-WA_GROUP_ID = '584142337463-1586178983@g.us'
+WA_GROUP_ID = '1594720028@g.us'  # ueipab soporte
 
 # WhatsApp config file — search multiple paths (same order as Odoo module)
 def _find_wa_config():
