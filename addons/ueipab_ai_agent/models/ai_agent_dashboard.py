@@ -16,7 +16,10 @@ class AiAgentDashboard(models.TransientModel):
     # ── Estado General ──────────────────────────────────────────────
     dry_run = fields.Boolean('Modo Prueba', default=True)
     active_db = fields.Char('Entorno Activo')
-    credits_ok = fields.Boolean('Creditos OK', readonly=True)
+    credits_ok = fields.Selection([
+        ('ok', 'OK'),
+        ('error', 'Sin Creditos'),
+    ], string='Creditos', readonly=True, default='ok')
 
     # ── Creditos y Consumo ──────────────────────────────────────────
     wa_remaining_sends = fields.Integer('WA Envios Restantes', readonly=True, default=-1)
@@ -110,9 +113,8 @@ class AiAgentDashboard(models.TransientModel):
 
         # ── Read-only status ────────────────────────────────────────
         if 'credits_ok' in fields_list:
-            res['credits_ok'] = ICP.get_param(
-                'ai_agent.credits_ok', 'True'
-            ).lower() == 'true'
+            is_ok = ICP.get_param('ai_agent.credits_ok', 'True').lower() == 'true'
+            res['credits_ok'] = 'ok' if is_ok else 'error'
 
         # ── WhatsApp account status ────────────────────────────────
         if 'whatsapp_active_account' in fields_list:

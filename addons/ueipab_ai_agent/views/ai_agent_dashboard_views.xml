@@ -29,7 +29,7 @@
                         <strong>MODO PRODUCCION:</strong> El agente esta activo y procesando mensajes.
                     </div>
                     <div class="alert alert-danger text-center" role="alert"
-                         invisible="credits_ok">
+                         invisible="credits_ok == 'ok'">
                         <strong>CREDITOS AGOTADOS:</strong> Kill switch activado — todas las llamadas salientes estan bloqueadas.
                     </div>
 
@@ -41,8 +41,8 @@
                         </group>
                         <group>
                             <field name="credits_ok" widget="badge"
-                                   decoration-success="credits_ok"
-                                   decoration-danger="not credits_ok"/>
+                                   decoration-success="credits_ok == 'ok'"
+                                   decoration-danger="credits_ok == 'error'"/>
                         </group>
                     </group>
 
