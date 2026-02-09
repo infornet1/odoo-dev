@@ -44,6 +44,7 @@
 | 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 27 | Akdemia Data Pipeline | In Progress | Script + Cron | See below |
 | 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | See below |
+| 29 | Resolution Bridge | Testing | Script + Cron | See below |
 
 ---
 
@@ -402,6 +403,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 | Check Conversation Timeouts cron | `active=False` | No auto-reminders, no auto-timeouts |
 | Credit Guard cron | `active=True` | Checks WA + Claude credits every 30 min |
 | Escalation bridge cron | Running (system) | `/etc/cron.d/ai_agent_escalation`, every 5 min, DRY_RUN=True |
+| Resolution bridge cron | Running (system) | `/etc/cron.d/ai_agent_resolution`, every 5 min, DRY_RUN=True |
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
@@ -446,6 +448,28 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - `DRY_RUN=True` by default, same safety pattern as other bridge scripts
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
 - **Cron:** `/etc/cron.d/ai_agent_escalation` — every 5 min, logs to `scripts/logs/escalation_bridge.log`
+
+### Resolution Bridge (v1.8.0)
+
+**Problem:** When Glenda resolves a bounce via WhatsApp, Odoo is updated but Freescout conversations remain open and Google Sheets "Customers" tab still shows the bounced email.
+
+**Script:** `scripts/ai_agent_resolution_bridge.py`
+**Cron:** `/etc/cron.d/ai_agent_resolution` — every 5 min, logs to `scripts/logs/resolution_bridge.log`
+
+**Flow for each resolved bounce log with Freescout conversation:**
+1. Check if already processed (subject starts with `[RESUELTO-AI]`) → skip
+2. Check Akdemia2526 tab for bounced email
+3. Update Freescout conversation:
+   - **Email IN Akdemia:** Subject = `[RESUELTO-AI] Se requiere actualización de correo electrónico en Akdemia`, assign to Alejandra Lopez (user_id=6), keep Active
+   - **Email NOT in Akdemia:** Subject = `[RESUELTO-AI] {original}`, status = Closed
+   - Internal note with resolution summary, Odoo links
+4. Update Customers tab (Google Sheets): remove bounced email from semicolon-separated list in column J
+
+**Key details:**
+- `DRY_RUN=True` by default, `--live` to apply, `--skip-sheets` to skip Google Sheets
+- Idempotent: checks `[RESUELTO-AI]` prefix to skip already-processed conversations
+- Alejandra (Freescout user_id=6): assigned when bounced email exists in Akdemia for manual platform cleanup
+- Customers tab matching: column A = partner VAT, column J = email (semicolon-separated)
 
 ### WhatsApp Health Monitor (v1.7.0)
 
