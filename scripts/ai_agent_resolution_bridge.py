@@ -282,6 +282,88 @@ def update_customers_email(spreadsheet, partner_vat, bounced_email):
 # Main Logic
 # ============================================================================
 
+def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
+                                partner_name, odoo_bl_url):
+    """Close other active Freescout conversations that mention the bounced email.
+
+    DSN conversations have customer_email=mailer-daemon@googlemail.com, so the
+    bounced address only appears in the thread body. This searches thread bodies
+    for the bounced email and closes any matching active conversations that
+    weren't already processed.
+
+    Returns count of conversations closed.
+    """
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    with fs_conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT DISTINCT c.id, c.number, c.subject
+            FROM conversations c
+            JOIN threads t ON t.conversation_id = c.id
+            WHERE c.status = 1
+              AND c.id != %s
+              AND c.subject NOT LIKE '[RESUELTO-AI]%%'
+              AND t.body LIKE %s
+        """, (primary_fs_id, f'%{bounced_email}%'))
+        related = cursor.fetchall()
+
+    if not related:
+        return 0
+
+    print(f"  {prefix}Found {len(related)} related active conversation(s) for '{bounced_email}':")
+    for r in related:
+        print(f"    #{r['number']} (id={r['id']}): {r['subject'][:70]}")
+
+    now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+    note_body = (
+        f"<p><strong>Cerrado automaticamente</strong> — el email rebotado "
+        f"<code>{bounced_email}</code> de <strong>{partner_name}</strong> "
+        f"ha sido resuelto.</p>"
+        f"<p><strong>Fecha:</strong> {now_str}</p>"
+        f'<p><a href="{odoo_bl_url}">Ver bounce log en Odoo</a></p>'
+    )
+
+    closed = 0
+    if not DRY_RUN:
+        try:
+            with fs_conn.cursor() as cursor:
+                for r in related:
+                    new_subject = f"[RESUELTO-AI] {r['subject']}"
+                    cursor.execute(
+                        "UPDATE conversations SET subject = %s, status = 3, "
+                        "updated_at = NOW() WHERE id = %s",
+                        (new_subject, r['id']),
+                    )
+                    cursor.execute("""
+                        INSERT INTO threads
+                            (conversation_id, `type`, body, state, status,
+                             source_via, source_type,
+                             created_by_user_id, user_id,
+                             created_at, updated_at)
+                        VALUES (%s, 3, %s, 2, 6,
+                                2, 2,
+                                %s, %s,
+                                NOW(), NOW())
+                    """, (r['id'], note_body, admin_id, admin_id))
+                    cursor.execute(
+                        "UPDATE conversations SET threads_count = threads_count + 1 "
+                        "WHERE id = %s",
+                        (r['id'],),
+                    )
+                    closed += 1
+            fs_conn.commit()
+        except Exception as e:
+            logger.error("  Error closing related conversations: %s", e)
+            try:
+                fs_conn.rollback()
+            except Exception:
+                pass
+    else:
+        closed = len(related)
+
+    return closed
+
+
 def get_resolved_bounce_logs(models, uid):
     """Query Odoo for resolved bounce logs with Freescout conversation ID.
 
@@ -330,13 +412,24 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         logger.warning("  Freescout conversation #%d not found, skipping", fs_conv_number)
         return 'error'
 
-    # Already processed?
-    if fs_conv['subject'] and fs_conv['subject'].startswith('[RESUELTO-AI]'):
-        logger.info("  Freescout #%d already processed, skipping", fs_conv_number)
+    fs_db_id = fs_conv['id']
+    primary_already_done = fs_conv['subject'] and fs_conv['subject'].startswith('[RESUELTO-AI]')
+
+    # Already processed? Still run related-conversations cleanup, then skip rest
+    if primary_already_done:
+        logger.info("  Freescout #%d primary already processed", fs_conv_number)
+        # Build odoo_bl_url for related cleanup
+        odoo_bl_url = f"{ODOO_URL}/web#id={bl_id}&model=mail.bounce.log&view_type=form"
+        if bounced_email:
+            related_closed = close_related_conversations(
+                fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
+            )
+            if related_closed:
+                print(f"  {prefix}Closed {related_closed} related Freescout conversation(s)")
+                return 'processed'
         return 'skipped'
 
     original_subject = fs_conv['subject'] or 'Delivery Status Notification'
-    fs_db_id = fs_conv['id']
 
     # --- Step 2: Check Akdemia2526 for bounced email ---
     in_akdemia = bounced_email in akdemia_emails if bounced_email else False
@@ -457,7 +550,15 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
                 pass
             return 'error'
 
-    # --- Step 5: Update Customers Google Sheet ---
+    # --- Step 5: Close related Freescout conversations ---
+    if bounced_email:
+        related_closed = close_related_conversations(
+            fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
+        )
+        if related_closed:
+            print(f"  {prefix}Closed {related_closed} related Freescout conversation(s)")
+
+    # --- Step 6: Update Customers Google Sheet ---
     if spreadsheet and partner_vat and bounced_email:
         print(f"  {prefix}Customers tab: removing '{bounced_email}' for VAT={partner_vat}")
         try:
