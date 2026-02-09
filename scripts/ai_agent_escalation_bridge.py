@@ -151,9 +151,28 @@ def get_freescout_admin_id(fs_conn):
 
 
 def get_freescout_mailbox_id(fs_conn):
-    """Get first mailbox ID from Freescout."""
+    """Get Soporte mailbox ID from Freescout."""
     with fs_conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM mailboxes WHERE email = 'soporte@ueipab.edu.ve' "
+            "ORDER BY id LIMIT 1")
+        row = cursor.fetchone()
+        if row:
+            return row['id']
+        # Fallback to first mailbox
         cursor.execute("SELECT id FROM mailboxes ORDER BY id LIMIT 1")
+        row = cursor.fetchone()
+        return row['id'] if row else 1
+
+
+def get_freescout_inbox_folder(fs_conn, mailbox_id):
+    """Get the Inbox folder (type=1) for a mailbox."""
+    with fs_conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM folders "
+            "WHERE mailbox_id = %s AND type = 1 AND user_id IS NULL LIMIT 1",
+            (mailbox_id,),
+        )
         row = cursor.fetchone()
         return row['id'] if row else 1
 
@@ -235,7 +254,9 @@ def main():
     wa_config = load_whatsapp_config()
     admin_id = get_freescout_admin_id(fs_conn)
     mailbox_id = get_freescout_mailbox_id(fs_conn)
-    logger.info("Freescout admin_id=%d, mailbox_id=%d", admin_id, mailbox_id)
+    inbox_folder_id = get_freescout_inbox_folder(fs_conn, mailbox_id)
+    logger.info("Freescout admin_id=%d, mailbox_id=%d, inbox_folder=%d",
+                admin_id, mailbox_id, inbox_folder_id)
 
     # Phase 2: Query pending escalations
     # Note: Odoo ORM treats Integer=0 as False in search, so we search
@@ -350,12 +371,12 @@ def main():
                          mailbox_id, customer_id, customer_email,
                          threads_count, created_by_user_id, source_via, source_type,
                          created_at, updated_at, last_reply_at)
-                    VALUES (%s, 1, 1, 1, 1, %s,
+                    VALUES (%s, 1, %s, 1, 1, %s,
                             %s, %s, %s,
                             1, %s, 2, 2,
                             NOW(), NOW(), NOW())
-                """, (conv_number, subject, mailbox_id, customer_id,
-                      customer_email, admin_id))
+                """, (conv_number, inbox_folder_id, subject, mailbox_id,
+                      customer_id, customer_email, admin_id))
 
                 conversation_db_id = cursor.lastrowid
 

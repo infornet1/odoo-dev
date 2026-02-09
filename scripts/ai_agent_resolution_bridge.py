@@ -149,6 +149,30 @@ def get_freescout_admin_id(fs_conn):
         return row['id'] if row else 1
 
 
+def get_freescout_folder(fs_conn, mailbox_id, folder_type, user_id=None):
+    """Get Freescout folder ID by type and optional user.
+
+    Folder types: 1=Inbox, 20=Assigned, 25=Starred, 30=Drafts,
+                  40=Closed, 60=Spam, 70=Deleted, 80=Sent.
+    Assigned (type=20) folders are per-user — requires user_id.
+    """
+    with fs_conn.cursor() as cursor:
+        if user_id:
+            cursor.execute(
+                "SELECT id FROM folders "
+                "WHERE mailbox_id = %s AND type = %s AND user_id = %s LIMIT 1",
+                (mailbox_id, folder_type, user_id),
+            )
+        else:
+            cursor.execute(
+                "SELECT id FROM folders "
+                "WHERE mailbox_id = %s AND type = %s AND user_id IS NULL LIMIT 1",
+                (mailbox_id, folder_type),
+            )
+        row = cursor.fetchone()
+        return row['id'] if row else None
+
+
 def get_freescout_conversation(fs_conn, conversation_id):
     """Get Freescout conversation by database ID. Returns dict or None.
 
@@ -157,7 +181,7 @@ def get_freescout_conversation(fs_conn, conversation_id):
     """
     with fs_conn.cursor() as cursor:
         cursor.execute(
-            "SELECT id, number, subject, status, user_id "
+            "SELECT id, number, subject, status, user_id, mailbox_id "
             "FROM conversations WHERE id = %s LIMIT 1",
             (conversation_id,),
         )
@@ -301,7 +325,7 @@ def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
 
     with fs_conn.cursor() as cursor:
         cursor.execute("""
-            SELECT DISTINCT c.id, c.number, c.subject
+            SELECT DISTINCT c.id, c.number, c.subject, c.mailbox_id
             FROM conversations c
             JOIN threads t ON t.conversation_id = c.id
             WHERE c.status = 1
@@ -333,11 +357,21 @@ def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
             with fs_conn.cursor() as cursor:
                 for r in related:
                     new_subject = f"[RESUELTO-AI] {r['subject']}"
-                    cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = 3, "
-                        "updated_at = NOW() WHERE id = %s",
-                        (new_subject, r['id']),
-                    )
+                    # Get Closed folder for this conversation's mailbox
+                    closed_folder = get_freescout_folder(
+                        fs_conn, r['mailbox_id'], 40)
+                    if closed_folder:
+                        cursor.execute(
+                            "UPDATE conversations SET subject = %s, status = 3, "
+                            "folder_id = %s, updated_at = NOW() WHERE id = %s",
+                            (new_subject, closed_folder, r['id']),
+                        )
+                    else:
+                        cursor.execute(
+                            "UPDATE conversations SET subject = %s, status = 3, "
+                            "updated_at = NOW() WHERE id = %s",
+                            (new_subject, r['id']),
+                        )
                     cursor.execute("""
                         INSERT INTO threads
                             (conversation_id, `type`, body, state, status,
@@ -458,14 +492,19 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             partner_current_email = partner_data[0].get('email') or ''
 
     # --- Step 4: Update Freescout ---
+    fs_mailbox_id = fs_conv.get('mailbox_id')
     if in_akdemia:
         new_subject = '[RESUELTO-AI] Se requiere actualización de correo electrónico en Akdemia'
         new_status = 1  # Keep Active — Alejandra closes after updating Akdemia
         assign_to = ALEJANDRA_USER_ID
+        # Move to Alejandra's Assigned folder (type=20)
+        new_folder_id = get_freescout_folder(fs_conn, fs_mailbox_id, 20, assign_to)
     else:
         new_subject = f'[RESUELTO-AI] {original_subject}'
         new_status = 3  # Closed
         assign_to = None
+        # Move to Closed folder (type=40)
+        new_folder_id = get_freescout_folder(fs_conn, fs_mailbox_id, 40)
 
     # Build internal note body
     odoo_bl_url = f"{ODOO_URL}/web#id={bl_id}&model=mail.bounce.log&view_type=form"
@@ -512,17 +551,27 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     print(f"    Status: {new_status} ({'Active (Alejandra)' if new_status == 1 else 'Closed'})")
     if assign_to:
         print(f"    Assign to: user_id={assign_to} (Alejandra Lopez)")
+    if new_folder_id:
+        print(f"    Folder: {new_folder_id} ({'Assigned' if assign_to else 'Closed'})")
     print(f"    Internal note: resolution summary added")
 
     if not DRY_RUN:
         try:
             with fs_conn.cursor() as cursor:
-                # Update conversation subject + status + assignment
-                if assign_to:
+                # Update conversation subject + status + assignment + folder
+                if assign_to and new_folder_id:
                     cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = %s, user_id = %s, "
+                        "UPDATE conversations SET subject = %s, status = %s, "
+                        "user_id = %s, folder_id = %s, "
                         "updated_at = NOW() WHERE id = %s",
-                        (new_subject, new_status, assign_to, fs_db_id),
+                        (new_subject, new_status, assign_to, new_folder_id, fs_db_id),
+                    )
+                elif new_folder_id:
+                    cursor.execute(
+                        "UPDATE conversations SET subject = %s, status = %s, "
+                        "folder_id = %s, "
+                        "updated_at = NOW() WHERE id = %s",
+                        (new_subject, new_status, new_folder_id, fs_db_id),
                     )
                 else:
                     cursor.execute(
