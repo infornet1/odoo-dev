@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Dashboard Form View -->
+    <record id="ai_agent_dashboard_view_form" model="ir.ui.view">
+        <field name="name">ai.agent.dashboard.form</field>
+        <field name="model">ai.agent.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Panel de Control" create="false" delete="false">
+                <header>
+                    <button name="action_apply" string="Aplicar"
+                            type="object" class="btn-primary"
+                            icon="fa-check"/>
+                    <button name="action_check_credits" string="Verificar Creditos"
+                            type="object" class="btn-secondary"
+                            icon="fa-refresh"/>
+                    <button name="action_refresh" string="Actualizar"
+                            type="object" class="btn-secondary"
+                            icon="fa-sync"/>
+                </header>
+                <sheet>
+                    <!-- Alert banners -->
+                    <div class="alert alert-warning text-center" role="alert"
+                         invisible="not dry_run">
+                        <strong>MODO PRUEBA:</strong> Las llamadas a WhatsApp y Claude estan desactivadas.
+                    </div>
+                    <div class="alert alert-success text-center" role="alert"
+                         invisible="dry_run">
+                        <strong>MODO PRODUCCION:</strong> El agente esta activo y procesando mensajes.
+                    </div>
+                    <div class="alert alert-danger text-center" role="alert"
+                         invisible="credits_ok">
+                        <strong>CREDITOS AGOTADOS:</strong> Kill switch activado — todas las llamadas salientes estan bloqueadas.
+                    </div>
+
+                    <!-- Estado General -->
+                    <group string="Estado General">
+                        <group>
+                            <field name="dry_run" widget="boolean_toggle"/>
+                            <field name="active_db"/>
+                        </group>
+                        <group>
+                            <field name="credits_ok" widget="badge"
+                                   decoration-success="credits_ok"
+                                   decoration-danger="not credits_ok"/>
+                        </group>
+                    </group>
+
+                    <!-- Creditos y Consumo -->
+                    <group string="Creditos y Consumo">
+                        <group string="WhatsApp (MassivaMovil)">
+                            <field name="wa_remaining_sends"/>
+                            <field name="wa_total_sends"/>
+                            <field name="wa_sends_threshold"/>
+                        </group>
+                        <group string="Claude AI (Anthropic)">
+                            <field name="claude_total_spend"/>
+                            <field name="claude_spend_limit_usd"/>
+                            <field name="claude_total_input_tokens"/>
+                            <field name="claude_total_output_tokens"/>
+                            <field name="claude_input_rate"/>
+                            <field name="claude_output_rate"/>
+                        </group>
+                    </group>
+
+                    <!-- Tareas Programadas -->
+                    <group string="Tareas Programadas">
+                        <group>
+                            <field name="cron_poll_active" widget="boolean_toggle"
+                                   string="Poll WhatsApp"/>
+                            <field name="cron_poll_nextcall"/>
+                        </group>
+                        <group>
+                            <field name="cron_timeout_active" widget="boolean_toggle"
+                                   string="Timeouts"/>
+                            <field name="cron_timeout_nextcall"/>
+                        </group>
+                        <group>
+                            <field name="cron_credits_active" widget="boolean_toggle"
+                                   string="Credit Guard"/>
+                            <field name="cron_credits_nextcall"/>
+                        </group>
+                    </group>
+
+                    <!-- Horario de Contacto -->
+                    <group string="Horario de Contacto (VET)">
+                        <group string="Lunes a Viernes">
+                            <field name="schedule_weekday_start"/>
+                            <field name="schedule_weekday_end"/>
+                        </group>
+                        <group string="Sabado y Domingo">
+                            <field name="schedule_weekend_start"/>
+                            <field name="schedule_weekend_end"/>
+                        </group>
+                    </group>
+
+                    <!-- Cuenta WhatsApp -->
+                    <group string="Cuenta WhatsApp">
+                        <group>
+                            <field name="whatsapp_active_account" widget="badge"
+                                   decoration-success="whatsapp_active_account == 'primary'"
+                                   decoration-warning="whatsapp_active_account == 'backup'"/>
+                            <field name="whatsapp_primary_phone"/>
+                            <field name="whatsapp_backup_phone"/>
+                        </group>
+                        <group>
+                            <field name="whatsapp_flagged_phone"
+                                   invisible="not whatsapp_flagged_phone"/>
+                            <field name="whatsapp_flagged_date"
+                                   invisible="not whatsapp_flagged_date"/>
+                            <button name="action_switch_whatsapp_account"
+                                    string="Cambiar Cuenta"
+                                    type="object" class="btn-warning"
+                                    icon="fa-exchange"
+                                    confirm="Cambiar la cuenta WhatsApp activa? Esto afecta todos los envios."/>
+                        </group>
+                    </group>
+
+                    <!-- Identidad del Agente -->
+                    <group string="Identidad del Agente">
+                        <group>
+                            <field name="agent_display_name"/>
+                            <field name="institution_display_name"/>
+                        </group>
+                        <group>
+                            <field name="whatsapp_send_interval"/>
+                        </group>
+                    </group>
+
+                    <!-- Estadisticas -->
+                    <group string="Estadisticas">
+                        <group>
+                            <field name="active_conversations_count"/>
+                            <field name="pending_bounce_count"/>
+                        </group>
+                        <group>
+                            <field name="total_messages_sent"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Dashboard Action -->
+    <record id="ai_agent_dashboard_action" model="ir.actions.act_window">
+        <field name="name">Panel de Control</field>
+        <field name="res_model">ai.agent.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'form_view_initial_mode': 'edit'}</field>
+    </record>
+
+</odoo>

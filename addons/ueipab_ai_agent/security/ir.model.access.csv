@@ -6,3 +6,5 @@ access_ai_agent_conversation_manager,ai.agent.conversation.manager,model_ai_agen
 access_ai_agent_message_user,ai.agent.message.user,model_ai_agent_message,base.group_user,1,0,0,0
 access_ai_agent_message_manager,ai.agent.message.manager,model_ai_agent_message,base.group_system,1,1,1,1
 access_ai_agent_start_wizard_user,ai.agent.start.conversation.wizard.user,model_ai_agent_start_conversation_wizard,base.group_user,1,1,1,1
+access_ai_agent_dashboard_user,ai.agent.dashboard.user,model_ai_agent_dashboard,base.group_user,1,0,0,0
+access_ai_agent_dashboard_manager,ai.agent.dashboard.manager,model_ai_agent_dashboard,base.group_system,1,1,1,1

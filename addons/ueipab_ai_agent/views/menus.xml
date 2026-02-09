@@ -7,6 +7,14 @@
               parent="contacts.menu_contacts"
               sequence="10"/>
 
+    <!-- Panel de Control -->
+    <menuitem id="menu_ai_agent_dashboard"
+              name="Panel de Control"
+              parent="menu_ai_agent_root"
+              action="ai_agent_dashboard_action"
+              sequence="0"
+              groups="group_ai_agent_manager"/>
+
     <!-- Conversaciones -->
     <menuitem id="menu_ai_agent_conversations"
               name="Conversaciones"

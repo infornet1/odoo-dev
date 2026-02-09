@@ -43,6 +43,7 @@
 | 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
 | 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 27 | Akdemia Data Pipeline | In Progress | Script + Cron | See below |
+| 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | See below |
 
 ---
 
@@ -217,7 +218,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
-| ueipab_ai_agent | 17.0.1.5.0 | 2026-02-08 |
+| ueipab_ai_agent | 17.0.1.7.0 | 2026-02-09 |
 
 ### Production Environment
 
@@ -446,6 +447,30 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
 - **Cron:** `/etc/cron.d/ai_agent_escalation` — every 5 min, logs to `scripts/logs/escalation_bridge.log`
 
+### WhatsApp Health Monitor (v1.7.0)
+
+**Problem:** WhatsApp platform can flag sender numbers as SPAM, unlinking them for ~24h. MassivaMóvil notifies via email to Freescout.
+
+**Solution:** Dual-layer detection + automatic failover to backup number.
+
+**Script:** `scripts/ai_agent_wa_health_monitor.py`
+**Cron:** `/etc/cron.d/ai_agent_wa_health` — every 15 min, DRY_RUN by default
+
+**Detection Layer 1 (API):** `GET /validate/whatsapp` on active sender number. If `status != 200`, number is flagged.
+**Detection Layer 2 (Freescout):** Scan inbox for subject `"¡Tu cuenta de WhatsApp ha sido desvinculada!"`.
+
+**Failover:** Either signal → switch `ai_agent.whatsapp_account_id` + `_phone` to backup → alert soporte WA group.
+**Recovery:** After 24h cooldown → validate flagged number via API → if valid, switch back + alert.
+
+**Manual override:** `python3 ai_agent_wa_health_monitor.py --force-switch backup --live`
+**Dashboard:** "Cambiar Cuenta" button under Cuenta WhatsApp section.
+
+**Accounts:**
+| | Phone | Unique ID |
+|---|---|---|
+| Primary | +584248944898 | `17537021528e296a067a37563370ded05f5a3bf3ec68875f083d7d0` |
+| Backup | +584148321963 | `17457894218e296a067a37563370ded05f5a3bf3ec680ea1ed6c305` |
+
 ### System Parameters
 
 | Key | Description |
@@ -453,10 +478,17 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 | `ai_agent.dry_run` | `True` (default) = no real API calls |
 | `ai_agent.active_db` | Database name authorized to run crons (prevents double-processing) |
 | `ai_agent.whatsapp_api_secret` | MassivaMóvil API secret |
-| `ai_agent.whatsapp_account_id` | WhatsApp account unique ID |
-| `ai_agent.whatsapp_account_phone` | WhatsApp account phone number |
+| `ai_agent.whatsapp_account_id` | Active WhatsApp account unique ID (switched by health monitor) |
+| `ai_agent.whatsapp_account_phone` | Active WhatsApp phone number (switched by health monitor) |
 | `ai_agent.whatsapp_base_url` | MassivaMóvil API base URL |
 | `ai_agent.whatsapp_send_interval` | Anti-spam interval in seconds between sends (default 120) |
+| `ai_agent.whatsapp_primary_phone` | Primary sender phone |
+| `ai_agent.whatsapp_primary_unique_id` | Primary MassivaMóvil unique ID |
+| `ai_agent.whatsapp_backup_phone` | Backup sender phone |
+| `ai_agent.whatsapp_backup_unique_id` | Backup MassivaMóvil unique ID |
+| `ai_agent.whatsapp_active_account` | `primary` or `backup` (current active) |
+| `ai_agent.whatsapp_flagged_phone` | Phone currently flagged (empty if none) |
+| `ai_agent.whatsapp_flagged_date` | When flagging was detected |
 | `ai_agent.claude_api_key` | Anthropic API key |
 | `ai_agent.claude_model` | Default Claude model |
 | `ai_agent.credits_ok` | Kill switch — `False` blocks all outbound API calls |
@@ -467,7 +499,7 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 
 ### Menu Location
 
-`Contactos > AI Agent > Conversaciones / Configuracion de Skills`
+`Contactos > AI Agent > Panel de Control / Conversaciones / Configuracion de Skills`
 
 ### Integration with Bounce Log
 
