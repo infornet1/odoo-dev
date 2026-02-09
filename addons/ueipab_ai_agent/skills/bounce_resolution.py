@@ -291,13 +291,15 @@ class BounceResolutionSkill:
                 mc_emails = [e.strip().lower() for e in (mc.email or '').split(';') if e.strip()]
                 if bounced_lower in mc_emails:
                     bounce_log._remove_email_from_field(mc, 'email', bounce_log.bounced_email)
+            # Target state: akdemia_pending if email is in Akdemia, else resolved
+            target_state = 'akdemia_pending' if bounce_log.in_akdemia else 'resolved'
             bounce_log.write({
-                'state': 'resolved',
+                'state': target_state,
                 'resolved_date': odoo_fields.Datetime.now(),
                 'resolved_by': conversation.env.uid,
             })
-            _logger.info("Bounce log %d: bounced email removed, customer OK with remaining emails",
-                         bounce_log.id)
+            _logger.info("Bounce log %d: bounced email removed, state=%s",
+                         bounce_log.id, target_state)
 
         elif action == 'declined':
             bounce_log.write({'state': 'contacted'})

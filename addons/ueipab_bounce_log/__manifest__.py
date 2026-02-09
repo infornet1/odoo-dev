@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Bounce Log',
-    'version': '17.0.1.2.1',
+    'version': '17.0.1.3.0',
     'category': 'Contacts',
     'summary': 'Email bounce tracking and resolution workflow for Contacts',
     'description': """
@@ -14,7 +14,7 @@ Features:
 * Track bounced emails with reason and technical detail
 * Link bounces to res.partner and mailing.contact records
 * Resolution workflow: Restore original email or apply new email
-* State tracking: Pending → Notified → Contacted → Resolved
+* State tracking: Pending → Notified → Contacted → Pendiente Akdemia → Resolved
 * Chatter audit trail on partner records
 * Mailing contact sync: resolution updates mailing.contact records by email match
 * Future: WhatsApp AI agent integration

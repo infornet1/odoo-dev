@@ -43,8 +43,18 @@ class MailBounceLog(models.Model):
         ('pending', 'Pendiente'),
         ('notified', 'Soporte Notificado'),
         ('contacted', 'Cliente Contactado'),
+        ('akdemia_pending', 'Pendiente Akdemia'),
         ('resolved', 'Resuelto'),
     ], default='pending', string='Estado', tracking=True)
+
+    # Akdemia tracking
+    in_akdemia = fields.Boolean(
+        'Email en Akdemia', default=False, tracking=True,
+        help='Indica si el email rebotado fue encontrado en la plataforma Akdemia')
+    akdemia_confirmed_date = fields.Datetime(
+        'Fecha Confirmacion Akdemia', readonly=True)
+    akdemia_confirmed_by = fields.Many2one(
+        'res.users', string='Confirmado por', readonly=True)
 
     # Resolution fields
     new_email = fields.Char('Email Nuevo')
@@ -108,10 +118,15 @@ class MailBounceLog(models.Model):
 
         Updates: res.partner, linked mailing.contact (if any), and ALL
         mailing.contact records that match the bounced email by search.
+
+        Target state depends on in_akdemia flag:
+        - in_akdemia=True + new email → akdemia_pending (Akdemia needs manual update)
+        - in_akdemia=True + restore (same email) → resolved (no Akdemia change needed)
+        - in_akdemia=False → resolved
         """
         self.ensure_one()
-        if self.state == 'resolved':
-            raise UserError(_('Este registro ya fue resuelto.'))
+        if self.state in ('resolved', 'akdemia_pending'):
+            raise UserError(_('Este registro ya fue resuelto o esta pendiente de Akdemia.'))
 
         # Update partner
         if self.partner_id:
@@ -145,8 +160,15 @@ class MailBounceLog(models.Model):
         # Search and update ALL mailing.contact records with the bounced email
         self._sync_mailing_contacts(email_to_add)
 
+        # Determine target state: akdemia_pending if email changed and in Akdemia
+        is_new_email = email_to_add.strip().lower() != (self.bounced_email or '').strip().lower()
+        if self.in_akdemia and is_new_email:
+            target_state = 'akdemia_pending'
+        else:
+            target_state = 'resolved'
+
         self.write({
-            'state': 'resolved',
+            'state': target_state,
             'resolved_date': fields.Datetime.now(),
             'resolved_by': self.env.uid,
         })
@@ -232,3 +254,25 @@ class MailBounceLog(models.Model):
             raise UserError(_(
                 'Solo se puede marcar contactado desde Pendiente o Notificado.'))
         self.state = 'contacted'
+
+    def action_confirm_akdemia(self):
+        """Confirm that Akdemia has been updated with the new email."""
+        self.ensure_one()
+        if self.state != 'akdemia_pending':
+            raise UserError(_(
+                'Solo se puede confirmar desde estado Pendiente Akdemia.'))
+        self.write({
+            'state': 'resolved',
+            'akdemia_confirmed_date': fields.Datetime.now(),
+            'akdemia_confirmed_by': self.env.uid,
+        })
+        self.message_post(
+            body=_(
+                '<strong>Akdemia actualizado</strong><br/>'
+                'El correo ha sido confirmado en la plataforma Akdemia.<br/>'
+                'Confirmado por: %(user)s',
+                user=self.env.user.name,
+            ),
+            message_type='comment',
+            subtype_xmlid='mail.mt_note',
+        )

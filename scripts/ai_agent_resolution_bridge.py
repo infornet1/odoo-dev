@@ -406,17 +406,18 @@ def close_related_conversations(fs_conn, admin_id, bounced_email, primary_fs_id,
 
 
 def get_resolved_bounce_logs(models, uid):
-    """Query Odoo for resolved bounce logs with Freescout conversation ID.
+    """Query Odoo for resolved/akdemia_pending bounce logs with Freescout conversation ID.
 
+    Both states need Freescout post-processing (subject prefix, notes, close/assign).
     Uses broader domain + client-side filter due to Odoo Integer=0 quirk.
     """
     all_resolved = odoo_search_read(
         models, uid, 'mail.bounce.log',
-        [('state', '=', 'resolved')],
+        [('state', 'in', ['resolved', 'akdemia_pending'])],
         [
             'id', 'bounced_email', 'new_email', 'partner_id',
             'freescout_conversation_id', 'action_tier',
-            'resolved_date', 'resolved_by',
+            'resolved_date', 'resolved_by', 'state', 'in_akdemia',
         ],
     )
 
@@ -643,6 +644,100 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     return 'processed'
 
 
+def refresh_in_akdemia_flags(models, uid, akdemia_emails):
+    """Refresh in_akdemia flag on all non-resolved bounce logs.
+
+    Ensures the flag is current before any manual or AI resolution happens.
+    Returns (updated_count, total_checked).
+    """
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    # Get all bounce logs that are not yet fully resolved
+    all_bls = odoo_search_read(
+        models, uid, 'mail.bounce.log',
+        [('state', 'not in', ['resolved'])],
+        ['id', 'bounced_email', 'in_akdemia'],
+    )
+
+    if not all_bls:
+        logger.info("  No non-resolved bounce logs to refresh")
+        return 0, 0
+
+    updated = 0
+    for bl in all_bls:
+        bounced = (bl.get('bounced_email') or '').strip().lower()
+        if not bounced:
+            continue
+
+        should_be = bounced in akdemia_emails
+        current = bl.get('in_akdemia', False)
+
+        if should_be != current:
+            logger.info("  %sBL#%d: in_akdemia %s → %s (%s)",
+                        prefix, bl['id'], current, should_be, bounced)
+            if not DRY_RUN:
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mail.bounce.log', 'write',
+                    [[bl['id']], {'in_akdemia': should_be}],
+                )
+            updated += 1
+
+    return updated, len(all_bls)
+
+
+def check_akdemia_confirmations(models, uid, akdemia_emails):
+    """Check akdemia_pending bounce logs and auto-confirm if new email is now in Akdemia.
+
+    Returns count of confirmations.
+    """
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    pending_bls = odoo_search_read(
+        models, uid, 'mail.bounce.log',
+        [('state', '=', 'akdemia_pending')],
+        ['id', 'new_email', 'bounced_email', 'partner_id'],
+    )
+
+    if not pending_bls:
+        logger.info("  No akdemia_pending bounce logs to check")
+        return 0
+
+    confirmed = 0
+    for bl in pending_bls:
+        new_email = (bl.get('new_email') or '').strip().lower()
+        partner_name = bl['partner_id'][1] if bl.get('partner_id') else '?'
+
+        if not new_email:
+            # REMOVE_ONLY case: bounced email was removed, check if it's gone from Akdemia
+            bounced = (bl.get('bounced_email') or '').strip().lower()
+            if bounced and bounced not in akdemia_emails:
+                logger.info("  %sBL#%d (%s): bounced email '%s' no longer in Akdemia → confirm",
+                            prefix, bl['id'], partner_name, bounced)
+                if not DRY_RUN:
+                    models.execute_kw(
+                        ODOO_DB, uid, ODOO_PASSWORD,
+                        'mail.bounce.log', 'action_confirm_akdemia',
+                        [[bl['id']]],
+                    )
+                confirmed += 1
+            continue
+
+        # NEW_EMAIL case: check if new email now appears in Akdemia
+        if new_email in akdemia_emails:
+            logger.info("  %sBL#%d (%s): new email '%s' found in Akdemia → confirm",
+                        prefix, bl['id'], partner_name, new_email)
+            if not DRY_RUN:
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mail.bounce.log', 'action_confirm_akdemia',
+                    [[bl['id']]],
+                )
+            confirmed += 1
+
+    return confirmed
+
+
 def main():
     parser = argparse.ArgumentParser(description='AI Agent Resolution Bridge')
     parser.add_argument('--live', action='store_true',
@@ -690,8 +785,20 @@ def main():
     else:
         logger.info("Google Sheets operations disabled (--skip-sheets)")
 
-    # Phase 2: Query resolved bounce logs
-    print("\n--- Phase 2: Query Resolved Bounce Logs ---")
+    # Phase 2a: Refresh in_akdemia flags
+    if akdemia_emails:
+        print("\n--- Phase 2a: Refresh in_akdemia Flags ---")
+        updated, total = refresh_in_akdemia_flags(models, uid, akdemia_emails)
+        print(f"  Checked {total} non-resolved bounce logs, updated {updated} flags")
+
+    # Phase 2b: Check akdemia_pending confirmations
+    if akdemia_emails:
+        print("\n--- Phase 2b: Check Akdemia Confirmations ---")
+        confirmed = check_akdemia_confirmations(models, uid, akdemia_emails)
+        print(f"  Confirmed {confirmed} akdemia_pending bounce log(s)")
+
+    # Phase 3: Query resolved bounce logs
+    print("\n--- Phase 3: Query Resolved Bounce Logs ---")
     resolved_bls = get_resolved_bounce_logs(models, uid)
 
     # Optional filter by bounce log ID
@@ -709,8 +816,8 @@ def main():
         print(f"    BL#{bl['id']}: {partner_name} — FS#{bl['freescout_conversation_id']} — "
               f"bounced={bl.get('bounced_email', '?')}")
 
-    # Phase 3: Process each
-    print("\n--- Phase 3: Process Resolved Bounce Logs ---")
+    # Phase 4: Process each
+    print("\n--- Phase 4: Process Resolved/Akdemia-Pending Bounce Logs ---")
     stats = {'processed': 0, 'skipped': 0, 'errors': 0}
 
     for bl in resolved_bls:

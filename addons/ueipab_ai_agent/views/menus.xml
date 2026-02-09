@@ -41,7 +41,7 @@
                 <button name="action_start_whatsapp" string="Iniciar WhatsApp"
                         type="object" class="btn-primary"
                         icon="fa-whatsapp"
-                        invisible="state == 'resolved'"
+                        invisible="state in ('resolved', 'akdemia_pending')"
                         confirm="Se iniciara una conversacion WhatsApp con el contacto. Continuar?"/>
             </xpath>
             <!-- Add AI conversation fields in the WhatsApp section -->

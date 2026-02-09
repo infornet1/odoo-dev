@@ -266,8 +266,9 @@ def find_email_changes(models, uid, parent_map):
     print_header("Phase 3: Compare Bounce Logs with Akdemia Data")
 
     # Get all unresolved bounce logs that have a partner linked
+    # Include akdemia_pending: these need confirmation, not fresh resolution
     bounce_logs = search_read(models, uid, 'mail.bounce.log',
-                              [('state', '!=', 'resolved'), ('partner_id', '!=', False)],
+                              [('state', 'not in', ['resolved']), ('partner_id', '!=', False)],
                               ['id', 'bounced_email', 'partner_id', 'state', 'new_email'])
 
     if not bounce_logs:
@@ -431,11 +432,33 @@ def apply_changes(models, uid, changes):
 
     for ch in changes:
         bl_id = ch['bounce_log_id']
+        bl_state = ch['bounce_log_state']
         new_email = ch['akdemia_new_email']
         bounced_email = ch['bounced_email']
         prefix = "[DRY_RUN] " if DRY_RUN else ""
 
-        print(f"--- BL#{bl_id} ({ch['partner_name']}) ---")
+        print(f"--- BL#{bl_id} ({ch['partner_name']}) [state={bl_state}] ---")
+
+        # akdemia_pending records: just confirm (Odoo already has new email applied)
+        if bl_state == 'akdemia_pending':
+            print(f"  {prefix}Confirming Akdemia update (new email '{new_email}' found in XLS)")
+            if not DRY_RUN:
+                try:
+                    models.execute_kw(
+                        ODOO_DB, uid, ODOO_PASSWORD,
+                        'mail.bounce.log', 'action_confirm_akdemia',
+                        [[bl_id]]
+                    )
+                    print(f"  Bounce log #{bl_id} confirmed (akdemia_pending → resolved)")
+                except Exception as e:
+                    print(f"  ERROR confirming BL#{bl_id}: {e}")
+                    results['errors'] += 1
+                    continue
+            results['resolved_bls'] += 1
+            print()
+            continue
+
+        # Non-akdemia_pending: full resolution flow
         print(f"  {prefix}Setting new_email='{new_email}' on bounce log")
 
         if not DRY_RUN:
@@ -448,7 +471,7 @@ def apply_changes(models, uid, changes):
                 )
 
                 # Step 2: Trigger action_apply_new_email
-                # (appends email to partner + updates mailing.contact via module + sets resolved)
+                # (appends email to partner + updates mailing.contact via module + sets resolved or akdemia_pending)
                 models.execute_kw(
                     ODOO_DB, uid, ODOO_PASSWORD,
                     'mail.bounce.log', 'action_apply_new_email',
