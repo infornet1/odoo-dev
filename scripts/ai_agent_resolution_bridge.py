@@ -366,16 +366,17 @@ def close_related_conversations(fs_conn, admin_id, search_email, primary_fs_id,
                     if closed_folder:
                         cursor.execute(
                             "UPDATE conversations SET subject = %s, status = 3, "
-                            "folder_id = %s, updated_at = NOW(), "
-                            "user_updated_at = NOW() WHERE id = %s",
-                            (new_subject, closed_folder, r['id']),
+                            "folder_id = %s, closed_at = NOW(), closed_by_user_id = %s, "
+                            "updated_at = NOW(), user_updated_at = NOW() WHERE id = %s",
+                            (new_subject, closed_folder, admin_id, r['id']),
                         )
                     else:
                         cursor.execute(
                             "UPDATE conversations SET subject = %s, status = 3, "
+                            "closed_at = NOW(), closed_by_user_id = %s, "
                             "updated_at = NOW(), user_updated_at = NOW() "
                             "WHERE id = %s",
-                            (new_subject, r['id']),
+                            (new_subject, admin_id, r['id']),
                         )
                     cursor.execute("""
                         INSERT INTO threads
@@ -573,28 +574,37 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         try:
             with fs_conn.cursor() as cursor:
                 # Update conversation subject + status + assignment + folder
+                # When closing (status=3), set closed_at/closed_by for Freescout UI visibility
+                closed_fields = ", closed_at = NOW(), closed_by_user_id = %s" if new_status == 3 else ""
+                closed_params = [admin_id] if new_status == 3 else []
+
                 if assign_to and new_folder_id:
                     cursor.execute(
                         "UPDATE conversations SET subject = %s, status = %s, "
-                        "user_id = %s, folder_id = %s, "
-                        "updated_at = NOW(), user_updated_at = NOW() "
+                        "user_id = %s, folder_id = %s"
+                        + closed_fields +
+                        ", updated_at = NOW(), user_updated_at = NOW() "
                         "WHERE id = %s",
-                        (new_subject, new_status, assign_to, new_folder_id, fs_db_id),
+                        (new_subject, new_status, assign_to, new_folder_id,
+                         *closed_params, fs_db_id),
                     )
                 elif new_folder_id:
                     cursor.execute(
                         "UPDATE conversations SET subject = %s, status = %s, "
-                        "folder_id = %s, "
-                        "updated_at = NOW(), user_updated_at = NOW() "
+                        "folder_id = %s"
+                        + closed_fields +
+                        ", updated_at = NOW(), user_updated_at = NOW() "
                         "WHERE id = %s",
-                        (new_subject, new_status, new_folder_id, fs_db_id),
+                        (new_subject, new_status, new_folder_id,
+                         *closed_params, fs_db_id),
                     )
                 else:
                     cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = %s, "
-                        "updated_at = NOW(), user_updated_at = NOW() "
+                        "UPDATE conversations SET subject = %s, status = %s"
+                        + closed_fields +
+                        ", updated_at = NOW(), user_updated_at = NOW() "
                         "WHERE id = %s",
-                        (new_subject, new_status, fs_db_id),
+                        (new_subject, new_status, *closed_params, fs_db_id),
                     )
 
                 # Add internal note thread

@@ -314,9 +314,12 @@ def postprocess_freescout(fs_conn, admin_id, fs_conv_id, conv_data, reply_info):
                 UPDATE conversations
                 SET subject = %s,
                     status = 3,
-                    updated_at = NOW()
+                    closed_at = NOW(),
+                    closed_by_user_id = %s,
+                    updated_at = NOW(),
+                    user_updated_at = NOW()
                 WHERE id = %s
-            """, (new_subject, fs_conv_id))
+            """, (new_subject, admin_id, fs_conv_id))
 
             # INSERT internal note (type=3=Note, state=2=Published, status=6=NoChange)
             note_body = build_freescout_note_html(conv_data, reply_info)
