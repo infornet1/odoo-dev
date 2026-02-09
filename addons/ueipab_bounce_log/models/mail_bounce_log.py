@@ -115,6 +115,10 @@ class MailBounceLog(models.Model):
 
         # Update partner
         if self.partner_id:
+            is_new_email = email_to_add.strip().lower() != (self.bounced_email or '').strip().lower()
+            if is_new_email:
+                # New email: remove bounced + add new
+                self._remove_email_from_field(self.partner_id, 'email', self.bounced_email)
             self._append_email_to_field(self.partner_id, 'email', email_to_add)
             self.partner_id.message_post(
                 body=_(

@@ -217,11 +217,12 @@ def load_akdemia_emails(spreadsheet):
     return akdemia_emails
 
 
-def update_customers_email(spreadsheet, partner_vat, bounced_email):
-    """Remove bounced email from the Customers tab for the given partner.
+def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''):
+    """Update email in the Customers tab: remove bounced, add new if provided.
 
     Finds the row by VAT (column A), reads email cell (column J),
     removes the bounced email from the semicolon-separated list,
+    adds new_email if provided and not already present,
     and writes back the cleaned value.
 
     Returns True if updated, False if not found or no change needed.
@@ -264,9 +265,12 @@ def update_customers_email(spreadsheet, partner_vat, bounced_email):
     emails = [e.strip() for e in current_email.split(';') if e.strip()]
     cleaned = [e for e in emails if e.lower() != bounced_email.strip().lower()]
 
-    if len(cleaned) == len(emails):
-        logger.info("  Row %d: bounced email '%s' not found in cell '%s'",
-                     target_row, bounced_email, current_email)
+    # Add new email if provided and not already present
+    if new_email and new_email.strip().lower() not in [e.lower() for e in cleaned]:
+        cleaned.append(new_email.strip())
+
+    if cleaned == emails:
+        logger.info("  Row %d: no change needed for '%s'", target_row, current_email)
         return False
 
     new_value = ';'.join(cleaned)
@@ -486,12 +490,19 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         note_body += f"<p><strong>Emails actuales:</strong> <code>{partner_current_email}</code></p>"
     note_body += f"<p><strong>Resuelto por:</strong> {resolved_by_name}</p>"
     if in_akdemia:
-        note_body += (
-            f"<hr/>"
-            f"<p><strong>⚠ Accion requerida:</strong> El email rebotado "
-            f"<code>{bounced_email}</code> existe en Akdemia. "
-            f"Alejandra debe eliminarlo manualmente de la plataforma Akdemia.</p>"
-        )
+        note_body += f"<hr/>"
+        if new_email:
+            note_body += (
+                f"<p><strong>⚠ Accion requerida en Akdemia:</strong> "
+                f"Reemplazar el correo <code>{bounced_email}</code> "
+                f"por <code>{new_email}</code> en la plataforma Akdemia.</p>"
+            )
+        else:
+            note_body += (
+                f"<p><strong>⚠ Accion requerida en Akdemia:</strong> "
+                f"Eliminar el correo <code>{bounced_email}</code> "
+                f"de la plataforma Akdemia (correo restaurado o removido).</p>"
+            )
     note_body += f"<hr/>"
     note_body += f'<p><a href="{odoo_bl_url}">Ver bounce log en Odoo</a></p>'
     note_body += f'<p><a href="{odoo_partner_url}">Ver contacto en Odoo</a></p>'
@@ -560,9 +571,10 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
 
     # --- Step 6: Update Customers Google Sheet ---
     if spreadsheet and partner_vat and bounced_email:
-        print(f"  {prefix}Customers tab: removing '{bounced_email}' for VAT={partner_vat}")
+        action_desc = f"replacing '{bounced_email}' with '{new_email}'" if new_email else f"removing '{bounced_email}'"
+        print(f"  {prefix}Customers tab: {action_desc} for VAT={partner_vat}")
         try:
-            updated = update_customers_email(spreadsheet, partner_vat, bounced_email)
+            updated = update_customers_email(spreadsheet, partner_vat, bounced_email, new_email)
             if updated:
                 print(f"  {prefix}Customers tab updated")
             else:
