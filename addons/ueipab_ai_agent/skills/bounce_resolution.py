@@ -94,11 +94,16 @@ class BounceResolutionSkill:
             f"{multi_email_instructions}"
             "- Si el cliente dice que su correo actual (el que rebotó) ya funciona (liberó espacio, lo arregló, etc.) "
             "o pide que le envíes un correo para verificar, DEBES responder con tu mensaje al cliente "
-            "seguido del marcador ACTION:VERIFY_EMAIL al final. Ejemplo:\n"
-            "  'Perfecto Alberto, le envío un correo de verificación para confirmar. "
-            "Revise su bandeja y avíseme cuando lo reciba. ACTION:VERIFY_EMAIL'\n"
-            "  El sistema enviará el correo automáticamente. SIEMPRE incluye el marcador.\n"
-            "- Si el cliente confirma que recibió el correo de verificación, responde: RESOLVED:RESTORE\n"
+            "seguido del marcador ACTION:VERIFY_EMAIL al final (sin email, se verifica el correo rebotado). "
+            "Si confirma recepción, responde: RESOLVED:RESTORE\n"
+            "- Si el cliente proporciona un correo NUEVO y quieres verificar que funcione "
+            "antes de aplicarlo, responde con: ACTION:VERIFY_EMAIL:nuevo@email.com "
+            "(reemplaza nuevo@email.com con el correo real del cliente). "
+            "Si confirma recepción del correo de verificación, responde: RESOLVED:nuevo@email.com\n"
+            "  Ejemplo: 'Perfecto, le envío un correo de verificación a su nueva dirección "
+            "para confirmar que funcione. Revise su bandeja y avíseme cuando lo reciba. "
+            "ACTION:VERIFY_EMAIL:dayanacperdomo@yahoo.com'\n"
+            "  El sistema enviará el correo automáticamente al email indicado. SIEMPRE incluye el marcador.\n"
             "- Si el cliente no desea proporcionar otro correo, responde: RESOLVED:DECLINED\n"
             "- Si el cliente solicita algo fuera del tema del correo electrónico "
             "(constancia de estudios, factura, cambio de datos, información de pagos, etc.), "
@@ -186,12 +191,15 @@ class BounceResolutionSkill:
                 'escalate': escalation_desc,
             }
 
-        # Check for ACTION:VERIFY_EMAIL (intermediate action, no resolution)
-        if 'ACTION:VERIFY_EMAIL' in ai_response:
+        # Check for ACTION:VERIFY_EMAIL or ACTION:VERIFY_EMAIL:target@email.com
+        verify_match = re.search(r'ACTION:VERIFY_EMAIL(?::(\S+))?', ai_response)
+        if verify_match:
+            # If email specified after colon, verify that email; otherwise verify bounced email
+            target_email = verify_match.group(1) if verify_match.group(1) else context.get('bounced_email', '')
             visible_text = self._extract_visible_text(ai_response)
             return {
                 'message': visible_text or ai_response,
-                'send_verification_email': context.get('bounced_email', ''),
+                'send_verification_email': target_email,
             }
 
         # Check for resolution patterns

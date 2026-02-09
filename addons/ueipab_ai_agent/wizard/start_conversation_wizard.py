@@ -53,7 +53,11 @@ class StartConversationWizard(models.TransientModel):
         if self.source_model == 'mail.bounce.log' and self.source_id:
             bounce_log = self.env['mail.bounce.log'].browse(self.source_id)
             if bounce_log.exists():
-                bounce_log.write({'ai_conversation_id': conversation.id})
+                bounce_log.write({
+                    'ai_conversation_id': conversation.id,
+                    'whatsapp_contacted': True,
+                    'whatsapp_contact_date': fields.Datetime.now(),
+                })
 
         # Start the conversation (send greeting)
         conversation.action_start()
