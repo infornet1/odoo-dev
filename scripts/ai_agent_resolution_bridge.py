@@ -1020,11 +1020,19 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
                     'mail.bounce.log', 'write',
                     [[bl_id], {'new_email': alternative}],
                 )
-                models.execute_kw(
-                    ODOO_DB, uid, ODOO_PASSWORD,
-                    'mail.bounce.log', 'action_apply_new_email',
-                    [[bl_id]],
-                )
+                try:
+                    models.execute_kw(
+                        ODOO_DB, uid, ODOO_PASSWORD,
+                        'mail.bounce.log', 'action_apply_new_email',
+                        [[bl_id]],
+                    )
+                except xmlrpc.client.Fault as f:
+                    # Odoo server returns None from button actions which it
+                    # cannot marshal. The action still executed successfully.
+                    if 'cannot marshal None' in str(f):
+                        logger.debug("  BL#%d: action executed (ignoring None marshal fault)", bl_id)
+                    else:
+                        raise
                 # Post audit trail to bounce log chatter
                 all_akdemia = ', '.join(sorted(akdemia_emails))
                 note_body = (
