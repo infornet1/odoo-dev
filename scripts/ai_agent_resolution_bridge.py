@@ -755,6 +755,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             return 'error'
 
     # --- Step 5: Close related Freescout conversations ---
+    total_related_closed = 0
     if bounced_email:
         related_closed = close_related_conversations(
             fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
@@ -762,6 +763,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         )
         if related_closed:
             print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
+            total_related_closed += related_closed
 
     # Also close conversations mentioning the NEW email (e.g. verification email replies)
     if new_email and new_email.lower() != bounced_email:
@@ -771,8 +773,10 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
         )
         if related_new:
             print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
+            total_related_closed += related_new
 
     # --- Step 6: Update Customers Google Sheet ---
+    sheets_updated = False
     if spreadsheet and partner_vat and bounced_email:
         action_desc = f"replacing '{bounced_email}' with '{new_email}'" if new_email else f"removing '{bounced_email}'"
         print(f"  {prefix}Customers tab: {action_desc} for VAT={partner_vat}")
@@ -780,6 +784,7 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             updated = update_customers_email(spreadsheet, partner_vat, bounced_email, new_email)
             if updated:
                 print(f"  {prefix}Customers tab updated")
+                sheets_updated = True
             else:
                 print(f"  Customers tab: no change needed (not found or already clean)")
         except Exception as e:
@@ -787,6 +792,55 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     else:
         if not partner_vat:
             print(f"  Skipping Customers tab: no VAT on partner")
+
+    # --- Step 7: Post audit trail to bounce log chatter ---
+    if not DRY_RUN:
+        try:
+            fs_url = f"{FREESCOUT_BASE_URL}/conversation/{fs_conv['number']}"
+            note_lines = [
+                '<strong>Post-procesamiento completado (Resolution Bridge)</strong>',
+            ]
+            # Freescout primary
+            if in_akdemia:
+                note_lines.append(
+                    f'Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
+                    f'[RESUELTO-AI], Asignado a Alejandra (Akdemia)')
+            else:
+                note_lines.append(
+                    f'Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
+                    f'[RESUELTO-AI], Cerrado')
+            # DSN customer reassignment
+            if real_customer and fs_customer_email == 'mailer-daemon@googlemail.com':
+                note_lines.append(
+                    f'Cliente Freescout reasignado: mailer-daemon → '
+                    f'{real_customer["first_name"]} {real_customer["last_name"]} '
+                    f'({real_customer["email"]})')
+            # Related conversations
+            if total_related_closed:
+                note_lines.append(
+                    f'{total_related_closed} conversacion(es) DSN relacionada(s) cerrada(s)')
+            # Customers sheet
+            if sheets_updated:
+                note_lines.append('Hoja Customers (Google Sheets): actualizada')
+            # Partner email
+            if partner_current_email:
+                note_lines.append(
+                    f'<strong>Emails actuales del contacto:</strong> '
+                    f'<code>{partner_current_email}</code>')
+
+            post_body = '<br/>'.join(note_lines)
+            models.execute_kw(
+                ODOO_DB, uid, ODOO_PASSWORD,
+                'mail.bounce.log', 'message_post',
+                [[bl_id]],
+                {
+                    'body': post_body,
+                    'message_type': 'comment',
+                    'subtype_xmlid': 'mail.mt_note',
+                },
+            )
+        except Exception as e:
+            logger.warning("  Could not post audit note to BL#%d: %s", bl_id, e)
 
     return 'processed'
 
@@ -970,6 +1024,26 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
                     ODOO_DB, uid, ODOO_PASSWORD,
                     'mail.bounce.log', 'action_apply_new_email',
                     [[bl_id]],
+                )
+                # Post audit trail to bounce log chatter
+                all_akdemia = ', '.join(sorted(akdemia_emails))
+                note_body = (
+                    f'<strong>Resuelto automaticamente — PATH F (Akdemia Auto-Resolve)</strong><br/>'
+                    f'<strong>Cedula:</strong> {cedula} ({partner_name})<br/>'
+                    f'<strong>Email rebotado:</strong> <code>{bounced_email}</code><br/>'
+                    f'<strong>Emails en Akdemia:</strong> <code>{all_akdemia}</code><br/>'
+                    f'<strong>Email aplicado:</strong> <code>{alternative}</code><br/>'
+                    f'<strong>Accion:</strong> Email reemplazado en contacto Odoo y mailing contacts'
+                )
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mail.bounce.log', 'message_post',
+                    [[bl_id]],
+                    {
+                        'body': note_body,
+                        'message_type': 'comment',
+                        'subtype_xmlid': 'mail.mt_note',
+                    },
                 )
                 logger.info("  BL#%d: auto-resolved with '%s'", bl_id, alternative)
             except Exception as e:
