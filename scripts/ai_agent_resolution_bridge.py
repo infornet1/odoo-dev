@@ -122,6 +122,20 @@ def odoo_search_read(models, uid, model, domain, fields):
     )
 
 
+def odoo_post_note(models, uid, model, res_id, body):
+    """Post an internal note (HTML) to a record's chatter.
+
+    Uses mail.message create() directly because message_post() via XML-RPC
+    escapes HTML entities (plaintext2html). Direct create preserves HTML.
+    """
+    return models.execute_kw(
+        ODOO_DB, uid, ODOO_PASSWORD,
+        'mail.message', 'create',
+        [{'model': model, 'res_id': res_id, 'body': body,
+          'message_type': 'notification', 'subtype_id': 2}],
+    )
+
+
 # ============================================================================
 # Helpers — Freescout
 # ============================================================================
@@ -797,48 +811,40 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     if not DRY_RUN:
         try:
             fs_url = f"{FREESCOUT_BASE_URL}/conversation/{fs_conv['number']}"
-            note_lines = [
-                '<strong>Post-procesamiento completado (Resolution Bridge)</strong>',
-            ]
+            items = []
             # Freescout primary
             if in_akdemia:
-                note_lines.append(
-                    f'Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
-                    f'[RESUELTO-AI], Asignado a Alejandra (Akdemia)')
+                items.append(
+                    f'<li>Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
+                    f'[RESUELTO-AI], Asignado a Alejandra (Akdemia)</li>')
             else:
-                note_lines.append(
-                    f'Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
-                    f'[RESUELTO-AI], Cerrado')
+                items.append(
+                    f'<li>Freescout <a href="{fs_url}">#{fs_conv["number"]}</a>: '
+                    f'[RESUELTO-AI], Cerrado</li>')
             # DSN customer reassignment
             if real_customer and fs_customer_email == 'mailer-daemon@googlemail.com':
-                note_lines.append(
-                    f'Cliente Freescout reasignado: mailer-daemon → '
+                items.append(
+                    f'<li>Cliente Freescout reasignado: mailer-daemon &rarr; '
                     f'{real_customer["first_name"]} {real_customer["last_name"]} '
-                    f'({real_customer["email"]})')
+                    f'({real_customer["email"]})</li>')
             # Related conversations
             if total_related_closed:
-                note_lines.append(
-                    f'{total_related_closed} conversacion(es) DSN relacionada(s) cerrada(s)')
+                items.append(
+                    f'<li>{total_related_closed} conversacion(es) DSN relacionada(s) cerrada(s)</li>')
             # Customers sheet
             if sheets_updated:
-                note_lines.append('Hoja Customers (Google Sheets): actualizada')
+                items.append('<li>Hoja Customers (Google Sheets): actualizada</li>')
             # Partner email
             if partner_current_email:
-                note_lines.append(
-                    f'<strong>Emails actuales del contacto:</strong> '
-                    f'<code>{partner_current_email}</code>')
+                items.append(
+                    f'<li><b>Emails actuales del contacto:</b> '
+                    f'<code>{partner_current_email}</code></li>')
 
-            post_body = '<br/>'.join(note_lines)
-            models.execute_kw(
-                ODOO_DB, uid, ODOO_PASSWORD,
-                'mail.bounce.log', 'message_post',
-                [[bl_id]],
-                {
-                    'body': post_body,
-                    'message_type': 'comment',
-                    'subtype_xmlid': 'mail.mt_note',
-                },
+            post_body = (
+                f'<p><b>Post-procesamiento completado (Resolution Bridge)</b></p>'
+                f'<ul>{"".join(items)}</ul>'
             )
+            odoo_post_note(models, uid, 'mail.bounce.log', bl_id, post_body)
         except Exception as e:
             logger.warning("  Could not post audit note to BL#%d: %s", bl_id, e)
 
@@ -1036,23 +1042,16 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
                 # Post audit trail to bounce log chatter
                 all_akdemia = ', '.join(sorted(akdemia_emails))
                 note_body = (
-                    f'<strong>Resuelto automaticamente — PATH F (Akdemia Auto-Resolve)</strong><br/>'
-                    f'<strong>Cedula:</strong> {cedula} ({partner_name})<br/>'
-                    f'<strong>Email rebotado:</strong> <code>{bounced_email}</code><br/>'
-                    f'<strong>Emails en Akdemia:</strong> <code>{all_akdemia}</code><br/>'
-                    f'<strong>Email aplicado:</strong> <code>{alternative}</code><br/>'
-                    f'<strong>Accion:</strong> Email reemplazado en contacto Odoo y mailing contacts'
+                    f'<p><b>Resuelto automaticamente — PATH F (Akdemia Auto-Resolve)</b></p>'
+                    f'<ul>'
+                    f'<li><b>Cedula:</b> {cedula} ({partner_name})</li>'
+                    f'<li><b>Email rebotado:</b> <code>{bounced_email}</code></li>'
+                    f'<li><b>Emails en Akdemia:</b> <code>{all_akdemia}</code></li>'
+                    f'<li><b>Email aplicado:</b> <code>{alternative}</code></li>'
+                    f'<li><b>Accion:</b> Email reemplazado en contacto Odoo y mailing contacts</li>'
+                    f'</ul>'
                 )
-                models.execute_kw(
-                    ODOO_DB, uid, ODOO_PASSWORD,
-                    'mail.bounce.log', 'message_post',
-                    [[bl_id]],
-                    {
-                        'body': note_body,
-                        'message_type': 'comment',
-                        'subtype_xmlid': 'mail.mt_note',
-                    },
-                )
+                odoo_post_note(models, uid, 'mail.bounce.log', bl_id, note_body)
                 logger.info("  BL#%d: auto-resolved with '%s'", bl_id, alternative)
             except Exception as e:
                 logger.error("  BL#%d: error applying new email: %s", bl_id, e)
