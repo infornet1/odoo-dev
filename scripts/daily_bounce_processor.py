@@ -1295,5 +1295,14 @@ class BounceProcessor:
 # ============================================================================
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Daily Bounce Processor')
+    parser.add_argument('--live', action='store_true',
+                        help='Disable DRY_RUN (apply real changes)')
+    args = parser.parse_args()
+
+    if args.live:
+        DRY_RUN = False
+
     processor = BounceProcessor()
     processor.run()
