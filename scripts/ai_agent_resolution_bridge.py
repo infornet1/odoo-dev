@@ -108,7 +108,7 @@ def connect_odoo():
     uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
     if not uid:
         raise RuntimeError("Odoo authentication failed")
-    models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object')
+    models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object', allow_none=True)
     logger.info("Odoo connected (uid=%d)", uid)
     return uid, models
 
