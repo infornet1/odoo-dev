@@ -287,11 +287,14 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ### Phase 1 - Standalone Script (Current Priority)
 
-- **Script:** `scripts/daily_bounce_processor.py` (cron daily)
+- **Script:** `scripts/daily_bounce_processor.py`
+- **Cron:** `/etc/cron.d/ai_agent_bounce_processor` — daily 05:00 VET, `--live`, `TARGET_ENV=testing`
+- **CLI:** `--live` flag disables DRY_RUN (DRY_RUN=True by default)
 - **Source:** Freescout MySQL (read-only) for bounce detection
-- **Target:** Production Odoo via XML-RPC (`res.partner` + `mailing.contact`)
+- **Target:** Odoo via XML-RPC (`res.partner` + `mailing.contact`). Defaults to production, cron overrides to testing.
 - **Log:** `scripts/bounce_logs/bounce_log.csv` (queryable history)
-- **State:** `scripts/bounce_state.json` (tracks last processed ID)
+- **State:** `scripts/bounce_state.json` (tracks last processed conversation ID)
+- **Deduplication:** Same bounced email address is not re-created if already in `mail.bounce.log`
 
 **3-Tier Logic (reason + tag based):**
 - CLEAN: Representante + permanent failure (`invalid_address`, `domain_not_found`) → auto-remove email
@@ -405,6 +408,9 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 | Credit Guard cron | `active=True` | Checks WA + Claude credits every 30 min |
 | Escalation bridge cron | Running (system) | `/etc/cron.d/ai_agent_escalation`, every 5 min, DRY_RUN=True |
 | Resolution bridge cron | Running (system) | `/etc/cron.d/ai_agent_resolution`, every 5 min, DRY_RUN=True |
+| Email checker cron | Running (system) | `/etc/cron.d/ai_agent_email_checker`, every 15 min, DRY_RUN=True |
+| Bounce processor cron | Running (system) | `/etc/cron.d/ai_agent_bounce_processor`, daily 05:00 VET, **LIVE** (TARGET_ENV=testing) |
+| WA health monitor cron | Running (system) | `/etc/cron.d/ai_agent_wa_health`, every 15 min, DRY_RUN=True |
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
@@ -427,7 +433,8 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - `reminder_count` resets on customer reply
 
 **Freescout Email Verification Detection:** Bridge script detects email replies.
-- Script: `scripts/ai_agent_email_checker.py` (cron every 15 min)
+- Script: `scripts/ai_agent_email_checker.py`
+- Cron: `/etc/cron.d/ai_agent_email_checker` — every 15 min, DRY_RUN=True (safe)
 - Queries Freescout for customer replies to verification emails
 - Auto-resolves conversations + triggers bounce log restore
 - Sends farewell WhatsApp to customer
