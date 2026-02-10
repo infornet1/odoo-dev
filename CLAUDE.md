@@ -45,6 +45,7 @@
 | 27 | Akdemia Data Pipeline | In Progress | Script + Cron | See below |
 | 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | See below |
 | 29 | Resolution Bridge | Testing | Script + Cron | See below |
+| 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
 
 ---
 
