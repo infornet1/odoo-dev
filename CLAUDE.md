@@ -457,14 +457,22 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
 - **Cron:** `/etc/cron.d/ai_agent_escalation` — every 5 min, logs to `scripts/logs/escalation_bridge.log`
 
-### Resolution Bridge (v1.8.0)
+### Resolution Bridge (v1.9.0)
 
 **Problem:** When Glenda resolves a bounce via WhatsApp, Odoo is updated but Freescout conversations remain open and Google Sheets "Customers" tab still shows the bounced email.
 
 **Script:** `scripts/ai_agent_resolution_bridge.py`
 **Cron:** `/etc/cron.d/ai_agent_resolution` — every 5 min, logs to `scripts/logs/resolution_bridge.log`
 
-**Flow for each resolved bounce log with Freescout conversation:**
+**Phase 2c — Akdemia Auto-Resolve (PATH F, v1.9.0):**
+Before processing resolved bounce logs, the bridge now auto-resolves pending bounce logs where Akdemia already has a valid alternative email for the same parent (matched by cedula/VAT). This eliminates unnecessary WhatsApp contact for ~17 of 35 pending bounce logs.
+- Builds cedula → emails map from Akdemia2526 (paired columns: cedula+email per parent slot)
+- For each pending BL with a linked partner: normalize VAT to digits, look up in map
+- If Akdemia has an email DIFFERENT from the bounced one → `write({'new_email': ...})` + `action_apply_new_email()`
+- Newly resolved BLs are immediately picked up by Phase 3-4 for Freescout + Sheets post-processing
+- Respects `--id N` filter for single-BL targeting
+
+**Flow for each resolved bounce log with Freescout conversation (Phase 3-4):**
 1. Check if already processed (subject starts with `[RESUELTO-AI]`) → skip primary, but still run related cleanup
 2. Check Akdemia2526 tab for bounced email
 3. Update Freescout conversation:
@@ -604,12 +612,13 @@ python3 scripts/akdemia_email_sync.py --file /path.xls    # specific file
 python3 scripts/akdemia_email_sync.py --skip-sheets       # skip Google Sheets
 ```
 
-**Bounce log resolution paths (4 total):**
+**Bounce log resolution paths (6 total):**
 - PATH A: Glenda WhatsApp → customer gives new email
 - PATH B: Email verification checker → customer replies to verification email
-- PATH C: Akdemia sync → tech support updated email in Akdemia
+- PATH C: Akdemia sync → tech support updated email in Akdemia (XLS download)
 - PATH D: Manual → staff clicks "Restaurar" or "Aplicar Nuevo" in Odoo
 - PATH E: Escalation → customer asks off-topic, Freescout ticket created, conversation continues
+- PATH F: Akdemia Auto-Resolve → bounced email not in Akdemia but valid alternative exists for same cedula
 
 ### Mailing Contact Sync (v1.2.0)
 

@@ -275,6 +275,48 @@ def load_akdemia_emails(spreadsheet):
     return akdemia_emails
 
 
+def load_akdemia_cedula_map(spreadsheet):
+    """Load cedula → emails mapping from Akdemia2526 tab.
+
+    Returns dict: {normalized_cedula: set of lowercase emails}
+    Cedula columns (0-indexed): 33 (AH), 62 (BK), 91 (CN)
+    Email columns (0-indexed): 46 (AU), 75 (BX), 104 (DA)
+    """
+    import re
+
+    try:
+        ws = spreadsheet.worksheet(AKDEMIA_TAB)
+    except Exception:
+        logger.warning("Akdemia2526 tab not found, skipping cedula map")
+        return {}
+
+    all_values = ws.get_all_values()
+    cedula_map = {}  # {cedula_str: set of emails}
+
+    # Paired columns: (cedula_col, email_col) for parent 1, 2, 3
+    paired_columns = [(33, 46), (62, 75), (91, 104)]
+
+    # Data starts at row 4 (index 3) — rows 0-2 are metadata + headers
+    for row_idx in range(3, len(all_values)):
+        row = all_values[row_idx]
+        for ced_col, email_col in paired_columns:
+            if ced_col >= len(row) or email_col >= len(row):
+                continue
+
+            ced_val = re.sub(r'[^0-9]', '', str(row[ced_col]))
+            email_val = row[email_col].strip().lower()
+
+            if not ced_val or not email_val or '@' not in email_val or email_val == 'nan':
+                continue
+
+            if ced_val not in cedula_map:
+                cedula_map[ced_val] = set()
+            cedula_map[ced_val].add(email_val)
+
+    logger.info("Loaded %d cedulas with emails from Akdemia2526", len(cedula_map))
+    return cedula_map
+
+
 def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''):
     """Update email in the Customers tab: remove bounced, add new if provided.
 
@@ -843,6 +885,102 @@ def check_akdemia_confirmations(models, uid, akdemia_emails):
     return confirmed
 
 
+def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None):
+    """Auto-resolve pending bounce logs where Akdemia has a valid alternative email.
+
+    For each pending bounce log with a linked partner:
+    1. Get partner VAT → normalize to digits
+    2. Look up in akdemia_cedula_map
+    3. Find an email that differs from the bounced email
+    4. If found: write new_email + call action_apply_new_email()
+
+    If target_bl_id is set, only process that specific bounce log.
+    Returns count of auto-resolved.
+    """
+    import re
+
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    domain = [('state', 'in', ['pending', 'notified', 'contacted']),
+              ('partner_id', '!=', False)]
+    if target_bl_id:
+        domain.append(('id', '=', target_bl_id))
+
+    pending_bls = odoo_search_read(
+        models, uid, 'mail.bounce.log',
+        domain,
+        ['id', 'bounced_email', 'partner_id', 'state'],
+    )
+
+    if not pending_bls:
+        logger.info("  No pending bounce logs with partners to check")
+        return 0
+
+    logger.info("  Checking %d pending bounce log(s) against Akdemia cedula map", len(pending_bls))
+
+    # Batch-fetch partner VATs
+    partner_ids = list({bl['partner_id'][0] for bl in pending_bls})
+    partner_data = odoo_search_read(
+        models, uid, 'res.partner',
+        [('id', 'in', partner_ids)],
+        ['id', 'vat'],
+    )
+    partner_vat_map = {p['id']: p.get('vat', '') for p in partner_data}
+
+    resolved_count = 0
+    for bl in pending_bls:
+        bl_id = bl['id']
+        bounced_email = (bl.get('bounced_email') or '').strip().lower()
+        partner_id = bl['partner_id'][0]
+        partner_name = bl['partner_id'][1]
+
+        vat = partner_vat_map.get(partner_id, '')
+        if not vat:
+            continue
+
+        cedula = re.sub(r'[^0-9]', '', str(vat))
+        if not cedula:
+            continue
+
+        akdemia_emails = akdemia_cedula_map.get(cedula)
+        if not akdemia_emails:
+            continue
+
+        # Find first email that differs from the bounced one
+        alternative = None
+        for email in sorted(akdemia_emails):  # sorted for deterministic order
+            if email != bounced_email:
+                alternative = email
+                break
+
+        if not alternative:
+            continue
+
+        print(f"  {prefix}BL#{bl_id} ({partner_name}): cedula={cedula}, "
+              f"bounced={bounced_email} → Akdemia has {alternative}")
+
+        if not DRY_RUN:
+            try:
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mail.bounce.log', 'write',
+                    [[bl_id], {'new_email': alternative}],
+                )
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'mail.bounce.log', 'action_apply_new_email',
+                    [[bl_id]],
+                )
+                logger.info("  BL#%d: auto-resolved with '%s'", bl_id, alternative)
+            except Exception as e:
+                logger.error("  BL#%d: error applying new email: %s", bl_id, e)
+                continue
+
+        resolved_count += 1
+
+    return resolved_count
+
+
 def main():
     parser = argparse.ArgumentParser(description='AI Agent Resolution Bridge')
     parser.add_argument('--live', action='store_true',
@@ -880,11 +1018,13 @@ def main():
     # Google Sheets (optional)
     spreadsheet = None
     akdemia_emails = set()
+    akdemia_cedula_map = {}
     if not args.skip_sheets:
         try:
             spreadsheet, _ = connect_sheets()
-            print("\n--- Loading Akdemia2526 emails ---")
+            print("\n--- Loading Akdemia2526 data ---")
             akdemia_emails = load_akdemia_emails(spreadsheet)
+            akdemia_cedula_map = load_akdemia_cedula_map(spreadsheet)
         except Exception as e:
             logger.warning("Google Sheets connection failed: %s (continuing without Sheets)", e)
     else:
@@ -901,6 +1041,13 @@ def main():
         print("\n--- Phase 2b: Check Akdemia Confirmations ---")
         confirmed = check_akdemia_confirmations(models, uid, akdemia_emails)
         print(f"  Confirmed {confirmed} akdemia_pending bounce log(s)")
+
+    # Phase 2c: Auto-resolve from Akdemia (PATH F)
+    if akdemia_cedula_map:
+        print("\n--- Phase 2c: Auto-Resolve from Akdemia ---")
+        auto_resolved = auto_resolve_from_akdemia(
+            models, uid, akdemia_cedula_map, target_bl_id=args.id)
+        print(f"  Auto-resolved {auto_resolved} bounce log(s) from Akdemia data")
 
     # Phase 3: Query resolved bounce logs
     print("\n--- Phase 3: Query Resolved Bounce Logs ---")
