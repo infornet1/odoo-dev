@@ -978,6 +978,19 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
 
     logger.info("  Checking %d pending bounce log(s) against Akdemia cedula map", len(pending_bls))
 
+    # Build set of ALL known bounced emails to avoid applying one as "new"
+    all_bounce_logs = odoo_search_read(
+        models, uid, 'mail.bounce.log',
+        [],
+        ['bounced_email'],
+    )
+    known_bounced = {
+        bl['bounced_email'].strip().lower()
+        for bl in all_bounce_logs
+        if bl.get('bounced_email')
+    }
+    logger.info("  Loaded %d known bounced emails for cross-check", len(known_bounced))
+
     # Batch-fetch partner VATs
     partner_ids = list({bl['partner_id'][0] for bl in pending_bls})
     partner_data = odoo_search_read(
@@ -1006,14 +1019,26 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
         if not akdemia_emails:
             continue
 
-        # Find first email that differs from the bounced one
+        # Find first email that differs from the bounced one AND is not itself a known bounce
         alternative = None
+        skipped_bounced = []
         for email in sorted(akdemia_emails):  # sorted for deterministic order
-            if email != bounced_email:
-                alternative = email
-                break
+            if email == bounced_email:
+                continue
+            if email in known_bounced:
+                skipped_bounced.append(email)
+                continue
+            alternative = email
+            break
+
+        if skipped_bounced:
+            logger.warning("  BL#%d (%s): skipped Akdemia email(s) %s — already known as bounced",
+                           bl_id, partner_name, ', '.join(skipped_bounced))
 
         if not alternative:
+            if skipped_bounced:
+                print(f"  {prefix}BL#{bl_id} ({partner_name}): ALL Akdemia alternatives "
+                      f"are known bounced emails ({', '.join(skipped_bounced)}), skipping")
             continue
 
         print(f"  {prefix}BL#{bl_id} ({partner_name}): cedula={cedula}, "
@@ -1041,15 +1066,22 @@ def auto_resolve_from_akdemia(models, uid, akdemia_cedula_map, target_bl_id=None
                         raise
                 # Post audit trail to bounce log chatter
                 all_akdemia = ', '.join(sorted(akdemia_emails))
+                note_items = [
+                    f'<li><b>Cedula:</b> {cedula} ({partner_name})</li>',
+                    f'<li><b>Email rebotado:</b> <code>{bounced_email}</code></li>',
+                    f'<li><b>Emails en Akdemia:</b> <code>{all_akdemia}</code></li>',
+                ]
+                if skipped_bounced:
+                    note_items.append(
+                        f'<li><b>Descartados (tambien rebotados):</b> '
+                        f'<code>{", ".join(skipped_bounced)}</code></li>')
+                note_items.extend([
+                    f'<li><b>Email aplicado:</b> <code>{alternative}</code></li>',
+                    f'<li><b>Accion:</b> Email reemplazado en contacto Odoo y mailing contacts</li>',
+                ])
                 note_body = (
                     f'<p><b>Resuelto automaticamente — PATH F (Akdemia Auto-Resolve)</b></p>'
-                    f'<ul>'
-                    f'<li><b>Cedula:</b> {cedula} ({partner_name})</li>'
-                    f'<li><b>Email rebotado:</b> <code>{bounced_email}</code></li>'
-                    f'<li><b>Emails en Akdemia:</b> <code>{all_akdemia}</code></li>'
-                    f'<li><b>Email aplicado:</b> <code>{alternative}</code></li>'
-                    f'<li><b>Accion:</b> Email reemplazado en contacto Odoo y mailing contacts</li>'
-                    f'</ul>'
+                    f'<ul>{"".join(note_items)}</ul>'
                 )
                 odoo_post_note(models, uid, 'mail.bounce.log', bl_id, note_body)
                 logger.info("  BL#%d: auto-resolved with '%s'", bl_id, alternative)
