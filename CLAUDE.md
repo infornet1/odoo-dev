@@ -42,7 +42,7 @@
 | 24 | WebSocket/Nginx Fix (Email Marketing) | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
 | 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
 | 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
-| 27 | Akdemia Data Pipeline | In Progress | Script + Cron | See below |
+| 27 | Akdemia Data Pipeline | Testing | Script + Cron | See below |
 | 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | See below |
 | 29 | Resolution Bridge | Testing | Script + Cron | See below |
 | 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
@@ -557,28 +557,50 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) for complete details.
 
 ## Akdemia Data Pipeline
 
-**Status:** In Progress | **Type:** Script + Cron
+**Status:** Testing | **Type:** Script + Cron | **Revived:** 2026-02-11
 
 Daily automated extraction of student/parent data from Akdemia student management system, with email change detection to auto-resolve AI agent conversations.
 
-### Existing Infrastructure (odoo_api_bridge)
+### Infrastructure
 
 | Component | Location | Status |
 |-----------|----------|--------|
-| Akdemia Scraper | `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` | Playwright-based, working |
+| Akdemia Scraper | `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` | Playwright-based, fixed 2026-02-11 |
+| Daily Orchestrator | `/var/www/dev/odoo_api_bridge/scripts/customer_matching_daily.py` | **Created 2026-02-11** |
 | Cron Wrapper | `/var/www/dev/odoo_api_bridge/scripts/customer_matching_wrapper.sh` | Configured, daily 6AM VET |
-| Cron Job | `/etc/cron.d/customer_matching` | Active |
-| Daily Script | `scripts/customer_matching_daily.py` | **NOT YET CREATED** |
-| Downloads Dir | `/var/www/dev/odoo_api_bridge/akdemia_downloads/` | Empty (last run Sep 2025) |
+| Cron Job | `/etc/cron.d/customer_matching` | Active (trailing newline fixed) |
+| Downloads Dir | `/var/www/dev/odoo_api_bridge/akdemia_downloads/` | Active |
 | Historical XLS | `customer_matching/data/xls_uploads/2025/09/` | 10+ files from Sep 2025 |
 
 ### Akdemia Scraper Details
 
 - **Platform:** `https://edge.akdemia.com` (Playwright headless Chromium)
 - **Credentials:** `gustavo.perdomo@ueipab.edu.ve` (hardcoded in scraper)
-- **Output:** Excel file `lista_de_estudiantes{date}-{hash}.xls`
-- **Data:** Student name, cedula, grade, section, parent name/email/phone, payment status, balance
-- **Google Sheets target:** Currently PVT2526, needs to also update Akdemia2526
+- **Output:** Excel file `akdemia_students_{period}_{date}.xls` (122 cols, A-DR)
+- **Data:** Student name, cedula, grade, section, parent name/email/phone, authorized reps, payment status, balance
+- **Report flow (updated 2026-02-11):** Generar → async → notification when done → download from `/notifications`
+- **Scraper fixes (2026-02-11):** 3 education level checkboxes (`.js-select-all-checkbox`), `#authorized_guardians_information` toggle, notification-based async download
+- **XLS structure:** 227 rows, 122 cols (A-DR), headers at row index 2, metadata rows 0-1
+- **TODO:** Wrapper script end-to-end test pending (Akdemia throttled after multiple test runs)
+
+### Daily Orchestrator
+
+**Script:** `/var/www/dev/odoo_api_bridge/scripts/customer_matching_daily.py`
+
+Thin orchestrator:
+1. **Phase 1:** Scrape Akdemia (Playwright) → download fresh XLS
+2. **Phase 2:** Call `akdemia_email_sync.py` as subprocess with `--file <downloaded_xls>`
+
+**Usage:**
+```bash
+python3 customer_matching_daily.py                # dry run (scrape + sync preview)
+python3 customer_matching_daily.py --live          # apply real changes
+python3 customer_matching_daily.py --skip-scrape   # use latest existing XLS
+python3 customer_matching_daily.py --skip-sheets   # skip Google Sheets update
+python3 customer_matching_daily.py --skip-odoo     # skip Odoo bounce log sync
+```
+
+**Exit codes:** 0=success, 1=scraper failed, 2=email sync failed
 
 ### Akdemia2526 Sheet Structure
 

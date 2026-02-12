@@ -236,12 +236,12 @@ def connect_odoo():
     """Establish XML-RPC connection to Odoo."""
     print(f"\nConnecting to Odoo: {ODOO_URL} (db={ODOO_DB})...")
     try:
-        common = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/common')
+        common = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/common', allow_none=True)
         uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
         if not uid:
             print("ERROR: Odoo authentication failed.")
             return None, None
-        models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object')
+        models = xmlrpc.client.ServerProxy(f'{ODOO_URL}/xmlrpc/2/object', allow_none=True)
         print(f"  Connected as uid={uid}")
         return uid, models
     except Exception as e:
