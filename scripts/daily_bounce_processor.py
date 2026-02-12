@@ -152,6 +152,7 @@ class BounceProcessor:
             'errors': [],
             'bounce_logs_created': [],  # mail.bounce.log records created
             'freescout_updated': [],    # Freescout conversations updated
+            'skipped_existing': 0,      # bounces skipped (already in Odoo)
         }
 
     # ---- Main orchestrator ------------------------------------------------
@@ -572,6 +573,16 @@ class BounceProcessor:
                 'status': 3,  # Closed - no action possible
                 'action_desc': 'Email no encontrado en Odoo',
             },
+            'resolved_dup': {
+                'prefix': '[RESUELTO-AI]',
+                'status': 3,  # Closed - already resolved
+                'action_desc': 'Duplicado de bounce ya resuelto en Odoo',
+            },
+            'existing_dup': {
+                'prefix': '[DUPLICADO]',
+                'status': 3,  # Closed - already tracked
+                'action_desc': 'Duplicado de bounce ya registrado en Odoo',
+            },
         }
 
         config = tier_config.get(tier, tier_config['flag'])
@@ -596,6 +607,25 @@ class BounceProcessor:
 
     # ---- Per-bounce processing (3-tier) -----------------------------------
 
+    def _check_existing_bounce_log(self, email):
+        """Check if a bounce log already exists for this email in Odoo.
+
+        Returns: dict with 'exists' bool, 'state' str, 'id' int, or None.
+        """
+        try:
+            bl_ids = self.models.execute_kw(
+                ODOO_DB, self.uid, ODOO_PASSWORD,
+                'mail.bounce.log', 'search_read',
+                [[('bounced_email', '=', email)]],
+                {'fields': ['id', 'state'], 'limit': 1,
+                 'order': 'id desc'}
+            )
+            if bl_ids:
+                return bl_ids[0]
+        except Exception as e:
+            print(f"  WARNING: Could not check existing bounce logs: {e}")
+        return None
+
     def process_bounce(self, bounce):
         email = bounce['bounced_email']
         conv_id = bounce['freescout_conversation_id']
@@ -609,6 +639,24 @@ class BounceProcessor:
               else f"  Reason: {reason} ({reason_text})")
 
         self.results['processed'].append(bounce)
+
+        # ── Cross-check: skip if bounce log already exists in Odoo ──
+        existing_bl = self._check_existing_bounce_log(email)
+        if existing_bl:
+            bl_state = existing_bl['state']
+            bl_id = existing_bl['id']
+            print(f"  -> SKIP: Bounce log #{bl_id} already exists (state={bl_state})")
+            # Tag Freescout conversation so support team sees it's handled
+            if bl_state == 'resolved':
+                self._accumulate_freescout_update(
+                    conv_id, 'resolved_dup', email, reason,
+                    bounce_log_id=bl_id)
+            else:
+                self._accumulate_freescout_update(
+                    conv_id, 'existing_dup', email, reason,
+                    bounce_log_id=bl_id)
+            self.results['skipped_existing'] = self.results.get('skipped_existing', 0) + 1
+            return
 
         # Search for the email in res.partner
         partner_ids = self._search_partners_by_email(email)
@@ -1266,6 +1314,7 @@ class BounceProcessor:
         nonrep_count = len(flagged) - temp_count
 
         print(f"  Total bounces processed:     {len(self.results['processed'])}")
+        print(f"  Skipped (already in Odoo):   {self.results['skipped_existing']}")
         print(f"  CLEANED (permanent + Representante):")
         print(f"    Partners cleaned:          {len(self.results['partners_cleaned'])}")
         print(f"    Mailing contacts cleaned:  {len(self.results['mailing_contacts_cleaned'])}")
