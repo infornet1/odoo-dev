@@ -36,13 +36,25 @@
                     <!-- Estado General (always visible above tabs) -->
                     <group string="Estado General">
                         <group>
-                            <field name="dry_run" widget="boolean_toggle"/>
+                            <field name="dry_run" readonly="1" widget="boolean_toggle"/>
                             <field name="active_db"/>
                         </group>
                         <group>
                             <field name="credits_ok" widget="badge"
                                    decoration-success="credits_ok == 'ok'"
                                    decoration-danger="credits_ok == 'error'"/>
+                            <button name="action_toggle_production_mode"
+                                    string="Activar Modo Produccion"
+                                    type="object" class="btn-danger"
+                                    icon="fa-power-off"
+                                    invisible="not dry_run"
+                                    confirm="ATENCION: Esto activara el envio REAL de mensajes WhatsApp y consumo de creditos Claude. Continuar?"/>
+                            <button name="action_toggle_production_mode"
+                                    string="Activar Modo Prueba"
+                                    type="object" class="btn-warning"
+                                    icon="fa-shield"
+                                    invisible="dry_run"
+                                    confirm="Desactivar el modo produccion y volver a modo prueba?"/>
                         </group>
                     </group>
 

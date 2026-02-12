@@ -259,6 +259,14 @@ class AiAgentDashboard(models.TransientModel):
         self.ensure_one()
         ICP = self.env['ir.config_parameter'].sudo()
 
+        # ── Guard: prevent accidental dry_run flip ─────────────────
+        current_dry_run = ICP.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+        if current_dry_run and not self.dry_run:
+            raise UserError(_(
+                "No se puede desactivar Modo Prueba desde aqui.\n"
+                "Use el boton dedicado 'Activar Modo Produccion' para confirmar este cambio."
+            ))
+
         # ── Write params ────────────────────────────────────────────
         for field_name, (param_key, param_type) in self._PARAM_MAP.items():
             value = getattr(self, field_name)
@@ -397,6 +405,35 @@ class AiAgentDashboard(models.TransientModel):
                 'message': _("Cuenta activa: %s (%s)") % (target.upper(), target_phone),
                 'type': 'warning',
                 'sticky': False,
+                'next': {'type': 'ir.actions.act_window_close'},
+            },
+        }
+
+    def action_toggle_production_mode(self):
+        """Dedicated toggle for dry_run with explicit confirmation in the UI."""
+        self.ensure_one()
+        ICP = self.env['ir.config_parameter'].sudo()
+        current = ICP.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+        new_value = not current
+        ICP.set_param('ai_agent.dry_run', str(new_value))
+
+        if new_value:
+            msg = _("Modo Prueba ACTIVADO — las llamadas a WhatsApp y Claude estan desactivadas.")
+            notif_type = 'warning'
+        else:
+            msg = _("Modo Produccion ACTIVADO — el agente enviara mensajes reales.")
+            notif_type = 'danger'
+
+        _logger.warning("dry_run toggled: %s → %s", current, new_value)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _("Modo Cambiado"),
+                'message': msg,
+                'type': notif_type,
+                'sticky': True,
                 'next': {'type': 'ir.actions.act_window_close'},
             },
         }
