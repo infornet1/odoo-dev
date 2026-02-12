@@ -79,6 +79,23 @@ class AiAgentDashboard(models.TransientModel):
     pending_bounce_count = fields.Integer('Bounces Pendientes', readonly=True)
     total_messages_sent = fields.Integer('Mensajes Enviados', readonly=True)
 
+    # ── Pipeline Akdemia ───────────────────────────────────────────
+    bounce_pending_count = fields.Integer('Pendiente', readonly=True)
+    bounce_contacted_count = fields.Integer('Contactado', readonly=True)
+    bounce_akdemia_pending_count = fields.Integer('Pendiente Akdemia', readonly=True)
+    bounce_resolved_count = fields.Integer('Resuelto', readonly=True)
+
+    akdemia_last_scrape_date = fields.Char('Ultimo Scraping', readonly=True)
+    akdemia_last_scrape_status = fields.Selection([
+        ('ok', 'OK'), ('error', 'Error'),
+    ], string='Estado Scraping', readonly=True)
+    akdemia_last_scrape_file = fields.Char('Archivo', readonly=True)
+
+    sys_cron_resolution_info = fields.Char('Resolution Bridge', readonly=True)
+    sys_cron_bounce_processor_info = fields.Char('Bounce Processor', readonly=True)
+    sys_cron_email_checker_info = fields.Char('Email Checker', readonly=True)
+    sys_cron_customer_matching_info = fields.Char('Akdemia Pipeline', readonly=True)
+
     # ── Param key mapping ───────────────────────────────────────────
     _PARAM_MAP = {
         'dry_run': ('ai_agent.dry_run', 'bool'),
@@ -175,6 +192,14 @@ class AiAgentDashboard(models.TransientModel):
             res['sys_cron_escalation_info'] = 'cada 5 min — /etc/cron.d/ai_agent_escalation'
         if 'sys_cron_wa_health_info' in fields_list:
             res['sys_cron_wa_health_info'] = 'cada 15 min — /etc/cron.d/ai_agent_wa_health'
+        if 'sys_cron_resolution_info' in fields_list:
+            res['sys_cron_resolution_info'] = 'cada 5 min — /etc/cron.d/ai_agent_resolution'
+        if 'sys_cron_bounce_processor_info' in fields_list:
+            res['sys_cron_bounce_processor_info'] = 'diario 05:00 VET — /etc/cron.d/ai_agent_bounce_processor'
+        if 'sys_cron_email_checker_info' in fields_list:
+            res['sys_cron_email_checker_info'] = 'cada 15 min — /etc/cron.d/ai_agent_email_checker'
+        if 'sys_cron_customer_matching_info' in fields_list:
+            res['sys_cron_customer_matching_info'] = 'diario 06:00 VET — /etc/cron.d/customer_matching'
 
         # ── Live stats ──────────────────────────────────────────────
         if 'claude_total_spend' in fields_list or 'claude_total_input_tokens' in fields_list:
@@ -205,6 +230,27 @@ class AiAgentDashboard(models.TransientModel):
             res['total_messages_sent'] = self.env['ai.agent.message'].search_count([
                 ('direction', '=', 'outbound'),
             ])
+
+        # ── Bounce log state distribution ──────────────────────────
+        BounceLog = self.env['mail.bounce.log']
+        if 'bounce_pending_count' in fields_list:
+            res['bounce_pending_count'] = BounceLog.search_count([('state', '=', 'pending')])
+        if 'bounce_contacted_count' in fields_list:
+            res['bounce_contacted_count'] = BounceLog.search_count([('state', '=', 'contacted')])
+        if 'bounce_akdemia_pending_count' in fields_list:
+            res['bounce_akdemia_pending_count'] = BounceLog.search_count([('state', '=', 'akdemia_pending')])
+        if 'bounce_resolved_count' in fields_list:
+            res['bounce_resolved_count'] = BounceLog.search_count([('state', '=', 'resolved')])
+
+        # ── Akdemia scrape status ──────────────────────────────────
+        if 'akdemia_last_scrape_date' in fields_list:
+            res['akdemia_last_scrape_date'] = ICP.get_param('ai_agent.akdemia_last_scrape_date', '')
+        if 'akdemia_last_scrape_status' in fields_list:
+            status = ICP.get_param('ai_agent.akdemia_last_scrape_status', '')
+            if status in ('ok', 'error'):
+                res['akdemia_last_scrape_status'] = status
+        if 'akdemia_last_scrape_file' in fields_list:
+            res['akdemia_last_scrape_file'] = ICP.get_param('ai_agent.akdemia_last_scrape_file', '')
 
         return res
 

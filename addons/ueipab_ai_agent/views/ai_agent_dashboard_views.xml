@@ -78,10 +78,18 @@
                                 <group>
                                     <field name="sys_cron_escalation_info"
                                            string="Escalation Bridge"/>
+                                    <field name="sys_cron_resolution_info"
+                                           string="Resolution Bridge"/>
+                                    <field name="sys_cron_email_checker_info"
+                                           string="Email Checker"/>
                                 </group>
                                 <group>
                                     <field name="sys_cron_wa_health_info"
                                            string="WA Health Monitor"/>
+                                    <field name="sys_cron_bounce_processor_info"
+                                           string="Bounce Processor"/>
+                                    <field name="sys_cron_customer_matching_info"
+                                           string="Akdemia Pipeline"/>
                                 </group>
                             </group>
                             <div class="alert alert-info mt-2" role="alert">
@@ -133,7 +141,34 @@
                             </group>
                         </page>
 
-                        <!-- Tab 4: Configuracion -->
+                        <!-- Tab 4: Pipeline Akdemia -->
+                        <page string="Pipeline Akdemia" name="page_pipeline">
+                            <group string="Ultimo Scraping de Akdemia">
+                                <group>
+                                    <field name="akdemia_last_scrape_status" widget="badge"
+                                           string="Estado"
+                                           decoration-success="akdemia_last_scrape_status == 'ok'"
+                                           decoration-danger="akdemia_last_scrape_status == 'error'"/>
+                                    <field name="akdemia_last_scrape_date" string="Fecha"/>
+                                </group>
+                                <group>
+                                    <field name="akdemia_last_scrape_file" string="Archivo"/>
+                                </group>
+                            </group>
+                            <group string="Distribucion de Bounce Logs">
+                                <group>
+                                    <field name="bounce_pending_count" string="Pendiente"/>
+                                    <field name="bounce_contacted_count" string="Contactado"/>
+                                </group>
+                                <group>
+                                    <field name="bounce_akdemia_pending_count"
+                                           string="Pendiente Akdemia"/>
+                                    <field name="bounce_resolved_count" string="Resuelto"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab 5: Configuracion -->
                         <page string="Configuracion" name="page_config">
                             <group string="Horario de Contacto (VET)">
                                 <group string="Lunes a Viernes">
@@ -156,7 +191,7 @@
                             </group>
                         </page>
 
-                        <!-- Tab 5: Estadisticas -->
+                        <!-- Tab 6: Estadisticas -->
                         <page string="Estadisticas" name="page_stats">
                             <group>
                                 <group>
