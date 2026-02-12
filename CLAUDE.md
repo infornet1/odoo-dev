@@ -581,7 +581,7 @@ Daily automated extraction of student/parent data from Akdemia student managemen
 - **Report flow (updated 2026-02-11):** Generar → async → notification when done → download from `/notifications`
 - **Scraper fixes (2026-02-11):** 3 education level checkboxes (`.js-select-all-checkbox`), `#authorized_guardians_information` toggle, notification-based async download
 - **XLS structure:** 227 rows, 122 cols (A-DR), headers at row index 2, metadata rows 0-1
-- **TODO:** Wrapper script end-to-end test pending (Akdemia throttled after multiple test runs)
+- **Wrapper e2e tested 2026-02-12:** Full pipeline (scrape → sync) completes in ~30s, exit code 0
 
 ### Daily Orchestrator
 
