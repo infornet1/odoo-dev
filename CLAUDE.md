@@ -219,7 +219,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_payroll_enhancements | 17.0.1.52.1 | 2026-01-08 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
-| ueipab_bounce_log | 17.0.1.2.0 | 2026-02-08 |
+| ueipab_bounce_log | 17.0.1.3.0 | 2026-02-09 |
 | ueipab_ai_agent | 17.0.1.9.0 | 2026-02-12 |
 
 ### Production Environment
@@ -294,7 +294,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 - **Target:** Odoo via XML-RPC (`res.partner` + `mailing.contact`). Defaults to production, cron overrides to testing.
 - **Log:** `scripts/bounce_logs/bounce_log.csv` (queryable history)
 - **State:** `scripts/bounce_state.json` (tracks last processed conversation ID)
-- **Deduplication:** Same bounced email address is not re-created if already in `mail.bounce.log`
+- **Deduplication:** Cross-checks Odoo before creating — skips if any `mail.bounce.log` exists for same email (any state). Resolved duplicates tag FS conversation `[RESUELTO-AI]`, others tag `[DUPLICADO]`.
 
 **3-Tier Logic (reason + tag based):**
 - CLEAN: Representante + permanent failure (`invalid_address`, `domain_not_found`) → auto-remove email
@@ -396,11 +396,11 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Environment safeguard:** `ai_agent.active_db` parameter prevents double-processing when both environments share the same WhatsApp account. Set to the database name that should process crons (e.g., `DB_UEIPAB` for production). The other environment's crons self-skip.
 
-### Testing Environment Status (2026-02-08)
+### Testing Environment Status (2026-02-12)
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| `ai_agent.dry_run` | `True` | Flip to `False` for live testing |
+| `ai_agent.dry_run` | `True` | Toggle via dedicated dashboard button (safeguarded) |
 | `ai_agent.active_db` | `testing` | Crons run in this env |
 | `ai_agent.credits_ok` | `True` | Kill switch (auto-managed by Credit Guard) |
 | Poll WhatsApp Messages cron | `active=True` | Processes customer replies every 5 min |
@@ -411,6 +411,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 | Email checker cron | Running (system) | `/etc/cron.d/ai_agent_email_checker`, every 15 min, DRY_RUN=True |
 | Bounce processor cron | Running (system) | `/etc/cron.d/ai_agent_bounce_processor`, daily 05:00 VET, **LIVE** (TARGET_ENV=testing) |
 | WA health monitor cron | Running (system) | `/etc/cron.d/ai_agent_wa_health`, every 15 min, DRY_RUN=True |
+| Akdemia pipeline cron | Running (system) | `/etc/cron.d/customer_matching`, daily 06:00 VET |
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
@@ -541,9 +542,15 @@ Before processing resolved bounce logs, the bridge now auto-resolves pending bou
 | `ai_agent.claude_input_rate` | $/token for input (default 0.000001) |
 | `ai_agent.claude_output_rate` | $/token for output (default 0.000005) |
 
-### Menu Location
+### Dashboard (Panel de Control)
 
-`Contactos > AI Agent > Panel de Control / Conversaciones / Configuracion de Skills`
+`Contactos > AI Agent > Panel de Control`
+
+6 tabs: Tareas Programadas (3 Odoo crons + 6 system crons), Creditos y Consumo (WA + Claude), Cuenta WhatsApp (failover), Pipeline Akdemia (scrape status + bounce log distribution), Configuracion (schedule, identity), Estadisticas.
+
+**dry_run safeguard (v1.9.0):** Toggle is read-only in form. Dedicated buttons "Activar Modo Produccion" (red, with confirmation) and "Activar Modo Prueba" (yellow) prevent accidental flips. `action_apply()` also blocks True→False programmatically.
+
+**Pipeline Akdemia tab (v1.9.0):** Shows last scrape date/status/file (written by orchestrator via XML-RPC) and bounce log state distribution (pending/contacted/akdemia_pending/resolved).
 
 ### Integration with Bounce Log
 
