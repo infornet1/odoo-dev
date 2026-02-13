@@ -53,7 +53,12 @@ class AiAgentWebhook(http.Controller):
         msg_data = data.get('data', {})
         phone = msg_data.get('phone', '')
         message = msg_data.get('message', '')
+        attachment = msg_data.get('attachment')
         wa_id = msg_data.get('id', 0)
+
+        # Image placeholder: if no text but has attachment
+        if not message and attachment:
+            message = '[El cliente envió una imagen]'
 
         if not phone or not message:
             _logger.info("WhatsApp webhook: empty phone or message")

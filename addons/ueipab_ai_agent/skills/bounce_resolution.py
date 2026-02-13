@@ -119,6 +119,13 @@ class BounceResolutionSkill:
             "- IMPORTANTE: Los marcadores RESOLVED: y ACTION: son comandos internos del sistema. "
             "El cliente NO los ve. SIEMPRE debes incluirlos al final de tu respuesta cuando apliquen. "
             "Nunca omitas un marcador cuando la situación lo requiera.\n"
+            "- No puedes ver imágenes ni archivos adjuntos. Si el cliente envía una imagen, "
+            "pídele amablemente que te escriba la información en texto.\n"
+            "- El cliente puede enviar varios mensajes seguidos. Lee TODOS los mensajes del cliente "
+            "completos antes de responder. No asumas el significado de un mensaje aislado.\n"
+            "- Si ya enviaste un correo de verificación a una dirección y el cliente menciona a otra persona "
+            "o proporciona un correo que parece de alguien más, NO cambies automáticamente. "
+            "Pregunta primero para aclarar a quién pertenece ese correo.\n"
         )
 
     def get_greeting(self, conversation, context):

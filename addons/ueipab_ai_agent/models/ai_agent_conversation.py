@@ -75,12 +75,21 @@ class AiAgentConversation(models.Model):
             rec.turn_count = len(rec.agent_message_ids.filtered(lambda m: m.direction == 'inbound'))
 
     def _get_conversation_history(self):
-        """Format messages as Claude API conversation history."""
+        """Format messages as Claude API conversation history.
+
+        Skips empty dedup records and merges consecutive messages from the
+        same role (required by Claude API's alternating user/assistant format).
+        """
         self.ensure_one()
         messages = []
         for msg in self.agent_message_ids.sorted('timestamp'):
+            if not msg.body:
+                continue  # Skip empty dedup records
             role = 'assistant' if msg.direction == 'outbound' else 'user'
-            messages.append({'role': role, 'content': msg.body})
+            if messages and messages[-1]['role'] == role:
+                messages[-1]['content'] += '\n' + msg.body
+            else:
+                messages.append({'role': role, 'content': msg.body})
         return messages
 
     def _is_dry_run(self):
@@ -187,8 +196,15 @@ class AiAgentConversation(models.Model):
             " (DRY RUN)" if dry_run else ""
         ))
 
-    def action_process_reply(self, message_text, wa_message_id=0):
-        """Process an incoming customer reply using Claude AI."""
+    def action_process_reply(self, message_text, wa_message_id=0, extra_wa_ids=None):
+        """Process an incoming customer reply using Claude AI.
+
+        Args:
+            message_text: The customer message (may be combined from multiple messages).
+            wa_message_id: WhatsApp message ID of the first/only message.
+            extra_wa_ids: List of additional WA message IDs when batching multiple
+                messages. Creates empty dedup records so they won't be re-processed.
+        """
         self.ensure_one()
         if self.state not in ('waiting', 'active'):
             _logger.warning("Conversation %s: ignoring reply in state %s", self.id, self.state)
@@ -201,6 +217,16 @@ class AiAgentConversation(models.Model):
             'body': message_text,
             'whatsapp_message_id': wa_message_id,
         })
+
+        # Create dedup-only records for extra WA IDs (empty body, won't appear in history)
+        if extra_wa_ids:
+            for extra_id in extra_wa_ids:
+                self.env['ai.agent.message'].create({
+                    'conversation_id': self.id,
+                    'direction': 'inbound',
+                    'body': '',
+                    'whatsapp_message_id': extra_id,
+                })
 
         self.write({
             'state': 'active',
@@ -513,7 +539,12 @@ class AiAgentConversation(models.Model):
 
     @api.model
     def _cron_poll_messages(self):
-        """Cron: poll WhatsApp API for incoming messages (fallback to webhook)."""
+        """Cron: poll WhatsApp API for incoming messages (fallback to webhook).
+
+        Groups multiple messages from the same conversation into a single
+        batch to avoid cascading misinterpretation by Claude when a customer
+        sends several rapid messages.
+        """
         if not self._is_active_environment():
             return
         if not self._is_within_schedule():
@@ -534,12 +565,21 @@ class AiAgentConversation(models.Model):
             _logger.error("Failed to poll WhatsApp messages: %s", e)
             return
 
+        # Phase 1: Collect and group messages by conversation
+        from collections import OrderedDict
+        conv_groups = OrderedDict()  # conv_id -> {'conversation': conv, 'items': [{'body', 'wa_id'}]}
+
         for msg in messages:
             # API uses 'recipient' for the other party's phone, 'phone' from webhook
             raw_phone = msg.get('recipient') or msg.get('phone', '')
             phone = wa_service._normalize_phone(raw_phone)
             body = msg.get('message', '')
             wa_id = msg.get('id', 0)
+            attachment = msg.get('attachment')
+
+            # Image placeholder: if no text but has attachment
+            if not body and attachment:
+                body = '[El cliente envió una imagen]'
 
             if not phone or not body:
                 continue
@@ -562,7 +602,32 @@ class AiAgentConversation(models.Model):
             if existing:
                 continue
 
-            conversation.action_process_reply(body, wa_message_id=wa_id)
+            if conversation.id not in conv_groups:
+                conv_groups[conversation.id] = {
+                    'conversation': conversation,
+                    'items': [],
+                }
+            conv_groups[conversation.id]['items'].append({
+                'body': body,
+                'wa_id': wa_id,
+            })
+
+        # Phase 2: Process each conversation batch
+        for conv_id, data in conv_groups.items():
+            conv = data['conversation']
+            items = data['items']
+            if len(items) == 1:
+                conv.action_process_reply(items[0]['body'], wa_message_id=items[0]['wa_id'])
+            else:
+                combined = '\n'.join(item['body'] for item in items)
+                _logger.info(
+                    "Conversation %d: batching %d messages into single interaction",
+                    conv_id, len(items))
+                conv.action_process_reply(
+                    combined,
+                    wa_message_id=items[0]['wa_id'],
+                    extra_wa_ids=[item['wa_id'] for item in items[1:]],
+                )
 
     @api.model
     def _cron_check_timeouts(self):
