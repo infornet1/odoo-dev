@@ -415,7 +415,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
-**Bounce logs:** 37 total (18 pending, 19 resolved), 37 unique emails, 0 duplicates, 0 active conversations. All orphan duplicates cleaned up (5 total: BL #79, #80, #81, #82, #83). Dedup cross-check fix deployed in bounce processor prevents recurrence.
+**Bounce logs:** 37 total (17 pending, 1 akdemia_pending, 19 resolved), 0 active conversations. BL #32 (ANTONIO MARTINEZ) manually resolved 2026-02-13 — already had working email `neumo.martinez@gmail.com`.
 
 ### Contact Schedule
 
