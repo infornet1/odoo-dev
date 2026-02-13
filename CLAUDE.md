@@ -407,7 +407,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 | Check Conversation Timeouts cron | `active=False` | No auto-reminders, no auto-timeouts |
 | Credit Guard cron | `active=True` | Checks WA + Claude credits every 30 min |
 | Escalation bridge cron | Running (system) | `/etc/cron.d/ai_agent_escalation`, every 5 min, DRY_RUN=True |
-| Resolution bridge cron | Running (system) | `/etc/cron.d/ai_agent_resolution`, every 5 min, DRY_RUN=True |
+| Resolution bridge cron | Running (system) | `/etc/cron.d/ai_agent_resolution`, every 5 min, **LIVE** |
 | Email checker cron | Running (system) | `/etc/cron.d/ai_agent_email_checker`, every 15 min, DRY_RUN=True |
 | Bounce processor cron | Running (system) | `/etc/cron.d/ai_agent_bounce_processor`, daily 05:00 VET, **LIVE** (TARGET_ENV=testing) |
 | WA health monitor cron | Running (system) | `/etc/cron.d/ai_agent_wa_health`, every 15 min, DRY_RUN=True |
@@ -415,7 +415,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
-**Bounce logs:** 37 total (17 pending, 1 akdemia_pending, 19 resolved), 0 active conversations. BL #32 (ANTONIO MARTINEZ) manually resolved 2026-02-13 — already had working email `neumo.martinez@gmail.com`.
+**Bounce logs:** 37 total (13 pending, 5 akdemia_pending, 19 resolved), 0 active conversations. 5 BLs manually resolved 2026-02-13 (PATH D) — all had working alternative emails: #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
 
 ### Contact Schedule
 
