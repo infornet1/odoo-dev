@@ -415,7 +415,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
-**Bounce logs:** 37 total (13 pending, 5 akdemia_pending, 19 resolved), 4 active conversations (#40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #47 FREDDY GONZALEZ — re-triggered to alternative phone, #65 MARYORY VASQUEZ). 5 BLs manually resolved 2026-02-13 (PATH D) — all had working alternative emails: #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
+**Bounce logs:** 37 total (12 pending, 5 akdemia_pending, 20 resolved), 3 active conversations (#40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #47 FREDDY GONZALEZ — re-triggered to alternative phone). BL #65 MARYORY VASQUEZ remediated via PATH D after Glenda resolved with wrong email (husband's) — correct email `vasquezmaryory72@gmail.com` applied manually. 5 BLs manually resolved 2026-02-13 (PATH D) — all had working alternative emails: #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
 
 ### Contact Schedule
 
