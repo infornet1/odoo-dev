@@ -60,6 +60,9 @@ class AiAgentConversation(models.Model):
     escalation_freescout_id = fields.Integer('Freescout Ticket #')
     escalation_notified = fields.Boolean('Equipo Notificado', default=False)
 
+    # Alternative contact info (captured when a family member provides a different number)
+    alternative_phone = fields.Char('Telefono Alternativo')
+
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
         for rec in self:
@@ -277,6 +280,9 @@ class AiAgentConversation(models.Model):
 
         if action.get('escalate'):
             self._handle_escalation(action['escalate'])
+
+        if action.get('alternative_phone'):
+            self.write({'alternative_phone': action['alternative_phone']})
 
         # Send AI response via WhatsApp
         response_text = action.get('message', ai_content)

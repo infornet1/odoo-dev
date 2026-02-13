@@ -15,7 +15,10 @@ class StartConversationWizard(models.TransientModel):
     @api.onchange('partner_id')
     def _onchange_partner_id(self):
         if self.partner_id:
-            self.phone = self.partner_id.mobile or self.partner_id.phone or ''
+            # When opened from bounce log, phone is pre-filled via default_phone
+            # (may contain alternative phone from escalated conversation)
+            if not self.env.context.get('default_phone'):
+                self.phone = self.partner_id.mobile or self.partner_id.phone or ''
 
     def action_start(self):
         """Create conversation and send greeting."""
@@ -35,10 +38,13 @@ class StartConversationWizard(models.TransientModel):
             ('state', 'in', ('draft', 'active', 'waiting')),
         ], limit=1)
         if existing:
-            raise UserError(_(
-                "Ya existe una conversacion activa para este contacto y skill (%s). "
-                "Cierre o resuelva la conversacion existente primero."
-            ) % existing.name)
+            if not existing.escalation_date:
+                raise UserError(_(
+                    "Ya existe una conversacion activa para este contacto y skill (%s). "
+                    "Cierre o resuelva la conversacion existente primero."
+                ) % existing.name)
+            # Escalated conversation — close it and allow retry with new number
+            existing.write({'state': 'failed'})
 
         # Create conversation
         conversation = self.env['ai.agent.conversation'].create({

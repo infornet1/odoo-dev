@@ -17,6 +17,10 @@ class MailBounceLog(models.Model):
         if self.partner_id:
             phone = self.partner_id.mobile or self.partner_id.phone or ''
 
+        # If there's an escalated conversation with an alternative phone, use it
+        if self.ai_conversation_id and self.ai_conversation_id.alternative_phone:
+            phone = self.ai_conversation_id.alternative_phone
+
         return {
             'type': 'ir.actions.act_window',
             'name': 'Iniciar Conversacion WhatsApp',

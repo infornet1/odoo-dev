@@ -220,7 +220,7 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.3.0 | 2026-02-09 |
-| ueipab_ai_agent | 17.0.1.9.0 | 2026-02-12 |
+| ueipab_ai_agent | 17.0.1.10.0 | 2026-02-13 |
 
 ### Production Environment
 
@@ -448,6 +448,14 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 2. Includes `ACTION:ESCALATE:description` marker (invisible to customer)
 3. Module saves `escalation_date` + `escalation_reason` on conversation
 4. Conversation continues in `waiting` state (intermediate action, not terminal)
+
+**Re-trigger after escalation (v1.10.0):** When a family member answers and provides a different phone number:
+1. Glenda emits `ACTION:ALTERNATIVE_PHONE:04XXXXXXXXX` (may accompany `ACTION:ESCALATE`)
+2. Module saves `alternative_phone` on conversation
+3. Operator clicks "Iniciar WhatsApp" on the bounce log → wizard opens with alternative phone **pre-filled**
+4. Old escalated conversation auto-closed as `failed`, new conversation created with the new number
+- Safety: non-escalated active conversations still block (prevents accidental duplicates)
+- Prompt instructs Glenda to capture alternative phone when a non-contact person answers
 
 **Escalation Bridge:** `scripts/ai_agent_escalation_bridge.py`
 - Queries Odoo for conversations with `escalation_date` but no Freescout ticket

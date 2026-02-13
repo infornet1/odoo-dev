@@ -110,6 +110,10 @@ class BounceResolutionSkill:
             "infórmale amablemente que has registrado su solicitud y que nuestro equipo de soporte "
             "le contactará al respecto. Luego retoma el tema del correo. "
             "Incluye al final de tu respuesta: ACTION:ESCALATE:breve descripcion del requerimiento\n"
+            "- Si alguien que NO es el contacto responde (un familiar, pareja, etc.) y te da "
+            "un numero de telefono diferente para comunicarte con el contacto real, "
+            "incluye al final: ACTION:ALTERNATIVE_PHONE:04XXXXXXXXX (solo digitos, sin guiones ni espacios). "
+            "Puedes incluirlo junto con ACTION:ESCALATE si aplica.\n"
             "- No reveles detalles técnicos del rebote a menos que el cliente pregunte.\n"
             "- Máximo 4-5 intercambios antes de cerrar la conversación.\n"
             "- IMPORTANTE: Los marcadores RESOLVED: y ACTION: son comandos internos del sistema. "
@@ -181,14 +185,28 @@ class BounceResolutionSkill:
 
     def process_ai_response(self, conversation, ai_response, context):
         """Parse AI response for resolution signals and actions."""
+        # Check for ACTION:ALTERNATIVE_PHONE (may appear alone or with ESCALATE)
+        phone_match = re.search(r'ACTION:ALTERNATIVE_PHONE:(\S+)', ai_response)
+
         # Check for ACTION:ESCALATE: (intermediate, conversation continues)
         escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', ai_response, re.MULTILINE)
         if escalate_match:
             escalation_desc = escalate_match.group(1).strip()
             visible_text = self._extract_visible_text(ai_response)
-            return {
+            result = {
                 'message': visible_text or ai_response,
                 'escalate': escalation_desc,
+            }
+            if phone_match:
+                result['alternative_phone'] = phone_match.group(1).strip()
+            return result
+
+        # Standalone ACTION:ALTERNATIVE_PHONE (without ESCALATE)
+        if phone_match:
+            visible_text = self._extract_visible_text(ai_response)
+            return {
+                'message': visible_text or ai_response,
+                'alternative_phone': phone_match.group(1).strip(),
             }
 
         # Check for ACTION:VERIFY_EMAIL or ACTION:VERIFY_EMAIL:target@email.com
