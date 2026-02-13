@@ -396,11 +396,11 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Environment safeguard:** `ai_agent.active_db` parameter prevents double-processing when both environments share the same WhatsApp account. Set to the database name that should process crons (e.g., `DB_UEIPAB` for production). The other environment's crons self-skip.
 
-### Testing Environment Status (2026-02-12)
+### Testing Environment Status (2026-02-13)
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| `ai_agent.dry_run` | `True` | Toggle via dedicated dashboard button (safeguarded) |
+| `ai_agent.dry_run` | `False` | **LIVE** — Glenda sending real messages (BL #32 test) |
 | `ai_agent.active_db` | `testing` | Crons run in this env |
 | `ai_agent.credits_ok` | `True` | Kill switch (auto-managed by Credit Guard) |
 | Poll WhatsApp Messages cron | `active=True` | Processes customer replies every 5 min |
