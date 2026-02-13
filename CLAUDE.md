@@ -400,7 +400,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| `ai_agent.dry_run` | `False` | **LIVE** — Glenda sending real messages (BL #32 test) |
+| `ai_agent.dry_run` | `False` | **LIVE** — Glenda Dubal sending real messages |
 | `ai_agent.active_db` | `testing` | Crons run in this env |
 | `ai_agent.credits_ok` | `True` | Kill switch (auto-managed by Credit Guard) |
 | Poll WhatsApp Messages cron | `active=True` | Processes customer replies every 5 min |
