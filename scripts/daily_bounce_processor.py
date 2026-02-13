@@ -1052,9 +1052,9 @@ class BounceProcessor:
             prefix = "[DRY_RUN] " if DRY_RUN else ""
             try:
                 with conn.cursor() as cursor:
-                    # Read current subject
+                    # Read current subject and mailbox
                     cursor.execute(
-                        "SELECT subject FROM conversations WHERE id = %s",
+                        "SELECT subject, mailbox_id FROM conversations WHERE id = %s",
                         (conv_id,))
                     row = cursor.fetchone()
                     if not row:
@@ -1062,6 +1062,17 @@ class BounceProcessor:
                         continue
 
                     current_subject = row['subject'] or ''
+                    mailbox_id = row['mailbox_id']
+
+                    # Look up Closed folder for this mailbox
+                    closed_folder_id = None
+                    if info['conv_status'] == 3 and mailbox_id:
+                        cursor.execute(
+                            "SELECT id FROM folders WHERE mailbox_id = %s AND type = 60 LIMIT 1",
+                            (mailbox_id,))
+                        folder_row = cursor.fetchone()
+                        if folder_row:
+                            closed_folder_id = folder_row['id']
                     tier_prefix = info['prefix']
 
                     # Skip if already prefixed
@@ -1086,16 +1097,29 @@ class BounceProcessor:
                         })
                         continue
 
-                    # UPDATE conversation: subject, customer_email, status
-                    cursor.execute("""
-                        UPDATE conversations
-                        SET subject = %s,
-                            customer_email = %s,
-                            status = %s,
-                            updated_at = NOW()
-                        WHERE id = %s
-                    """, (new_subject, info['bounced_email'],
-                          info['conv_status'], conv_id))
+                    # UPDATE conversation: subject, customer_email, status, folder
+                    if closed_folder_id:
+                        cursor.execute("""
+                            UPDATE conversations
+                            SET subject = %s,
+                                customer_email = %s,
+                                status = %s,
+                                folder_id = %s,
+                                user_updated_at = NOW(),
+                                updated_at = NOW()
+                            WHERE id = %s
+                        """, (new_subject, info['bounced_email'],
+                              info['conv_status'], closed_folder_id, conv_id))
+                    else:
+                        cursor.execute("""
+                            UPDATE conversations
+                            SET subject = %s,
+                                customer_email = %s,
+                                status = %s,
+                                updated_at = NOW()
+                            WHERE id = %s
+                        """, (new_subject, info['bounced_email'],
+                              info['conv_status'], conv_id))
 
                     # INSERT internal note thread
                     note_body = self._build_freescout_note_html(info, reason_labels)

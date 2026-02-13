@@ -317,7 +317,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
   - "Restaurar Email Original" -- re-enable old email (temporary issue fixed)
   - "Aplicar Nuevo Email" -- apply customer's new email
 - **Script integration:** Script auto-creates `mail.bounce.log` records via XML-RPC with tier, partner link, and Freescout conversation ID
-- **Freescout post-processing:** Script updates Freescout conversations with `[LIMPIADO]`/`[REVISION]`/`[NO ENCONTRADO]` prefix, internal note with bidirectional Odoo links, and status change
+- **Freescout post-processing:** Script updates Freescout conversations with `[LIMPIADO]`/`[REVISION]`/`[NO ENCONTRADO]` prefix, internal note with bidirectional Odoo links, status change, and `folder_id` set to Closed folder (type=60) so conversations move out of Inbox
 - **WhatsApp Integration:** Implemented via `ueipab_ai_agent` module. "Iniciar WhatsApp" button on bounce log form launches AI-powered conversation to resolve bounced emails. See [AI Agent Module](documentation/AI_AGENT_MODULE.md).
 
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md) for complete details.
