@@ -390,6 +390,13 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 | `ai.agent.whatsapp.service` | MassivaMóvil API abstraction |
 | `ai.agent.claude.service` | Anthropic API abstraction |
 
+### Deployment Roadmap
+
+1. **Bounce resolution** (current) — Email bounce workflow testing with live customers
+2. **Billing interactions** (planned) — `bill_reminder` + `billing_support` skills
+3. **HR interactions** (planned) — Future skill TBD
+4. **Public announcement** — Formal announcement to school community AFTER billing + HR skills are functional. Tier 1 anti-impersonation: announce exact sender phone number (+584248944898), clarify what Glenda will/won't ask, provide verification channel (soporte@ueipab.edu.ve).
+
 ### Production Architecture (v1.2.0)
 
 Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on dev server (where Freescout MySQL lives). They reach production Odoo via XML-RPC (`TARGET_ENV=production`). Config files searched in order: env var `AI_AGENT_CONFIG_DIR`, `/opt/odoo-dev/config/`, `/home/vision/ueipab17/config/`.
