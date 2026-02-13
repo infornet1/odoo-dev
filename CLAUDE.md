@@ -415,7 +415,9 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. No unsolicited outbound messages (reminders/timeouts) are sent while the timeout cron is disabled.
 
-**Bounce logs:** 37 total (12 pending, 5 akdemia_pending, 20 resolved), 3 active conversations (#40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #47 FREDDY GONZALEZ — re-triggered to alternative phone). BL #65 MARYORY VASQUEZ remediated via PATH D after Glenda resolved with wrong email (husband's) — correct email `vasquezmaryory72@gmail.com` applied manually. 5 BLs manually resolved 2026-02-13 (PATH D) — all had working alternative emails: #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
+**Bounce logs:** 37 total (11 pending, 5 akdemia_pending, 21 resolved), 2 active conversations (#40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO — both waiting first reply). BL #47 FREDDY GONZALEZ resolved manually (customer replied `freddyaquiles1976@gmail.com` but MassivaMóvil API gap — reply manually fed via shell). BL #65 MARYORY VASQUEZ remediated via PATH D after Glenda resolved with wrong email (husband's) — correct email `vasquezmaryory72@gmail.com` applied manually. 5 BLs manually resolved 2026-02-13 (PATH D): #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
+
+**Production sync (2026-02-13):** 23 partners + 27 mailing contacts synced from testing to production — bounced emails removed, new emails applied. All 26 resolved/akdemia_pending partners now match between environments.
 
 ### Contact Schedule
 
