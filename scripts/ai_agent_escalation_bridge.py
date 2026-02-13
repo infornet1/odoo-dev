@@ -17,12 +17,14 @@ Flow:
   4. Update Odoo with Freescout ticket number
 
 Usage:
-    python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py
+    python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py           # dry run
+    python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py --live    # apply real changes
 
 Author: Claude Code Assistant
 Date: 2026-02-08
 """
 
+import argparse
 import json
 import logging
 import os
@@ -37,7 +39,7 @@ import requests
 # Configuration
 # ============================================================================
 
-DRY_RUN = True  # True = no modifications, False = create tickets + notify
+DRY_RUN = True  # Default: True = no modifications. Use --live to override.
 TARGET_ENV = os.environ.get('TARGET_ENV', 'testing')
 
 # Odoo XML-RPC configuration per environment
@@ -182,25 +184,38 @@ def get_next_conversation_number(fs_conn):
     with fs_conn.cursor() as cursor:
         cursor.execute("SELECT COALESCE(MAX(number), 0) + 1 AS next_num FROM conversations")
         row = cursor.fetchone()
-        return row['next_num']
+        return int(row['next_num'])
 
 
 def find_or_create_customer(fs_conn, email, first_name, last_name):
-    """Find or create a Freescout customer by email."""
+    """Find or create a Freescout customer by email.
+
+    Freescout stores emails in a separate `emails` table (not on customers directly).
+    """
     with fs_conn.cursor() as cursor:
-        cursor.execute("SELECT id FROM customers WHERE email = %s LIMIT 1", (email,))
+        # Look up via emails table
+        cursor.execute(
+            "SELECT customer_id FROM emails WHERE email = %s LIMIT 1", (email,))
         row = cursor.fetchone()
         if row:
-            return row['id']
+            return row['customer_id']
 
         # Create new customer
         cursor.execute(
-            "INSERT INTO customers (first_name, last_name, email, created_at, updated_at) "
-            "VALUES (%s, %s, %s, NOW(), NOW())",
-            (first_name, last_name, email),
+            "INSERT INTO customers (first_name, last_name, created_at, updated_at) "
+            "VALUES (%s, %s, NOW(), NOW())",
+            (first_name, last_name),
+        )
+        customer_id = cursor.lastrowid
+
+        # Create email record
+        cursor.execute(
+            "INSERT INTO emails (customer_id, email, type, created_at, updated_at) "
+            "VALUES (%s, %s, 1, NOW(), NOW())",
+            (customer_id, email),
         )
         fs_conn.commit()
-        return cursor.lastrowid
+        return customer_id
 
 
 def send_whatsapp_group(wa_config, message):
@@ -365,17 +380,18 @@ def main():
 
             with fs_conn.cursor() as cursor:
                 # INSERT conversation
+                preview = reason[:255] if reason else subject[:255]
                 cursor.execute("""
                     INSERT INTO conversations
-                        (number, `type`, folder_id, status, state, subject,
+                        (number, `type`, folder_id, status, state, subject, preview,
                          mailbox_id, customer_id, customer_email,
                          threads_count, created_by_user_id, source_via, source_type,
                          created_at, updated_at, last_reply_at)
-                    VALUES (%s, 1, %s, 1, 1, %s,
+                    VALUES (%s, 1, %s, 1, 1, %s, %s,
                             %s, %s, %s,
                             1, %s, 2, 2,
                             NOW(), NOW(), NOW())
-                """, (conv_number, inbox_folder_id, subject, mailbox_id,
+                """, (conv_number, inbox_folder_id, subject, preview, mailbox_id,
                       customer_id, customer_email, admin_id))
 
                 conversation_db_id = cursor.lastrowid
@@ -564,6 +580,12 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='AI Agent Escalation Bridge')
+    parser.add_argument('--live', action='store_true',
+                        help='Disable DRY_RUN (create real tickets + notify)')
+    args = parser.parse_args()
+    if args.live:
+        DRY_RUN = False
     try:
         main()
     except Exception as e:
