@@ -322,7 +322,7 @@ class AiAgentConversation(models.Model):
             'Colegio Andrés Bello - Soporte <soporte@ueipab.edu.ve>',
         )
         institution = icp.get_param('ai_agent.institution_display_name', 'UEIPAB')
-        first_name = (self.partner_id.name or '').split()[0] if self.partner_id.name else 'Estimado/a'
+        first_name = (self.partner_id.name or '').split()[0].title() if self.partner_id.name else 'Estimado/a'
 
         subject = f'{institution} - Correo de verificación'
         body_html = (

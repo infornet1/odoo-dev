@@ -38,7 +38,7 @@ def get_first_name(full_name):
     """Extract first name from a full name string."""
     if not full_name:
         return "estimado/a"
-    return full_name.strip().split()[0]
+    return full_name.strip().split()[0].title()
 
 
 # Import skill modules to trigger registration
