@@ -397,6 +397,23 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 3. **HR interactions** (planned) — Future skill TBD
 4. **Public announcement** — Formal announcement to school community AFTER billing + HR skills are functional. Tier 1 anti-impersonation: announce exact sender phone number (+584248944898), clarify what Glenda will/won't ask, provide verification channel (soporte@ueipab.edu.ve).
 
+### Production Migration Checklist (2026-02-13)
+
+**BLOCKERs (must resolve before deployment):**
+1. **`ueipab_bounce_log` in production** — Module dependency, must be installed first
+2. **Hardcoded API credentials** — 5 bridge scripts have XML-RPC passwords in source code. Refactor to config file or env vars before production
+3. **Webhook callback URL** — MassivaMóvil POSTs to ONE URL only. Production: `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp`. Testing falls back to poll cron
+4. **Freescout MySQL access** — Bridge scripts must run from dev server (local MySQL). Reach production Odoo via XML-RPC
+
+**IMPORTANT (pre-deployment):**
+- Config files at `/home/vision/ueipab17/config/`: `whatsapp_massiva.json`, `anthropic_api.json`, `google_sheets_credentials.json`
+- 24 system parameters verified (especially `active_db=DB_UEIPAB`, `dry_run=False`)
+- System crons `TARGET_ENV` switched from `testing` to `production`
+- End-to-end webhook test (send → reply → AI response) in production before going live
+- `active_db` safeguard: production=`DB_UEIPAB`, testing=`testing`
+
+**Estimated effort:** 2-3 days prep + 1 day deployment + 3-4 days monitoring
+
 ### Production Architecture (v1.2.0)
 
 Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on dev server (where Freescout MySQL lives). They reach production Odoo via XML-RPC (`TARGET_ENV=production`). Config files searched in order: env var `AI_AGENT_CONFIG_DIR`, `/opt/odoo-dev/config/`, `/home/vision/ueipab17/config/`.
@@ -422,7 +439,7 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. Timeout cron sends reminders after 24h (x2) and auto-closes after 72h of no reply.
 
-**Bounce logs:** 37 total (8 pending, 5 akdemia_pending, 21 resolved, 3 contacted), 6 active conversations (#31 ANGELA GONZALEZ, #40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #42 EDDA RODRIGUEZ, #48 ANAIS GALVIS, #66 WILLIANS VELASQUEZ — all waiting first reply). BL #47 FREDDY GONZALEZ resolved manually (customer replied `freddyaquiles1976@gmail.com` but MassivaMóvil API gap — reply manually fed via shell). BL #65 MARYORY VASQUEZ remediated via PATH D after Glenda resolved with wrong email (husband's) — correct email `vasquezmaryory72@gmail.com` applied manually. 5 BLs manually resolved 2026-02-13 (PATH D): #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
+**Bounce logs:** 37 total (8 pending, 5 akdemia_pending, 21 resolved, 3 contacted), 6 active conversations (#31 ANGELA GONZALEZ, #40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #42 EDDA RODRIGUEZ, #48 ANAIS GALVIS, #66 WILLIANS VELASQUEZ). BL #66 WILLIANS VELASQUEZ replied "Está cerrado ese correo" — Glenda asked for alternative, waiting reply. Other 5 waiting first reply. BL #47 FREDDY GONZALEZ resolved manually (MassivaMóvil API gap — reply manually fed via shell). BL #65 MARYORY VASQUEZ remediated via PATH D (correct email `vasquezmaryory72@gmail.com`). 5 BLs manually resolved 2026-02-13 (PATH D): #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
 
 **Production sync (2026-02-13):** 23 partners + 27 mailing contacts synced from testing to production — bounced emails removed, new emails applied. All 26 resolved/akdemia_pending partners now match between environments.
 
