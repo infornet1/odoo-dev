@@ -49,6 +49,11 @@ class AiAgentDashboard(models.TransientModel):
     cron_credits_lastcall = fields.Datetime('Ultima Ejecucion', readonly=True)
     cron_credits_interval = fields.Char('Intervalo', readonly=True)
 
+    cron_archive_active = fields.Boolean('Archivado Activo')
+    cron_archive_nextcall = fields.Datetime('Proxima Ejecucion', readonly=True)
+    cron_archive_lastcall = fields.Datetime('Ultima Ejecucion', readonly=True)
+    cron_archive_interval = fields.Char('Intervalo', readonly=True)
+
     # ── Tareas Programadas (System crons — informational) ─────────
     sys_cron_escalation_info = fields.Char('Escalation Bridge', readonly=True)
     sys_cron_wa_health_info = fields.Char('WA Health Monitor', readonly=True)
@@ -163,6 +168,7 @@ class AiAgentDashboard(models.TransientModel):
             'cron_poll': 'ueipab_ai_agent.ir_cron_poll_whatsapp_messages',
             'cron_timeout': 'ueipab_ai_agent.ir_cron_check_conversation_timeouts',
             'cron_credits': 'ueipab_ai_agent.ir_cron_check_credits',
+            'cron_archive': 'ueipab_ai_agent.ir_cron_archive_attachments',
         }
         interval_labels = {
             'minutes': 'minuto(s)',
@@ -282,6 +288,7 @@ class AiAgentDashboard(models.TransientModel):
             'cron_poll_active': 'ueipab_ai_agent.ir_cron_poll_whatsapp_messages',
             'cron_timeout_active': 'ueipab_ai_agent.ir_cron_check_conversation_timeouts',
             'cron_credits_active': 'ueipab_ai_agent.ir_cron_check_credits',
+            'cron_archive_active': 'ueipab_ai_agent.ir_cron_archive_attachments',
         }
         for field_name, xml_id in cron_map.items():
             try:

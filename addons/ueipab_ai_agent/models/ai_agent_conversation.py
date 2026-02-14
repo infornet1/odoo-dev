@@ -77,19 +77,50 @@ class AiAgentConversation(models.Model):
     def _get_conversation_history(self):
         """Format messages as Claude API conversation history.
 
-        Skips empty dedup records and merges consecutive messages from the
-        same role (required by Claude API's alternating user/assistant format).
+        Supports multimodal content (text + images). When images are present,
+        uses content block format. Falls back to simple string for text-only.
         """
         self.ensure_one()
         messages = []
         for msg in self.agent_message_ids.sorted('timestamp'):
-            if not msg.body:
+            if not msg.body and not msg.attachment_url:
                 continue  # Skip empty dedup records
+
             role = 'assistant' if msg.direction == 'outbound' else 'user'
+
+            # Build content blocks for this message
+            blocks = []
+            if msg.attachment_url and msg.attachment_type == 'image':
+                if msg.attachment_id and msg.attachment_id.datas:
+                    blocks.append({
+                        'type': 'image',
+                        'source': {
+                            'type': 'base64',
+                            'media_type': msg.attachment_id.mimetype or 'image/jpeg',
+                            'data': msg.attachment_id.datas.decode('utf-8'),
+                        },
+                    })
+                else:
+                    blocks.append({
+                        'type': 'image',
+                        'source': {'type': 'url', 'url': msg.attachment_url},
+                    })
+            if msg.body:
+                blocks.append({'type': 'text', 'text': msg.body})
+
+            # Merge with previous if same role
             if messages and messages[-1]['role'] == role:
-                messages[-1]['content'] += '\n' + msg.body
+                prev = messages[-1]['content']
+                if isinstance(prev, str):
+                    messages[-1]['content'] = [{'type': 'text', 'text': prev}]
+                messages[-1]['content'].extend(blocks)
             else:
-                messages.append({'role': role, 'content': msg.body})
+                if len(blocks) == 1 and blocks[0].get('type') == 'text':
+                    content = blocks[0]['text']
+                else:
+                    content = blocks
+                messages.append({'role': role, 'content': content})
+
         return messages
 
     def _is_dry_run(self):
@@ -196,7 +227,8 @@ class AiAgentConversation(models.Model):
             " (DRY RUN)" if dry_run else ""
         ))
 
-    def action_process_reply(self, message_text, wa_message_id=0, extra_wa_ids=None):
+    def action_process_reply(self, message_text, wa_message_id=0, extra_wa_ids=None,
+                             attachment_url=None, extra_attachments=None):
         """Process an incoming customer reply using Claude AI.
 
         Args:
@@ -204,6 +236,9 @@ class AiAgentConversation(models.Model):
             wa_message_id: WhatsApp message ID of the first/only message.
             extra_wa_ids: List of additional WA message IDs when batching multiple
                 messages. Creates empty dedup records so they won't be re-processed.
+            attachment_url: URL of attachment from the first/only message.
+            extra_attachments: List of dicts {'url': ..., 'wa_id': ...} for
+                additional attachments from batched messages.
         """
         self.ensure_one()
         if self.state not in ('waiting', 'active'):
@@ -211,12 +246,28 @@ class AiAgentConversation(models.Model):
             return
 
         # Log inbound message
-        self.env['ai.agent.message'].create({
+        msg_vals = {
             'conversation_id': self.id,
             'direction': 'inbound',
-            'body': message_text,
+            'body': message_text or '',
             'whatsapp_message_id': wa_message_id,
-        })
+        }
+        if attachment_url:
+            msg_vals['attachment_url'] = attachment_url
+            msg_vals['attachment_type'] = self._detect_attachment_type(attachment_url)
+        self.env['ai.agent.message'].create(msg_vals)
+
+        # Create separate records for extra attachments (batched images)
+        if extra_attachments:
+            for att in extra_attachments:
+                self.env['ai.agent.message'].create({
+                    'conversation_id': self.id,
+                    'direction': 'inbound',
+                    'body': '',
+                    'whatsapp_message_id': att.get('wa_id', 0),
+                    'attachment_url': att['url'],
+                    'attachment_type': self._detect_attachment_type(att['url']),
+                })
 
         # Create dedup-only records for extra WA IDs (empty body, won't appear in history)
         if extra_wa_ids:
@@ -336,6 +387,22 @@ class AiAgentConversation(models.Model):
             'last_message_date': fields.Datetime.now(),
             'last_sender': 'agent',
         })
+
+    @staticmethod
+    def _detect_attachment_type(url):
+        """Detect attachment type from URL file extension."""
+        if not url:
+            return None
+        url_lower = url.lower().split('?')[0]
+        if any(url_lower.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+            return 'image'
+        if any(url_lower.endswith(ext) for ext in ('.pdf', '.doc', '.docx')):
+            return 'document'
+        if any(url_lower.endswith(ext) for ext in ('.mp3', '.ogg', '.opus')):
+            return 'audio'
+        if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov')):
+            return 'video'
+        return 'image'  # Default for MassivaMóvil (most common)
 
     def _send_verification_email(self, recipient_email):
         """Send a verification email to check if the customer's email is working."""
@@ -577,11 +644,7 @@ class AiAgentConversation(models.Model):
             wa_id = msg.get('id', 0)
             attachment = msg.get('attachment')
 
-            # Image placeholder: if no text but has attachment
-            if not body and attachment:
-                body = '[El cliente envió una imagen]'
-
-            if not phone or not body:
+            if not phone or (not body and not attachment):
                 continue
 
             # Find active conversation for this phone
@@ -608,8 +671,9 @@ class AiAgentConversation(models.Model):
                     'items': [],
                 }
             conv_groups[conversation.id]['items'].append({
-                'body': body,
+                'body': body or '',
                 'wa_id': wa_id,
+                'attachment': attachment if attachment else None,
             })
 
         # Phase 2: Process each conversation batch
@@ -617,16 +681,26 @@ class AiAgentConversation(models.Model):
             conv = data['conversation']
             items = data['items']
             if len(items) == 1:
-                conv.action_process_reply(items[0]['body'], wa_message_id=items[0]['wa_id'])
+                item = items[0]
+                conv.action_process_reply(
+                    item['body'], wa_message_id=item['wa_id'],
+                    attachment_url=item.get('attachment'),
+                )
             else:
-                combined = '\n'.join(item['body'] for item in items)
+                combined = '\n'.join(item['body'] for item in items if item['body'])
                 _logger.info(
                     "Conversation %d: batching %d messages into single interaction",
                     conv_id, len(items))
+                first_att = items[0].get('attachment')
+                extra_atts = [{'url': i['attachment'], 'wa_id': i['wa_id']}
+                              for i in items[1:] if i.get('attachment')]
+                extra_ids = [i['wa_id'] for i in items[1:] if not i.get('attachment')]
                 conv.action_process_reply(
                     combined,
                     wa_message_id=items[0]['wa_id'],
-                    extra_wa_ids=[item['wa_id'] for item in items[1:]],
+                    extra_wa_ids=extra_ids or None,
+                    attachment_url=first_att,
+                    extra_attachments=extra_atts or None,
                 )
 
     @api.model
@@ -666,6 +740,46 @@ class AiAgentConversation(models.Model):
                 conv._send_reminder()
             else:
                 conv.action_timeout()
+
+    @api.model
+    def _cron_archive_attachments(self):
+        """Cron: download image attachments to ir.attachment before URL expiry."""
+        if not self._is_active_environment():
+            return
+
+        import base64
+        from datetime import timedelta
+        now = fields.Datetime.now()
+        min_age = now - timedelta(minutes=10)
+        max_age = now - timedelta(hours=72)
+
+        messages = self.env['ai.agent.message'].search([
+            ('attachment_url', '!=', False),
+            ('attachment_id', '=', False),
+            ('attachment_type', '=', 'image'),
+            ('timestamp', '<=', min_age),
+            ('timestamp', '>=', max_age),
+        ], limit=20)
+
+        for msg in messages:
+            try:
+                resp = requests.get(msg.attachment_url, timeout=30)
+                resp.raise_for_status()
+                content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                filename = msg.attachment_url.split('/')[-1].split('?')[0] or 'attachment.jpg'
+                attachment = self.env['ir.attachment'].sudo().create({
+                    'name': 'WA_%d_%s' % (msg.whatsapp_message_id, filename),
+                    'type': 'binary',
+                    'datas': base64.b64encode(resp.content),
+                    'mimetype': content_type,
+                    'res_model': 'ai.agent.message',
+                    'res_id': msg.id,
+                })
+                msg.write({'attachment_id': attachment.id})
+                _logger.info("Archived attachment for msg %d: %s (%d bytes)",
+                             msg.id, filename, len(resp.content))
+            except Exception as e:
+                _logger.warning("Failed to archive attachment for msg %d: %s", msg.id, e)
 
     @api.model
     def _cron_check_credits(self):

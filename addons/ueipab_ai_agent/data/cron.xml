@@ -38,5 +38,17 @@
             <field name="active">True</field>
         </record>
 
+        <!-- Archive WhatsApp Attachments -->
+        <record id="ir_cron_archive_attachments" model="ir.cron">
+            <field name="name">AI Agent: Archive Attachments</field>
+            <field name="model_id" ref="model_ai_agent_conversation"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_archive_attachments()</field>
+            <field name="interval_number">2</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+
     </data>
 </odoo>

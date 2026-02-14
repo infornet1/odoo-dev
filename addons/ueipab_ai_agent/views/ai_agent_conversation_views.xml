@@ -99,6 +99,7 @@
                                            decoration-info="direction == 'outbound'"
                                            decoration-success="direction == 'inbound'"/>
                                     <field name="body"/>
+                                    <field name="attachment_url" widget="url" string="Adjunto" optional="show"/>
                                     <field name="whatsapp_message_id" optional="hide"/>
                                     <field name="ai_input_tokens" optional="hide"/>
                                     <field name="ai_output_tokens" optional="hide"/>

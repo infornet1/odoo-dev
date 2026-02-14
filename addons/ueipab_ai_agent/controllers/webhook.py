@@ -56,11 +56,7 @@ class AiAgentWebhook(http.Controller):
         attachment = msg_data.get('attachment')
         wa_id = msg_data.get('id', 0)
 
-        # Image placeholder: if no text but has attachment
-        if not message and attachment:
-            message = '[El cliente envió una imagen]'
-
-        if not phone or not message:
+        if not phone or (not message and not attachment):
             _logger.info("WhatsApp webhook: empty phone or message")
             return {'status': 'ok', 'message': 'No phone or message'}
 
@@ -91,6 +87,9 @@ class AiAgentWebhook(http.Controller):
         # Process reply
         _logger.info("WhatsApp webhook: processing reply for conversation %d from %s",
                       conversation.id, normalized_phone)
-        conversation.action_process_reply(message, wa_message_id=wa_id)
+        conversation.action_process_reply(
+            message, wa_message_id=wa_id,
+            attachment_url=attachment if attachment else None,
+        )
 
         return {'status': 'ok'}

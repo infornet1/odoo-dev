@@ -85,6 +85,13 @@
                                     <field name="cron_credits_nextcall" string="Proxima"/>
                                     <field name="cron_credits_lastcall" string="Ultima"/>
                                 </group>
+                                <group string="Archivado Adjuntos">
+                                    <field name="cron_archive_active" widget="boolean_toggle"
+                                           string="Activo"/>
+                                    <field name="cron_archive_interval" string="Frecuencia"/>
+                                    <field name="cron_archive_nextcall" string="Proxima"/>
+                                    <field name="cron_archive_lastcall" string="Ultima"/>
+                                </group>
                             </group>
                             <group string="Crons del Sistema (solo lectura)">
                                 <group>

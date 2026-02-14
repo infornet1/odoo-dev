@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.12.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.13.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -135,6 +135,9 @@ failed/timeout -> waiting (action_retry)
 | `whatsapp_message_id` | Integer | MassivaMóvil message ID |
 | `ai_input_tokens` | Integer | Claude input tokens used |
 | `ai_output_tokens` | Integer | Claude output tokens used |
+| `attachment_url` | Char | Public URL of attachment from MassivaMóvil |
+| `attachment_type` | Selection | image/document/audio/video |
+| `attachment_id` | Many2one | Archived local copy (ir.attachment) |
 
 ## Skills System
 
@@ -251,8 +254,9 @@ Claude spend is calculated by summing ALL `ai.agent.message` tokens across ALL c
 | AI Agent: Poll WhatsApp Messages | 5 min | Yes | Fetch new received messages (fallback to webhook) |
 | AI Agent: Check Conversation Timeouts | 1 hour | **No** | Send reminders or timeout waiting conversations |
 | AI Agent: Credit Guard | 30 min | Yes | Check WA + Claude credit levels, kill switch + email alert |
+| AI Agent: Archive Attachments | 2 hours | Yes | Download image attachments to ir.attachment before MassivaMóvil URL expiry |
 
-**Operational model:** Poll cron processes customer replies automatically. Timeout cron is kept disabled during supervised testing — no unsolicited reminders or auto-timeouts. Credit Guard runs continuously to monitor API credit levels. Conversations are started manually via "Iniciar WhatsApp" button.
+**Operational model:** Poll cron processes customer replies automatically. Timeout cron handles reminders and auto-close. Credit Guard runs continuously to monitor API credit levels. Archive cron downloads customer-sent images to local storage before MassivaMóvil URLs expire. Conversations are started manually via "Iniciar WhatsApp" button.
 
 ### System Crons (dev server /etc/cron.d/)
 
@@ -451,6 +455,7 @@ Motivo: escalation description
 | C | Akdemia sync → tech support updated email in Akdemia | Auto-resolve via script |
 | D | Manual → staff clicks "Restaurar" or "Aplicar Nuevo" in Odoo | Direct action |
 | E | Escalation → customer asks off-topic question | `ACTION:ESCALATE:desc` (intermediate, Freescout ticket created) |
+| F | Akdemia Auto-Resolve → valid alternative email exists for same cedula | Auto-resolve from Akdemia data |
 
 ## Production Deployment Architecture
 
