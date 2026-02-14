@@ -482,6 +482,305 @@ def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''
     return True
 
 
+def enrich_family_emails(bl, models, uid, known_bounced, spreadsheet=None):
+    """Enrich partner + mailing contacts + Sheets with family emails from Akdemia.
+
+    Reads the family context from the bounce log's akdemia_family_emails JSON,
+    collects valid emails from other family members, filters out known-bounced
+    emails, and appends them to:
+      1. res.partner email field (;-separated)
+      2. mailing.contact records matching the partner
+      3. Customers Google Sheet col J
+
+    Returns list of emails actually added (empty if none).
+    """
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    family_json = bl.get('akdemia_family_emails')
+    if not family_json:
+        return []
+
+    try:
+        family = json.loads(family_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    partner_id = bl['partner_id'][0] if bl.get('partner_id') else 0
+    bounced = (bl.get('bounced_email') or '').strip().lower()
+    new_email = (bl.get('new_email') or '').strip().lower()
+
+    # Collect all valid family emails (deduplicated)
+    family_emails = set()
+    for rec in family:
+        for parent in rec.get('parents', []):
+            email = (parent.get('email') or '').strip().lower()
+            if email:
+                family_emails.add(email)
+
+    # Filter: remove bounced, new (already applied), and known-bounced
+    candidates = family_emails - {bounced}
+    if new_email:
+        candidates -= {new_email}
+    if known_bounced:
+        skipped = candidates & known_bounced
+        if skipped:
+            logger.info("  Family enrichment: skipping known-bounced %s", ', '.join(skipped))
+        candidates -= known_bounced
+
+    if not candidates:
+        return []
+
+    # Read partner current email
+    if not partner_id:
+        return []
+    partner_data = odoo_search_read(
+        models, uid, 'res.partner',
+        [('id', '=', partner_id)], ['email', 'vat'])
+    if not partner_data:
+        return []
+
+    current_email = partner_data[0].get('email', '') or ''
+    partner_vat = partner_data[0].get('vat', '') or ''
+    current_list = [e.strip().lower() for e in current_email.split(';') if e.strip()]
+
+    # Only add emails not already on partner
+    to_add = [e for e in sorted(candidates) if e not in current_list]
+    if not to_add:
+        logger.info("  Family enrichment: all family emails already on partner")
+        return []
+
+    logger.info("  Family enrichment: adding %d email(s): %s", len(to_add), ', '.join(to_add))
+
+    # 1. Update partner email field
+    new_partner_email = current_email
+    for email in to_add:
+        if new_partner_email:
+            new_partner_email += ';' + email
+        else:
+            new_partner_email = email
+
+    if not DRY_RUN:
+        models.execute_kw(
+            ODOO_DB, uid, ODOO_PASSWORD,
+            'res.partner', 'write',
+            [[partner_id], {'email': new_partner_email}])
+
+    print(f"  {prefix}Partner #{partner_id} email: {current_email} → {new_partner_email}")
+
+    # 2. Sync mailing contacts (find MCs with partner's current/bounced email)
+    searched_emails = set()
+    for search_email in [bounced, new_email] + current_list:
+        if not search_email or search_email in searched_emails:
+            continue
+        searched_emails.add(search_email)
+        try:
+            mcs = odoo_search_read(
+                models, uid, 'mailing.contact',
+                [('email', 'ilike', search_email)],
+                ['id', 'email'])
+            for mc in mcs:
+                mc_email = mc.get('email', '') or ''
+                mc_list = [e.strip().lower() for e in mc_email.split(';') if e.strip()]
+                mc_to_add = [e for e in to_add if e not in mc_list]
+                if mc_to_add:
+                    new_mc_email = mc_email
+                    for email in mc_to_add:
+                        new_mc_email += ';' + email if new_mc_email else email
+                    if not DRY_RUN:
+                        models.execute_kw(
+                            ODOO_DB, uid, ODOO_PASSWORD,
+                            'mailing.contact', 'write',
+                            [[mc['id']], {'email': new_mc_email}])
+                    print(f"  {prefix}MC#{mc['id']} email: {mc_email} → {new_mc_email}")
+        except Exception as e:
+            logger.warning("  MC sync error for '%s': %s", search_email, e)
+
+    # 3. Update Google Sheets Customers tab
+    if spreadsheet and partner_vat:
+        try:
+            ws = spreadsheet.worksheet(CUSTOMERS_TAB)
+            vat_values = ws.col_values(1)
+            target_vat = partner_vat.strip().upper()
+            target_row = None
+            for idx, val in enumerate(vat_values):
+                if idx < CUSTOMERS_HEADER_ROW:
+                    continue
+                if val.strip().upper() == target_vat:
+                    target_row = idx + 1
+                    break
+            if target_row:
+                cell_value = ws.cell(target_row, 10).value or ''
+                cell_list = [e.strip().lower() for e in cell_value.split(';') if e.strip()]
+                sheet_to_add = [e for e in to_add if e not in cell_list]
+                if sheet_to_add:
+                    new_cell = cell_value
+                    for email in sheet_to_add:
+                        new_cell += ';' + email if new_cell else email
+                    logger.info("  Sheets row %d: '%s' → '%s'", target_row, cell_value, new_cell)
+                    if not DRY_RUN:
+                        ws.update_cell(target_row, 10, new_cell)
+                    print(f"  {prefix}Customers sheet: added family emails")
+        except Exception as e:
+            logger.warning("  Sheets family enrichment error: %s", e)
+
+    return to_add
+
+
+def sync_customers_family_emails(spreadsheet, akdemia_cedula_map, known_bounced,
+                                  models=None, uid=None):
+    """Sync ALL Akdemia family emails to Customers sheet + Odoo partner + MC.
+
+    For each Customers row with a VAT matching an Akdemia cedula:
+      1. Collect all Akdemia emails for that cedula (cross all parent slots)
+      2. Filter out known-bounced
+      3. Compare with current col J -> append missing to sheet
+      4. Look up Odoo partner by VAT -> append missing to partner email
+      5. Find mailing.contacts for that partner -> append missing
+
+    Returns (sheets_updated, odoo_updated, total_checked).
+    """
+    import re
+
+    prefix = "[DRY_RUN] " if DRY_RUN else ""
+
+    try:
+        ws = spreadsheet.worksheet(CUSTOMERS_TAB)
+    except Exception as e:
+        logger.warning("Customers tab not found: %s", e)
+        return 0, 0, 0
+
+    # Single bulk read of the entire sheet
+    all_values = ws.get_all_values()
+    if len(all_values) < CUSTOMERS_DATA_START:
+        logger.info("  Customers sheet has no data rows")
+        return 0, 0, 0
+
+    sheets_updated = 0
+    odoo_updated = 0
+    total_checked = 0
+
+    # Data rows start at index CUSTOMERS_HEADER_ROW (0-indexed = row 2 = index 2)
+    for row_idx in range(CUSTOMERS_HEADER_ROW, len(all_values)):
+        row = all_values[row_idx]
+        if len(row) < 10:
+            continue
+
+        vat_raw = (row[0] or '').strip()
+        if not vat_raw:
+            continue
+
+        # Normalize VAT to digits for cedula lookup
+        cedula = re.sub(r'[^0-9]', '', str(vat_raw))
+        if not cedula:
+            continue
+
+        akdemia_set = akdemia_cedula_map.get(cedula)
+        if not akdemia_set:
+            continue
+
+        total_checked += 1
+
+        # Filter out known-bounced emails
+        valid = akdemia_set - (known_bounced or set())
+
+        # Parse current col J (index 9) — semicolon-separated, strip+filter empties
+        current_raw = (row[9] or '').strip()
+        current_list = [e.strip().lower() for e in current_raw.split(';') if e.strip()]
+        current_set = set(current_list)
+
+        to_add = sorted(valid - current_set)
+        if not to_add:
+            continue
+
+        sheet_row = row_idx + 1  # gspread uses 1-indexed rows
+        logger.info("  Row %d (VAT=%s): adding %d email(s): %s",
+                     sheet_row, vat_raw, len(to_add), ', '.join(to_add))
+
+        # --- Sheet: append to col J ---
+        # Rebuild from parsed list to avoid trailing semicolons
+        current_clean = ';'.join(e for e in current_raw.split(';') if e.strip())
+        new_cell = current_clean
+        for email in to_add:
+            new_cell = new_cell + ';' + email if new_cell else email
+
+        print(f"  {prefix}Sheet row {sheet_row}: '{current_raw}' -> '{new_cell}'")
+        if not DRY_RUN:
+            ws.update_cell(sheet_row, 10, new_cell)
+        sheets_updated += 1
+
+        # --- Odoo partner: search by VAT, append missing emails ---
+        if models and uid:
+            try:
+                partners = odoo_search_read(
+                    models, uid, 'res.partner',
+                    [('vat', '=', vat_raw)], ['id', 'email'])
+                if partners:
+                    partner = partners[0]
+                    partner_email = partner.get('email', '') or ''
+                    partner_list = [e.strip().lower() for e in partner_email.split(';')
+                                    if e.strip()]
+                    partner_to_add = [e for e in to_add if e not in partner_list]
+
+                    if partner_to_add:
+                        # Clean trailing semicolons before appending
+                        partner_email_clean = ';'.join(
+                            e for e in partner_email.split(';') if e.strip())
+                        new_partner_email = partner_email_clean
+                        for email in partner_to_add:
+                            new_partner_email = (new_partner_email + ';' + email
+                                                 if new_partner_email else email)
+
+                        print(f"  {prefix}Partner #{partner['id']}: "
+                              f"'{partner_email}' -> '{new_partner_email}'")
+                        if not DRY_RUN:
+                            models.execute_kw(
+                                ODOO_DB, uid, ODOO_PASSWORD,
+                                'res.partner', 'write',
+                                [[partner['id']], {'email': new_partner_email}])
+
+                        # --- MC: find mailing.contacts, append missing ---
+                        mc_searched = set()
+                        for search_email in partner_list + [partner_email.strip().lower()]:
+                            if not search_email or search_email in mc_searched:
+                                continue
+                            mc_searched.add(search_email)
+                            try:
+                                mcs = odoo_search_read(
+                                    models, uid, 'mailing.contact',
+                                    [('email', 'ilike', search_email)],
+                                    ['id', 'email'])
+                                for mc in mcs:
+                                    mc_email = mc.get('email', '') or ''
+                                    mc_list = [e.strip().lower()
+                                               for e in mc_email.split(';') if e.strip()]
+                                    mc_to_add = [e for e in partner_to_add
+                                                 if e not in mc_list]
+                                    if mc_to_add:
+                                        new_mc_email = mc_email
+                                        for email in mc_to_add:
+                                            new_mc_email = (new_mc_email + ';' + email
+                                                            if new_mc_email else email)
+                                        print(f"  {prefix}MC#{mc['id']}: "
+                                              f"'{mc_email}' -> '{new_mc_email}'")
+                                        if not DRY_RUN:
+                                            models.execute_kw(
+                                                ODOO_DB, uid, ODOO_PASSWORD,
+                                                'mailing.contact', 'write',
+                                                [[mc['id']], {'email': new_mc_email}])
+                            except Exception as e:
+                                logger.warning("  MC sync error for '%s': %s",
+                                               search_email, e)
+
+                        odoo_updated += 1
+                else:
+                    logger.info("  No Odoo partner found for VAT=%s (sheet-only update)",
+                                vat_raw)
+            except Exception as e:
+                logger.warning("  Odoo partner/MC update error for VAT=%s: %s", vat_raw, e)
+
+    return sheets_updated, odoo_updated, total_checked
+
+
 # ============================================================================
 # Main Logic
 # ============================================================================
@@ -614,6 +913,7 @@ def get_resolved_bounce_logs(models, uid):
             'id', 'bounced_email', 'new_email', 'partner_id',
             'freescout_conversation_id', 'action_tier',
             'resolved_date', 'resolved_by', 'state', 'in_akdemia',
+            'akdemia_family_emails',
         ],
     )
 
@@ -626,7 +926,8 @@ def get_resolved_bounce_logs(models, uid):
     return with_freescout
 
 
-def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, models, uid):
+def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, models, uid,
+                       known_bounced=None):
     """Process a single resolved bounce log.
 
     Returns 'processed', 'skipped', or 'error'.
@@ -697,6 +998,40 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             if related_new:
                 print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
                 any_closed += related_new
+        # Family enrichment runs even for already-processed BLs
+        family_added = []
+        if bl.get('akdemia_family_emails'):
+            family_added = enrich_family_emails(
+                bl, models, uid, known_bounced, spreadsheet)
+            if family_added:
+                print(f"  {prefix}Family emails added: {', '.join(family_added)}")
+                any_closed += 1  # count as "processed" so we don't return 'skipped'
+        # Post audit note for family enrichment on already-processed BLs
+        if family_added and not DRY_RUN:
+            try:
+                # Re-read partner email for accurate audit
+                updated_email = ''
+                if partner_id:
+                    p = odoo_search_read(
+                        models, uid, 'res.partner',
+                        [('id', '=', partner_id)], ['email'])
+                    if p:
+                        updated_email = p[0].get('email', '')
+                items = [
+                    f'<li><b>Emails familiares agregados (Akdemia):</b> '
+                    f'<code>{"; ".join(family_added)}</code></li>',
+                ]
+                if updated_email:
+                    items.append(
+                        f'<li><b>Emails actuales del contacto:</b> '
+                        f'<code>{updated_email}</code></li>')
+                post_body = (
+                    f'<p><b>Enriquecimiento familiar (Resolution Bridge)</b></p>'
+                    f'<ul>{"".join(items)}</ul>'
+                )
+                odoo_post_note(models, uid, 'mail.bounce.log', bl_id, post_body)
+            except Exception as e:
+                logger.warning("  Could not post family enrichment note to BL#%d: %s", bl_id, e)
         return 'processed' if any_closed else 'skipped'
 
     original_subject = fs_conv['subject'] or 'Delivery Status Notification'
@@ -875,6 +1210,21 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
             total_related_closed += related_new
 
+    # --- Step 5b: Enrich with family emails ---
+    family_emails_added = []
+    if bl.get('akdemia_family_emails'):
+        family_emails_added = enrich_family_emails(
+            bl, models, uid, known_bounced, spreadsheet)
+        if family_emails_added:
+            print(f"  {prefix}Family emails added: {', '.join(family_emails_added)}")
+            # Re-read partner email for accurate audit trail
+            if partner_id:
+                partner_data = odoo_search_read(
+                    models, uid, 'res.partner',
+                    [('id', '=', partner_id)], ['email'])
+                if partner_data:
+                    partner_current_email = partner_data[0].get('email', '')
+
     # --- Step 6: Update Customers Google Sheet ---
     sheets_updated = False
     if spreadsheet and partner_vat and bounced_email:
@@ -921,6 +1271,11 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             if sheets_updated:
                 items.append('<li>Hoja Customers (Google Sheets): actualizada</li>')
             # Partner email
+            # Family enrichment
+            if family_emails_added:
+                items.append(
+                    f'<li><b>Emails familiares agregados (Akdemia):</b> '
+                    f'<code>{"; ".join(family_emails_added)}</code></li>')
             if partner_current_email:
                 items.append(
                     f'<li><b>Emails actuales del contacto:</b> '
@@ -1308,6 +1663,14 @@ def main():
         print(f"    BL#{bl['id']}: {partner_name} — FS#{bl['freescout_conversation_id']} — "
               f"bounced={bl.get('bounced_email', '?')}")
 
+    # Build known-bounced set for family enrichment filtering
+    all_bounce_logs = odoo_search_read(models, uid, 'mail.bounce.log', [], ['bounced_email'])
+    known_bounced = {
+        bl['bounced_email'].strip().lower()
+        for bl in all_bounce_logs if bl.get('bounced_email')
+    }
+    logger.info("Loaded %d known bounced emails for family enrichment filter", len(known_bounced))
+
     # Phase 4: Process each
     print("\n--- Phase 4: Process Resolved/Akdemia-Pending Bounce Logs ---")
     stats = {'processed': 0, 'skipped': 0, 'errors': 0}
@@ -1319,8 +1682,19 @@ def main():
 
         result = process_bounce_log(
             bl, fs_conn, admin_id, akdemia_emails, spreadsheet, models, uid,
+            known_bounced=known_bounced,
         )
         stats[result] = stats.get(result, 0) + 1
+
+    # Phase 5: Sync Customers sheet family emails from Akdemia
+    if spreadsheet and akdemia_cedula_map:
+        print("\n--- Phase 5: Sync Customers Family Emails ---")
+        sheets_synced, odoo_synced, checked = sync_customers_family_emails(
+            spreadsheet, akdemia_cedula_map, known_bounced,
+            models=models, uid=uid)
+        print(f"  Checked {checked} Customers rows with Akdemia matches")
+        print(f"  Sheets updated: {sheets_synced}")
+        print(f"  Odoo partners/MC updated: {odoo_synced}")
 
     # Summary
     fs_conn.close()
