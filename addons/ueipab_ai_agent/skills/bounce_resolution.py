@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -36,12 +37,50 @@ class BounceResolutionSkill:
                     bounce_log._fields['bounce_reason'].selection
                 ).get(bounce_log.bounce_reason, bounce_log.bounce_reason or '')
                 ctx['bounce_log_id'] = bounce_log.id
+                # Load family context from Akdemia
+                family_json = bounce_log.akdemia_family_emails
+                ctx['family_context'] = json.loads(family_json) if family_json else []
                 # Check if partner has other emails besides the bounced one
                 all_emails = conversation.partner_id.email or ''
                 parts = [e.strip() for e in all_emails.replace(',', ';').split(';') if e.strip()]
                 bounced_lower = (bounce_log.bounced_email or '').lower()
                 ctx['remaining_emails'] = [e for e in parts if e.lower() != bounced_lower]
         return ctx
+
+    def _build_family_section(self, context):
+        """Build family context section for system prompt from Akdemia data."""
+        family = context.get('family_context', [])
+        if not family:
+            return '', ''
+
+        # Collect unique parent entries (name + email) across all student rows
+        seen = set()
+        lines = []
+        for record in family:
+            for parent in record.get('parents', []):
+                key = (parent.get('name', ''), parent.get('email', ''))
+                if key in seen or not parent.get('name'):
+                    continue
+                seen.add(key)
+                email_part = parent.get('email') or 'sin correo'
+                lines.append(
+                    f"  - {parent['name']} ({parent.get('slot', '?')}): {email_part}")
+
+        if not lines:
+            return '', ''
+
+        section = (
+            "CONTEXTO FAMILIAR (Akdemia - plataforma escolar):\n"
+            "Los siguientes correos estan registrados en Akdemia para la familia de este contacto:\n"
+            + '\n'.join(lines) + '\n\n'
+        )
+        instruction = (
+            "- IMPORTANTE: Si el cliente proporciona un correo que ya aparece en el CONTEXTO FAMILIAR "
+            "bajo otro nombre (otro representante/familiar), informale amablemente que ese correo ya "
+            "esta registrado a nombre de otra persona en el sistema escolar y pidele un correo personal "
+            "diferente. NO aceptes ese correo como nuevo.\n"
+        )
+        return section, instruction
 
     def get_system_prompt(self, conversation, context):
         """Return Claude system prompt for bounce resolution."""
@@ -80,18 +119,23 @@ class BounceResolutionSkill:
                 "EXACTAMENTE con el formato: RESOLVED:nuevo@email.com\n"
             )
 
+        # Build family context section
+        family_section, family_instruction = self._build_family_section(context)
+
         return (
             f"Eres {agent_name}, asistente de {institution}, ubicado en Venezuela. "
             "Tu tarea es contactar amablemente a un representante o cliente cuyo correo electrónico "
             "está presentando problemas de entrega.\n\n"
             "CONTEXTO:\n"
             f"- Nombre del contacto: {first_name}\n"
-            f"{email_context}\n"
+            f"{email_context}"
+            f"{family_section}"
             "INSTRUCCIONES:\n"
             "- Comunícate siempre en español venezolano, de forma cercana y cálida.\n"
             f"- Dirígete al cliente por su nombre ({first_name}).\n"
             "- Sé amable, profesional y conciso. No uses emojis.\n"
             f"{multi_email_instructions}"
+            f"{family_instruction}"
             "- Si el cliente dice que su correo actual (el que rebotó) ya funciona (liberó espacio, lo arregló, etc.) "
             "o pide que le envíes un correo para verificar, DEBES responder con tu mensaje al cliente "
             "seguido del marcador ACTION:VERIFY_EMAIL al final (sin email, se verifica el correo rebotado). "

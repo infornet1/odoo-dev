@@ -71,6 +71,9 @@
                             <field name="mailing_contact_id"/>
                         </group>
                     </group>
+                    <group string="Familia Akdemia" invisible="not akdemia_family_emails">
+                        <field name="akdemia_family_emails" nolabel="1" colspan="2" readonly="1" widget="text"/>
+                    </group>
                     <div class="alert alert-warning" role="alert"
                          invisible="state != 'akdemia_pending'">
                         <strong>Pendiente Akdemia:</strong> El email ha sido actualizado en Odoo,

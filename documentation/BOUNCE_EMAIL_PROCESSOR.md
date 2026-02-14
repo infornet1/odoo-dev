@@ -181,7 +181,7 @@ Full CSV export: `/home/ftpuser/odoo-dev/bounce_dry_run_2026-02-05.csv`
 
 ## Phase 2: Odoo Module (Installed in Testing)
 
-**Module:** `ueipab_bounce_log` | **Version:** 17.0.1.1.0 | **Depends:** `contacts`, `mail`, `mass_mailing`
+**Module:** `ueipab_bounce_log` | **Version:** 17.0.1.4.0 | **Depends:** `contacts`, `mail`, `mass_mailing`
 
 The module extends the existing Contacts app (not a standalone app). WhatsApp AI agent integration is planned for a future phase.
 
@@ -251,6 +251,9 @@ class MailBounceLog(models.Model):
     action_tier            = fields.Selection([                              # v1.1.0
         ('clean', 'Limpiado'), ('flag', 'Revision'), ('not_found', 'No Encontrado'),
     ], string='Accion del Script')
+
+    # Akdemia family context (v1.4.0)
+    akdemia_family_emails  = fields.Text('Contexto Familiar Akdemia')  # JSON
 
     # Future: WhatsApp agent fields
     whatsapp_contacted     = fields.Boolean('Contactado por WhatsApp')

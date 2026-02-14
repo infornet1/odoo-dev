@@ -260,8 +260,8 @@ Adds "Modo Estimacion" to Relacion de Liquidacion wizard (VEB only). Applies con
 | ueipab_payroll_enhancements | 17.0.1.52.2 | 2026-02-13 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
-| ueipab_bounce_log | 17.0.1.3.0 | 2026-02-09 |
-| ueipab_ai_agent | 17.0.1.11.0 | 2026-02-13 |
+| ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
+| ueipab_ai_agent | 17.0.1.12.0 | 2026-02-14 |
 
 ### Production Environment
 
@@ -348,12 +348,14 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ### Phase 2 - Odoo Module (Installed in Testing)
 
-- **Module:** `ueipab_bounce_log` v17.0.1.2.0 (extends Contacts app, not a standalone app)
+- **Module:** `ueipab_bounce_log` v17.0.1.4.0 (extends Contacts app, not a standalone app)
 - **Menu:** `Contacts > Bounce Log` (direct submenu)
 - **Model:** `mail.bounce.log` with resolution workflow
 - **New fields (v1.1.0):**
   - `action_tier` -- Selection (Limpiado/Revision/No Encontrado) showing script tier action
   - `freescout_url` -- Computed clickable link to Freescout conversation
+- **New fields (v1.4.0):**
+  - `akdemia_family_emails` -- Text (JSON) with family email context from Akdemia2526, used by AI agent to detect duplicate email proposals
 - **Resolution:** Two actions per bounce record:
   - "Restaurar Email Original" -- re-enable old email (temporary issue fixed)
   - "Aplicar Nuevo Email" -- apply customer's new email
@@ -402,7 +404,7 @@ Cross-reference analysis of Odoo, Freescout, Customers sheet, and Akdemia reveal
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.4.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.12.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills" for different business processes.
 
@@ -533,12 +535,18 @@ Glenda only initiates contact during allowed hours (VET, GMT-4):
 - Multiple escalations in same conversation: appended with timestamps, subsequent ones add notes to existing ticket
 - **Cron:** `/etc/cron.d/ai_agent_escalation` — every 5 min, logs to `scripts/logs/escalation_bridge.log`
 
-### Resolution Bridge (v1.9.0)
+### Resolution Bridge (v1.10.0)
 
 **Problem:** When Glenda resolves a bounce via WhatsApp, Odoo is updated but Freescout conversations remain open and Google Sheets "Customers" tab still shows the bounced email.
 
 **Script:** `scripts/ai_agent_resolution_bridge.py`
 **Cron:** `/etc/cron.d/ai_agent_resolution` — every 5 min, logs to `scripts/logs/resolution_bridge.log`
+
+**Phase 2a — Family Email Context (v1.10.0):**
+During `refresh_in_akdemia_flags()`, the bridge now also builds a family map from Akdemia2526 and writes `akdemia_family_emails` JSON to each non-resolved bounce log. This gives Glenda visibility into what emails other family members have registered, preventing customers from proposing an email already in use by another parent (e.g., BL#42 EDDA RODRIGUEZ case where husband's email was proposed).
+- `load_akdemia_family_map()`: reads student name + all parent slots (name, cedula, email, slot label) → returns `{cedula: [family_records]}`
+- JSON written to bounce log, read by `bounce_resolution` skill's `get_context()` → injected into Claude system prompt
+- Family section shows all registered parents with emails; instruction tells Glenda to reject duplicate family emails
 
 **Phase 2c — Akdemia Auto-Resolve (PATH F, v1.9.0):**
 Before processing resolved bounce logs, the bridge now auto-resolves pending bounce logs where Akdemia already has a valid alternative email for the same parent (matched by cedula/VAT). This eliminates unnecessary WhatsApp contact for ~17 of 35 pending bounce logs.
@@ -632,6 +640,7 @@ Before processing resolved bounce logs, the bridge now auto-resolves pending bou
 - `mail.bounce.log` extended with `ai_conversation_id` field
 - "Iniciar WhatsApp" button on bounce log form → opens wizard → creates conversation
 - Conversation resolution triggers bounce log actions (apply new email, restore original)
+- **Family email context (v1.12.0):** `akdemia_family_emails` JSON field on bounce log provides Akdemia family data to Claude's system prompt. If customer proposes an email already registered under another family member, Glenda warns them and asks for a different personal email. Populated by resolution bridge Phase 2a.
 
 See [Full Documentation](documentation/AI_AGENT_MODULE.md) for complete details.
 

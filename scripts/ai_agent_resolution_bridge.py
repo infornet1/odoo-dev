@@ -331,6 +331,92 @@ def load_akdemia_cedula_map(spreadsheet):
     return cedula_map
 
 
+def load_akdemia_family_map(spreadsheet):
+    """Load cedula → family records mapping from Akdemia2526 tab.
+
+    Returns dict: {normalized_cedula: [family_records]}
+    Each family_record is a dict with 'student' and 'parents' list.
+    A parent with 2 kids will appear in 2 entries.
+
+    Column indices (0-based):
+    - Student: first_name=2, last_name=4
+    - Parent 1: first_name=27, last_name=30, cedula=33, email=46
+    - Parent 2: first_name=56, last_name=59, cedula=62, email=75
+    - Parent 3: first_name=85, last_name=88, cedula=91, email=104
+    """
+    import re
+
+    try:
+        ws = spreadsheet.worksheet(AKDEMIA_TAB)
+    except Exception:
+        logger.warning("Akdemia2526 tab not found, skipping family map")
+        return {}
+
+    all_values = ws.get_all_values()
+    family_map = {}  # {cedula_str: [family_records]}
+
+    # Parent slot definitions: (first_name_col, last_name_col, cedula_col, email_col, slot_label)
+    parent_slots = [
+        (27, 30, 33, 46, 'Representante'),
+        (56, 59, 62, 75, 'Representante.1'),
+        (85, 88, 91, 104, 'Representante.2'),
+    ]
+
+    # Data starts at row 4 (index 3) — rows 0-2 are metadata + headers
+    for row_idx in range(3, len(all_values)):
+        row = all_values[row_idx]
+
+        # Student name
+        student_first = row[2].strip() if len(row) > 2 else ''
+        student_last = row[4].strip() if len(row) > 4 else ''
+        student_name = f"{student_first} {student_last}".strip()
+        if not student_name:
+            continue
+
+        # Collect all parents for this row
+        row_parents = []
+        row_cedulas = []
+        for fn_col, ln_col, ced_col, email_col, slot in parent_slots:
+            if ced_col >= len(row):
+                continue
+            ced_val = re.sub(r'[^0-9]', '', str(row[ced_col]))
+            if not ced_val:
+                continue
+
+            fn = row[fn_col].strip() if fn_col < len(row) else ''
+            ln = row[ln_col].strip() if ln_col < len(row) else ''
+            email = row[email_col].strip().lower() if email_col < len(row) else ''
+            if email == 'nan':
+                email = ''
+
+            parent_info = {
+                'name': f"{fn} {ln}".strip(),
+                'cedula': ced_val,
+                'email': email,
+                'slot': slot,
+            }
+            row_parents.append(parent_info)
+            row_cedulas.append(ced_val)
+
+        if not row_parents:
+            continue
+
+        # Build family record for this student row
+        family_record = {
+            'student': student_name,
+            'parents': row_parents,
+        }
+
+        # Index by each parent's cedula
+        for ced in set(row_cedulas):
+            if ced not in family_map:
+                family_map[ced] = []
+            family_map[ced].append(family_record)
+
+    logger.info("Loaded family map for %d cedulas from Akdemia2526", len(family_map))
+    return family_map
+
+
 def update_customers_email(spreadsheet, partner_vat, bounced_email, new_email=''):
     """Update email in the Customers tab: remove bounced, add new if provided.
 
@@ -851,24 +937,39 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     return 'processed'
 
 
-def refresh_in_akdemia_flags(models, uid, akdemia_emails):
-    """Refresh in_akdemia flag on all non-resolved bounce logs.
+def refresh_in_akdemia_flags(models, uid, akdemia_emails, akdemia_family_map=None):
+    """Refresh in_akdemia flag and family context on all non-resolved bounce logs.
 
     Ensures the flag is current before any manual or AI resolution happens.
+    If akdemia_family_map is provided, also updates akdemia_family_emails JSON.
     Returns (updated_count, total_checked).
     """
+    import re
+
     prefix = "[DRY_RUN] " if DRY_RUN else ""
 
     # Get all bounce logs that are not yet fully resolved
     all_bls = odoo_search_read(
         models, uid, 'mail.bounce.log',
         [('state', 'not in', ['resolved'])],
-        ['id', 'bounced_email', 'in_akdemia'],
+        ['id', 'bounced_email', 'in_akdemia', 'akdemia_family_emails', 'partner_id'],
     )
 
     if not all_bls:
         logger.info("  No non-resolved bounce logs to refresh")
         return 0, 0
+
+    # Batch-fetch partner VATs for family context lookup
+    partner_vat_map = {}
+    if akdemia_family_map:
+        partner_ids = list({bl['partner_id'][0] for bl in all_bls if bl.get('partner_id')})
+        if partner_ids:
+            partner_data = odoo_search_read(
+                models, uid, 'res.partner',
+                [('id', 'in', partner_ids)],
+                ['id', 'vat'],
+            )
+            partner_vat_map = {p['id']: p.get('vat', '') for p in partner_data}
 
     updated = 0
     for bl in all_bls:
@@ -876,17 +977,39 @@ def refresh_in_akdemia_flags(models, uid, akdemia_emails):
         if not bounced:
             continue
 
+        write_vals = {}
+
+        # Check in_akdemia flag
         should_be = bounced in akdemia_emails
         current = bl.get('in_akdemia', False)
-
         if should_be != current:
+            write_vals['in_akdemia'] = should_be
             logger.info("  %sBL#%d: in_akdemia %s → %s (%s)",
                         prefix, bl['id'], current, should_be, bounced)
+
+        # Check family context
+        if akdemia_family_map and bl.get('partner_id'):
+            partner_id = bl['partner_id'][0]
+            vat = partner_vat_map.get(partner_id, '')
+            if vat:
+                cedula = re.sub(r'[^0-9]', '', str(vat))
+                family_records = akdemia_family_map.get(cedula, [])
+                if family_records:
+                    new_json = json.dumps(family_records, ensure_ascii=False)
+                else:
+                    new_json = ''
+                current_json = bl.get('akdemia_family_emails') or ''
+                if new_json != current_json:
+                    write_vals['akdemia_family_emails'] = new_json or False
+                    logger.info("  %sBL#%d: akdemia_family_emails updated (%d records)",
+                                prefix, bl['id'], len(family_records))
+
+        if write_vals:
             if not DRY_RUN:
                 models.execute_kw(
                     ODOO_DB, uid, ODOO_PASSWORD,
                     'mail.bounce.log', 'write',
-                    [[bl['id']], {'in_akdemia': should_be}],
+                    [[bl['id']], write_vals],
                 )
             updated += 1
 
@@ -1132,12 +1255,14 @@ def main():
     spreadsheet = None
     akdemia_emails = set()
     akdemia_cedula_map = {}
+    akdemia_family_map = {}
     if not args.skip_sheets:
         try:
             spreadsheet, _ = connect_sheets()
             print("\n--- Loading Akdemia2526 data ---")
             akdemia_emails = load_akdemia_emails(spreadsheet)
             akdemia_cedula_map = load_akdemia_cedula_map(spreadsheet)
+            akdemia_family_map = load_akdemia_family_map(spreadsheet)
         except Exception as e:
             logger.warning("Google Sheets connection failed: %s (continuing without Sheets)", e)
     else:
@@ -1146,7 +1271,9 @@ def main():
     # Phase 2a: Refresh in_akdemia flags
     if akdemia_emails:
         print("\n--- Phase 2a: Refresh in_akdemia Flags ---")
-        updated, total = refresh_in_akdemia_flags(models, uid, akdemia_emails)
+        updated, total = refresh_in_akdemia_flags(
+            models, uid, akdemia_emails,
+            akdemia_family_map=akdemia_family_map if akdemia_family_map else None)
         print(f"  Checked {total} non-resolved bounce logs, updated {updated} flags")
 
     # Phase 2b: Check akdemia_pending confirmations

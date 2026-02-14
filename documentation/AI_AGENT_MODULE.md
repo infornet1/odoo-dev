@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.5.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.12.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -157,7 +157,7 @@ class MySkill:
 
 | Code | Purpose | Resolution Triggers |
 |------|---------|-------------------|
-| `bounce_resolution` | Ask for new email when old one bounced | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
+| `bounce_resolution` | Ask for new email when old one bounced. Includes Akdemia family email context to prevent duplicate proposals. | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
 | `bill_reminder` | Friendly invoice due date reminder | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
 | `billing_support` | Balance inquiry and billing Q&A | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
 

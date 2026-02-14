@@ -55,6 +55,10 @@ class MailBounceLog(models.Model):
         'Fecha Confirmacion Akdemia', readonly=True)
     akdemia_confirmed_by = fields.Many2one(
         'res.users', string='Confirmado por', readonly=True)
+    akdemia_family_emails = fields.Text(
+        'Contexto Familiar Akdemia',
+        help='JSON con informacion de correos de otros familiares registrados en Akdemia. '
+             'Actualizado automaticamente por el Resolution Bridge.')
 
     # Resolution fields
     new_email = fields.Char('Email Nuevo')
