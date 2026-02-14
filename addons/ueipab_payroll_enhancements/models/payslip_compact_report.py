@@ -245,10 +245,17 @@ class PayslipCompactReport(models.AbstractModel):
             lambda l: l.category_id.code in earnings_categories and l.total > 0 and l.code != 'VE_GROSS_V2'
         )
 
+        cesta_ticket_usd = 0.0
+
         for line in earning_lines:
-            # Point 2: Consolidate VE_BONUS_V2 and VE_CESTA_TICKET_V2
-            if line.code in ['VE_BONUS_V2', 'VE_CESTA_TICKET_V2']:
+            # Point 2: Accumulate VE_BONUS_V2 for consolidated "Bonos" line
+            if line.code == 'VE_BONUS_V2':
                 bonos_total_usd += line.total
+                continue
+
+            # Track Cesta Ticket separately for its own display line
+            if line.code == 'VE_CESTA_TICKET_V2':
+                cesta_ticket_usd += line.total
                 continue
 
             # Process other lines and apply renaming
@@ -258,7 +265,7 @@ class PayslipCompactReport(models.AbstractModel):
             # Point 1: Rename VE_SALARY_V2
             if line.code == 'VE_SALARY_V2':
                 line_name = 'Salario quincenal (Deducible)'
-            
+
             # Point 3: Rename VE_EXTRABONUS_V2
             elif line.code == 'VE_EXTRABONUS_V2':
                 line_name = 'Otros Bonos'
@@ -272,7 +279,7 @@ class PayslipCompactReport(models.AbstractModel):
                 'amount_formatted': self._format_amount(amount_converted, currency)
             })
             earnings_total += amount_converted
-        
+
         # Add the consolidated "Bonos" line if it has a value
         if bonos_total_usd > 0:
             bonos_converted = self._convert_amount(bonos_total_usd, exchange_rate)
@@ -285,13 +292,27 @@ class PayslipCompactReport(models.AbstractModel):
                 'amount_formatted': self._format_amount(bonos_converted, currency)
             })
             earnings_total += bonos_converted
+
+        # Add Cesta Ticket as its own visible line
+        if cesta_ticket_usd > 0:
+            cesta_converted = self._convert_amount(cesta_ticket_usd, exchange_rate)
+            processed_earnings.append({
+                'number': len(processed_earnings) + 1,
+                'name': 'Cesta Ticket',
+                'code': 'VE_CESTA_TICKET_V2',
+                'quantity': 1.0,
+                'amount': cesta_converted,
+                'amount_formatted': self._format_amount(cesta_converted, currency)
+            })
+            earnings_total += cesta_converted
         
         # --- End of Refactored Earnings ---
 
-        # Point 6: Calculate "Salario mas Bonos"
+        # Point 6: Calculate "Salario mas Bonos" (includes bonus + cesta ticket)
         salary_usd = contract.wage
         salary_converted = self._convert_amount(salary_usd, exchange_rate)
-        bonos_total_converted = self._convert_amount(bonos_total_usd, exchange_rate)
+        all_bonos_usd = bonos_total_usd + cesta_ticket_usd
+        bonos_total_converted = self._convert_amount(all_bonos_usd, exchange_rate)
         salary_plus_bonos_converted = salary_converted + bonos_total_converted
         
         # Process deductions
