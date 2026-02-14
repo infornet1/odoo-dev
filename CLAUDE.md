@@ -480,9 +480,9 @@ Scripts (`ai_agent_email_checker.py`, `daily_bounce_processor.py`) MUST run on d
 
 **Operational model:** Conversations are started **manually** via "Iniciar WhatsApp" button on bounce log records. Customer replies are processed automatically by the poll cron. Credit Guard monitors API credit levels continuously. Timeout cron sends reminders after 24h (x2) and auto-closes after 72h of no reply.
 
-**Bounce logs:** 37 total (8 pending, 5 akdemia_pending, 21 resolved, 3 contacted), 6 active conversations (#31 ANGELA GONZALEZ, #40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #42 EDDA RODRIGUEZ, #48 ANAIS GALVIS, #66 WILLIANS VELASQUEZ). BL #66 WILLIANS VELASQUEZ replied "Está cerrado ese correo" — Glenda asked for alternative, waiting reply. Other 5 waiting first reply. BL #47 FREDDY GONZALEZ resolved manually (MassivaMóvil API gap — reply manually fed via shell). BL #65 MARYORY VASQUEZ remediated via PATH D (correct email `vasquezmaryory72@gmail.com`). 5 BLs manually resolved 2026-02-13 (PATH D): #32 ANTONIO MARTINEZ, #34 ARELIS DE MORILLO, #54 FRANCIA LORETO, #57 MIGUEL MARIN, #58 GLORIA MILLAN.
+**Bounce logs:** 37 total (8 pending, 4 akdemia_pending, 22 resolved, 3 contacted), 5 active conversations (#31 ANGELA GONZALEZ, #40 DANIEL DOMINGUEZ, #41 RAFAEL DUERTO, #48 ANAIS GALVIS, #66 WILLIANS VELASQUEZ). BL #42 EDDA RODRIGUEZ resolved by Glenda — new email `edddajoserodrigueztineo@gmail.com` (message batching v1.11.0 worked correctly). BL #66 WILLIANS VELASQUEZ replied "Está cerrado ese correo" — Glenda asked for alternative, waiting reply. Other 3 waiting first reply.
 
-**Production sync (2026-02-13):** 23 partners + 27 mailing contacts synced from testing to production — bounced emails removed, new emails applied. All 26 resolved/akdemia_pending partners now match between environments.
+**Production sync (2026-02-13/14):** 24 partners + 29 mailing contacts synced from testing to production — bounced emails removed, new emails applied. Latest: EDDA RODRIGUEZ (partner #2352 + MC #78, #271) synced 2026-02-14.
 
 ### Contact Schedule
 
