@@ -242,7 +242,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **Credit Guard:** Kill switch at `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
 
-### Testing Environment Status (2026-02-14)
+### Testing Environment Status (2026-02-15)
 
 | Setting | Value |
 |---------|-------|
@@ -257,6 +257,8 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 **System crons (host-level):** escalation (5 min, LIVE), resolution (5 min, LIVE), email checker (15 min, LIVE), bounce processor (daily 05:00, LIVE), WA health (15 min, LIVE), Akdemia pipeline (daily 06:00, LIVE). All 6 system crons are LIVE as of 2026-02-14.
 
 **Contact schedule (VET):** Weekdays 06:30-20:30, Weekends 09:30-19:00.
+
+**Glenda conversation snapshot (2026-02-15 12:36 VET):** 14 total — 4 waiting (RAFAEL DUERTO, DANIEL DOMINGUEZ, WILLIANS VELASQUEZ, ANGELA GONZALEZ), 8 resolved, 2 failed. Contact data: 317/317 Representante contacts fully synced (both envs), complete address fields (city/zip/country/state), all Individual type.
 
 ### Production Migration Checklist
 
