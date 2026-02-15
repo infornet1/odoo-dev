@@ -489,4 +489,13 @@ def main():
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='AI Agent Email Checker')
+    parser.add_argument('--live', action='store_true',
+                        help='Disable DRY_RUN (resolve conversations for real)')
+    args = parser.parse_args()
+
+    if args.live:
+        DRY_RUN = False
+
     main()

@@ -248,8 +248,8 @@ MassivaMóvil webhook callback must point to production Odoo:
 | Cron File | Script | Current TARGET_ENV | Current DRY_RUN | Production Change Needed |
 |-----------|--------|-------------------|-----------------|--------------------------|
 | `ai_agent_bounce_processor` | `daily_bounce_processor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
-| `ai_agent_email_checker` | `ai_agent_email_checker.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
-| `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
+| `ai_agent_email_checker` | `ai_agent_email_checker.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
+| `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
 | `ai_agent_resolution` | `ai_agent_resolution_bridge.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 | `ai_agent_wa_health` | `ai_agent_wa_health_monitor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 | `customer_matching` | `customer_matching_daily.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
@@ -269,14 +269,11 @@ The Akdemia scraper and orchestrator live under `/var/www/dev/odoo_api_bridge/` 
 
 **Status:** No path changes needed. Only TARGET_ENV switch.
 
-#### GAP 6: Escalation Bridge & Email Checker are DRY_RUN
+#### ~~GAP 6: Escalation Bridge & Email Checker are DRY_RUN~~ RESOLVED (2026-02-14)
 
-Two critical scripts have **never run live**:
-
-- **Escalation bridge** — Freescout tickets + WhatsApp group alerts for off-topic requests are NOT being created. Tested in dry-run only (2026-02-08).
-- **Email checker** — Customer replies to verification emails are NOT being auto-detected. State file exists but hasn't applied changes.
-
-**Action:** Add `--live` to both cron entries. Test escalation bridge live on a test conversation before production.
+Both scripts switched to **LIVE** on 2026-02-14:
+- **Escalation bridge** — `--live` added to `/etc/cron.d/ai_agent_escalation`. Freescout tickets + WA group alerts now created for real.
+- **Email checker** — `--live` argparse flag added to script + cron updated in `/etc/cron.d/ai_agent_email_checker`. Customer verification email replies now auto-resolve conversations.
 
 #### GAP 7: Freescout API Migration (Optional but Recommended)
 
