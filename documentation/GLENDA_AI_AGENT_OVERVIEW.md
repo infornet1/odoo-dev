@@ -197,6 +197,167 @@ Customer-initiated replies (webhook) are processed anytime.
 
 ---
 
+## Production Readiness Review (2026-02-14)
+
+### Deployment Model
+
+All 7 system cron scripts run on the **dev server** (where Freescout MySQL is local). For production, they STAY on the dev server — only `TARGET_ENV` changes to `production` so they point Odoo XML-RPC at `https://odoo.ueipab.edu.ve` / `DB_UEIPAB`. Freescout/Sheets/WhatsApp connections remain unchanged.
+
+```
+                  DEV SERVER (10.124.0.2)                    PROD SERVER (10.124.0.3)
+            ┌──────────────────────────────┐            ┌──────────────────────────┐
+            │  7 System Cron Scripts       │            │  Odoo 17 (ueipab17)      │
+            │  Freescout MySQL (local)     │ ──XML-RPC──│  ueipab_ai_agent module  │
+            │  /var/www/dev/odoo_api_bridge│            │  ueipab_bounce_log       │
+            │  Google Sheets API           │            │  4 Odoo Crons            │
+            │  Akdemia Scraper (Playwright)│            │  Webhook endpoint        │
+            └──────────────────────────────┘            └──────────────────────────┘
+```
+
+### Gap Analysis
+
+#### GAP 1: Odoo Modules Not Installed in Production
+
+| Module | Required | Status |
+|--------|----------|--------|
+| `ueipab_bounce_log` v17.0.1.4.0 | Hard dependency | **NOT INSTALLED** |
+| `ueipab_ai_agent` v17.0.1.13.0 | Primary module | **NOT INSTALLED** |
+
+**Action:** Copy modules to `/home/vision/ueipab17/addons/`, install `ueipab_bounce_log` first, then `ueipab_ai_agent`.
+
+#### GAP 2: Config Files Missing on Production
+
+| File | Needed By | Location on Dev | Production Path |
+|------|-----------|-----------------|-----------------|
+| `whatsapp_massiva.json` | Module (post_init_hook) + escalation/health scripts | `/opt/odoo-dev/config/` | `/home/vision/ueipab17/config/` |
+| `anthropic_api.json` | Module (post_init_hook) | `/opt/odoo-dev/config/` | `/home/vision/ueipab17/config/` |
+| `google_sheets_credentials.json` | Bridge scripts only (dev server) | `/opt/odoo-dev/config/` | **N/A — stays on dev server** |
+
+**Action:** Copy `whatsapp_massiva.json` and `anthropic_api.json` to production. Sheets creds stay on dev.
+
+#### GAP 3: Webhook URL Not Configured
+
+MassivaMóvil webhook callback must point to production Odoo:
+- **Current:** Not set (polling-only mode in testing)
+- **Required:** `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp`
+
+**Action:** Configure in MassivaMóvil dashboard. Verify production Nginx passes `/ai-agent/` to Odoo.
+
+#### GAP 4: System Crons — TARGET_ENV and DRY_RUN Flags
+
+| Cron File | Script | Current TARGET_ENV | Current DRY_RUN | Production Change Needed |
+|-----------|--------|-------------------|-----------------|--------------------------|
+| `ai_agent_bounce_processor` | `daily_bounce_processor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
+| `ai_agent_email_checker` | `ai_agent_email_checker.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
+| `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
+| `ai_agent_resolution` | `ai_agent_resolution_bridge.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
+| `ai_agent_wa_health` | `ai_agent_wa_health_monitor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
+| `customer_matching` | `customer_matching_daily.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
+
+**Action:** Update all 6 cron files in `/etc/cron.d/`. Recommend phased: first switch TARGET_ENV in DRY mode, verify logs, then enable `--live`.
+
+#### GAP 5: Akdemia Pipeline Path Dependencies
+
+The Akdemia scraper and orchestrator live under `/var/www/dev/odoo_api_bridge/` on the dev server. This is **NOT a blocker** — these scripts always run on the dev server (Playwright/Chrome is installed there). They reach Odoo via XML-RPC.
+
+| Path | Used By | Runs On | Production Impact |
+|------|---------|---------|-------------------|
+| `/var/www/dev/odoo_api_bridge/scripts/customer_matching_daily.py` | customer_matching cron | dev server | None — stays on dev |
+| `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` | orchestrator | dev server | None — stays on dev |
+| `/var/www/dev/odoo_api_bridge/akdemia_downloads/` | scraper output | dev server | None — stays on dev |
+| `/opt/odoo-dev/scripts/akdemia_email_sync.py` | orchestrator (subprocess) | dev server | TARGET_ENV must be `production` |
+
+**Status:** No path changes needed. Only TARGET_ENV switch.
+
+#### GAP 6: Escalation Bridge & Email Checker are DRY_RUN
+
+Two critical scripts have **never run live**:
+
+- **Escalation bridge** — Freescout tickets + WhatsApp group alerts for off-topic requests are NOT being created. Tested in dry-run only (2026-02-08).
+- **Email checker** — Customer replies to verification emails are NOT being auto-detected. State file exists but hasn't applied changes.
+
+**Action:** Add `--live` to both cron entries. Test escalation bridge live on a test conversation before production.
+
+#### GAP 7: Freescout API Migration (Optional but Recommended)
+
+Current scripts use **direct MySQL** for Freescout operations. This works but:
+- Bypasses Laravel event system (must manually set `user_updated_at=NOW()`)
+- Fragile if Freescout schema changes
+- No API purchase yet ([plan](FREESCOUT_API_MIGRATION_PLAN.md))
+
+**Status:** Not a blocker. Direct SQL works. API migration is a future improvement.
+
+#### GAP 8: Credit Guard Production Calibration
+
+- Claude spend is **cumulative (lifetime)**, not monthly
+- Default `claude_spend_limit_usd = 4.50` (90% of initial $5 credit)
+- When topping up credits, MUST increase this limit proportionally
+- WA sends checked against MassivaMóvil Plan 500 subscription
+
+**Action:** Set appropriate `claude_spend_limit_usd` based on actual credit balance at go-live.
+
+#### GAP 9: Bounce Log Data (Initial Load)
+
+Production has NO bounce logs yet. The `daily_bounce_processor.py` script will create them from Freescout data on first run.
+
+**Action:** Run bounce processor against production first (DRY to preview, then LIVE). This creates the bounce log records that Glenda will work from.
+
+#### GAP 10: Testing Environment Lockout
+
+When production goes live, testing must stop processing to avoid double-sending WhatsApp messages (both envs share the same MassivaMóvil account).
+
+**Action:**
+1. Set `ai_agent.active_db = 'DB_UEIPAB'` on production
+2. Set `ai_agent.active_db = ''` on testing (Odoo crons self-skip)
+3. Update all cron scripts: `TARGET_ENV=production`
+
+#### GAP 11: Partner/MC Data Drift (prod vs test)
+
+Dry-run sync comparison (2026-02-14) showed:
+- **19 partners** where testing has extra family emails (Phase 5 enrichment)
+- **22 mailing contacts** with same extra emails
+- **9 partners** in production but not testing (new enrollments)
+- **0 emails** only in production (testing is superset)
+
+**Status:** Not a blocker. Production will catch up when Phase 5 runs against production data. New enrollments will be picked up by bounce processor.
+
+### Production Migration Sequence
+
+```
+Phase A — Prepare (no user impact)
+  [ ] Backup production database
+  [ ] Copy ueipab_bounce_log + ueipab_ai_agent to /home/vision/ueipab17/addons/
+  [ ] Copy whatsapp_massiva.json + anthropic_api.json to /home/vision/ueipab17/config/
+  [ ] Install ueipab_bounce_log on production
+  [ ] Install ueipab_ai_agent on production
+  [ ] Verify ir.config_parameter values loaded
+  [ ] Set ai_agent.dry_run = True (safety first)
+  [ ] Set ai_agent.active_db = 'DB_UEIPAB'
+  [ ] Set ai_agent.claude_spend_limit_usd = appropriate value
+
+Phase B — Configure & Dry Test (no user impact)
+  [ ] Configure MassivaMóvil webhook → https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
+  [ ] Verify Nginx passes /ai-agent/ to Odoo
+  [ ] Update all 6 cron files: TARGET_ENV=production (keep DRY_RUN)
+  [ ] Run bounce processor DRY → verify it detects bounces from Freescout
+  [ ] Run resolution bridge DRY → verify it sees resolved BLs
+  [ ] Run escalation bridge DRY → verify it detects escalations
+  [ ] Run email checker DRY → verify it scans Freescout conversations
+  [ ] Run WA health monitor DRY → verify it checks active number
+  [ ] Set ai_agent.active_db = '' on TESTING (disable testing crons)
+
+Phase C — Go Live (staged)
+  [ ] Run bounce processor LIVE → creates initial bounce log records
+  [ ] Enable cron --live flags: resolution bridge, bounce processor, WA health
+  [ ] Set ai_agent.dry_run = False on production
+  [ ] Monitor: first Glenda conversation end-to-end
+  [ ] Enable cron --live flags: escalation bridge, email checker
+  [ ] Enable cron --live: customer_matching (Akdemia pipeline)
+  [ ] Monitor Credit Guard for 48h (check ai_agent.credits_ok stays True)
+```
+
+---
+
 ## Key Files
 
 | File | Purpose |

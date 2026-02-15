@@ -504,44 +504,11 @@ Both testing and production share the same WhatsApp account (+584148321963). To 
 
 **To return to testing:** reverse the `active_db` values.
 
-### Production Migration Checklist (DO NOT EXECUTE - reference only)
+### Production Migration Checklist
 
-```
-Pre-deployment:
-[ ] Copy config files to production: /home/vision/ueipab17/config/
-    - whatsapp_massiva.json
-    - anthropic_api.json
-[ ] Ensure ueipab_bounce_log module is installed on production
-[ ] Sync ueipab_ai_agent module to production addons path
-
-Module installation:
-[ ] Install/upgrade ueipab_ai_agent on production Odoo
-[ ] Verify ir.config_parameter values loaded (WhatsApp + Claude keys)
-[ ] Set ai_agent.dry_run = 'True' (keep dry until verified)
-[ ] Set ai_agent.active_db = 'DB_UEIPAB'
-
-Webhook setup:
-[ ] Configure MassivaMóvil webhook: https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
-
-Testing environment lockout:
-[ ] Set ai_agent.active_db = '' on testing Odoo (disable crons)
-[ ] Verify testing crons log "Skipping cron processing" warning
-
-Script deployment:
-[ ] Update ai_agent_email_checker.py: TARGET_ENV='production'
-[ ] Update ai_agent_escalation_bridge.py: TARGET_ENV='production'
-[ ] Update daily_bounce_processor.py: TARGET_ENV='production' (if not already)
-[ ] Add crontab entries on dev server (email_checker 15min, escalation_bridge 5min)
-
-Credit Guard:
-[ ] Verify Credit Guard cron is active (Settings > Technical > Scheduled Actions)
-[ ] Set ai_agent.claude_spend_limit_usd based on loaded credit (default 4.50 = 90% of $5)
-[ ] Manually trigger _cron_check_credits() once to verify WA + Claude checks pass
-
-Go live:
-[ ] Set ai_agent.dry_run = 'False' on production
-[ ] Monitor first conversations end-to-end
-```
+> **Full gap analysis and 3-phase migration sequence:** See [Glenda Overview — Production Readiness Review](GLENDA_AI_AGENT_OVERVIEW.md#production-readiness-review-2026-02-14)
+>
+> Covers 11 identified gaps: modules, config files, webhook, cron flags, Akdemia paths, escalation/email-checker DRY status, Freescout API, Credit Guard calibration, initial bounce load, testing lockout, and data drift.
 
 ## Cost Estimates
 
