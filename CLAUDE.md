@@ -258,7 +258,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 **Contact schedule (VET):** Weekdays 06:30-20:30, Weekends 09:30-19:00.
 
-**Glenda conversation snapshot (2026-02-15 12:36 VET):** 14 total — 4 waiting (RAFAEL DUERTO, DANIEL DOMINGUEZ, WILLIANS VELASQUEZ, ANGELA GONZALEZ), 8 resolved, 2 failed. Contact data: 317/317 Representante contacts fully synced (both envs), complete address fields (city/zip/country/state), all Individual type.
+**Glenda conversation snapshot (2026-02-15 12:36 VET):** 14 total — 4 waiting (RAFAEL DUERTO, DANIEL DOMINGUEZ, WILLIANS VELASQUEZ, ANGELA GONZALEZ), 8 resolved, 2 failed. Contact data: 318/318 Representante contacts fully synced (both envs, 244 Rep + 74 PDVSA), complete address fields (city/zip/country/state), all Individual type, 0 field diffs.
 
 ### Production Migration Checklist
 
@@ -323,7 +323,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- **Contact Data Cleanup (2026-02-15):** All Representante contacts (317/317 both envs) fully synchronized with complete address data. Fixes applied: (1) Country state remapped from Kenya IDs to Anzoátegui (2171), (2) Emails synced testing→production (22 partners + 23 MCs, 0 diffs), (3) Empty states filled, (4) 2 missing contacts created in testing, (5) ZIP=6050 for all 317 contacts, (6) company_type=Individual for all 317, (7) City names normalized, (8) Missing city/zip/country filled for 27+1 contacts. Final: 315 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 317/317 zip=6050, 0 missing country.
+- **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
