@@ -321,7 +321,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- **Country State Data (res.country.state):** Production has 278 contacts with Kenyan state IDs (1693=Bungoma, 1716=Meru) that should be Anzoátegui (2171). Fixed in testing (2026-02-15), pending production fix. Canonical VE states: IDs 2170-2193 (V01-V24).
+- **Country State Data (res.country.state):** Bad CSV import assigned Kenyan state IDs to VE contacts. Fixed in both envs (2026-02-15): testing 507, production 451 contacts remapped to Anzoátegui (2171). Canonical VE states: IDs 2170-2193 (V01-V24).
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
