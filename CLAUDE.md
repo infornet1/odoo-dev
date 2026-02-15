@@ -321,7 +321,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- **Contact Data Cleanup (2026-02-15):** All Representante contacts (317/317 both envs) fully synchronized. Fixes applied: (1) Country state remapped from Kenya IDs to Anzoátegui (2171), (2) Emails synced testing→production (22 partners + 23 MCs, 0 diffs verified), (3) Empty states filled, (4) 2 missing contacts created in testing (CHENIANA NOGALES, CARLOS SANCHEZ), (5) ZIP=6050 for all El Tigre contacts (288/288), (6) company_type=Individual for all Representante (317/317), (7) City names normalized ("EL TIGRE"/"EL TGRE"→"El Tigre"). Canonical VE states: IDs 2170-2193 (V01-V24).
+- **Contact Data Cleanup (2026-02-15):** All Representante contacts (317/317 both envs) fully synchronized with complete address data. Fixes applied: (1) Country state remapped from Kenya IDs to Anzoátegui (2171), (2) Emails synced testing→production (22 partners + 23 MCs, 0 diffs), (3) Empty states filled, (4) 2 missing contacts created in testing, (5) ZIP=6050 for all 317 contacts, (6) company_type=Individual for all 317, (7) City names normalized, (8) Missing city/zip/country filled for 27+1 contacts. Final: 315 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 317/317 zip=6050, 0 missing country.
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
