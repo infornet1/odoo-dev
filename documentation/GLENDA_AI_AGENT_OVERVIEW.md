@@ -252,9 +252,9 @@ MassivaMóvil webhook callback must point to production Odoo:
 | `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
 | `ai_agent_resolution` | `ai_agent_resolution_bridge.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 | `ai_agent_wa_health` | `ai_agent_wa_health_monitor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
-| `customer_matching` | `customer_matching_daily.py` | testing | **DRY** (no override) | Change `TARGET_ENV=production`, add `--live` |
+| `customer_matching` | `customer_matching_daily.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
 
-**Action:** Update all 6 cron files in `/etc/cron.d/`. Recommend phased: first switch TARGET_ENV in DRY mode, verify logs, then enable `--live`.
+**Status:** All 6 crons are LIVE as of 2026-02-14. Only `TARGET_ENV` switch needed for production.
 
 #### GAP 5: Akdemia Pipeline Path Dependencies
 

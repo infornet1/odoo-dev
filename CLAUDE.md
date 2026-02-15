@@ -254,7 +254,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 | Credit Guard | active, 30 min |
 | Archive Attachments | active, 2 hours |
 
-**System crons (host-level):** escalation (5 min, LIVE), resolution (5 min, LIVE), email checker (15 min, LIVE), bounce processor (daily 05:00, LIVE), WA health (15 min, LIVE), Akdemia pipeline (daily 06:00, DRY).
+**System crons (host-level):** escalation (5 min, LIVE), resolution (5 min, LIVE), email checker (15 min, LIVE), bounce processor (daily 05:00, LIVE), WA health (15 min, LIVE), Akdemia pipeline (daily 06:00, LIVE). All 6 system crons are LIVE as of 2026-02-14.
 
 **Contact schedule (VET):** Weekdays 06:30-20:30, Weekends 09:30-19:00.
 
