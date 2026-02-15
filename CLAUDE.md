@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-02-15
 
 ## Core Instructions
 
@@ -321,7 +321,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- **Country State Data (res.country.state):** Fixed 2026-02-15. All Representante contacts now have Anzoátegui (2171) in both envs (testing 316, production 317). Emails synced testing→production (20 partners + 23 MCs). Canonical VE states: IDs 2170-2193 (V01-V24). Remaining: 9 prod-only / 8 test-only contacts (ID divergence).
+- **Contact Data Cleanup (2026-02-15):** All Representante contacts (317/317 both envs) fully synchronized. Fixes applied: (1) Country state remapped from Kenya IDs to Anzoátegui (2171), (2) Emails synced testing→production (20 partners + 23 MCs), (3) Empty states filled, (4) 2 missing contacts created in testing (CHENIANA NOGALES, CARLOS SANCHEZ), (5) ZIP=6050 for all El Tigre contacts (288/288), (6) company_type=Individual for all Representante (317/317), (7) City names normalized ("EL TIGRE"/"EL TGRE"→"El Tigre"). Canonical VE states: IDs 2170-2193 (V01-V24).
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
