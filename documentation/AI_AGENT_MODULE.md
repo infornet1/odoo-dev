@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.13.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.15.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -324,6 +324,9 @@ Glenda only initiates outbound WhatsApp messages during allowed hours (Venezuela
 |-----|-------|-----|
 | Monday - Friday | 06:30 | 20:30 |
 | Saturday - Sunday | 09:30 | 19:00 |
+| Public Holidays | 09:30 | 19:00 |
+
+**Holiday support (v1.15.0):** Venezuelan public holidays automatically use the weekend schedule (09:30-19:00) even when they fall on weekdays. Holidays are stored as comma-separated `MM-DD` values in `ai_agent.holidays` and editable from the Dashboard Configuracion tab.
 
 **Behavior:**
 - **Cron-initiated outbound** (reminders, timeouts, poll processing): Blocked outside schedule. Crons skip silently and retry next run.
@@ -338,6 +341,7 @@ Glenda only initiates outbound WhatsApp messages during allowed hours (Venezuela
 | `ai_agent.schedule_weekday_end` | `20:30` | Weekday end (HH:MM, VET) |
 | `ai_agent.schedule_weekend_start` | `09:30` | Weekend start (HH:MM, VET) |
 | `ai_agent.schedule_weekend_end` | `19:00` | Weekend end (HH:MM, VET) |
+| `ai_agent.holidays` | *(empty)* | Public holidays as MM-DD CSV (use weekend schedule) |
 
 ## WhatsApp Reminders
 

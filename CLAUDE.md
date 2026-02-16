@@ -125,7 +125,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.14.0 | 2026-02-16 |
+| ueipab_ai_agent | 17.0.1.15.0 | 2026-02-16 |
 
 ### Production Environment
 
@@ -216,7 +216,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.14.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.15.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills". See [Full Documentation](documentation/AI_AGENT_MODULE.md).
 
@@ -241,6 +241,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **Family email context:** Akdemia data prevents duplicate email proposals
 - **Credit Guard:** Kill switch at `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
+- **Holiday schedule (v1.15.0):** Public holidays use weekend hours (09:30-19:00) via `ai_agent.holidays` param
 
 ### Testing Environment Status (2026-02-15)
 
@@ -256,7 +257,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 **System crons (host-level):** escalation (5 min, LIVE), resolution (5 min, LIVE), email checker (15 min, LIVE), bounce processor (daily 05:00, LIVE), WA health (15 min, LIVE), Akdemia pipeline (daily 06:00, LIVE). All 6 system crons are LIVE as of 2026-02-14.
 
-**Contact schedule (VET):** Weekdays 06:30-20:30, Weekends 09:30-19:00.
+**Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. Holidays configured in Dashboard Configuracion tab (`ai_agent.holidays` param, MM-DD CSV).
 
 **Glenda conversation snapshot (2026-02-15 12:36 VET):** 14 total — 4 waiting (RAFAEL DUERTO, DANIEL DOMINGUEZ, WILLIANS VELASQUEZ, ANGELA GONZALEZ), 8 resolved, 2 failed. Contact data: 318/318 Representante contacts fully synced (both envs, 244 Rep + 74 PDVSA), complete address fields (city/zip/country/state), all Individual type, 0 field diffs.
 

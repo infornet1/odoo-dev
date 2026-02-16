@@ -199,6 +199,11 @@
                                     <field name="schedule_weekend_end"/>
                                 </group>
                             </group>
+                            <group string="Dias Feriados (usan horario Sab-Dom)" colspan="2">
+                                <field name="schedule_holidays" widget="text"
+                                       placeholder="01-01,02-16,02-17,03-30,03-31,04-01,04-02,04-03,05-01,06-24,07-24,10-12,12-24,12-25,12-31"
+                                       help="Formato MM-DD separados por coma. En feriados se usa horario de fin de semana."/>
+                            </group>
                             <group string="Identidad del Agente">
                                 <group>
                                     <field name="agent_display_name"/>

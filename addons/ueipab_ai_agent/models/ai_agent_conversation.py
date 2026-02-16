@@ -167,10 +167,16 @@ class AiAgentConversation(models.Model):
 
         ICP = self.env['ir.config_parameter'].sudo()
 
-        if weekday < 5:  # Monday-Friday
+        # Check if today is a holiday (uses weekend schedule)
+        holidays_str = ICP.get_param('ai_agent.holidays', '')
+        holidays = {d.strip() for d in holidays_str.split(',') if d.strip()}
+        current_date = now_ve.strftime('%m-%d')
+        is_holiday = current_date in holidays
+
+        if weekday < 5 and not is_holiday:  # Regular weekday
             start = ICP.get_param('ai_agent.schedule_weekday_start', '06:30')
             end = ICP.get_param('ai_agent.schedule_weekday_end', '20:30')
-        else:  # Saturday-Sunday
+        else:  # Weekend OR holiday
             start = ICP.get_param('ai_agent.schedule_weekend_start', '09:30')
             end = ICP.get_param('ai_agent.schedule_weekend_end', '19:00')
 
@@ -178,10 +184,11 @@ class AiAgentConversation(models.Model):
             return True
 
         day_name = now_ve.strftime('%A')
+        reason = "feriado" if is_holiday else day_name
         _logger.info(
             "AI Agent: Outside schedule (%s %s, allowed %s-%s VET). "
             "Skipping cron processing.",
-            day_name, current_time, start, end)
+            reason, current_time, start, end)
         return False
 
     def action_start(self):

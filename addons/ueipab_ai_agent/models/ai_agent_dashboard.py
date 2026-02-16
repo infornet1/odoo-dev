@@ -63,6 +63,7 @@ class AiAgentDashboard(models.TransientModel):
     schedule_weekday_end = fields.Char('Lun-Vie Fin', default='20:30')
     schedule_weekend_start = fields.Char('Sab-Dom Inicio', default='09:30')
     schedule_weekend_end = fields.Char('Sab-Dom Fin', default='19:00')
+    schedule_holidays = fields.Text('Dias Feriados (MM-DD)')
 
     # ── Cuenta WhatsApp ─────────────────────────────────────────────
     whatsapp_active_account = fields.Selection([
@@ -114,6 +115,7 @@ class AiAgentDashboard(models.TransientModel):
         'schedule_weekday_end': ('ai_agent.schedule_weekday_end', 'str'),
         'schedule_weekend_start': ('ai_agent.schedule_weekend_start', 'str'),
         'schedule_weekend_end': ('ai_agent.schedule_weekend_end', 'str'),
+        'schedule_holidays': ('ai_agent.holidays', 'str'),
         'agent_display_name': ('ai_agent.agent_display_name', 'str'),
         'institution_display_name': ('ai_agent.institution_display_name', 'str'),
     }
@@ -456,15 +458,27 @@ class AiAgentDashboard(models.TransientModel):
         }
 
     @api.constrains('schedule_weekday_start', 'schedule_weekday_end',
-                     'schedule_weekend_start', 'schedule_weekend_end')
+                     'schedule_weekend_start', 'schedule_weekend_end',
+                     'schedule_holidays')
     def _check_schedule_format(self):
-        pattern = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
+        time_pattern = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
         for rec in self:
             for fname in ('schedule_weekday_start', 'schedule_weekday_end',
                           'schedule_weekend_start', 'schedule_weekend_end'):
                 val = getattr(rec, fname)
-                if val and not pattern.match(val):
+                if val and not time_pattern.match(val):
                     raise ValidationError(
                         _("El campo '%s' debe tener formato HH:MM (ej: 06:30). Valor: %s")
                         % (fname, val)
+                    )
+            # Validate holiday dates
+            holidays_str = rec.schedule_holidays or ''
+            date_pattern = re.compile(r'^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$')
+            for entry in holidays_str.split(','):
+                entry = entry.strip()
+                if entry and not date_pattern.match(entry):
+                    raise ValidationError(
+                        _("Formato invalido en Dias Feriados: '%s'. "
+                          "Use MM-DD separados por coma (ej: 01-01,02-16,12-25).")
+                        % entry
                     )
