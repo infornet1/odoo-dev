@@ -1,7 +1,7 @@
 {
     'name': 'UEIPAB AI Agent',
-    'version': '17.0.1.13.0',
-    'category': 'Contacts',
+    'version': '17.0.1.14.0',
+    'category': 'Services',
     'summary': 'AI-powered WhatsApp agent for automated customer interactions',
     'author': 'UEIPAB',
     'website': '',
@@ -20,6 +20,6 @@
     ],
     'post_init_hook': '_load_api_configs',
     'installable': True,
-    'application': False,
+    'application': True,
     'license': 'LGPL-3',
 }

@@ -1,33 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- AI Agent parent menu under Contacts -->
+    <!-- Top-level app menu (no parent) -->
     <menuitem id="menu_ai_agent_root"
               name="AI Agent"
-              parent="contacts.menu_contacts"
+              web_icon="ueipab_ai_agent,static/description/icon.png"
+              sequence="55"/>
+
+    <!-- Operaciones category -->
+    <menuitem id="menu_ai_agent_operations"
+              name="Operaciones"
+              parent="menu_ai_agent_root"
               sequence="10"/>
 
-    <!-- Panel de Control -->
     <menuitem id="menu_ai_agent_dashboard"
               name="Panel de Control"
-              parent="menu_ai_agent_root"
+              parent="menu_ai_agent_operations"
               action="ai_agent_dashboard_action"
               sequence="0"
               groups="group_ai_agent_manager"/>
 
-    <!-- Conversaciones -->
     <menuitem id="menu_ai_agent_conversations"
               name="Conversaciones"
-              parent="menu_ai_agent_root"
+              parent="menu_ai_agent_operations"
               action="ai_agent_conversation_action"
               sequence="1"/>
 
-    <!-- Configuracion de Skills -->
-    <menuitem id="menu_ai_agent_skills"
-              name="Configuracion de Skills"
+    <menuitem id="menu_ai_agent_bounce_log"
+              name="Bounce Log"
+              parent="menu_ai_agent_operations"
+              action="ueipab_bounce_log.mail_bounce_log_action"
+              sequence="2"/>
+
+    <!-- Configuracion category -->
+    <menuitem id="menu_ai_agent_config"
+              name="Configuracion"
               parent="menu_ai_agent_root"
+              sequence="20"/>
+
+    <menuitem id="menu_ai_agent_skills"
+              name="Skills"
+              parent="menu_ai_agent_config"
               action="ai_agent_skill_action"
-              sequence="2"
+              sequence="0"
               groups="group_ai_agent_manager"/>
 
     <!-- Extend Bounce Log form view to add WhatsApp button -->
