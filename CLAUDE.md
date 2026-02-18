@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-18
 
 ## Core Instructions
 
@@ -46,6 +46,7 @@
 | 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 29 | Resolution Bridge | Testing | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
+| 31 | HR Data Collection (Glenda) | Planning | `ueipab_ai_agent` + `ueipab_hr_employee` | [Plan](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 
 ---
 
@@ -312,6 +313,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
 - [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
 - [Glenda Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md)
+- [HR Data Collection (Glenda)](documentation/GLENDA_HR_DATA_COLLECTION.md)
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
