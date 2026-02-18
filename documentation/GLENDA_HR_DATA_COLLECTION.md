@@ -709,15 +709,16 @@ def _cron_check_document_expiry(self):
 - [x] Skill data record: `hr_data_collection` (max_turns=15, timeout=72h)
 - [x] Installed and verified in testing (CRUD test with Gustavo Perdomo OK)
 
-### Phase B: Skill Implementation (Estimated: 3-4 days)
-- [ ] Create `hr_data_collection.py` skill class
-- [ ] Implement 5-phase conversation logic with smart confirmation
-- [ ] Implement all ACTION markers and `process_ai_response()`
-- [ ] Implement `on_resolve()` — write data to employee (with protected field checks)
-- [ ] Phone normalization utility (+58 format)
-- [ ] RIF format validation
-- [ ] Cedula expiry conversion (MM/YYYY → last day of month)
-- [ ] Add skill record to `skill_data.xml`
+### Phase B: Skill Implementation -- COMPLETED (2026-02-18)
+- [x] Create `hr_data_collection.py` skill class (390+ lines)
+- [x] Implement 5-phase conversation logic with smart confirmation
+- [x] Implement all ACTION markers: PHASE_COMPLETE (phone/cedula/cedula_expiry/rif_number/rif_expiry/address/emergency), SAVE_DOCUMENT (cedula/rif), ESCALATE, RESOLVED
+- [x] Implement `on_resolve()` — write data to employee with protected field checks (name/work_email NEVER touched)
+- [x] Phone normalization: `normalize_ve_phone()` — all VE formats → `+58 XXX XXXXXXX`
+- [x] RIF validation: `validate_rif_format()` — normalizes to `V-XXXXXXXX-X`
+- [x] Cedula expiry: `parse_cedula_expiry()` — `06/2035` → `2035-06-30` (last day of month)
+- [x] Skill registered via `@register_skill('hr_data_collection')` decorator
+- [x] Verified in testing: get_context, get_greeting (smart confirmation), get_system_prompt (3877 chars), process_ai_response (marker parsing), on_resolve (employee write-back)
 
 ### Phase C: Document Handling (Estimated: 2-3 days)
 - [ ] Photo download from WhatsApp URL → `ir.attachment`
