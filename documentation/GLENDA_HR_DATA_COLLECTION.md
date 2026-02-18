@@ -734,11 +734,22 @@ def _cron_check_document_expiry(self):
 - [x] Module version bumped to 17.0.1.17.0
 - [x] Verified in testing: PDF→PNG conversion (53KB), conversation history with image blocks, attachment creation + naming + linking
 
-### Phase D: Email Integration (Estimated: 2-3 days)
-- [ ] Escalation email template (to recursoshumanos@ueipab.edu.ve)
-- [ ] HR email checker script (monitor Freescout for document replies)
-- [ ] Attachment extraction from Freescout threads
-- [ ] Freescout conversation linking to collection request
+### Phase D: Email Integration -- COMPLETED (2026-02-18)
+- [x] `_send_escalation_email()` on conversation model — sends HTML email with employee name, reason, Odoo links
+- [x] HR skill `process_ai_response` returns `send_escalation_email` action on ESCALATE markers
+- [x] Email to `recursoshumanos@ueipab.edu.ve` with subject `[GLENDA-HR] Requiere atencion: {name} — {reason}`
+- [x] Freescout auto-creates conversation in HR mailbox (mailbox_id=4) from received email
+- [x] `action_process_reply` engine handles `send_escalation_email` action key
+- [x] HR email checker script: `scripts/ai_agent_hr_email_checker.py` (DRY_RUN default, --live)
+- [x] Monitors HR mailbox for employee replies with attachments (images + PDFs)
+- [x] Matches sender work_email to active `hr.data.collection.request` records
+- [x] Reads attachments from Freescout disk (`/var/www/freescout/storage/app/attachment/`)
+- [x] Uploads to Odoo via XML-RPC: creates ir.attachment, links to `identification_attachment_ids`
+- [x] Updates request phase status (cedula_photo_received / rif_photo_received)
+- [x] Posts Freescout internal note `[GLENDA-HR] Documento recibido y procesado`
+- [x] `guess_doc_type()` heuristic: filename keywords → cedula/rif/unknown
+- [x] State file: `scripts/ai_agent_hr_email_checker_state.json`
+- [x] Verified: Odoo escalation email (dry run), Freescout attachment read (50KB test), script dry run OK
 
 ### Phase E: Batch Operations + Stagger (Estimated: 1-2 days)
 - [ ] Batch launch wizard (from payslip batch)
@@ -805,3 +816,4 @@ def _cron_check_document_expiry(self):
 | 2026-02-18 | 0.2.0 | Major refinements: dual-channel (WA + email), Cedula tracking (Phase 2), protected fields (name/work_email NEVER TOUCH), `identification_attachment_ids` reuse for Cedula + RIF, escalation via email to HR Manager, progressive 30-day rollout, smart confirmation for existing data, Freescout HR mailbox integration (mailbox_id=4), combined RIF + Cedula expiry CRON |
 | 2026-02-18 | 0.3.0 | Phase A completed: `ueipab_hr_employee` v1.0.0 installed, `ueipab_ai_agent` v1.16.0 upgraded, `hr.data.collection.request` model + views + menu + security + skill record. PDF document support added to accepted formats (Section 4.10). |
 | 2026-02-18 | 0.4.0 | Phase B completed: skill class with 5-phase logic, utility functions, all ACTION markers. Phase C completed: PDF-to-image via PyMuPDF for Claude Vision, SAVE_DOCUMENT saves to employee `identification_attachment_ids`, archive cron handles PDFs. Module v1.17.0. |
+| 2026-02-18 | 0.5.0 | Phase D completed: Escalation email to recursoshumanos@ with Odoo links, HR email checker script for Freescout HR mailbox attachment processing, Freescout disk attachment reading, doc type heuristic. Phases A-D complete — ready for testing (Phase G). |

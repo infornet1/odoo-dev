@@ -382,6 +382,9 @@ class AiAgentConversation(models.Model):
         if action.get('escalate'):
             self._handle_escalation(action['escalate'])
 
+        if action.get('send_escalation_email'):
+            self._send_escalation_email(action['send_escalation_email'])
+
         if action.get('alternative_phone'):
             self.write({'alternative_phone': action['alternative_phone']})
 
@@ -530,6 +533,50 @@ class AiAgentConversation(models.Model):
             "Escalacion registrada: %s. Pendiente creacion de ticket en Freescout."
         ) % reason)
         _logger.info("Conversation %s: escalation — %s", self.id, reason)
+
+    def _send_escalation_email(self, email_data):
+        """Send an escalation email to HR or another department.
+
+        Args:
+            email_data: dict with keys:
+                - to: recipient email address
+                - subject: email subject
+                - body_html: HTML body content
+                - from_name: (optional) sender display name
+        """
+        self.ensure_one()
+        dry_run = self._is_dry_run()
+        icp = self.env['ir.config_parameter'].sudo()
+
+        default_from = icp.get_param(
+            'ai_agent.escalation_email_from',
+            'UEIPAB - Glenda AI <soporte@ueipab.edu.ve>',
+        )
+        email_from = email_data.get('from_name', default_from)
+        email_to = email_data['to']
+        subject = email_data['subject']
+        body_html = email_data['body_html']
+
+        if dry_run:
+            _logger.info(
+                "DRY_RUN: Would send escalation email to %s — Subject: %s",
+                email_to, subject)
+        else:
+            mail = self.env['mail.mail'].sudo().create({
+                'subject': subject,
+                'body_html': body_html,
+                'email_from': email_from,
+                'email_to': email_to,
+                'auto_delete': True,
+            })
+            mail.send()
+            _logger.info(
+                "Escalation email sent to %s for conversation %s — Subject: %s",
+                email_to, self.id, subject)
+
+        self.message_post(body=_(
+            "Escalacion enviada por correo a %s: %s%s"
+        ) % (email_to, subject, " (DRY RUN)" if dry_run else ""))
 
     def action_resolve(self, summary='', resolution_data=None):
         """Mark conversation as resolved and trigger skill callback."""

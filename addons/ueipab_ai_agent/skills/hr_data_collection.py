@@ -427,9 +427,47 @@ RECORDATORIO IMPORTANTE:
         escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', ai_response, re.MULTILINE)
         if escalate_match:
             escalate_desc = escalate_match.group(1).strip()
+            emp_name = context.get('employee_name', 'Empleado')
+            institution = context.get('institution', 'UEIPAB')
+            request_id = context.get('request_id', 0)
+
+            # Build escalation email for HR Manager
+            odoo_base = conversation.env['ir.config_parameter'].sudo().get_param(
+                'web.base.url', 'http://localhost:8069')
+            request_url = (
+                f"{odoo_base}/web#id={request_id}"
+                f"&model=hr.data.collection.request&view_type=form"
+            ) if request_id else ''
+            conv_url = (
+                f"{odoo_base}/web#id={conversation.id}"
+                f"&model=ai.agent.conversation&view_type=form"
+            )
+
+            body_html = (
+                f'<h3>[{institution}] Glenda HR — Escalacion</h3>'
+                f'<p><strong>Empleado:</strong> {emp_name}</p>'
+                f'<p><strong>Motivo:</strong> {escalate_desc}</p>'
+                f'<p><strong>Conversacion:</strong> <a href="{conv_url}">#{conversation.id}</a></p>'
+            )
+            if request_url:
+                body_html += (
+                    f'<p><strong>Solicitud:</strong> '
+                    f'<a href="{request_url}">#{request_id}</a></p>'
+                )
+            body_html += (
+                '<hr/>'
+                '<p><em>Este correo fue generado automaticamente por Glenda AI. '
+                'Requiere atencion del equipo de Recursos Humanos.</em></p>'
+            )
+
             return {
                 'message': visible_text or ai_response,
                 'escalate': escalate_desc,
+                'send_escalation_email': {
+                    'to': 'recursoshumanos@ueipab.edu.ve',
+                    'subject': f'[GLENDA-HR] Requiere atencion: {emp_name} — {escalate_desc[:80]}',
+                    'body_html': body_html,
+                },
             }
 
         # --- Check for RESOLVED ---
