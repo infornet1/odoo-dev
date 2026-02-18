@@ -1,11 +1,11 @@
 # Glenda HR Data Collection — AI-Assisted Employee Data Verification
 
-**Status:** Planning
+**Status:** Testing (Gustavo test COMPLETED)
 **Created:** 2026-02-18
 **Module:** `ueipab_ai_agent` (new skill) + `ueipab_hr_employee` (new module for employee extensions)
 **Skill Code:** `hr_data_collection`
 **Target:** 44 employees (from latest payslip batches)
-**Test Employee:** Gustavo Perdomo
+**Test Employee:** Gustavo Perdomo (Request #9, Conversation #25 — COMPLETED)
 **Language:** Venezuelan Spanish
 
 ---
@@ -15,8 +15,8 @@
 Extend Glenda's AI Agent capabilities with a new **HR Data Collection** skill that proactively contacts employees via WhatsApp to verify and collect:
 
 1. **Phone number** — confirm correct mobile, save in `+58 4XX XXXXXXX` format
-2. **Cedula de Identidad** — confirm number (format `V15128008`), expiry date (format `MM/YYYY` → stored as last day of month), request photo/scan
-3. **RIF (Registro de Informacion Fiscal)** — request number + photo/screenshot, validate expiration, upload to employee profile
+2. **Cedula de Identidad** — confirm number (format `V15128008`), expiry date (format `MM/YYYY` → stored as last day of month), request photo/scan. Also collects personal data: nationality (auto-derived), gender, date of birth (from photo), place of birth.
+3. **RIF (Registro de Informacion Fiscal)** — request number (format `V151280087`, no dashes) + photo/screenshot, validate expiration, upload to employee profile
 4. **Private address** — extract/confirm from RIF document
 5. **Emergency contact** — name + phone number
 
@@ -86,8 +86,12 @@ hr.data.collection.request
 │   ├── cedula_number            (Char — e.g. "V15128008")
 │   ├── cedula_expiry_date       (Date — e.g. 2035-06-30 from "06/2035")
 │   ├── cedula_photo_received    / cedula_photo_date
+│   ├── nationality_country_code (Char — auto-derived: V→VE, E→foreign)
+│   ├── gender_value             (Selection: male/female/other)
+│   ├── birthday_value           (Date — extracted from cedula photo)
+│   ├── place_of_birth_value     (Char — asked during cedula phase)
 │   ├── rif_number_confirmed     / rif_confirmed_date
-│   ├── rif_number_value         (Char — e.g. "V-15128008-9")
+│   ├── rif_number_value         (Char — e.g. "V151280087")
 │   ├── rif_expiry_date          (Date — extracted from document)
 │   ├── rif_photo_received       / rif_photo_date
 │   ├── address_confirmed        / address_confirmed_date
@@ -139,9 +143,9 @@ PHASE 1: Phone Confirmation
   IF no phone:
     Glenda: "...Necesito confirmar tu numero de WhatsApp personal.
              Me lo podrias indicar?"
-  → Save confirmed phone in +58 format to request + hr.employee.mobile_phone
+  → Save confirmed phone in +58 format to request + hr.employee.mobile_phone + hr.employee.private_phone
 
-PHASE 2: Cedula de Identidad
+PHASE 2: Cedula de Identidad + Personal Data
   Context: Check identification_id and id_expiry_date
   IF has cedula:
     Glenda: "Tu cedula es [V15128008], confirmas?
@@ -153,6 +157,10 @@ PHASE 2: Cedula de Identidad
              Puede ser por aqui o por correo a recursoshumanos@ueipab.edu.ve"
   → Save: identification_id (V15128008), id_expiry_date (06/2035 → 2035-06-30)
   → Upload photo to identification_attachment_ids (named "Cedula - V15128008.jpg")
+  → Auto-derive: nationality (V-prefix → Venezuela), country_of_birth (V → VE)
+  → From cedula photo: extract birthday via Claude Vision
+  → Ask: gender confirmation, place of birth (if not already on file)
+  → Save: gender, birthday, place_of_birth, nationality_country_code
 
 PHASE 3: RIF (Registro de Informacion Fiscal)
   Glenda: "Ahora necesitamos tu RIF. Por favor, indicame:
@@ -165,7 +173,7 @@ PHASE 3: RIF (Registro de Informacion Fiscal)
   → If expired: "Tu RIF vencio el [date]. Necesitas renovarlo.
      Mientras tanto, registramos el actual."
   → Save: ueipab_rif, ueipab_rif_expiry_date
-  → Upload photo to identification_attachment_ids (named "RIF - V-15128008-9.jpg")
+  → Upload photo to identification_attachment_ids (named "RIF - V151280087.jpg")
 
 PHASE 4: Address Confirmation
   Context: Extract address from RIF photo via Claude Vision
@@ -218,9 +226,12 @@ Extending the existing marker pattern used by other skills:
 | `ACTION:PHASE_COMPLETE:cedula:V15128008` | Cedula number confirmed | |
 | `ACTION:PHASE_COMPLETE:cedula_expiry:2035-06-30` | Cedula expiry confirmed | "06/2035" → last day of month |
 | `ACTION:SAVE_DOCUMENT:cedula` | Current attachment is Cedula photo | Upload to identification_attachment_ids |
-| `ACTION:PHASE_COMPLETE:rif_number:V-15128008-9` | RIF number confirmed | |
+| `ACTION:PHASE_COMPLETE:rif_number:V151280087` | RIF number confirmed | |
 | `ACTION:PHASE_COMPLETE:rif_expiry:2028-05-15` | RIF expiry from photo | Claude Vision extraction |
 | `ACTION:SAVE_DOCUMENT:rif` | Current attachment is RIF photo | Upload to identification_attachment_ids |
+| `ACTION:PHASE_COMPLETE:gender:male` | Gender confirmed | Values: male/female/other |
+| `ACTION:PHASE_COMPLETE:birthday:1990-01-15` | Date of birth confirmed | YYYY-MM-DD format |
+| `ACTION:PHASE_COMPLETE:place_of_birth:El Tigre` | Place of birth confirmed | City/town name |
 | `ACTION:PHASE_COMPLETE:address:Calle X, El Tigre, Anzoategui` | Address confirmed | |
 | `ACTION:PHASE_COMPLETE:emergency:Juan Perez;+58 412 1234567` | Emergency contact | Name;Phone format |
 | `ACTION:ESCALATE:description` | Cannot resolve or protected field issue | Email to HR Manager |
@@ -265,7 +276,7 @@ Venezuelan Cedula expiry is expressed as month/year: `06/2035`
 
 ### 4.9 RIF Document Processing
 
-**RIF format:** `[V|E|J|G|P|C]-XXXXXXXX-X` (type-number-check_digit)
+**RIF format:** `[V|E|J|G|P|C]XXXXXXXXX` (type + digits, no dashes — official Venezuelan convention)
 
 **Claude Vision extraction from RIF photo:**
 1. RIF number (validate format)
@@ -275,7 +286,7 @@ Venezuelan Cedula expiry is expressed as month/year: `06/2035`
 
 **Storage — both Cedula and RIF use `identification_attachment_ids`:**
 - Cedula photo → `identification_attachment_ids` (name: `"Cedula - V15128008"`)
-- RIF photo → `identification_attachment_ids` (name: `"RIF - V-15128008-9"`)
+- RIF photo → `identification_attachment_ids` (name: `"RIF - V151280087"`)
 - RIF number → `hr.employee.ueipab_rif` field (new, in `ueipab_hr_employee` module)
 - RIF expiry → `hr.employee.ueipab_rif_expiry_date` field (new)
 - Cedula number → `hr.employee.identification_id` (existing standard field)
@@ -341,7 +352,7 @@ addons/ueipab_hr_employee/
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `ueipab_rif` | Char | RIF number (`V-XXXXXXXX-X`) |
+| `ueipab_rif` | Char | RIF number (`VXXXXXXXXX` (no dashes)) |
 | `ueipab_rif_expiry_date` | Date | RIF expiration date |
 
 **View extension:** Adds a third group `[RIF]` alongside existing `[Identification ID]` and `[Passport ID]` in the employee form's personal information page:
@@ -589,16 +600,22 @@ Glenda detects issue (name mismatch, employee refusal, etc.)
 | `name` | — | — | `ARCIDES ARZOLA` | **YES — NEVER TOUCH** |
 | `work_email` | — | — | `arcides.arzola@ueipab.edu.ve` | **YES — NEVER TOUCH** |
 | `mobile_phone` | Phase 1 | `+58 XXX XXXXXXX` | `+58 414 2337463` | No |
+| `private_phone` | Phase 1 | `+58 XXX XXXXXXX` | `+58 414 2337463` | No (mirrors mobile_phone) |
 | `identification_id` | Phase 2 | `VXXXXXXXX` | `V15128008` | No |
 | `id_expiry_date` | Phase 2 | Date (last day of month) | `2035-06-30` | No |
 | `identification_attachment_ids` | Phase 2+3 | Many2many ir.attachment | Cedula + RIF photos | No |
-| `ueipab_rif` | Phase 3 | `V-XXXXXXXX-X` | `V-15128008-9` | No |
+| `country_id` | Phase 2 | Many2one | Venezuela (auto-derived from V-prefix cedula) | No |
+| `gender` | Phase 2 | Selection | `male` / `female` / `other` | No |
+| `birthday` | Phase 2 | Date | `1990-01-15` (from cedula photo) | No |
+| `place_of_birth` | Phase 2 | Char | `El Tigre` | No |
+| `country_of_birth` | Phase 2 | Many2one | Venezuela (auto-derived from V-prefix cedula) | No |
+| `ueipab_rif` | Phase 3 | `VXXXXXXXXX` (no dashes) | `V151280087` | No |
 | `ueipab_rif_expiry_date` | Phase 3 | Date | `2028-05-15` | No |
 | `private_street` | Phase 4 | Free text | `Calle Bolivar, Sector Centro` | No |
-| `private_city` | Phase 4 | City name | `El Tigre` | No |
-| `private_state_id` | Phase 4 | Many2one | Anzoategui (ID 2171) | No |
-| `private_zip` | Phase 4 | Postal code | `6050` | No |
-| `private_country_id` | Phase 4 | Many2one | Venezuela | No |
+| `private_city` | Phase 4 | City name | `El Tigre` (parsed from address) | No |
+| `private_state_id` | Phase 4 | Many2one | Anzoategui (code V02, ID 2171) | No |
+| `private_zip` | Phase 4 | Postal code | `6050` (parsed or default) | No |
+| `private_country_id` | Phase 4 | Many2one | Venezuela (always set) | No |
 | `emergency_contact` | Phase 5 | Full name | `Maria Gonzalez` | No |
 | `emergency_phone` | Phase 5 | `+58 XXX XXXXXXX` | `+58 412 1234567` | No |
 
@@ -626,7 +643,13 @@ Glenda detects issue (name mismatch, employee refusal, etc.)
 | `emergency_contact` | Core Odoo | Emergency contact name |
 | `emergency_phone` | Core Odoo | Emergency contact phone |
 | `private_street`, `private_city`, etc. | Core Odoo | Private address fields |
+| `private_phone` | Core Odoo | Private phone (mirrors mobile_phone) |
 | `mobile_phone` | Core Odoo | Work mobile (used for WA number) |
+| `country_id` | Core Odoo | Nationality (auto-derived from cedula prefix) |
+| `gender` | Core Odoo | Gender (male/female/other) |
+| `birthday` | Core Odoo | Date of birth (from cedula photo) |
+| `place_of_birth` | Core Odoo | Place of birth (asked during Phase 2) |
+| `country_of_birth` | Core Odoo | Country of birth (auto-derived from cedula prefix) |
 
 ---
 
@@ -715,17 +738,19 @@ def _cron_check_document_expiry(self):
 - [x] Implement all ACTION markers: PHASE_COMPLETE (phone/cedula/cedula_expiry/rif_number/rif_expiry/address/emergency), SAVE_DOCUMENT (cedula/rif), ESCALATE, RESOLVED
 - [x] Implement `on_resolve()` — write data to employee with protected field checks (name/work_email NEVER touched)
 - [x] Phone normalization: `normalize_ve_phone()` — all VE formats → `+58 XXX XXXXXXX`
-- [x] RIF validation: `validate_rif_format()` — normalizes to `V-XXXXXXXX-X`
+- [x] RIF validation: `validate_rif_format()` — normalizes to `VXXXXXXXXX` (no dashes, official VE convention)
 - [x] Cedula expiry: `parse_cedula_expiry()` — `06/2035` → `2035-06-30` (last day of month)
+- [x] Address parsing: `parse_ve_address()` — extracts city, state (Odoo code V01-V24), zip from free text
+- [x] Personal data: nationality auto-derived from cedula prefix (V→VE), gender/birthday/place_of_birth markers
 - [x] Skill registered via `@register_skill('hr_data_collection')` decorator
-- [x] Verified in testing: get_context, get_greeting (smart confirmation), get_system_prompt (3877 chars), process_ai_response (marker parsing), on_resolve (employee write-back)
+- [x] Verified in testing: get_context, get_greeting (smart confirmation), get_system_prompt, process_ai_response (marker parsing), on_resolve (employee write-back with structured address)
 
 ### Phase C: Document Handling -- COMPLETED (2026-02-18)
 - [x] PDF-to-image conversion via PyMuPDF (fitz) — first page rendered at 2x resolution for Claude Vision
 - [x] `_convert_pdf_to_image()` on conversation model — tries archived binary first, falls back to URL download
 - [x] `_get_conversation_history()` enhanced: PDFs sent as image blocks so Claude can analyze via Vision
 - [x] Archive cron updated: now archives both `image` AND `document` types (was image-only)
-- [x] `_save_document_to_employee()` on skill — downloads latest attachment, creates ir.attachment with naming ("Cedula - V15128008.jpg", "RIF - V-15128008-9.pdf"), links to employee `identification_attachment_ids`
+- [x] `_save_document_to_employee()` on skill — downloads latest attachment, creates ir.attachment with naming ("Cedula - V15128008.jpg", "RIF - V151280087.pdf"), links to employee `identification_attachment_ids`
 - [x] SAVE_DOCUMENT markers now trigger actual document saving (not just boolean flags)
 - [x] Original file format preserved: PDFs stored as PDFs, images as images (conversion only for Vision)
 - [x] Claude Vision already handles RIF/Cedula data extraction via system prompt (Phase B)
@@ -761,12 +786,26 @@ def _cron_check_document_expiry(self):
 - [ ] Activity/email notification creation
 - [ ] Optional: auto-trigger renewal request for expired documents
 
-### Phase G: Testing with Gustavo (Estimated: 1-2 days)
-- [ ] Dry run conversation flow
-- [ ] Live test: full 5-phase conversation
-- [ ] Verify all data written correctly (including attachments)
-- [ ] Test edge cases (blurry photo, wrong format, name mismatch escalation)
-- [ ] Test email channel (send document via email)
+### Phase G: Testing with Gustavo -- COMPLETED (2026-02-18)
+- [x] Live test with Gustavo Perdomo (Request #9, Conversation #25)
+- [x] Full 5-phase conversation completed: phone → cedula → RIF → address → emergency
+- [x] All data written to hr.employee correctly (including attachments)
+- [x] Cedula photo: Claude Vision extracted name, detected name discrepancy → escalation email sent
+- [x] RIF photo: Claude Vision extracted RIF number, expiry date, and address
+- [x] Address parsing: `parse_ve_address()` extracts city (El Tigre), state (V02 Anzoátegui), zip (6050) from free text
+- [x] Country always set to Venezuela on address confirmation
+- [x] Personal data fields: nationality (auto-derived from V-prefix), gender, birthday, place_of_birth
+- [x] Private phone mirrors mobile_phone
+- [x] Escalation email deduplication (one per conversation)
+
+**Bugs found and fixed during Gustavo test:**
+1. `_extract_visible_text()` truncated messages after ACTION markers — fixed to strip marker lines only
+2. RIF format stored with dashes (`V-15128008-7`) — fixed to dashless convention (`V151280087`)
+3. VE state code mapping wrong (V01=Anzoátegui) — corrected (V01=Amazonas, V02=Anzoátegui)
+4. Country field missing from address write — made unconditional
+5. Claude not emitting markers for confirmed data — reinforced system prompt rules 5-6
+6. Duplicate escalation emails (4x for same issue) — added `escalation_date` dedup guard
+7. `private_phone` not populated — added to on_resolve() Phase 1 writes
 
 ### Phase H: Progressive Rollout (Weeks 2-6)
 - [ ] Week 2: 5 employees — small batch validation
@@ -817,3 +856,4 @@ def _cron_check_document_expiry(self):
 | 2026-02-18 | 0.3.0 | Phase A completed: `ueipab_hr_employee` v1.0.0 installed, `ueipab_ai_agent` v1.16.0 upgraded, `hr.data.collection.request` model + views + menu + security + skill record. PDF document support added to accepted formats (Section 4.10). |
 | 2026-02-18 | 0.4.0 | Phase B completed: skill class with 5-phase logic, utility functions, all ACTION markers. Phase C completed: PDF-to-image via PyMuPDF for Claude Vision, SAVE_DOCUMENT saves to employee `identification_attachment_ids`, archive cron handles PDFs. Module v1.17.0. |
 | 2026-02-18 | 0.5.0 | Phase D completed: Escalation email to recursoshumanos@ with Odoo links, HR email checker script for Freescout HR mailbox attachment processing, Freescout disk attachment reading, doc type heuristic. Phases A-D complete — ready for testing (Phase G). |
+| 2026-02-18 | 0.6.0 | Phase G completed: Live test with Gustavo Perdomo (5-phase conversation). Fixed 7 bugs: `_extract_visible_text()` truncation, RIF dashless format, VE state code mapping, unconditional country write, marker emission enforcement, escalation email dedup, private_phone write. Added 4 personal data fields to Phase 2 (nationality, gender, birthday, place_of_birth — auto-derived where possible). Added `parse_ve_address()` for structured address parsing (city/state/zip extraction). |
