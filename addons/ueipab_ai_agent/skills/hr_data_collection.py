@@ -22,6 +22,7 @@ from . import (
     normalize_ve_phone,
     validate_rif_format,
     parse_cedula_expiry,
+    parse_ve_address,
 )
 
 _logger = logging.getLogger(__name__)
@@ -199,7 +200,8 @@ REGLAS CRITICAS:
 2. Avanza las fases en orden: telefono → cedula → RIF → direccion → emergencia.
 3. Si un dato ya existe, pide CONFIRMACION rapida ("Tu cedula es V15128008, es correcto?") en vez de pedirlo desde cero.
 4. Si faltan fotos de cedula o RIF, pide que las envien por WhatsApp o por correo a recursoshumanos@ueipab.edu.ve.
-5. Emite UN marcador ACTION por respuesta. Multiples datos en un solo turno se procesan con multiples marcadores separados por salto de linea.
+5. SIEMPRE emite los marcadores ACTION cuando el empleado confirma un dato. Puedes emitir multiples marcadores en la misma respuesta, cada uno en su propia linea. Los marcadores son OBLIGATORIOS para que el sistema registre los datos.
+6. Cuando el empleado confirma un dato existente (dice "si", "correcto", etc.), DEBES emitir el marcador PHASE_COMPLETE con el valor confirmado. Confirmar sin marcador NO guarda el dato.
 
 INSTRUCCIONES POR FASE:
 
@@ -218,11 +220,11 @@ FASE 2 - CEDULA DE IDENTIDAD:
 - Cuando recibas la foto, emite: ACTION:SAVE_DOCUMENT:cedula
 
 FASE 3 - RIF (Registro de Informacion Fiscal):
-- Pide el numero de RIF completo (formato V-XXXXXXXX-X, ejemplo V-15128008-9).
+- Pide el numero de RIF completo (formato VXXXXXXXXX, ejemplo V151280087 — sin guiones).
 - Pide una foto o captura del RIF.
 - Si la foto es visible, usa tu capacidad de vision para extraer: numero RIF, fecha vencimiento, domicilio fiscal.
 - Si el nombre en el RIF NO coincide con {emp_name}, NO modifiques el nombre. Emite ACTION:ESCALATE con descripcion.
-- Emite: ACTION:PHASE_COMPLETE:rif_number:V-15128008-9
+- Emite: ACTION:PHASE_COMPLETE:rif_number:V151280087 (sin guiones)
 - Emite: ACTION:PHASE_COMPLETE:rif_expiry:AAAA-MM-DD (formato ISO)
 - Cuando recibas la foto, emite: ACTION:SAVE_DOCUMENT:rif
 
@@ -630,19 +632,28 @@ RECORDATORIO IMPORTANTE:
             if hasattr(emp, 'ueipab_rif_expiry_date') and request.rif_expiry_date:
                 writes['ueipab_rif_expiry_date'] = request.rif_expiry_date
 
-        # Phase 4: Address
+        # Phase 4: Address — parse structured components from free text
         if request.address_confirmed and request.address_value:
-            writes['private_street'] = request.address_value
-            # Default Venezuelan address components for El Tigre employees
-            if not emp.private_city:
+            parsed = parse_ve_address(request.address_value)
+            writes['private_street'] = parsed['street'] or request.address_value
+            if parsed['city']:
+                writes['private_city'] = parsed['city']
+            elif not emp.private_city:
                 writes['private_city'] = 'El Tigre'
-            if not emp.private_state_id:
-                # Anzoategui state ID 2171
+            if parsed['state_code']:
+                state = env['res.country.state'].search(
+                    [('code', '=', parsed['state_code'])], limit=1)
+                if state:
+                    writes['private_state_id'] = state.id
+            elif not emp.private_state_id:
+                # Default: Anzoátegui (V02 in Odoo)
                 anzoategui = env['res.country.state'].search(
-                    [('code', '=', 'V01')], limit=1)
+                    [('code', '=', 'V02')], limit=1)
                 if anzoategui:
                     writes['private_state_id'] = anzoategui.id
-            if not emp.private_zip:
+            if parsed['zip']:
+                writes['private_zip'] = parsed['zip']
+            elif not emp.private_zip:
                 writes['private_zip'] = '6050'
             if not emp.private_country_id:
                 ve = env['res.country'].search([('code', '=', 'VE')], limit=1)

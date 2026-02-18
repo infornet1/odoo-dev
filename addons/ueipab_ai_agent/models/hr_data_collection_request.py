@@ -59,7 +59,7 @@ class HrDataCollectionRequest(models.Model):
     # --- Phase 3: RIF ---
     rif_number_confirmed = fields.Boolean('RIF Confirmado', default=False)
     rif_confirmed_date = fields.Datetime('Fecha Confirmacion RIF')
-    rif_number_value = fields.Char('Numero RIF (e.g. V-15128008-9)')
+    rif_number_value = fields.Char('Numero RIF (e.g. V151280087)')
     rif_expiry_date = fields.Date('Vencimiento RIF')
     rif_photo_received = fields.Boolean('Foto RIF Recibida', default=False)
     rif_photo_date = fields.Datetime('Fecha Foto RIF')
