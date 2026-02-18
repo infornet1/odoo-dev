@@ -655,10 +655,9 @@ RECORDATORIO IMPORTANTE:
                 writes['private_zip'] = parsed['zip']
             elif not emp.private_zip:
                 writes['private_zip'] = '6050'
-            if not emp.private_country_id:
-                ve = env['res.country'].search([('code', '=', 'VE')], limit=1)
-                if ve:
-                    writes['private_country_id'] = ve.id
+            ve = env['res.country'].search([('code', '=', 'VE')], limit=1)
+            if ve:
+                writes['private_country_id'] = ve.id
 
         # Phase 5: Emergency
         if request.emergency_confirmed:
