@@ -238,3 +238,70 @@ class HrDataCollectionRequest(models.Model):
         self.ensure_one()
         if self.state == 'cancelled':
             self.state = 'draft'
+
+    @api.model
+    def _cron_start_pending(self):
+        """Stagger-start draft requests respecting capacity limits.
+
+        Reads config:
+        - ai_agent.stagger_batch_size (default 2): max requests to start per run
+        - ai_agent.stagger_max_active (default 10): max concurrent active conversations
+
+        Picks FIFO by create_date. Each request is started + committed individually
+        so a failure on one doesn't block the rest.
+        """
+        Conversation = self.env['ai.agent.conversation']
+
+        # Environment and schedule guards (reuse from conversation model)
+        if not Conversation._is_active_environment():
+            return
+        if not Conversation._is_within_schedule():
+            return
+        if Conversation._is_dry_run():
+            _logger.info("HR Stagger CRON: dry_run=True, skipping.")
+            return
+
+        ICP = self.env['ir.config_parameter'].sudo()
+        batch_size = int(ICP.get_param('ai_agent.stagger_batch_size', '2'))
+        max_active = int(ICP.get_param('ai_agent.stagger_max_active', '10'))
+
+        # Count ALL active conversations (not just HR), states that represent ongoing work
+        active_count = Conversation.search_count([
+            ('state', 'in', ('draft', 'active', 'waiting')),
+        ])
+        available_slots = max(0, max_active - active_count)
+        to_start = min(batch_size, available_slots)
+
+        if to_start <= 0:
+            _logger.info(
+                "HR Stagger CRON: no slots available "
+                "(active=%d, max=%d). Skipping.",
+                active_count, max_active)
+            return
+
+        # Pick oldest draft requests
+        drafts = self.search([
+            ('state', '=', 'draft'),
+        ], order='create_date asc', limit=to_start)
+
+        if not drafts:
+            _logger.info("HR Stagger CRON: no draft requests to start.")
+            return
+
+        _logger.info(
+            "HR Stagger CRON: starting %d of %d draft requests "
+            "(active=%d, max=%d, batch_size=%d)",
+            len(drafts), to_start, active_count, max_active, batch_size)
+
+        for req in drafts:
+            try:
+                req.action_start()
+                self.env.cr.commit()
+                _logger.info(
+                    "HR Stagger CRON: started request #%d (%s)",
+                    req.id, req.employee_id.name)
+            except Exception:
+                self.env.cr.rollback()
+                _logger.exception(
+                    "HR Stagger CRON: failed to start request #%d (%s)",
+                    req.id, req.employee_id.name)

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== Wizard Form View ===== -->
+    <record id="hr_data_collection_create_wizard_form" model="ir.ui.view">
+        <field name="name">hr.data.collection.create.wizard.form</field>
+        <field name="model">hr.data.collection.create.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear Solicitudes de Recoleccion">
+                <!-- SELECT state -->
+                <div invisible="state != 'select'">
+                    <group>
+                        <group>
+                            <field name="payslip_run_id"/>
+                        </group>
+                        <group>
+                            <field name="total_count" readonly="1"/>
+                            <field name="selected_count" readonly="1"/>
+                            <field name="excluded_count" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="mb-2">
+                        <button name="action_select_all" string="Seleccionar Todos"
+                                type="object" class="btn-link"/>
+                        <button name="action_deselect_all" string="Deseleccionar Todos"
+                                type="object" class="btn-link"/>
+                    </div>
+                    <field name="line_ids" nolabel="1">
+                        <tree editable="bottom"
+                              decoration-muted="has_existing_request == True"
+                              decoration-danger="has_phone == False">
+                            <field name="selected" widget="boolean_toggle"/>
+                            <field name="employee_name"/>
+                            <field name="has_phone" widget="boolean" string="Tel"/>
+                            <field name="has_cedula" widget="boolean" string="CI"/>
+                            <field name="has_address" widget="boolean" string="Dir"/>
+                            <field name="has_existing_request" widget="boolean"
+                                   string="Existente" column_invisible="True"/>
+                            <field name="existing_request_state" widget="badge"
+                                   string="Solicitud"
+                                   decoration-success="existing_request_state == 'completed'"
+                                   decoration-warning="existing_request_state == 'partial'"
+                                   decoration-info="existing_request_state == 'in_progress'"
+                                   decoration-danger="existing_request_state == 'cancelled'"
+                                   optional="show"/>
+                            <field name="employee_id" column_invisible="True"/>
+                        </tree>
+                    </field>
+                </div>
+
+                <!-- DONE state -->
+                <div invisible="state != 'done'">
+                    <div class="alert alert-success text-center" role="status">
+                        <h3>
+                            <i class="fa fa-check-circle"/>
+                            Se crearon <field name="created_count" readonly="1" class="d-inline"/> solicitudes
+                        </h3>
+                        <p>Las solicitudes se crearon en estado <strong>Borrador</strong>.
+                           El CRON de stagger las iniciara automaticamente segun la capacidad disponible,
+                           o puede iniciarlas manualmente.</p>
+                    </div>
+                </div>
+
+                <field name="state" invisible="1"/>
+
+                <footer>
+                    <button name="action_create_requests" string="Crear Solicitudes"
+                            type="object" class="btn-primary"
+                            invisible="state != 'select'"/>
+                    <button name="action_view_requests" string="Ver Solicitudes"
+                            type="object" class="btn-primary"
+                            invisible="state != 'done'"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"
+                            invisible="state != 'select'"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"
+                            invisible="state != 'done'"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== Action: From Payslip Batch button ===== -->
+    <record id="action_create_collection_from_batch" model="ir.actions.act_window">
+        <field name="name">Recoleccion de Datos</field>
+        <field name="res_model">hr.data.collection.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+    <!-- ===== Action: Standalone from menu ===== -->
+    <record id="action_create_collection_standalone" model="ir.actions.act_window">
+        <field name="name">Crear desde Lote</field>
+        <field name="res_model">hr.data.collection.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

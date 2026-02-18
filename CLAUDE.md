@@ -46,7 +46,7 @@
 | 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 29 | Resolution Bridge | Testing | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
-| 31 | HR Data Collection (Glenda) | Planning | `ueipab_ai_agent` + `ueipab_hr_employee` | [Plan](documentation/GLENDA_HR_DATA_COLLECTION.md) |
+| 31 | HR Data Collection (Glenda) | Testing | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 
 ---
 
@@ -126,7 +126,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.15.0 | 2026-02-16 |
+| ueipab_ai_agent | 17.0.1.18.0 | 2026-02-18 |
 
 ### Production Environment
 

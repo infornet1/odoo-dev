@@ -776,10 +776,18 @@ def _cron_check_document_expiry(self):
 - [x] State file: `scripts/ai_agent_hr_email_checker_state.json`
 - [x] Verified: Odoo escalation email (dry run), Freescout attachment read (50KB test), script dry run OK
 
-### Phase E: Batch Operations + Stagger (Estimated: 1-2 days)
-- [ ] Batch launch wizard (from payslip batch)
-- [ ] Staggered start CRON with capacity limits
-- [ ] Progress dashboard / stats
+### Phase E: Batch Operations + Stagger CRON -- COMPLETED (2026-02-18)
+- [x] Batch launch wizard: `hr.data.collection.create.wizard` + `hr.data.collection.create.line` (TransientModels)
+- [x] Wizard shows employee status indicators (phone, cedula, address, existing request)
+- [x] Two access points: "Recoleccion de Datos" button on payslip batch form + standalone menu
+- [x] Wizard 2-state form: select (with toggle/deselect-all) → done (summary + "Ver Solicitudes")
+- [x] Stagger CRON: `_cron_start_pending()` on `hr.data.collection.request` (every 30 min)
+- [x] Respects `ai_agent.stagger_batch_size` (default 2) and `ai_agent.stagger_max_active` (default 10)
+- [x] Counts ALL active conversations (all skills) for capacity check
+- [x] Individual commit/rollback per request start (one failure doesn't block others)
+- [x] `hr_payroll_community` added as dependency (payslip batch view inheritance)
+- [x] Security: wizard + line models accessible to all users
+- [x] Module version bumped to 17.0.1.18.0
 
 ### Phase F: Document Expiry Tracking (Estimated: 1 day)
 - [ ] Weekly CRON for combined RIF + Cedula expiry check
@@ -857,3 +865,4 @@ def _cron_check_document_expiry(self):
 | 2026-02-18 | 0.4.0 | Phase B completed: skill class with 5-phase logic, utility functions, all ACTION markers. Phase C completed: PDF-to-image via PyMuPDF for Claude Vision, SAVE_DOCUMENT saves to employee `identification_attachment_ids`, archive cron handles PDFs. Module v1.17.0. |
 | 2026-02-18 | 0.5.0 | Phase D completed: Escalation email to recursoshumanos@ with Odoo links, HR email checker script for Freescout HR mailbox attachment processing, Freescout disk attachment reading, doc type heuristic. Phases A-D complete — ready for testing (Phase G). |
 | 2026-02-18 | 0.6.0 | Phase G completed: Live test with Gustavo Perdomo (5-phase conversation). Fixed 7 bugs: `_extract_visible_text()` truncation, RIF dashless format, VE state code mapping, unconditional country write, marker emission enforcement, escalation email dedup, private_phone write. Added 4 personal data fields to Phase 2 (nationality, gender, birthday, place_of_birth — auto-derived where possible). Added `parse_ve_address()` for structured address parsing (city/state/zip extraction). |
+| 2026-02-18 | 0.7.0 | Phase E completed: Batch wizard (`hr.data.collection.create.wizard` + line model), payslip batch button, standalone menu, stagger CRON (`_cron_start_pending()`, 30 min, batch_size=2, max_active=10), `hr_payroll_community` dependency. Module v1.18.0. |
