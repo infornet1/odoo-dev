@@ -89,22 +89,44 @@ class AiAgentConversation(models.Model):
             role = 'assistant' if msg.direction == 'outbound' else 'user'
 
             # Build content blocks for this message
+            SUPPORTED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
             blocks = []
             if msg.attachment_url and msg.attachment_type == 'image':
                 if msg.attachment_id and msg.attachment_id.datas:
-                    blocks.append({
-                        'type': 'image',
-                        'source': {
-                            'type': 'base64',
-                            'media_type': msg.attachment_id.mimetype or 'image/jpeg',
-                            'data': msg.attachment_id.datas.decode('utf-8'),
-                        },
-                    })
+                    mime = msg.attachment_id.mimetype or 'image/jpeg'
+                    if mime in SUPPORTED_IMAGE_TYPES:
+                        blocks.append({
+                            'type': 'image',
+                            'source': {
+                                'type': 'base64',
+                                'media_type': mime,
+                                'data': msg.attachment_id.datas.decode('utf-8'),
+                            },
+                        })
+                    else:
+                        _logger.warning(
+                            "Skipping unsupported image mimetype %s for msg %d",
+                            mime, msg.id)
+                        blocks.append({
+                            'type': 'text',
+                            'text': '(Imagen en formato no soportado)',
+                        })
                 else:
-                    blocks.append({
-                        'type': 'image',
-                        'source': {'type': 'url', 'url': msg.attachment_url},
-                    })
+                    # Validate URL extension before sending to Claude
+                    url_ext = msg.attachment_url.lower().split('?')[0].rsplit('.', 1)[-1]
+                    if url_ext in ('jpg', 'jpeg', 'png', 'gif', 'webp'):
+                        blocks.append({
+                            'type': 'image',
+                            'source': {'type': 'url', 'url': msg.attachment_url},
+                        })
+                    else:
+                        _logger.warning(
+                            "Skipping non-image URL extension .%s for msg %d",
+                            url_ext, msg.id)
+                        blocks.append({
+                            'type': 'text',
+                            'text': '(Archivo adjunto no soportado para vision)',
+                        })
             elif msg.attachment_url and msg.attachment_type == 'document':
                 # Convert PDF first page to image for Claude Vision
                 pdf_image = self._convert_pdf_to_image(msg)
@@ -429,9 +451,9 @@ class AiAgentConversation(models.Model):
             return 'image'
         if any(url_lower.endswith(ext) for ext in ('.pdf', '.doc', '.docx')):
             return 'document'
-        if any(url_lower.endswith(ext) for ext in ('.mp3', '.ogg', '.opus')):
+        if any(url_lower.endswith(ext) for ext in ('.mp3', '.ogg', '.opus', '.m4a', '.aac', '.wav')):
             return 'audio'
-        if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov')):
+        if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.3gp')):
             return 'video'
         return 'image'  # Default for MassivaMóvil (most common)
 
