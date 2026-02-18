@@ -383,7 +383,11 @@ class AiAgentConversation(models.Model):
             self._handle_escalation(action['escalate'])
 
         if action.get('send_escalation_email'):
-            self._send_escalation_email(action['send_escalation_email'])
+            # Only send one escalation email per conversation to avoid duplicates
+            if not self.escalation_date:
+                self._send_escalation_email(action['send_escalation_email'])
+            else:
+                _logger.info("Conversation %d: skipping duplicate escalation email", self.id)
 
         if action.get('alternative_phone'):
             self.write({'alternative_phone': action['alternative_phone']})
