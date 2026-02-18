@@ -48,13 +48,22 @@ class HrDataCollectionRequest(models.Model):
     phone_confirmed_date = fields.Datetime('Fecha Confirmacion Telefono')
     phone_value = fields.Char('Telefono Confirmado (+58 format)')
 
-    # --- Phase 2: Cedula ---
+    # --- Phase 2: Cedula + Personal Data ---
     cedula_confirmed = fields.Boolean('Cedula Confirmada', default=False)
     cedula_confirmed_date = fields.Datetime('Fecha Confirmacion Cedula')
     cedula_number = fields.Char('Numero Cedula (e.g. V15128008)')
     cedula_expiry_date = fields.Date('Vencimiento Cedula')
     cedula_photo_received = fields.Boolean('Foto Cedula Recibida', default=False)
     cedula_photo_date = fields.Datetime('Fecha Foto Cedula')
+    # Sub-fields extracted during cedula phase
+    nationality_country_code = fields.Char('Nacionalidad (codigo pais)')
+    gender_value = fields.Selection([
+        ('male', 'Masculino'),
+        ('female', 'Femenino'),
+        ('other', 'Otro'),
+    ], string='Genero')
+    birthday_value = fields.Date('Fecha de Nacimiento')
+    place_of_birth_value = fields.Char('Lugar de Nacimiento')
 
     # --- Phase 3: RIF ---
     rif_number_confirmed = fields.Boolean('RIF Confirmado', default=False)

@@ -102,22 +102,26 @@
                             </group>
                         </page>
 
-                        <!-- Phase 2: Cedula -->
+                        <!-- Phase 2: Cedula + Personal Data -->
                         <page string="2. Cedula" name="phase_cedula">
                             <group>
-                                <group>
+                                <group string="Cedula">
                                     <field name="cedula_confirmed"/>
                                     <field name="cedula_number"
                                            invisible="not cedula_confirmed"/>
                                     <field name="cedula_expiry_date"
                                            invisible="not cedula_confirmed"/>
-                                </group>
-                                <group>
                                     <field name="cedula_confirmed_date"
                                            invisible="not cedula_confirmed"/>
                                     <field name="cedula_photo_received"/>
                                     <field name="cedula_photo_date"
                                            invisible="not cedula_photo_received"/>
+                                </group>
+                                <group string="Datos Personales">
+                                    <field name="nationality_country_code"/>
+                                    <field name="gender_value"/>
+                                    <field name="birthday_value"/>
+                                    <field name="place_of_birth_value"/>
                                 </group>
                             </group>
                         </page>

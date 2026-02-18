@@ -104,6 +104,12 @@ class HrDataCollectionSkill:
             'current_emergency_name': emp.emergency_contact or '',
             'current_emergency_phone': emp.emergency_phone or '',
             'current_work_email': emp.work_email or '',
+            # Personal data (Phase 2 sub-fields)
+            'current_gender': emp.gender or '',
+            'current_birthday': str(emp.birthday) if emp.birthday else '',
+            'current_place_of_birth': emp.place_of_birth or '',
+            'current_country_of_birth': emp.country_of_birth.name if emp.country_of_birth else '',
+            'current_nationality': emp.country_id.name if emp.country_id else '',
             # Phase completion status (from request)
             'phone_done': request.phone_confirmed,
             'cedula_done': request.cedula_confirmed,
@@ -112,6 +118,10 @@ class HrDataCollectionSkill:
             'emergency_done': request.emergency_confirmed,
             'cedula_photo_done': request.cedula_photo_received,
             'rif_photo_done': request.rif_photo_received,
+            # Personal data completion (from request)
+            'gender_done': bool(request.gender_value),
+            'birthday_done': bool(request.birthday_value),
+            'place_of_birth_done': bool(request.place_of_birth_value),
         })
         return ctx
 
@@ -182,6 +192,16 @@ class HrDataCollectionSkill:
                 f"  - Contacto emergencia: {context['current_emergency_name']} "
                 f"({context['current_emergency_phone']})"
             )
+        # Personal data
+        if context.get('current_gender'):
+            gender_map = {'male': 'Masculino', 'female': 'Femenino', 'other': 'Otro'}
+            existing_data_lines.append(f"  - Genero registrado: {gender_map.get(context['current_gender'], context['current_gender'])}")
+        if context.get('current_birthday'):
+            existing_data_lines.append(f"  - Fecha nacimiento: {context['current_birthday']}")
+        if context.get('current_place_of_birth'):
+            existing_data_lines.append(f"  - Lugar nacimiento: {context['current_place_of_birth']}")
+        if context.get('current_nationality'):
+            existing_data_lines.append(f"  - Nacionalidad: {context['current_nationality']}")
 
         existing_data = '\n'.join(existing_data_lines) if existing_data_lines else '  (ninguno)'
 
@@ -211,13 +231,21 @@ FASE 1 - TELEFONO:
 - Si dan un numero nuevo, normaliza al formato +58 XXX XXXXXXX antes de emitir el marcador.
 - Formato: +58 seguido de 3 digitos de area y 7 digitos (ejemplo: +58 414 2337463).
 
-FASE 2 - CEDULA DE IDENTIDAD:
+FASE 2 - CEDULA DE IDENTIDAD + DATOS PERSONALES:
 - Pide el numero de cedula (formato VXXXXXXXX, ejemplo V15128008).
 - Pide la fecha de vencimiento (formato MM/AAAA, ejemplo 06/2035).
 - Pide una foto o captura de la cedula.
 - Emite: ACTION:PHASE_COMPLETE:cedula:V15128008
 - Emite: ACTION:PHASE_COMPLETE:cedula_expiry:06/2035
 - Cuando recibas la foto, emite: ACTION:SAVE_DOCUMENT:cedula
+- DATOS PERSONALES adicionales en esta fase (si no estan completos):
+  * Cuando recibas la foto de cedula, extrae la fecha de nacimiento con tu vision.
+    Emite: ACTION:PHASE_COMPLETE:birthday:AAAA-MM-DD (formato ISO, ejemplo 1982-02-21)
+  * Confirma el genero del empleado con una pregunta rapida: "Confirmo, tu genero es masculino?"
+    Emite: ACTION:PHASE_COMPLETE:gender:male (valores: male, female, other)
+  * Pregunta el lugar de nacimiento: "Cual es tu lugar de nacimiento (ciudad/estado)?"
+    Emite: ACTION:PHASE_COMPLETE:place_of_birth:El Tigre (solo el nombre de la ciudad)
+  * La nacionalidad y pais de nacimiento se derivan automaticamente de la cedula (V=Venezuela), NO preguntes por esto.
 
 FASE 3 - RIF (Registro de Informacion Fiscal):
 - Pide el numero de RIF completo (formato VXXXXXXXXX, ejemplo V151280087 — sin guiones).
@@ -503,12 +531,20 @@ RECORDATORIO IMPORTANTE:
 
             elif phase_key == 'cedula':
                 cedula = value.strip().upper().replace(' ', '')
-                request.write({
+                writes = {
                     'cedula_confirmed': True,
                     'cedula_confirmed_date': now,
                     'cedula_number': cedula,
-                })
-                _logger.info("HR Collection #%d: cedula confirmed: %s", request.id, cedula)
+                }
+                # Auto-derive nationality and country of birth from prefix
+                prefix = cedula[0] if cedula else ''
+                if prefix == 'V':
+                    writes['nationality_country_code'] = 'VE'
+                elif prefix == 'E':
+                    writes['nationality_country_code'] = ''  # foreign, needs manual
+                request.write(writes)
+                _logger.info("HR Collection #%d: cedula confirmed: %s (nationality: %s)",
+                             request.id, cedula, writes.get('nationality_country_code', '?'))
 
             elif phase_key == 'cedula_expiry':
                 expiry_date = parse_cedula_expiry(value)
@@ -561,6 +597,29 @@ RECORDATORIO IMPORTANTE:
                     'emergency_phone': emer_phone or '',
                 })
                 _logger.info("HR Collection #%d: emergency confirmed: %s", request.id, emer_name)
+
+            elif phase_key == 'gender':
+                gender = value.strip().lower()
+                if gender in ('male', 'female', 'other',
+                              'masculino', 'femenino', 'otro'):
+                    gender_map = {'masculino': 'male', 'femenino': 'female', 'otro': 'other'}
+                    normalized = gender_map.get(gender, gender)
+                    request.write({'gender_value': normalized})
+                    _logger.info("HR Collection #%d: gender: %s", request.id, normalized)
+
+            elif phase_key == 'birthday':
+                try:
+                    from datetime import date as date_cls
+                    parts = value.strip().split('-')
+                    bday = date_cls(int(parts[0]), int(parts[1]), int(parts[2]))
+                    request.write({'birthday_value': bday})
+                    _logger.info("HR Collection #%d: birthday: %s", request.id, bday)
+                except (ValueError, IndexError):
+                    _logger.warning("HR Collection #%d: invalid birthday: %s", request.id, value)
+
+            elif phase_key == 'place_of_birth':
+                request.write({'place_of_birth_value': value.strip().title()})
+                _logger.info("HR Collection #%d: place of birth: %s", request.id, value.strip())
 
         # --- Process SAVE_DOCUMENT markers ---
         doc_markers = re.findall(r'ACTION:SAVE_DOCUMENT:(\w+)', ai_response)
@@ -619,11 +678,27 @@ RECORDATORIO IMPORTANTE:
         if request.phone_confirmed and request.phone_value:
             writes['mobile_phone'] = request.phone_value
 
-        # Phase 2: Cedula
+        # Phase 2: Cedula + Personal Data
         if request.cedula_confirmed and request.cedula_number:
             writes['identification_id'] = request.cedula_number
         if request.cedula_expiry_date:
             writes['id_expiry_date'] = request.cedula_expiry_date
+        # Nationality (auto-derived from cedula prefix)
+        if request.nationality_country_code:
+            country = env['res.country'].search(
+                [('code', '=', request.nationality_country_code)], limit=1)
+            if country:
+                writes['country_id'] = country.id
+                writes['country_of_birth'] = country.id
+        # Gender
+        if request.gender_value:
+            writes['gender'] = request.gender_value
+        # Birthday
+        if request.birthday_value:
+            writes['birthday'] = request.birthday_value
+        # Place of birth
+        if request.place_of_birth_value:
+            writes['place_of_birth'] = request.place_of_birth_value
 
         # Phase 3: RIF
         if request.rif_number_confirmed and request.rif_number_value:
