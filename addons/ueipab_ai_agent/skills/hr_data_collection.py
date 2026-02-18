@@ -9,8 +9,11 @@ Multi-phase conversation to verify and collect employee data:
 
 PROTECTED FIELDS: name and work_email are NEVER modified.
 """
+import base64
 import logging
 import re
+
+import requests
 
 from . import (
     register_skill,
@@ -315,6 +318,94 @@ RECORDATORIO IMPORTANTE:
         text = ai_response[:match.start()].strip()
         return text if text else None
 
+    def _save_document_to_employee(self, conversation, doc_type, request):
+        """Download the latest attachment and save to employee identification_attachment_ids.
+
+        Finds the most recent inbound image/document attachment in the
+        conversation, downloads it if needed, creates an ir.attachment
+        with naming like "Cedula - V15128008.jpg" or "RIF - V-15128008-9.pdf",
+        and links it to the employee's identification_attachment_ids Many2many.
+
+        Args:
+            conversation: ai.agent.conversation record
+            doc_type: 'cedula' or 'rif'
+            request: hr.data.collection.request record
+
+        Returns True if saved successfully, False otherwise.
+        """
+        env = conversation.env
+        emp = request.employee_id
+
+        # Find latest inbound attachment (image or document)
+        attachment_msg = env['ai.agent.message'].search([
+            ('conversation_id', '=', conversation.id),
+            ('direction', '=', 'inbound'),
+            ('attachment_url', '!=', False),
+            ('attachment_type', 'in', ('image', 'document')),
+        ], order='timestamp desc', limit=1)
+
+        if not attachment_msg:
+            _logger.warning(
+                "HR Collection #%d: SAVE_DOCUMENT:%s — no attachment found in conversation",
+                request.id, doc_type)
+            return False
+
+        # Get binary data (base64-encoded)
+        binary_data = None
+        mimetype = 'image/jpeg'
+
+        if attachment_msg.attachment_id and attachment_msg.attachment_id.datas:
+            binary_data = attachment_msg.attachment_id.datas
+            mimetype = attachment_msg.attachment_id.mimetype or 'image/jpeg'
+        elif attachment_msg.attachment_url:
+            try:
+                resp = requests.get(attachment_msg.attachment_url, timeout=30)
+                resp.raise_for_status()
+                binary_data = base64.b64encode(resp.content)
+                mimetype = resp.headers.get('Content-Type', 'image/jpeg')
+            except Exception as e:
+                _logger.error(
+                    "HR Collection #%d: failed to download %s attachment: %s",
+                    request.id, doc_type, e)
+                return False
+
+        if not binary_data:
+            return False
+
+        # Build filename: "Cedula - V15128008.jpg" or "RIF - V-15128008-9.pdf"
+        ext_map = {
+            'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
+            'image/gif': '.gif', 'application/pdf': '.pdf',
+        }
+        ext = ext_map.get(mimetype, '.jpg')
+
+        if doc_type == 'cedula':
+            doc_label = request.cedula_number or emp.identification_id or 'Unknown'
+            filename = f"Cedula - {doc_label}{ext}"
+        else:
+            doc_label = request.rif_number_value or getattr(emp, 'ueipab_rif', '') or 'Unknown'
+            filename = f"RIF - {doc_label}{ext}"
+
+        # Create ir.attachment linked to employee
+        attachment = env['ir.attachment'].sudo().create({
+            'name': filename,
+            'type': 'binary',
+            'datas': binary_data,
+            'mimetype': mimetype,
+            'res_model': 'hr.employee',
+            'res_id': emp.id,
+        })
+
+        # Add to employee's identification_attachment_ids (Many2many)
+        emp.sudo().write({
+            'identification_attachment_ids': [(4, attachment.id)],
+        })
+
+        _logger.info(
+            "HR Collection #%d: saved %s as '%s' (attachment id=%d) for employee %s",
+            request.id, doc_type, filename, attachment.id, emp.name)
+        return True
+
     def process_ai_response(self, conversation, ai_response, context):
         """Parse Claude's response for control markers and update request.
 
@@ -437,17 +528,23 @@ RECORDATORIO IMPORTANTE:
             if not request:
                 continue
             if doc_type == 'cedula':
+                saved = self._save_document_to_employee(conversation, 'cedula', request)
                 request.write({
                     'cedula_photo_received': True,
                     'cedula_photo_date': now,
                 })
-                _logger.info("HR Collection #%d: cedula photo saved", request.id)
+                _logger.info(
+                    "HR Collection #%d: cedula photo %s",
+                    request.id, "saved to employee" if saved else "flagged (save pending)")
             elif doc_type == 'rif':
+                saved = self._save_document_to_employee(conversation, 'rif', request)
                 request.write({
                     'rif_photo_received': True,
                     'rif_photo_date': now,
                 })
-                _logger.info("HR Collection #%d: RIF photo saved", request.id)
+                _logger.info(
+                    "HR Collection #%d: RIF photo %s",
+                    request.id, "saved to employee" if saved else "flagged (save pending)")
 
         # --- Update request state ---
         if request:

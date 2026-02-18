@@ -105,6 +105,23 @@ class AiAgentConversation(models.Model):
                         'type': 'image',
                         'source': {'type': 'url', 'url': msg.attachment_url},
                     })
+            elif msg.attachment_url and msg.attachment_type == 'document':
+                # Convert PDF first page to image for Claude Vision
+                pdf_image = self._convert_pdf_to_image(msg)
+                if pdf_image:
+                    blocks.append({
+                        'type': 'image',
+                        'source': {
+                            'type': 'base64',
+                            'media_type': 'image/png',
+                            'data': pdf_image,
+                        },
+                    })
+                    if not msg.body:
+                        blocks.append({
+                            'type': 'text',
+                            'text': '(Documento PDF enviado)',
+                        })
             if msg.body:
                 blocks.append({'type': 'text', 'text': msg.body})
 
@@ -410,6 +427,43 @@ class AiAgentConversation(models.Model):
         if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov')):
             return 'video'
         return 'image'  # Default for MassivaMóvil (most common)
+
+    def _convert_pdf_to_image(self, msg):
+        """Convert a PDF attachment's first page to base64 PNG for Claude Vision.
+
+        Tries archived binary first, falls back to URL download.
+        Returns base64 string (no prefix) or None if conversion fails.
+        """
+        import base64
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            _logger.warning("PyMuPDF not installed — cannot convert PDF for Vision")
+            return None
+
+        try:
+            pdf_bytes = None
+            if msg.attachment_id and msg.attachment_id.datas:
+                pdf_bytes = base64.b64decode(msg.attachment_id.datas)
+            elif msg.attachment_url:
+                resp = requests.get(msg.attachment_url, timeout=30)
+                resp.raise_for_status()
+                pdf_bytes = resp.content
+
+            if not pdf_bytes:
+                return None
+
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            page = doc[0]
+            # 2x resolution for readability
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            png_data = pix.tobytes("png")
+            doc.close()
+
+            return base64.b64encode(png_data).decode('utf-8')
+        except Exception as e:
+            _logger.warning("Failed to convert PDF to image for msg %d: %s", msg.id, e)
+            return None
 
     def _send_verification_email(self, recipient_email):
         """Send a verification email to check if the customer's email is working."""
@@ -750,7 +804,7 @@ class AiAgentConversation(models.Model):
 
     @api.model
     def _cron_archive_attachments(self):
-        """Cron: download image attachments to ir.attachment before URL expiry."""
+        """Cron: download image/document attachments to ir.attachment before URL expiry."""
         if not self._is_active_environment():
             return
 
@@ -763,7 +817,7 @@ class AiAgentConversation(models.Model):
         messages = self.env['ai.agent.message'].search([
             ('attachment_url', '!=', False),
             ('attachment_id', '=', False),
-            ('attachment_type', '=', 'image'),
+            ('attachment_type', 'in', ('image', 'document')),
             ('timestamp', '<=', min_age),
             ('timestamp', '>=', max_age),
         ], limit=20)

@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB AI Agent',
-    'version': '17.0.1.16.0',
+    'version': '17.0.1.17.0',
     'category': 'Services',
     'summary': 'AI-powered WhatsApp agent for automated customer interactions',
     'author': 'UEIPAB',
@@ -20,6 +20,9 @@
         'views/menus.xml',
     ],
     'post_init_hook': '_load_api_configs',
+    'external_dependencies': {
+        'python': ['fitz'],  # PyMuPDF — PDF-to-image for Claude Vision
+    },
     'installable': True,
     'application': True,
     'license': 'LGPL-3',

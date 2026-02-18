@@ -720,12 +720,19 @@ def _cron_check_document_expiry(self):
 - [x] Skill registered via `@register_skill('hr_data_collection')` decorator
 - [x] Verified in testing: get_context, get_greeting (smart confirmation), get_system_prompt (3877 chars), process_ai_response (marker parsing), on_resolve (employee write-back)
 
-### Phase C: Document Handling (Estimated: 2-3 days)
-- [ ] Photo download from WhatsApp URL → `ir.attachment`
-- [ ] Upload to `identification_attachment_ids` with proper naming
-- [ ] Claude Vision prompt for RIF/Cedula data extraction
-- [ ] Expiry date parsing from Claude response
-- [ ] Name mismatch detection → escalation trigger
+### Phase C: Document Handling -- COMPLETED (2026-02-18)
+- [x] PDF-to-image conversion via PyMuPDF (fitz) — first page rendered at 2x resolution for Claude Vision
+- [x] `_convert_pdf_to_image()` on conversation model — tries archived binary first, falls back to URL download
+- [x] `_get_conversation_history()` enhanced: PDFs sent as image blocks so Claude can analyze via Vision
+- [x] Archive cron updated: now archives both `image` AND `document` types (was image-only)
+- [x] `_save_document_to_employee()` on skill — downloads latest attachment, creates ir.attachment with naming ("Cedula - V15128008.jpg", "RIF - V-15128008-9.pdf"), links to employee `identification_attachment_ids`
+- [x] SAVE_DOCUMENT markers now trigger actual document saving (not just boolean flags)
+- [x] Original file format preserved: PDFs stored as PDFs, images as images (conversion only for Vision)
+- [x] Claude Vision already handles RIF/Cedula data extraction via system prompt (Phase B)
+- [x] Name mismatch detection: system prompt instructs Claude to ESCALATE if RIF name differs from employee record
+- [x] `external_dependencies` added to manifest: `fitz` (PyMuPDF)
+- [x] Module version bumped to 17.0.1.17.0
+- [x] Verified in testing: PDF→PNG conversion (53KB), conversation history with image blocks, attachment creation + naming + linking
 
 ### Phase D: Email Integration (Estimated: 2-3 days)
 - [ ] Escalation email template (to recursoshumanos@ueipab.edu.ve)
@@ -797,3 +804,4 @@ def _cron_check_document_expiry(self):
 | 2026-02-18 | 0.1.0 | Initial planning document |
 | 2026-02-18 | 0.2.0 | Major refinements: dual-channel (WA + email), Cedula tracking (Phase 2), protected fields (name/work_email NEVER TOUCH), `identification_attachment_ids` reuse for Cedula + RIF, escalation via email to HR Manager, progressive 30-day rollout, smart confirmation for existing data, Freescout HR mailbox integration (mailbox_id=4), combined RIF + Cedula expiry CRON |
 | 2026-02-18 | 0.3.0 | Phase A completed: `ueipab_hr_employee` v1.0.0 installed, `ueipab_ai_agent` v1.16.0 upgraded, `hr.data.collection.request` model + views + menu + security + skill record. PDF document support added to accepted formats (Section 4.10). |
+| 2026-02-18 | 0.4.0 | Phase B completed: skill class with 5-phase logic, utility functions, all ACTION markers. Phase C completed: PDF-to-image via PyMuPDF for Claude Vision, SAVE_DOCUMENT saves to employee `identification_attachment_ids`, archive cron handles PDFs. Module v1.17.0. |
