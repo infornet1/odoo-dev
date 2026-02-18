@@ -674,9 +674,10 @@ RECORDATORIO IMPORTANTE:
 
         writes = {}
 
-        # Phase 1: Phone
+        # Phase 1: Phone (mobile + private mirror the same number)
         if request.phone_confirmed and request.phone_value:
             writes['mobile_phone'] = request.phone_value
+            writes['private_phone'] = request.phone_value
 
         # Phase 2: Cedula + Personal Data
         if request.cedula_confirmed and request.cedula_number:
