@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== Tree View ===== -->
+    <record id="hr_data_collection_request_view_tree" model="ir.ui.view">
+        <field name="name">hr.data.collection.request.tree</field>
+        <field name="model">hr.data.collection.request</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="state == 'completed'"
+                  decoration-warning="state == 'partial'"
+                  decoration-muted="state == 'cancelled'"
+                  decoration-info="state == 'in_progress'">
+                <field name="employee_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'completed'"
+                       decoration-warning="state == 'partial'"
+                       decoration-info="state == 'in_progress'"
+                       decoration-danger="state == 'cancelled'"/>
+                <field name="channel"/>
+                <field name="phone_confirmed" widget="boolean_toggle"/>
+                <field name="cedula_confirmed" widget="boolean_toggle"/>
+                <field name="rif_number_confirmed" widget="boolean_toggle"/>
+                <field name="address_confirmed" widget="boolean_toggle"/>
+                <field name="emergency_confirmed" widget="boolean_toggle"/>
+                <field name="phases_completed"/>
+                <field name="progress" widget="progressbar"/>
+                <field name="ai_conversation_state" widget="badge" optional="hide"
+                       decoration-warning="ai_conversation_state in ('waiting', 'timeout')"
+                       decoration-success="ai_conversation_state == 'resolved'"
+                       decoration-info="ai_conversation_state == 'active'"
+                       decoration-danger="ai_conversation_state == 'failed'"/>
+                <field name="attempt_count" optional="hide"/>
+                <field name="create_date" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ===== Form View ===== -->
+    <record id="hr_data_collection_request_view_form" model="ir.ui.view">
+        <field name="name">hr.data.collection.request.form</field>
+        <field name="model">hr.data.collection.request</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" string="Iniciar Recoleccion"
+                            type="object" class="btn-primary"
+                            invisible="state not in ('draft', 'partial')"/>
+                    <button name="action_mark_completed" string="Marcar Completada"
+                            type="object" class="btn-success"
+                            invisible="state != 'in_progress' or phases_completed != 5"/>
+                    <button name="action_mark_partial" string="Marcar Parcial"
+                            type="object"
+                            invisible="state != 'in_progress' or phases_completed == 0 or phases_completed == 5"/>
+                    <button name="action_cancel" string="Cancelar"
+                            type="object"
+                            invisible="state in ('completed', 'cancelled')"
+                            confirm="Esta seguro que desea cancelar esta solicitud?"/>
+                    <button name="action_reset_draft" string="Volver a Borrador"
+                            type="object"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,in_progress,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Informacion General">
+                            <field name="employee_id" readonly="state != 'draft'"/>
+                            <field name="batch_id" readonly="state != 'draft'"/>
+                            <field name="channel"/>
+                            <field name="ai_conversation_id"/>
+                            <field name="ai_conversation_state" widget="badge"
+                                   invisible="not ai_conversation_id"
+                                   decoration-warning="ai_conversation_state in ('waiting', 'timeout')"
+                                   decoration-success="ai_conversation_state == 'resolved'"
+                                   decoration-info="ai_conversation_state == 'active'"
+                                   decoration-danger="ai_conversation_state == 'failed'"/>
+                        </group>
+                        <group string="Progreso">
+                            <field name="phases_completed"/>
+                            <field name="progress" widget="progressbar"/>
+                            <field name="attempt_count"/>
+                            <field name="last_attempt_date"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Phase 1: Phone -->
+                        <page string="1. Telefono" name="phase_phone">
+                            <group>
+                                <group>
+                                    <field name="phone_confirmed"/>
+                                    <field name="phone_value"
+                                           invisible="not phone_confirmed"/>
+                                </group>
+                                <group>
+                                    <field name="phone_confirmed_date"
+                                           invisible="not phone_confirmed"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Phase 2: Cedula -->
+                        <page string="2. Cedula" name="phase_cedula">
+                            <group>
+                                <group>
+                                    <field name="cedula_confirmed"/>
+                                    <field name="cedula_number"
+                                           invisible="not cedula_confirmed"/>
+                                    <field name="cedula_expiry_date"
+                                           invisible="not cedula_confirmed"/>
+                                </group>
+                                <group>
+                                    <field name="cedula_confirmed_date"
+                                           invisible="not cedula_confirmed"/>
+                                    <field name="cedula_photo_received"/>
+                                    <field name="cedula_photo_date"
+                                           invisible="not cedula_photo_received"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Phase 3: RIF -->
+                        <page string="3. RIF" name="phase_rif">
+                            <group>
+                                <group>
+                                    <field name="rif_number_confirmed"/>
+                                    <field name="rif_number_value"
+                                           invisible="not rif_number_confirmed"/>
+                                    <field name="rif_expiry_date"
+                                           invisible="not rif_number_confirmed"/>
+                                </group>
+                                <group>
+                                    <field name="rif_confirmed_date"
+                                           invisible="not rif_number_confirmed"/>
+                                    <field name="rif_photo_received"/>
+                                    <field name="rif_photo_date"
+                                           invisible="not rif_photo_received"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Phase 4: Address -->
+                        <page string="4. Direccion" name="phase_address">
+                            <group>
+                                <group>
+                                    <field name="address_confirmed"/>
+                                    <field name="address_value"
+                                           invisible="not address_confirmed"/>
+                                </group>
+                                <group>
+                                    <field name="address_confirmed_date"
+                                           invisible="not address_confirmed"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Phase 5: Emergency -->
+                        <page string="5. Emergencia" name="phase_emergency">
+                            <group>
+                                <group>
+                                    <field name="emergency_confirmed"/>
+                                    <field name="emergency_name"
+                                           invisible="not emergency_confirmed"/>
+                                    <field name="emergency_phone"
+                                           invisible="not emergency_confirmed"/>
+                                </group>
+                                <group>
+                                    <field name="emergency_confirmed_date"
+                                           invisible="not emergency_confirmed"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Notes -->
+                        <page string="Notas" name="notes">
+                            <field name="notes" placeholder="Notas adicionales..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== Search View ===== -->
+    <record id="hr_data_collection_request_view_search" model="ir.ui.view">
+        <field name="name">hr.data.collection.request.search</field>
+        <field name="model">hr.data.collection.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="state"/>
+                <filter name="filter_draft" string="Borrador"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_in_progress" string="En Progreso"
+                        domain="[('state', '=', 'in_progress')]"/>
+                <filter name="filter_partial" string="Parcial"
+                        domain="[('state', '=', 'partial')]"/>
+                <filter name="filter_completed" string="Completada"
+                        domain="[('state', '=', 'completed')]"/>
+                <separator/>
+                <filter name="filter_missing_phone" string="Falta Telefono"
+                        domain="[('phone_confirmed', '=', False)]"/>
+                <filter name="filter_missing_rif" string="Falta RIF"
+                        domain="[('rif_number_confirmed', '=', False)]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_channel" string="Canal"
+                            context="{'group_by': 'channel'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===== Action ===== -->
+    <record id="hr_data_collection_request_action" model="ir.actions.act_window">
+        <field name="name">Recoleccion de Datos</field>
+        <field name="res_model">hr.data.collection.request</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="hr_data_collection_request_view_search"/>
+        <field name="context">{'search_default_filter_in_progress': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay solicitudes de recoleccion de datos
+            </p>
+            <p>
+                Cree solicitudes para recolectar datos de empleados
+                (telefono, cedula, RIF, direccion, contacto de emergencia).
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -5,3 +5,5 @@ from . import ai_agent_dashboard
 from . import whatsapp_service
 from . import claude_service
 from . import mail_bounce_log
+from . import hr_data_collection_request
+from . import hr_employee

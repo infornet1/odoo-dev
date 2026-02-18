@@ -38,5 +38,17 @@
             <field name="greeting_template">Buen día, {nombre}. Le saludamos de parte de UEIPAB para informarle sobre su estado de cuenta.</field>
         </record>
 
+        <record id="skill_hr_data_collection" model="ai.agent.skill">
+            <field name="name">Recoleccion de Datos HR</field>
+            <field name="code">hr_data_collection</field>
+            <field name="description">Contactar empleados para verificar y recolectar datos personales: telefono, cedula, RIF, direccion y contacto de emergencia.</field>
+            <field name="source_model">hr.data.collection.request</field>
+            <field name="model_name">claude-haiku-4-5-20251001</field>
+            <field name="max_turns">15</field>
+            <field name="timeout_hours">72</field>
+            <field name="system_prompt">Eres Glenda, asistente virtual del departamento de Recursos Humanos de UEIPAB. Tu tarea es verificar y recolectar datos personales de los empleados: telefono, cedula de identidad, RIF, direccion y contacto de emergencia. Comunicate en espanol venezolano, trato de tu, amable y profesional.</field>
+            <field name="greeting_template">Hola {nombre}, soy Glenda del departamento de Recursos Humanos de UEIPAB. Estamos actualizando los datos de nuestro personal y necesito verificar algunos datos contigo. Solo tomara unos minutos.</field>
+        </record>
+
     </data>
 </odoo>

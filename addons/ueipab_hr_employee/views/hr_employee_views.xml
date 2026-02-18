@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Add RIF group alongside Identification ID and Passport ID -->
+    <record id="view_employee_form_rif" model="ir.ui.view">
+        <field name="name">hr.employee.form.inherit.ueipab.rif</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="priority">25</field>
+        <field name="arch" type="xml">
+            <!-- Insert RIF group after the Passport ID group
+                 (hr_employee_updation creates identification_id and passport_id groups) -->
+            <xpath expr="//group[@name='passport_id']" position="after">
+                <group name="rif_id" string="RIF">
+                    <field name="ueipab_rif"/>
+                    <field name="ueipab_rif_expiry_date"
+                           groups="hr.group_hr_user"
+                           invisible="ueipab_rif in [None,False]"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

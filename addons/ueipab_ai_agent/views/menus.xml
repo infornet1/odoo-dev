@@ -32,6 +32,12 @@
               action="ueipab_bounce_log.mail_bounce_log_action"
               sequence="2"/>
 
+    <menuitem id="menu_ai_agent_data_collection"
+              name="Recoleccion de Datos"
+              parent="menu_ai_agent_operations"
+              action="hr_data_collection_request_action"
+              sequence="3"/>
+
     <!-- Configuracion category -->
     <menuitem id="menu_ai_agent_config"
               name="Configuracion"

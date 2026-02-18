@@ -1,11 +1,11 @@
 {
     'name': 'UEIPAB AI Agent',
-    'version': '17.0.1.15.0',
+    'version': '17.0.1.16.0',
     'category': 'Services',
     'summary': 'AI-powered WhatsApp agent for automated customer interactions',
     'author': 'UEIPAB',
     'website': '',
-    'depends': ['contacts', 'mail', 'mass_mailing', 'account', 'ueipab_bounce_log'],
+    'depends': ['contacts', 'mail', 'mass_mailing', 'account', 'ueipab_bounce_log', 'hr', 'ueipab_hr_employee'],
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',
@@ -16,6 +16,7 @@
         'views/ai_agent_skill_views.xml',
         'views/ai_agent_conversation_views.xml',
         'views/ai_agent_message_views.xml',
+        'views/hr_data_collection_request_views.xml',
         'views/menus.xml',
     ],
     'post_init_hook': '_load_api_configs',

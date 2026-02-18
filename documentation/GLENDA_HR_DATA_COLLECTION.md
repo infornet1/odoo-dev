@@ -281,7 +281,24 @@ Venezuelan Cedula expiry is expressed as month/year: `06/2035`
 - Cedula number → `hr.employee.identification_id` (existing standard field)
 - Cedula expiry → `hr.employee.id_expiry_date` (existing, from `hr_employee_updation`)
 
-### 4.10 Document Expiry CRON (Combined: RIF + Cedula)
+### 4.10 Accepted Document Formats
+
+Employees can send Cedula/RIF documents in any of these formats:
+
+| Format | Claude Vision | Handling |
+|--------|--------------|----------|
+| JPG/PNG/WEBP (photo) | Direct analysis | Best — Claude extracts all data directly |
+| PDF | Cannot read directly | Convert first page to image, then analyze via Vision |
+| Document (DOC/DOCX) | Not supported | Ask employee to send as photo or PDF instead |
+
+**PDF processing pipeline:**
+1. Download PDF from WhatsApp URL (or email attachment)
+2. Convert first page to image using `pdf2image` or `PyMuPDF`
+3. Send converted image to Claude Vision for RIF/Cedula data extraction
+4. Store the **original PDF** in `identification_attachment_ids` (not the converted image)
+5. Employee experience is identical regardless of format
+
+### 4.11 Document Expiry CRON (Combined: RIF + Cedula)
 
 Single weekly CRON that checks **both** RIF and Cedula expiry dates:
 
@@ -682,13 +699,15 @@ def _cron_check_document_expiry(self):
 
 ## 15. Development Phases
 
-### Phase A: Foundation (Estimated: 2-3 days)
-- [ ] Create `ueipab_hr_employee` module (RIF fields, employee form RIF group)
-- [ ] Create `hr.data.collection.request` model (within `ueipab_ai_agent`)
-- [ ] Create basic views (list, form, kanban for collection requests)
-- [ ] Add menu items under AI Agent app
-- [ ] Add employee form extensions (collection status indicator)
-- [ ] Security rules for both modules
+### Phase A: Foundation -- COMPLETED (2026-02-18)
+- [x] Create `ueipab_hr_employee` module v17.0.1.0.0 (RIF fields, expiry CRON, employee form RIF group)
+- [x] Create `hr.data.collection.request` model (within `ueipab_ai_agent` v17.0.1.16.0)
+- [x] Create views (tree with progress bar, form with 5-phase notebook tabs, search with filters)
+- [x] Add "Recoleccion de Datos" menu under AI Agent > Operaciones
+- [x] Add `data_collection_state` computed field on hr.employee
+- [x] Security rules: user (read) + manager (full CRUD)
+- [x] Skill data record: `hr_data_collection` (max_turns=15, timeout=72h)
+- [x] Installed and verified in testing (CRUD test with Gustavo Perdomo OK)
 
 ### Phase B: Skill Implementation (Estimated: 3-4 days)
 - [ ] Create `hr_data_collection.py` skill class
@@ -776,3 +795,4 @@ def _cron_check_document_expiry(self):
 |------|---------|---------|
 | 2026-02-18 | 0.1.0 | Initial planning document |
 | 2026-02-18 | 0.2.0 | Major refinements: dual-channel (WA + email), Cedula tracking (Phase 2), protected fields (name/work_email NEVER TOUCH), `identification_attachment_ids` reuse for Cedula + RIF, escalation via email to HR Manager, progressive 30-day rollout, smart confirmation for existing data, Freescout HR mailbox integration (mailbox_id=4), combined RIF + Cedula expiry CRON |
+| 2026-02-18 | 0.3.0 | Phase A completed: `ueipab_hr_employee` v1.0.0 installed, `ueipab_ai_agent` v1.16.0 upgraded, `hr.data.collection.request` model + views + menu + security + skill record. PDF document support added to accepted formats (Section 4.10). |
