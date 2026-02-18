@@ -1,6 +1,7 @@
 import logging
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -110,15 +111,101 @@ class HrDataCollectionRequest(models.Model):
             rec.progress = (count / 5.0) * 100
 
     def action_start(self):
-        """Start the data collection conversation."""
+        """Create an AI conversation and start the HR data collection flow.
+
+        Creates an ai.agent.conversation linked to this request,
+        finds the employee's WhatsApp number, and sends the greeting.
+        """
         self.ensure_one()
         if self.state not in ('draft', 'partial'):
-            return
+            raise UserError(_("Solo se puede iniciar una solicitud en estado Borrador o Parcial."))
+
+        emp = self.employee_id
+        if not emp:
+            raise UserError(_("La solicitud no tiene empleado asignado."))
+
+        # Get phone from employee
+        phone = emp.mobile_phone or emp.work_phone or ''
+        if not phone:
+            raise UserError(_(
+                "El empleado %s no tiene numero de telefono registrado. "
+                "Agregue un numero en el campo 'Telefono movil' del empleado."
+            ) % emp.name)
+
+        # Get the hr_data_collection skill
+        skill = self.env['ai.agent.skill'].search([
+            ('code', '=', 'hr_data_collection'),
+        ], limit=1)
+        if not skill:
+            raise UserError(_("No se encontro el skill 'hr_data_collection'."))
+
+        # Find or create a partner for the employee
+        partner = emp.user_id.partner_id if emp.user_id else None
+        if not partner:
+            # Search by work email
+            if emp.work_email:
+                partner = self.env['res.partner'].search([
+                    ('email', '=', emp.work_email),
+                ], limit=1)
+            if not partner:
+                partner = self.env['res.partner'].search([
+                    ('name', '=', emp.name),
+                ], limit=1)
+            if not partner:
+                raise UserError(_(
+                    "No se encontro un contacto (res.partner) para el empleado %s. "
+                    "Verifique que el empleado tenga un usuario o contacto asociado."
+                ) % emp.name)
+
+        # Check for existing active conversation for this request
+        existing = self.env['ai.agent.conversation'].search([
+            ('source_model', '=', 'hr.data.collection.request'),
+            ('source_id', '=', self.id),
+            ('state', 'in', ('draft', 'active', 'waiting')),
+        ], limit=1)
+        if existing:
+            raise UserError(_(
+                "Ya existe una conversacion activa para esta solicitud: %s. "
+                "Cierre o resuelva la conversacion existente primero."
+            ) % existing.name)
+
+        # Normalize phone
+        wa_service = self.env['ai.agent.whatsapp.service']
+        normalized_phone = wa_service._normalize_phone(phone)
+
+        # Create the conversation
+        conversation = self.env['ai.agent.conversation'].create({
+            'skill_id': skill.id,
+            'partner_id': partner.id,
+            'phone': normalized_phone,
+            'source_model': 'hr.data.collection.request',
+            'source_id': self.id,
+        })
+
+        # Link conversation to request
         self.write({
             'state': 'in_progress',
+            'ai_conversation_id': conversation.id,
             'attempt_count': self.attempt_count + 1,
             'last_attempt_date': fields.Datetime.now(),
         })
+
+        # Start the conversation (sends WhatsApp greeting)
+        conversation.action_start()
+
+        _logger.info(
+            "HR Collection #%d: started conversation #%d for %s (%s)",
+            self.id, conversation.id, emp.name, normalized_phone)
+
+        # Return action to view the conversation
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Conversacion AI'),
+            'res_model': 'ai.agent.conversation',
+            'res_id': conversation.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
     def action_mark_partial(self):
         """Mark as partial when some but not all phases are done."""
