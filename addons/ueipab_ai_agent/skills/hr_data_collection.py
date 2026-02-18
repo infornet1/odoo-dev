@@ -309,13 +309,13 @@ RECORDATORIO IMPORTANTE:
         )
 
     def _extract_visible_text(self, ai_response):
-        """Extract the text visible to the employee (before any markers)."""
-        # Find the first ACTION: or RESOLVED: marker
-        pattern = r'(?:ACTION|RESOLVED):'
-        match = re.search(pattern, ai_response)
-        if not match:
-            return ai_response.strip()
-        text = ai_response[:match.start()].strip()
+        """Extract text visible to the employee (strip marker lines, keep rest)."""
+        lines = ai_response.split('\n')
+        visible_lines = [
+            line for line in lines
+            if not re.match(r'^\s*(?:ACTION|RESOLVED):', line)
+        ]
+        text = '\n'.join(visible_lines).strip()
         return text if text else None
 
     def _save_document_to_employee(self, conversation, doc_type, request):
