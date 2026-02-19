@@ -414,18 +414,19 @@ def main():
                       customer_email, customer_id))
 
             fs_conn.commit()
-            logger.info("Freescout ticket #%d created for conv #%d", conv_number, conv_id)
+            logger.info("Freescout ticket id=%d (number=%d) created for conv #%d",
+                        conversation_db_id, conv_number, conv_id)
 
-            # Update Odoo with ticket number
+            # Update Odoo with ticket ID (not number — URLs use id)
             models.execute_kw(
                 ODOO_DB, uid, ODOO_PASSWORD,
                 'ai.agent.conversation', 'write',
-                [[conv_id], {'escalation_freescout_id': conv_number}],
+                [[conv_id], {'escalation_freescout_id': conversation_db_id}],
             )
 
             created_tickets.append({
                 'conv_id': conv_id,
-                'fs_number': conv_number,
+                'fs_number': conversation_db_id,
                 'partner_name': partner_name,
                 'phone': phone,
                 'reason': reason,
@@ -514,18 +515,9 @@ def main():
                 print(f"  DRY_RUN: Would add note to Freescout #{fs_number}: {last_entry[:80]}")
             else:
                 try:
-                    # Find Freescout conversation DB id by number
+                    # escalation_freescout_id now stores the DB id directly
+                    fs_conv_db_id = fs_number
                     with fs_conn.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT id FROM conversations WHERE number = %s",
-                            (fs_number,),
-                        )
-                        row = cursor.fetchone()
-                        if not row:
-                            logger.warning("Freescout conversation #%d not found", fs_number)
-                            continue
-
-                        fs_conv_db_id = row['id']
                         note_body = (
                             f"<p><strong>Escalacion adicional:</strong></p>"
                             f"<pre>{last_entry}</pre>"
