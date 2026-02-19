@@ -412,9 +412,27 @@ RECORDATORIO IMPORTANTE:
         if doc_type == 'cedula':
             doc_label = request.cedula_number or emp.identification_id or 'Unknown'
             filename = f"Cedula - {doc_label}{ext}"
+            prefix = 'Cedula - '
         else:
             doc_label = request.rif_number_value or getattr(emp, 'ueipab_rif', '') or 'Unknown'
             filename = f"RIF - {doc_label}{ext}"
+            prefix = 'RIF - '
+
+        # Deduplication: remove any existing attachment with the same prefix
+        # for this employee (keeps only the latest version)
+        existing = env['ir.attachment'].sudo().search([
+            ('res_model', '=', 'hr.employee'),
+            ('res_id', '=', emp.id),
+            ('name', '=like', f'{prefix}%'),
+        ])
+        if existing:
+            _logger.info(
+                "HR Collection #%d: replacing %d existing %s attachment(s) for %s",
+                request.id, len(existing), doc_type, emp.name)
+            emp.sudo().write({
+                'identification_attachment_ids': [(3, att.id) for att in existing],
+            })
+            existing.unlink()
 
         # Create ir.attachment linked to employee
         attachment = env['ir.attachment'].sudo().create({

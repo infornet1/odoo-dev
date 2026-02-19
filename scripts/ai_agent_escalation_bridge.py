@@ -58,7 +58,7 @@ ODOO_DB = ODOO_CONFIGS[TARGET_ENV]['db']
 ODOO_USER = ODOO_CONFIGS[TARGET_ENV]['user']
 ODOO_PASSWORD = ODOO_CONFIGS[TARGET_ENV]['password']
 
-FREESCOUT_BASE_URL = 'https://soporte.ueipab.edu.ve'
+FREESCOUT_BASE_URL = 'https://freescout.ueipab.edu.ve'
 
 # WhatsApp group for notifications
 WA_GROUP_ID = '1594720028@g.us'  # ueipab soporte

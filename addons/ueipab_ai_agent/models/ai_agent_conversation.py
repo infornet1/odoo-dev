@@ -57,7 +57,9 @@ class AiAgentConversation(models.Model):
     # Escalation tracking
     escalation_date = fields.Datetime('Fecha Escalacion')
     escalation_reason = fields.Text('Razon Escalacion')
-    escalation_freescout_id = fields.Integer('Freescout Ticket #')
+    escalation_freescout_id = fields.Char('Freescout Ticket #')
+    escalation_freescout_url = fields.Char(
+        'Ticket Freescout', compute='_compute_escalation_freescout_url')
     escalation_notified = fields.Boolean('Equipo Notificado', default=False)
 
     # Alternative contact info (captured when a family member provides a different number)
@@ -69,6 +71,17 @@ class AiAgentConversation(models.Model):
             skill_name = rec.skill_id.name or 'AI'
             partner_name = rec.partner_id.name or 'Sin contacto'
             rec.name = f"{skill_name} - {partner_name}"
+
+    @api.depends('escalation_freescout_id')
+    def _compute_escalation_freescout_url(self):
+        base = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.freescout_base_url', 'https://freescout.ueipab.edu.ve')
+        for rec in self:
+            if rec.escalation_freescout_id:
+                rec.escalation_freescout_url = (
+                    f"{base}/conversation/{rec.escalation_freescout_id}")
+            else:
+                rec.escalation_freescout_url = False
 
     def _compute_turn_count(self):
         for rec in self:

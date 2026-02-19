@@ -81,7 +81,8 @@
                     <group string="Escalacion" invisible="not escalation_date">
                         <group>
                             <field name="escalation_date"/>
-                            <field name="escalation_freescout_id"/>
+                            <field name="escalation_freescout_id" invisible="1"/>
+                            <field name="escalation_freescout_url" widget="url"/>
                             <field name="escalation_notified"/>
                         </group>
                         <group>

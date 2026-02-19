@@ -73,7 +73,7 @@ FREESCOUT_DB_HOST = os.environ.get('FREESCOUT_DB_HOST', 'localhost')
 FREESCOUT_DB_USER = os.environ.get('FREESCOUT_DB_USER', 'free297')
 FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '1gczp1S@3!')
 FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
-FREESCOUT_BASE_URL = 'https://soporte.ueipab.edu.ve'
+FREESCOUT_BASE_URL = 'https://freescout.ueipab.edu.ve'
 
 # Alejandra Lopez — Freescout user for Akdemia cleanup
 ALEJANDRA_USER_ID = 6

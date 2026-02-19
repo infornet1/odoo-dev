@@ -74,7 +74,7 @@ FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '1gczp1S@3!')
 FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
 
 # Freescout base URL for hyperlinks in Odoo
-FREESCOUT_BASE_URL = 'https://soporte.ueipab.edu.ve'
+FREESCOUT_BASE_URL = 'https://freescout.ueipab.edu.ve'
 
 # State file to track last check
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
