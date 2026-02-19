@@ -453,64 +453,8 @@ RECORDATORIO IMPORTANTE:
         from odoo import fields as odoo_fields
         now = odoo_fields.Datetime.now()
 
-        # --- Check for ESCALATE ---
-        escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', ai_response, re.MULTILINE)
-        if escalate_match:
-            escalate_desc = escalate_match.group(1).strip()
-            emp_name = context.get('employee_name', 'Empleado')
-            institution = context.get('institution', 'UEIPAB')
-            request_id = context.get('request_id', 0)
-
-            # Build escalation email for HR Manager
-            odoo_base = conversation.env['ir.config_parameter'].sudo().get_param(
-                'web.base.url', 'http://localhost:8069')
-            request_url = (
-                f"{odoo_base}/web#id={request_id}"
-                f"&model=hr.data.collection.request&view_type=form"
-            ) if request_id else ''
-            conv_url = (
-                f"{odoo_base}/web#id={conversation.id}"
-                f"&model=ai.agent.conversation&view_type=form"
-            )
-
-            body_html = (
-                f'<h3>[{institution}] Glenda HR — Escalacion</h3>'
-                f'<p><strong>Empleado:</strong> {emp_name}</p>'
-                f'<p><strong>Motivo:</strong> {escalate_desc}</p>'
-                f'<p><strong>Conversacion:</strong> <a href="{conv_url}">#{conversation.id}</a></p>'
-            )
-            if request_url:
-                body_html += (
-                    f'<p><strong>Solicitud:</strong> '
-                    f'<a href="{request_url}">#{request_id}</a></p>'
-                )
-            body_html += (
-                '<hr/>'
-                '<p><em>Este correo fue generado automaticamente por Glenda AI. '
-                'Requiere atencion del equipo de Recursos Humanos.</em></p>'
-            )
-
-            return {
-                'message': visible_text or ai_response,
-                'escalate': escalate_desc,
-                'send_escalation_email': {
-                    'to': 'recursoshumanos@ueipab.edu.ve',
-                    'subject': f'[GLENDA-HR] Requiere atencion: {emp_name} — {escalate_desc[:80]}',
-                    'body_html': body_html,
-                },
-            }
-
-        # --- Check for RESOLVED ---
-        resolved_match = re.search(r'RESOLVED:(\S+)', ai_response)
-        if resolved_match:
-            return {
-                'resolve': True,
-                'farewell_message': visible_text,
-                'summary': f"Recoleccion de datos completada para {context.get('employee_name', 'empleado')}",
-                'resolution_data': {'action': 'completed'},
-            }
-
-        # --- Process PHASE_COMPLETE markers ---
+        # --- Process PHASE_COMPLETE markers FIRST (before escalation/resolved) ---
+        # This ensures data is saved even when the same response also escalates.
         phase_markers = re.findall(
             r'ACTION:PHASE_COMPLETE:(\w+):(.+?)(?:\n|$)', ai_response
         )
@@ -652,6 +596,62 @@ RECORDATORIO IMPORTANTE:
                 request.state = 'completed'
             elif request.phases_completed > 0 and request.state == 'draft':
                 request.state = 'in_progress'
+
+        # --- Check for ESCALATE (after markers are saved) ---
+        escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', ai_response, re.MULTILINE)
+        if escalate_match:
+            escalate_desc = escalate_match.group(1).strip()
+            emp_name = context.get('employee_name', 'Empleado')
+            institution = context.get('institution', 'UEIPAB')
+            request_id = context.get('request_id', 0)
+
+            odoo_base = conversation.env['ir.config_parameter'].sudo().get_param(
+                'web.base.url', 'http://localhost:8069')
+            request_url = (
+                f"{odoo_base}/web#id={request_id}"
+                f"&model=hr.data.collection.request&view_type=form"
+            ) if request_id else ''
+            conv_url = (
+                f"{odoo_base}/web#id={conversation.id}"
+                f"&model=ai.agent.conversation&view_type=form"
+            )
+
+            body_html = (
+                f'<h3>[{institution}] Glenda HR — Escalacion</h3>'
+                f'<p><strong>Empleado:</strong> {emp_name}</p>'
+                f'<p><strong>Motivo:</strong> {escalate_desc}</p>'
+                f'<p><strong>Conversacion:</strong> <a href="{conv_url}">#{conversation.id}</a></p>'
+            )
+            if request_url:
+                body_html += (
+                    f'<p><strong>Solicitud:</strong> '
+                    f'<a href="{request_url}">#{request_id}</a></p>'
+                )
+            body_html += (
+                '<hr/>'
+                '<p><em>Este correo fue generado automaticamente por Glenda AI. '
+                'Requiere atencion del equipo de Recursos Humanos.</em></p>'
+            )
+
+            return {
+                'message': visible_text or ai_response,
+                'escalate': escalate_desc,
+                'send_escalation_email': {
+                    'to': 'recursoshumanos@ueipab.edu.ve',
+                    'subject': f'[GLENDA-HR] Requiere atencion: {emp_name} — {escalate_desc[:80]}',
+                    'body_html': body_html,
+                },
+            }
+
+        # --- Check for RESOLVED (after markers are saved) ---
+        resolved_match = re.search(r'RESOLVED:(\S+)', ai_response)
+        if resolved_match:
+            return {
+                'resolve': True,
+                'farewell_message': visible_text,
+                'summary': f"Recoleccion de datos completada para {context.get('employee_name', 'empleado')}",
+                'resolution_data': {'action': 'completed'},
+            }
 
         # Forward visible text to employee
         return {'message': visible_text or ai_response}
