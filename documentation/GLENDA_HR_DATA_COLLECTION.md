@@ -1,11 +1,11 @@
 # Glenda HR Data Collection — AI-Assisted Employee Data Verification
 
-**Status:** Testing (Gustavo test COMPLETED)
+**Status:** Testing (Gustavo + Alejandra + Alberto tests COMPLETED)
 **Created:** 2026-02-18
 **Module:** `ueipab_ai_agent` (new skill) + `ueipab_hr_employee` (new module for employee extensions)
 **Skill Code:** `hr_data_collection`
 **Target:** 44 employees (from latest payslip batches)
-**Test Employee:** Gustavo Perdomo (Request #9, Conversation #25 — COMPLETED)
+**Test Employees:** Gustavo Perdomo (#9/Conv#25), Alejandra Lopez (#12/Conv#28), Alberto Perdomo (#13/Conv#29) — ALL COMPLETED
 **Language:** Venezuelan Spanish
 
 ---
@@ -814,6 +814,34 @@ def _cron_check_document_expiry(self):
 5. Claude not emitting markers for confirmed data — reinforced system prompt rules 5-6
 6. Duplicate escalation emails (4x for same issue) — added `escalation_date` dedup guard
 7. `private_phone` not populated — added to on_resolve() Phase 1 writes
+
+### Phase G.2: Testing with Alejandra + Alberto -- COMPLETED (2026-02-18/19)
+- [x] Live test with Alejandra Lopez (Request #12, Conversation #28, Employee #570)
+- [x] Live test with Alberto Perdomo (Request #13, Conversation #29, Employee #765)
+- [x] Both conversations hit max_turns=15 limit and failed — fixed to max_turns=30
+- [x] Alberto: all 5 phases completed, 18 fields written to employee, 2 attachments (Cedula PDF + RIF PDF)
+- [x] Alejandra: all 5 phases completed (manually recovered), 17 fields written, 2 attachments (Cedula + RIF photos)
+- [x] Alejandra: escalation email sent for name discrepancy (ALEJANDRA CRISTINA LOPEZ SAYAGO vs ALEJANDRA LOPEZ)
+- [x] Freescout ticket properly created via email (FS #39571 in HR mailbox #4)
+
+**Bugs found and fixed during Alejandra/Alberto tests:**
+
+| # | Bug | Root Cause | Fix | Commit |
+|---|-----|-----------|-----|--------|
+| 1 | Conversations fail at 15 turns | `turn_count` counts ALL inbound messages (old ones batched). 15 turns insufficient for full 5-phase collection. | Increased `max_turns` from 15 to 30 in DB + `skills_data.xml` | `0b4eb76` |
+| 2 | ESCALATE short-circuits phase markers | `process_ai_response()` returned early on ESCALATE before processing PHASE_COMPLETE/SAVE_DOCUMENT markers. All data confirmations silently dropped when escalation present. | Moved PHASE_COMPLETE + SAVE_DOCUMENT processing BEFORE ESCALATE/RESOLVED checks | `0b4eb76` |
+| 3 | First escalation email never sent | `_handle_escalation()` sets `escalation_date` before the `if not self.escalation_date` email send check, making it always False | Capture `is_first_escalation` flag BEFORE calling `_handle_escalation()` | `f69702a` |
+| 4 | Wrong Freescout conversation linked | Bridge stored `conv_number` (display number) but FS URLs use auto-increment `id` | Changed to store `conversation_db_id` (note: superseded by bridge refactor) | `634c2b3` |
+| 5 | Direct SQL INSERT created orphan FS conversations | Escalation bridge created Freescout conversations via raw SQL INSERT, bypassing Laravel pipeline (wrong state, source_via, folder_id, etc.) | **Removed ALL Freescout MySQL operations from bridge.** Escalation now via email only (Odoo → mail.mail → FS auto-creates). Bridge only sends WA group notification. | `65a1598` |
+| 6 | Freescout base URL wrong | `soporte.ueipab.edu.ve` used everywhere — domain doesn't exist | Changed to `freescout.ueipab.edu.ve` in all 4 files | `43c1ac2` |
+| 7 | FS ticket ID formatted with comma | `escalation_freescout_id` was `Integer` field — Odoo adds thousands separator (39,571) | Changed to `Char` field. Added computed `escalation_freescout_url` with `widget="url"` for clickable link | `43c1ac2` |
+| 8 | Duplicate attachments on employee | `_save_document_to_employee()` creates new attachment every time, even for same doc_type. Multiple SAVE_DOCUMENT emissions stack duplicates. | Added deduplication: search existing attachments by prefix ("Cedula -" / "RIF -"), remove before creating new | `43c1ac2` |
+
+**Cleanup performed:**
+- Deleted 2 orphan FS conversations (#39427 FREDDY GONZALEZ, #39569 ALEJANDRA LOPEZ) created by wrong SQL INSERT
+- Cleaned up 4 duplicate attachments on Alberto's employee #765 (kept 1 Cedula PDF + 1 RIF PDF)
+- Cleared stale `escalation_freescout_id` references on Conv #13 and #28
+- Sent proper escalation email for Alejandra → FS #39571 created correctly via email
 
 ### Phase H: Progressive Rollout (Weeks 2-6)
 - [ ] Week 2: 5 employees — small batch validation
