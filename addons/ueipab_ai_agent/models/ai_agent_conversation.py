@@ -401,12 +401,14 @@ class AiAgentConversation(models.Model):
         if action.get('send_verification_email'):
             self._send_verification_email(action['send_verification_email'])
 
+        # Check BEFORE _handle_escalation sets escalation_date
+        is_first_escalation = not self.escalation_date
         if action.get('escalate'):
             self._handle_escalation(action['escalate'])
 
         if action.get('send_escalation_email'):
             # Only send one escalation email per conversation to avoid duplicates
-            if not self.escalation_date:
+            if is_first_escalation:
                 self._send_escalation_email(action['send_escalation_email'])
             else:
                 _logger.info("Conversation %d: skipping duplicate escalation email", self.id)
