@@ -3,7 +3,7 @@
 **Reported:** 2026-02-24
 **Affected file:** `app/Listeners/SendReplyToCustomer.php` line 76
 **Severity:** Medium — affects all phone conversations where the customer has an email address
-**Status:** Reported to Freescout helpdesk forum, pending upstream guidance
+**Status:** Fixed in upstream master branch (confirmed 2026-02-24), will be included in next Freescout release. Update Freescout when available.
 
 ---
 
@@ -47,19 +47,8 @@ if ($to_array && ($customer_email = $to_array[0]) && $customer_email != $main_cu
 - First occurrence in logs: **2026-02-18**
 - ~15 errors between 2026-02-18 and 2026-02-24
 
-## How to Apply (when approved)
+## Resolution
 
-1. Edit `/var/www/freescout/app/Listeners/SendReplyToCustomer.php`
-2. Replace line 76 with the proposed fix above
-3. Clear Laravel cache:
-   ```bash
-   cd /var/www/freescout
-   php artisan cache:clear
-   php artisan config:clear
-   ```
-4. No database migration needed
-5. No Freescout restart needed (PHP-FPM picks up file changes)
+**No manual patch needed.** Freescout team confirmed the fix is merged into the master branch (2026-02-24). It will be included in the next official release.
 
-## Verification
-
-After applying the fix, create a phone conversation for a customer that has an email address. The "email delivery issue" warning should no longer appear, and the reply email should be dispatched normally.
+**Action:** Update Freescout when the next release is published, then verify phone conversations no longer trigger the error.

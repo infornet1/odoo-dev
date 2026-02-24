@@ -326,7 +326,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (pending upstream fix)
+- [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (fixed in upstream master, update Freescout when next release ships)
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 
 ### Legal
