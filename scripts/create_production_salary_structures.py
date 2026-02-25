@@ -54,8 +54,10 @@ VE_PAYROLL_V2_RULES = [
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': '''monthly_salary = contract.ueipab_salary_v2 or 0.0
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = monthly_salary * (period_days / 30.0)'''
+multiplier = 1.0
+if payslip.payslip_run_id and (payslip.payslip_run_id.is_advance_payment or payslip.payslip_run_id.is_remainder_batch):
+    multiplier = (payslip.payslip_run_id.advance_percentage or 100.0) / 100.0
+result = (monthly_salary / 2.0) * multiplier'''
     },
     {
         'code': 'VE_EXTRABONUS_V2',
@@ -65,8 +67,10 @@ result = monthly_salary * (period_days / 30.0)'''
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': '''monthly_extrabonus = contract.ueipab_extrabonus_v2 or 0.0
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = monthly_extrabonus * (period_days / 30.0)'''
+multiplier = 1.0
+if payslip.payslip_run_id and (payslip.payslip_run_id.is_advance_payment or payslip.payslip_run_id.is_remainder_batch):
+    multiplier = (payslip.payslip_run_id.advance_percentage or 100.0) / 100.0
+result = (monthly_extrabonus / 2.0) * multiplier'''
     },
     {
         'code': 'VE_BONUS_V2',
@@ -76,8 +80,10 @@ result = monthly_extrabonus * (period_days / 30.0)'''
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': '''monthly_bonus = contract.ueipab_bonus_v2 or 0.0
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = monthly_bonus * (period_days / 30.0)'''
+multiplier = 1.0
+if payslip.payslip_run_id and (payslip.payslip_run_id.is_advance_payment or payslip.payslip_run_id.is_remainder_batch):
+    multiplier = (payslip.payslip_run_id.advance_percentage or 100.0) / 100.0
+result = (monthly_bonus / 2.0) * multiplier'''
     },
     {
         'code': 'VE_CESTA_TICKET_V2',
@@ -87,8 +93,7 @@ result = monthly_bonus * (period_days / 30.0)'''
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': '''monthly_cesta = contract.cesta_ticket_usd or 0.0
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = monthly_cesta * (period_days / 30.0)'''
+result = monthly_cesta / 2.0'''
     },
     {
         'code': 'VE_GROSS_V2',
@@ -122,12 +127,9 @@ employee_salary_usd = contract.ueipab_salary_v2 or 0.0
 # Apply ceiling: use lower of employee salary or Bs 1300 (in USD)
 sso_base = min(employee_salary_usd, sso_ceiling_usd)
 
-# Calculate monthly deduction at 4.5%
-monthly_deduction = sso_base * 0.045
-
-# Prorate for actual payslip period
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = -(monthly_deduction * (period_days / 30.0))'''
+# Calculate monthly deduction at 4% then halve for quincena
+monthly_deduction = sso_base * 0.04
+result = -(monthly_deduction / 2.0)'''
     },
     {
         'code': 'VE_PARO_DED_V2',
@@ -138,8 +140,7 @@ result = -(monthly_deduction * (period_days / 30.0))'''
         'amount_select': 'code',
         'amount_python_compute': '''monthly_salary = contract.ueipab_salary_v2 or 0.0
 monthly_deduction = monthly_salary * 0.005
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = -(monthly_deduction * (period_days / 30.0))'''
+result = -(monthly_deduction / 2.0)'''
     },
     {
         'code': 'VE_FAOV_DED_V2',
@@ -150,8 +151,7 @@ result = -(monthly_deduction * (period_days / 30.0))'''
         'amount_select': 'code',
         'amount_python_compute': '''monthly_salary = contract.ueipab_salary_v2 or 0.0
 monthly_deduction = monthly_salary * 0.01
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = -(monthly_deduction * (period_days / 30.0))'''
+result = -(monthly_deduction / 2.0)'''
     },
     {
         'code': 'VE_ARI_DED_V2',
@@ -163,8 +163,7 @@ result = -(monthly_deduction * (period_days / 30.0))'''
         'amount_python_compute': '''monthly_salary = contract.ueipab_salary_v2 or 0.0
 ari_rate = (contract.ueipab_ari_withholding_rate or 0.0) / 100.0
 monthly_deduction = monthly_salary * ari_rate
-period_days = (payslip.date_to - payslip.date_from).days + 1
-result = -(monthly_deduction * (period_days / 30.0))'''
+result = -(monthly_deduction / 2.0)'''
     },
     {
         'code': 'VE_TOTAL_DED_V2',

@@ -72,6 +72,8 @@
 | ARI | Variable % | From contract field |
 | Otras Deducciones | Fixed USD | From contract field |
 
+**Quincena Calculation:** All V2 salary rules use fixed `monthly / 2.0` for quincena amounts (fixed 2026-02-25). Previously used `period_days / 30.0` which caused February 2nd quincena to pay only 13/30 instead of 15/30. AGUINALDOS rule retained its own fixed-0.5 logic separately.
+
 ---
 
 ## V2 Payroll Accounting Configuration
@@ -327,6 +329,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 ### Known Issues
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (fixed in upstream master, update Freescout when next release ships)
+- **Quincena Salary Rule Fix (2026-02-25):** All V2 salary rules (9 rules: 4 earnings + 5 deductions) fixed from `period_days / 30.0` to `monthly / 2.0`. February FEBRERO28 batch (Feb 16-28, 13 days) was paying 13.3% less than FEBRERO15 (15 days). FEBRERO28 was cancelled, recomputed with corrected rules, and reconfirmed. All 44 employees' NET now matches FEBRERO15 ($7,427.05 vs $7,426.98). Rules updated in both production and testing DBs + script file.
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 
 ### Legal
