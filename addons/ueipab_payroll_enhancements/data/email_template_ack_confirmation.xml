@@ -88,7 +88,22 @@
                     <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0">
                         <p style="font-size:15px;color:#333;margin:5px 0">Cordialmente,</p>
                         <p style="font-size:15px;color:#333;margin:5px 0"><strong>Recursos Humanos</strong></p>
-                        <p style="font-size:14px;color:#555;margin:5px 0">Instituto Privado Andres Bello</p>
+                        <t t-set="company" t-value="object.company_id"/>
+                        <p style="font-size:14px;color:#555;margin:5px 0"><t t-out="company.name"/></p>
+                        <p style="font-size:13px;color:#888;margin:3px 0">
+                            <t t-if="company.vat">RIF: <t t-out="company.vat"/></t>
+                        </p>
+                        <p style="font-size:13px;color:#888;margin:3px 0">
+                            <t t-out="company.street or ''"/>
+                            <t t-if="company.city">, <t t-out="company.city"/></t>
+                            <t t-if="company.state_id"> - <t t-out="company.state_id.name"/></t>
+                            <t t-if="company.zip">, <t t-out="company.zip"/></t>
+                        </p>
+                        <p style="font-size:13px;color:#888;margin:3px 0">
+                            <t t-if="company.phone">Tel: <t t-out="company.phone"/></t>
+                            <t t-if="company.phone and company.website"> | </t>
+                            <t t-if="company.website"><t t-out="company.website"/></t>
+                        </p>
                     </div>
                 </div>
             </div>
