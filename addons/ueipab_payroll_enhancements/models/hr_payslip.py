@@ -173,6 +173,18 @@ class HrPayslip(models.Model):
                 return line.total
         return 0.0
 
+    def get_net_amount(self):
+        """Get net amount trying VE_NET_V2, NET, then AGUINALDOS fallback.
+
+        Used in email templates where lambda filters are stripped by QWeb.
+        """
+        self.ensure_one()
+        for code in ('VE_NET_V2', 'NET', 'AGUINALDOS'):
+            amt = self.get_line_amount(code)
+            if amt:
+                return amt
+        return self.net_wage or 0.0
+
     def get_ack_timestamp_vet(self):
         """Return acknowledged_date formatted in Venezuela Time (UTC-4).
 
