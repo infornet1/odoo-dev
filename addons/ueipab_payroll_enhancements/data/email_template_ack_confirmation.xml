@@ -61,9 +61,6 @@
                         <t t-set="net_ves" t-value="net_usd * rate"/>
                         <hr style="margin:12px 0;border:none;border-top:1px solid #c8e6c9"/>
                         <p style="font-size:14px;color:#333;margin:5px 0">
-                            <strong>Monto Neto (USD):</strong> <t t-out="'${:,.2f}'.format(net_usd)"/>
-                        </p>
-                        <p style="font-size:14px;color:#333;margin:5px 0">
                             <strong>Tasa de Cambio:</strong> <t t-out="'{:,.4f}'.format(rate)"/> Bs/USD
                         </p>
                         <p style="font-size:15px;color:#2e7d32;margin:8px 0 0 0;font-weight:bold">
