@@ -7,6 +7,7 @@
 | Payslip Compact Report | Regular payroll | - |
 | Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment **(DEFAULT)** | 43 / 37 |
 | Aguinaldos Email - Christmas Bonus Delivery | December Christmas bonuses | 44 / 38 |
+| Payslip Ack Confirmation | Auto-sent after employee acknowledges payslip | 67 / TBD |
 
 **Syntax Rules:**
 - Headers (subject): Jinja2 `{{object.field}}`
@@ -107,3 +108,28 @@ UPDATE mail_template SET body_html = (SELECT pg_read_file('/tmp/template.json'):
 - Checks for `NET`/`VE_NET_V2` lines first
 - Falls back to `AGUINALDOS` line for Christmas bonus payslips
 - File: `controllers/payslip_acknowledgment.py:153-160`
+
+---
+
+## Payslip Ack Confirmation Email Template
+
+**Added:** 2026-02-28 | **Template IDs:** Testing: 67, Production: TBD
+
+| Field | Value |
+|-------|-------|
+| Subject | `{{object.number}} ha sido confirmado exitosamente` |
+| Email From | `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>` |
+| Email To | `{{object.employee_id.work_email}}` |
+| Email CC | `recursoshumanos@ueipa.ueipab.edu.ve` |
+
+**Trigger:** Automatically sent from `payslip_acknowledge_confirm()` controller after employee clicks "Confirmar Recepcion Digital" on the portal page.
+
+**Content:**
+- Green-themed "Confirmacion Registrada" header
+- Payslip details: number, period, batch name
+- Acknowledgment timestamp from `object.acknowledged_date`
+- Contact info for HR questions
+
+**Design:** Matches existing template style (same as reminder template but green instead of orange).
+
+**Error Handling:** Wrapped in try/except — email failure never blocks the acknowledgment success page.

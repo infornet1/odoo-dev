@@ -110,6 +110,47 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 
 ---
 
+## Payslip Acknowledgment Confirmation Email
+
+**Status:** PRODUCTION | **Deployed:** 2026-02-28 | **Module Version:** v1.53.0
+
+**Problem Solved:** After an employee acknowledges their payslip via the portal, there was no email confirmation sent. Employee had no proof of acknowledgment, and HR only knew via dashboard.
+
+**Solution Implemented:** Automatic confirmation email sent immediately after successful acknowledgment.
+
+### Email Template
+
+- Template: `email_template_payslip_ack_confirmation`
+- Template ID: Testing=67
+- Subject: `{{object.number}} ha sido confirmado exitosamente`
+- From: `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
+- To: Employee work email
+- CC: `recursoshumanos@ueipa.ueipab.edu.ve`
+- Body: Green-themed confirmation with payslip details and acknowledgment timestamp
+
+### Trigger Point
+
+Sent automatically from `controllers/payslip_acknowledgment.py` in the `payslip_acknowledge_confirm()` method, right after:
+1. `payslip.write()` sets `is_acknowledged=True` with audit trail
+2. `payslip.message_post()` adds chatter note
+
+Wrapped in try/except so email failures never block the acknowledgment success page.
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `data/email_template_ack_confirmation.xml` | Confirmation email template (noupdate=1) |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `controllers/payslip_acknowledgment.py` | Added send_mail() call after acknowledgment |
+| `__manifest__.py` | Version 1.53.0, added XML file |
+
+---
+
 ## Payslip Acknowledgment Reminder System
 
 **Status:** PRODUCTION | **Deployed:** 2025-12-19 | **Module Version:** v1.49.1

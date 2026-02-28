@@ -274,6 +274,17 @@ class PayslipAcknowledgmentController(http.Controller):
                 subtype_xmlid='mail.mt_note'
             )
 
+            # Send confirmation email to employee (CC to HR)
+            try:
+                ack_template = request.env.ref(
+                    'ueipab_payroll_enhancements.email_template_payslip_ack_confirmation',
+                    raise_if_not_found=False
+                )
+                if ack_template:
+                    ack_template.sudo().send_mail(payslip.id, force_send=True)
+            except Exception:
+                pass  # Don't block acknowledgment success page if email fails
+
             ack_date = datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')
             content = f'''
                 <div class="icon">✅</div>

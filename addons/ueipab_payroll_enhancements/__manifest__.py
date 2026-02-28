@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.52.2',
+    'version': '17.0.1.53.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -107,6 +107,7 @@ Advance Payment System (Pago Adelanto):
         'reports/report_actions.xml',
         'data/mail_template_payslip.xml',  # After reports (depends on action_report_payslip_compact)
         'data/email_template_ack_reminder.xml',  # Acknowledgment reminder email template
+        'data/email_template_ack_confirmation.xml',  # Acknowledgment confirmation email
 
         # 4. Views (which may inherit or use actions from above)
         'views/hr_payslip_employees_views.xml',
