@@ -120,7 +120,7 @@ UPDATE mail_template SET body_html = (SELECT pg_read_file('/tmp/template.json'):
 | Subject | `{{object.number}} ha sido confirmado exitosamente` |
 | Email From | `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>` |
 | Email To | `{{object.employee_id.work_email}}` |
-| Email CC | `recursoshumanos@ueipa.ueipab.edu.ve` |
+| Email CC | `recursoshumanos@ueipab.edu.ve` |
 
 **Trigger:** Automatically sent from `payslip_acknowledge_confirm()` controller after employee clicks "Confirmar Recepcion Digital" on the portal page.
 

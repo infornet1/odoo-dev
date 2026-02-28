@@ -7,7 +7,7 @@
         <!-- Jinja2 for headers -->
         <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
         <field name="email_to">{{object.employee_id.work_email}}</field>
-        <field name="email_cc">recursoshumanos@ueipa.ueipab.edu.ve</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
         <field name="subject">{{object.number}} ha sido confirmado exitosamente</field>
 
         <!-- QWeb ONLY for body_html -->
@@ -35,6 +35,12 @@
                             <strong>Comprobante:</strong> <t t-out="object.number"/>
                         </p>
                         <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Empleado:</strong> <t t-out="object.employee_id.name"/>
+                        </p>
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Cedula:</strong> <t t-out="object.employee_id.identification_id or '-'"/>
+                        </p>
+                        <p style="font-size:14px;color:#333;margin:5px 0">
                             <strong>Periodo:</strong>
                             <t t-out="object.date_from" t-options='{"widget": "date"}'/> -
                             <t t-out="object.date_to" t-options='{"widget": "date"}'/>
@@ -44,10 +50,26 @@
                                 <strong>Lote:</strong> <t t-out="object.payslip_run_id.name"/>
                             </p>
                         </t>
+                    </div>
+
+                    <!-- Audit Trail Box -->
+                    <div style="background:#f5f5f5;padding:20px;border-left:4px solid #9e9e9e;margin:25px 0;border-radius:4px">
+                        <p style="font-size:13px;color:#555;margin:0 0 10px 0;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">
+                            Datos de Confirmacion Digital
+                        </p>
                         <t t-if="object.acknowledged_date">
-                            <p style="font-size:14px;color:#333;margin:5px 0">
-                                <strong>Fecha de confirmacion:</strong>
-                                <t t-out="object.acknowledged_date" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm:ss"}'/>
+                            <p style="font-size:13px;color:#333;margin:4px 0">
+                                <strong>Fecha y hora (VET):</strong> <t t-out="object.get_ack_timestamp_vet()"/>
+                            </p>
+                        </t>
+                        <t t-if="object.acknowledged_ip">
+                            <p style="font-size:13px;color:#333;margin:4px 0">
+                                <strong>Direccion IP:</strong> <t t-out="object.acknowledged_ip"/>
+                            </p>
+                        </t>
+                        <t t-if="object.acknowledged_user_agent">
+                            <p style="font-size:12px;color:#666;margin:4px 0;word-break:break-all">
+                                <strong>Navegador:</strong> <t t-out="object.acknowledged_user_agent"/>
                             </p>
                         </t>
                     </div>
@@ -59,7 +81,7 @@
                     <div style="background:#e3f2fd;padding:15px;border-radius:4px;margin:25px 0">
                         <p style="font-size:13px;color:#1565c0;margin:0;text-align:center">
                             <strong>Tiene alguna duda?</strong><br/>
-                            Escriba a <a href="mailto:recursoshumanos@ueipa.ueipab.edu.ve" style="color:#1565c0">recursoshumanos@ueipa.ueipab.edu.ve</a>
+                            Escriba a <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#1565c0">recursoshumanos@ueipab.edu.ve</a>
                         </p>
                     </div>
 

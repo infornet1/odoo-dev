@@ -173,6 +173,19 @@ class HrPayslip(models.Model):
                 return line.total
         return 0.0
 
+    def get_ack_timestamp_vet(self):
+        """Return acknowledged_date formatted in Venezuela Time (UTC-4).
+
+        Used in email templates since QWeb datetime widget renders in UTC
+        for public/unauthenticated contexts.
+        """
+        self.ensure_one()
+        if not self.acknowledged_date:
+            return ''
+        from datetime import timedelta
+        vet = self.acknowledged_date - timedelta(hours=4)
+        return vet.strftime('%d/%m/%Y %H:%M:%S')
+
     # ========================================
     # ACKNOWLEDGMENT METHODS
     # ========================================

@@ -125,7 +125,7 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 - Subject: `{{object.number}} ha sido confirmado exitosamente`
 - From: `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
 - To: Employee work email
-- CC: `recursoshumanos@ueipa.ueipab.edu.ve`
+- CC: `recursoshumanos@ueipab.edu.ve`
 - Body: Green-themed confirmation with payslip details and acknowledgment timestamp
 
 ### Trigger Point
