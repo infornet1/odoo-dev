@@ -38,7 +38,7 @@ sshpass -p '$PASSWORD' ssh -o StrictHostKeyChecking=no root@10.124.0.3 \
 
 ## Production Upgrade Procedure
 
-**Last Sync:** 2026-02-28 - `ueipab_payroll_enhancements` 1.52.2 -> 1.53.0 (ack confirmation email)
+**Last Sync:** 2026-02-28 - `ueipab_payroll_enhancements` 1.52.2 -> 1.53.0 (ack confirmation email with logo, audit trail, net amount, company info)
 
 ### Sync Method
 

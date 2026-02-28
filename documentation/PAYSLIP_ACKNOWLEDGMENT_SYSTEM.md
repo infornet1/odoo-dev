@@ -126,7 +126,22 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 - From: `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
 - To: Employee work email
 - CC: `recursoshumanos@ueipab.edu.ve`
-- Body: Green-themed confirmation with payslip details and acknowledgment timestamp
+- Body: Green-themed confirmation with full details
+
+### Email Content
+
+| Section | Details |
+|---------|---------|
+| Company Logo | Centered at top, served from `static/img/ueipab_logo.png` via `web.base.url` |
+| Payslip Info | Comprobante, Empleado, Cedula, Periodo, Lote |
+| Financial | Tasa de Cambio (Bs/USD), Monto Neto (Bs.) — uses `get_net_amount()` helper |
+| Audit Trail | Fecha y hora (VET via `get_ack_timestamp_vet()`), Direccion IP, Navegador |
+| Company Footer | Dynamic from `object.company_id`: name, RIF, address, phone, website |
+
+### Helper Methods (hr.payslip)
+
+- `get_net_amount()`: Tries VE_NET_V2 → NET → AGUINALDOS → net_wage fallback
+- `get_ack_timestamp_vet()`: Converts `acknowledged_date` from UTC to VET (UTC-4)
 
 ### Trigger Point
 
@@ -141,12 +156,14 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 | File | Description |
 |------|-------------|
 | `data/email_template_ack_confirmation.xml` | Confirmation email template (noupdate=1) |
+| `static/img/ueipab_logo.png` | Company logo for email header (291x120px) |
 
 ### Files Modified
 
 | File | Changes |
 |------|---------|
 | `controllers/payslip_acknowledgment.py` | Added send_mail() call after acknowledgment |
+| `models/hr_payslip.py` | Added `get_net_amount()` helper method |
 | `__manifest__.py` | Version 1.53.0, added XML file |
 
 ---
