@@ -121,7 +121,7 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 ### Email Template
 
 - Template: `email_template_payslip_ack_confirmation`
-- Template ID: Testing=67
+- Template ID: Testing=67, Production=46
 - Subject: `{{object.number}} ha sido confirmado exitosamente`
 - From: `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
 - To: Employee work email

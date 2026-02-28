@@ -7,7 +7,7 @@
 | Payslip Compact Report | Regular payroll | - |
 | Payslip Email - Employee Delivery | Monthly detailed view with acknowledgment **(DEFAULT)** | 43 / 37 |
 | Aguinaldos Email - Christmas Bonus Delivery | December Christmas bonuses | 44 / 38 |
-| Payslip Ack Confirmation | Auto-sent after employee acknowledges payslip | 67 / TBD |
+| Payslip Ack Confirmation | Auto-sent after employee acknowledges payslip | 67 / 46 |
 
 **Syntax Rules:**
 - Headers (subject): Jinja2 `{{object.field}}`
@@ -113,7 +113,7 @@ UPDATE mail_template SET body_html = (SELECT pg_read_file('/tmp/template.json'):
 
 ## Payslip Ack Confirmation Email Template
 
-**Added:** 2026-02-28 | **Template IDs:** Testing: 67, Production: TBD
+**Added:** 2026-02-28 | **Template IDs:** Testing: 67, Production: 46
 
 | Field | Value |
 |-------|-------|
