@@ -514,6 +514,30 @@ Both testing and production share the same WhatsApp account (+584148321963). To 
 >
 > Covers 11 identified gaps: modules, config files, webhook, cron flags, Akdemia paths, escalation/email-checker DRY status, Freescout API, Credit Guard calibration, initial bounce load, testing lockout, and data drift.
 
+## Known Issues
+
+### Poll Cron Transaction Rollback Bug (2026-03-02)
+
+**Status:** Open — Identified during HR data collection testing with Rafael Perez and Lorena Reyes.
+
+**Symptom:** Customer receives recursive/duplicate WhatsApp messages from Glenda with the same content. Inbound messages are NOT logged in Odoo despite being present in the MassivaMóvil received API.
+
+**Root Cause:** `_cron_poll_messages()` (line 829-853) processes all conversation batches in a single transaction with **no error isolation**. If `action_process_reply()` raises an exception for ANY conversation:
+1. The entire cron transaction rolls back (all Odoo records lost)
+2. But Claude API calls and WhatsApp sends already executed (irreversible external calls)
+3. Next cron cycle: dedup check fails (records were rolled back) → same messages re-processed → recursive
+
+**Evidence (Conv #30 — Rafael Perez):** 12 inbound WA messages in MassivaMóvil API (IDs 205945-205973), zero logged in Odoo. Poll cron running every 1 minute, conversation in `waiting` state for ~2 hours.
+
+**Secondary Issue — Duplicate Conversations (Conv #31/#32 — Lorena Reyes):** Two active conversations for the same phone. Dedup check is per-conversation (`conversation_id = X`), so the same WA message (#205917) was processed by both conversations → double Claude calls, double WA sends.
+
+**Recommended Fixes:**
+1. **Critical:** Wrap each conversation processing in `try/except` with `cr.savepoint()` for error isolation
+2. **Important:** Make WA message dedup global (not per-conversation) to prevent cross-conversation duplicates
+3. **Important:** Add wizard validation to prevent creating duplicate active conversations for the same phone
+
+---
+
 ## Cost Estimates
 
 Using Claude Haiku 4.5 at $1/$5 per MTok:
