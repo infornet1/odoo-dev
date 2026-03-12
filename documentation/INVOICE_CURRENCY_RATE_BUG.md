@@ -216,6 +216,32 @@ AND fixed_second_currency_rate > 1;
 
 ---
 
+## FORMA LIBRE Exchange Rate Fix (v17.0.1.4)
+
+**Date:** 2026-03-12
+**Module:** `impresion_forma_libre`
+**Status:** Fixed — pending production deploy
+
+### Problem
+
+FORMA LIBRE PDF footer showed the exchange rate based on `self.date` (invoice accounting date), not the latest available rate. Invoice INV/2026/00483 displayed 417.36 instead of the current BCV rate.
+
+**Root cause:** `_get_rate()` and `_compute_fiscal_tax_totals._convert()` both used `move.date or fields.date.today()` to look up the exchange rate. This returned the rate for the invoice date (or the nearest earlier date if no entry existed), not the latest rate.
+
+**Additional bug found:** `_compute_fiscal_tax_totals` had a hardcoded `"amount_untaxed": 335.26` that overwrote the computed value.
+
+### Fix Applied
+
+1. `_get_rate()`: changed date parameter from `self.date or fields.date.today()` to `fields.date.today()` — footer always shows latest BCV rate
+2. `_compute_fiscal_tax_totals._convert()`: same change — fiscal amounts converted at latest rate, consistent with footer
+3. Removed hardcoded `amount_untaxed: 335.26` override
+
+### Production Database Fix
+
+Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `res_currency_rate` created during a bulk BCV import on 2025-10-09. Restored a single USD base rate (date 2024-01-01, rate 0.010548256162291249) as the normalization factor for VEB rate calculations.
+
+---
+
 ## Change Log
 
 | Date | Action | By |
@@ -224,6 +250,9 @@ AND fixed_second_currency_rate > 1;
 | 2025-12-16 | Fixed FACTU/2025/12/0018 | Claude |
 | 2025-12-16 | Fixed INV/2025/00377 | Claude |
 | 2025-12-16 | Fixed INV/2025/00014 | Claude |
+| 2026-03-12 | FORMA LIBRE rate fix — always use latest BCV rate at print time | Claude |
+| 2026-03-12 | Removed hardcoded amount_untaxed=335.26 bug | Claude |
+| 2026-03-12 | Cleaned stale USD/EUR rate entries + restored USD base rate in production | Claude |
 
 ---
 

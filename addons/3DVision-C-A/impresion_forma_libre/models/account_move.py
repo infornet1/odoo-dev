@@ -39,7 +39,7 @@ class AccountMove(models.Model):
                             from_amount=amount,
                             to_currency=currency or move.fiscal_currency_id,
                             company=move.company_id,
-                            date=move.date or fields.date.today(),
+                            date=fields.date.today(),
                             round=True,
                         )
                     return amount
@@ -85,7 +85,6 @@ class AccountMove(models.Model):
                 converted_amounts = {
                     "amount_total": _convert(tax_totals["amount_total"]),
                     "amount_untaxed": _convert(tax_totals["amount_untaxed"]),
-                    "amount_untaxed": 335.26,
                     "groups_by_subtotal": converted_subtotal_groups,
                 }
 
@@ -158,13 +157,13 @@ class AccountMove(models.Model):
                 from_currency,
                 to_currency,
                 self.company_id,
-                self.date or fields.date.today()
+                fields.date.today()
             ),
             get_rate(
                 to_currency,
                 from_currency,
                 self.company_id,
-                self.date or fields.date.today()
+                fields.date.today()
             ))
 
         if return_formatted:
