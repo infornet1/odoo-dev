@@ -129,7 +129,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.18.0 | 2026-02-18 |
+| ueipab_ai_agent | 17.0.1.19.0 | 2026-03-02 |
 
 ### Production Environment
 
@@ -220,7 +220,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.15.0 | **Installed:** 2026-02-07
+**Status:** Testing | **Version:** 17.0.1.19.0 | **Installed:** 2026-02-07
 
 Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills". See [Full Documentation](documentation/AI_AGENT_MODULE.md).
 
@@ -263,7 +263,9 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 **Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. Holidays configured in Dashboard Configuracion tab (`ai_agent.holidays` param, MM-DD CSV).
 
-**Glenda conversation snapshot (2026-02-15 12:36 VET):** 14 total — 4 waiting (RAFAEL DUERTO, DANIEL DOMINGUEZ, WILLIANS VELASQUEZ, ANGELA GONZALEZ), 8 resolved, 2 failed. Contact data: 318/318 Representante contacts fully synced (both envs, 244 Rep + 74 PDVSA), complete address fields (city/zip/country/state), all Individual type, 0 field diffs.
+**Glenda conversation snapshot (2026-03-12 06:30 VET):** Bounce resolution: 14 total — 4 waiting, 8 resolved, 2 failed. HR Data Collection: Daniel Bongianni (Request #17, Conv#33 timeout → Conv#35 re-triggered, attempt #2, phases 1-2 done, pending RIF/address/emergency). Contact data: 318/318 Representante contacts fully synced.
+
+**WhatsApp account status (2026-03-12):** Primary (+584248944898) ACTIVE. Was on backup (+584148321963) since 2026-03-10 (health monitor flagged primary), but backup became disconnected. Manually switched back to primary on 2026-03-12 — primary validated OK. Health state file reset.
 
 ### Production Migration Checklist
 
@@ -332,7 +334,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (fixed in upstream master, update Freescout when next release ships)
 - **Quincena Salary Rule Fix (2026-02-25) — RESOLVED:** All V2 salary rules (9 prod + 10 test) fixed from `period_days / 30.0` to `monthly / 2.0`. FEBRERO28 batch cancelled, recomputed, reconfirmed. VEB differences (~Bs. 407,086 total) paid to all 44 employees, corrected comprobantes emailed, journal entries verified `posted`, HR letter distributed. See [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md).
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
-- **AI Agent Poll Cron Rollback Bug (2026-03-02):** `_cron_poll_messages()` has no error isolation — if `action_process_reply()` fails for any conversation, entire transaction rolls back but Claude+WA sends already executed → recursive messages. Also: per-conversation dedup allows same WA message to be processed by duplicate conversations. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
+- **AI Agent Poll Cron Rollback Bug (2026-03-02) — RESOLVED (v1.19.0):** Fixed in 3 parts: (1) savepoint per conversation in poll cron for error isolation, (2) global WA message dedup (not per-conversation), (3) phone-based duplicate conversation guard in wizard. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)

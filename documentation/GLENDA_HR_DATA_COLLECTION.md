@@ -5,7 +5,7 @@
 **Module:** `ueipab_ai_agent` (new skill) + `ueipab_hr_employee` (new module for employee extensions)
 **Skill Code:** `hr_data_collection`
 **Target:** 44 employees (from latest payslip batches)
-**Test Employees:** Gustavo Perdomo (#9/Conv#25), Alejandra Lopez (#12/Conv#28), Alberto Perdomo (#13/Conv#29) — ALL COMPLETED
+**Test Employees:** Gustavo Perdomo (#9/Conv#25), Alejandra Lopez (#12/Conv#28), Alberto Perdomo (#13/Conv#29) — ALL COMPLETED | Daniel Bongianni (#17/Conv#33→#35) — IN PROGRESS (re-triggered 2026-03-12)
 **Language:** Venezuelan Spanish
 
 ---
@@ -843,6 +843,16 @@ def _cron_check_document_expiry(self):
 - Cleared stale `escalation_freescout_id` references on Conv #13 and #28
 - Sent proper escalation email for Alejandra → FS #39571 created correctly via email
 
+### Phase G.3: Testing with Daniel Bongianni -- IN PROGRESS (2026-03-12)
+- [x] Live test with Daniel Bongianni (Request #17, Conversation #33, Employee #578)
+- [x] Attempt 1 (2026-03-04): Phone confirmed, Cedula confirmed + photo received, personal data collected (gender, birthday, birthplace, nationality)
+- [x] Claude Vision detected name discrepancy: cedula shows **JUAN DANIEL BONGIANNI** vs Odoo record **Daniel Bongianni** — asked employee to confirm
+- [x] Daniel stopped responding after Phase 2 (cedula) — 2 reminders sent, conversation #33 timed out 2026-03-07
+- [x] Attempt 2 (2026-03-12): Request set to `partial`, new Conversation #35 created, greeting sent
+- [ ] Pending phases: RIF (Phase 3), Address (Phase 4), Emergency Contact (Phase 5)
+- **WA blocker resolved:** Primary account (+584248944898) was flagged by health monitor 2026-03-10, system switched to backup (+584148321963) which became disconnected. Manually restored primary on 2026-03-12 — validated OK before re-trigger.
+- **Bank template context:** Re-trigger motivated by Banco Plazas payroll account opening — need verified employee data (name, cedula, birthday, phone, marital status, address) for all 44 employees. Template generated at `/home/ftpuser/odoo-dev/Plantilla-Empleados-UEIPAB-FILLED.xlsx` with 34/45 employees missing personal phone numbers.
+
 ### Phase H: Progressive Rollout (Weeks 2-6)
 - [ ] Week 2: 5 employees — small batch validation
 - [ ] Week 3: 8 employees — ramp up
@@ -894,3 +904,4 @@ def _cron_check_document_expiry(self):
 | 2026-02-18 | 0.5.0 | Phase D completed: Escalation email to recursoshumanos@ with Odoo links, HR email checker script for Freescout HR mailbox attachment processing, Freescout disk attachment reading, doc type heuristic. Phases A-D complete — ready for testing (Phase G). |
 | 2026-02-18 | 0.6.0 | Phase G completed: Live test with Gustavo Perdomo (5-phase conversation). Fixed 7 bugs: `_extract_visible_text()` truncation, RIF dashless format, VE state code mapping, unconditional country write, marker emission enforcement, escalation email dedup, private_phone write. Added 4 personal data fields to Phase 2 (nationality, gender, birthday, place_of_birth — auto-derived where possible). Added `parse_ve_address()` for structured address parsing (city/state/zip extraction). |
 | 2026-02-18 | 0.7.0 | Phase E completed: Batch wizard (`hr.data.collection.create.wizard` + line model), payslip batch button, standalone menu, stagger CRON (`_cron_start_pending()`, 30 min, batch_size=2, max_active=10), `hr_payroll_community` dependency. Module v1.18.0. |
+| 2026-03-12 | 0.8.0 | Phase G.3: Daniel Bongianni re-triggered (attempt 2, Conv#35). WA primary account restored from backup failover. Bank template (Banco Plazas) generated from production employee data — 34/45 missing personal phones identified as data gap for HR collection rollout. |
