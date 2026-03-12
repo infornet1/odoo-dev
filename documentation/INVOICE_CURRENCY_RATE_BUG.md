@@ -220,7 +220,7 @@ AND fixed_second_currency_rate > 1;
 
 **Date:** 2026-03-12
 **Module:** `impresion_forma_libre`
-**Status:** Fixed — pending production deploy
+**Status:** Deployed to production (2026-03-12)
 
 ### Problem
 
@@ -253,6 +253,7 @@ Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `r
 | 2026-03-12 | FORMA LIBRE rate fix — always use latest BCV rate at print time | Claude |
 | 2026-03-12 | Removed hardcoded amount_untaxed=335.26 bug | Claude |
 | 2026-03-12 | Cleaned stale USD/EUR rate entries + restored USD base rate in production | Claude |
+| 2026-03-12 | Deployed v17.0.1.4 to production — verified INV/2026/00483 shows 440.97 (today's rate) | Claude |
 
 ---
 
