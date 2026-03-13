@@ -240,6 +240,14 @@ FORMA LIBRE PDF footer showed the exchange rate based on `self.date` (invoice ac
 
 Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `res_currency_rate` created during a bulk BCV import on 2025-10-09. Restored a single USD base rate (date 2024-01-01, rate 0.010548256162291249) as the normalization factor for VEB rate calculations.
 
+### Fiscal Check Visibility Fix (2026-03-13)
+
+**Module:** `ueipab_impresion_forma_libre` (view ID 2742 in both envs)
+
+**Problem:** When migrating from Odoo `attrs` syntax to Odoo 17 `invisible=` syntax, the move types were inverted — `fiscal_check`, `control_number`, and `fiscal_correlative` were hidden on `out_invoice` and `in_invoice` (all regular invoices) instead of `out_receipt` and `in_receipt`. Also missing `readonly="state == 'posted'"` guard.
+
+**Fix:** Corrected `invisible` domain to `move_type in ('entry', 'out_receipt', 'in_receipt')` and restored `readonly="state == 'posted'"`. Applied via direct DB update on both envs + source file fix in `addons_archived/`.
+
 ---
 
 ## Change Log
@@ -254,6 +262,7 @@ Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `r
 | 2026-03-12 | Removed hardcoded amount_untaxed=335.26 bug | Claude |
 | 2026-03-12 | Cleaned stale USD/EUR rate entries + restored USD base rate in production | Claude |
 | 2026-03-12 | Deployed v17.0.1.4 to production — verified INV/2026/00483 shows 440.97 (today's rate) | Claude |
+| 2026-03-13 | Fixed fiscal_check visibility bug in ueipab_impresion_forma_libre view (both envs) | Claude |
 
 ---
 
