@@ -246,7 +246,7 @@ Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `r
 
 **Problem:** When migrating from Odoo `attrs` syntax to Odoo 17 `invisible=` syntax, the move types were inverted — `fiscal_check`, `control_number`, and `fiscal_correlative` were hidden on `out_invoice` and `in_invoice` (all regular invoices) instead of `out_receipt` and `in_receipt`. Also missing `readonly="state == 'posted'"` guard.
 
-**Fix:** Corrected `invisible` domain to `move_type in ('entry', 'out_receipt', 'in_receipt')` and restored `readonly="state == 'posted'"`. Applied via direct DB update on both envs + source file fix in `addons_archived/`.
+**Fix:** Corrected `invisible` domain to `move_type in ('entry', 'out_receipt', 'in_receipt')` and restored `readonly="state == 'posted'"`. Removed `widget="boolean_toggle"` which was preventing `@api.onchange("fiscal_check")` from firing — the toggle widget doesn't properly trigger onchange for auto-populating `control_number` and `fiscal_correlative`. Reverted to standard checkbox. Applied via direct DB update on both envs + source file fix in `addons_archived/`.
 
 ---
 
@@ -263,6 +263,7 @@ Deleted 3 orphaned USD rate entries (IDs 4, 5, 6) and 1 EUR entry (ID 3) from `r
 | 2026-03-12 | Cleaned stale USD/EUR rate entries + restored USD base rate in production | Claude |
 | 2026-03-12 | Deployed v17.0.1.4 to production — verified INV/2026/00483 shows 440.97 (today's rate) | Claude |
 | 2026-03-13 | Fixed fiscal_check visibility bug in ueipab_impresion_forma_libre view (both envs) | Claude |
+| 2026-03-13 | Removed boolean_toggle widget from fiscal_check — was blocking onchange auto-population | Claude |
 
 ---
 
