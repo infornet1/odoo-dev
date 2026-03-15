@@ -112,7 +112,7 @@ print(f"Acknowledged: {len(acknowledged)} / {len(batch.slip_ids)}")
 
 ## Payslip Acknowledgment Confirmation Email
 
-**Status:** PRODUCTION | **Deployed:** 2026-02-28 | **Module Version:** v1.53.0 | **Verified:** 2026-02-28 (SLIP/404 ANDRES MORALES)
+**Status:** PRODUCTION | **Deployed:** 2026-02-28 | **Module Version:** v1.53.1 | **Verified:** 2026-02-28 (SLIP/404 ANDRES MORALES)
 
 **Problem Solved:** After an employee acknowledges their payslip via the portal, there was no email confirmation sent. Employee had no proof of acknowledgment, and HR only knew via dashboard.
 
@@ -165,6 +165,27 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 | `controllers/payslip_acknowledgment.py` | Added send_mail() call after acknowledgment |
 | `models/hr_payslip.py` | Added `get_net_amount()` helper method |
 | `__manifest__.py` | Version 1.53.0, added XML file |
+
+---
+
+## Double-Acknowledgment Bug Fix (v1.53.1, 2026-03-15)
+
+**Problem:** Employee double-clicking the "Confirmar" button sent two simultaneous POST requests. Both workers passed the `is_acknowledged` guard check before either committed. `send_mail(force_send=True)` fires the SMTP send *inside* the transaction before commit, so both workers sent a confirmation email. Worker 2's DB write then failed with a Postgres `SerializationFailure` (HTTP 500), but the email had already left the server — result: employee received two confirmation emails.
+
+**Root cause confirmed from production logs (JESUS DI CESARE, SLIP/514, 2026-03-15 20:29:27):** Two simultaneous POST requests from same IP, two `mail.mail` records created and sent (IDs 2418 and 2419), worker 27 got HTTP 500 after SMTP send.
+
+**Fix — two layers:**
+
+1. **Client-side (`payslip_acknowledge_page`):** `onsubmit` handler on the form disables the button and changes its text to "⏳ Procesando..." immediately on click. Prevents the browser from sending a second request.
+
+2. **Server-side (`payslip_acknowledge_confirm`):** `SELECT ... FOR UPDATE` row lock acquired before the `is_acknowledged` check. The second concurrent request blocks at the lock, waits for the first transaction to commit, then reads the committed `is_acknowledged=True` value and returns "Ya Confirmado" — no second email sent. Also calls `payslip.invalidate_recordset()` after the lock to flush the stale ORM cache before reading `acknowledged_date`.
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `controllers/payslip_acknowledgment.py` | `onsubmit` button disable + `SELECT FOR UPDATE` lock + `invalidate_recordset()` |
+| `__manifest__.py` | Version 1.53.1 |
 
 ---
 

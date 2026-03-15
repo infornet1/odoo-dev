@@ -178,7 +178,8 @@ class PayslipAcknowledgmentController(http.Controller):
                     <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
                     <p style="color: #666; font-size: 14px;">Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital.</p>
                 </div>
-                <form action="/payslip/acknowledge/{payslip_id}/{token}/confirm?db={db_name}" method="POST">
+                <form action="/payslip/acknowledge/{payslip_id}/{token}/confirm?db={db_name}" method="POST"
+                      onsubmit="var btn=this.querySelector('button'); btn.disabled=true; btn.textContent='⏳ Procesando...';">
                     <button type="submit" class="btn">✅ Confirmar Recepción Digital</button>
                 </form>
                 <p style="margin-top: 15px; color: #999; font-size: 12px;">
@@ -233,8 +234,20 @@ class PayslipAcknowledgmentController(http.Controller):
                     [('Content-Type', 'text/html')]
                 )
 
+            # Acquire a row-level lock before checking/writing is_acknowledged.
+            # This serializes concurrent requests (e.g. double-click): the second
+            # request blocks here until the first commits, then re-reads the
+            # committed value and returns "Ya Confirmado" without sending a second email.
+            request.env.cr.execute(
+                "SELECT is_acknowledged FROM hr_payslip WHERE id = %s FOR UPDATE",
+                (payslip.id,)
+            )
+            row = request.env.cr.fetchone()
+            is_already_acked = row and row[0]
+
             # Check if already acknowledged
-            if payslip.is_acknowledged:
+            if is_already_acked:
+                payslip.invalidate_recordset()  # flush stale ORM cache, re-read from DB
                 ack_date = payslip.acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
                 content = f'''
                     <div class="icon">✅</div>
