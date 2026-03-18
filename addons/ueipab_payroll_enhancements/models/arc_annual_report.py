@@ -31,8 +31,9 @@ FAOV_CODES = ['VE_FAOV_DED_V2', 'VE_FAOV_DED']
 PARO_CODES = ['VE_PARO_DED_V2', 'VE_INCES_DED_V2', 'VE_PARO_DED']
 ARI_CODES = ['VE_ARI_DED_V2', 'VE_ARI_DED', 'VE_ISLR_DED']
 
-# Liquidation structures to exclude from monthly income sums
-LIQUIDATION_CODES = ['LIQUID_VE', 'LIQUID_VE_V2']
+# Structures to exclude from monthly income sums (liquidations + aguinaldos
+# are one-off payments that must not displace the regular monthly simulation)
+LIQUIDATION_CODES = ['LIQUID_VE', 'LIQUID_VE_V2', 'AGUINALDOS_2025']
 
 
 class ArcAnnualReport(models.AbstractModel):
@@ -246,10 +247,12 @@ class ArcAnnualReport(models.AbstractModel):
         gross_ves = (salary_usd + extrabonus_usd + bonus_usd) * rate
         salary_ves = salary_usd * rate
 
-        # SSO 4%, FAOV 1%, PARO 0.5% — applied on taxable salary VES
+        # SSO 4%, FAOV 1% — applied on base salary only (ueipab_salary_v2)
+        # PARO/INCES 0.5% applies to Utilidades only, not regular monthly nómina → 0
+        # ARI mirrors VE_ARI_DED_V2: salary_v2 × ari_rate (base salary only)
         sso_ves = salary_ves * 0.04
         faov_ves = salary_ves * 0.01
-        paro_ves = salary_ves * 0.005
+        paro_ves = 0.0
         net_taxable_ves = gross_ves - sso_ves - faov_ves - paro_ves
         ari_ves = salary_ves * ari_pct
 

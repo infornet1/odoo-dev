@@ -199,7 +199,10 @@ class ArcReportWizard(models.TransientModel):
                     body_html = tmpl._render_field('body_html', [employee.id])[employee.id]
                     email_from = tmpl._render_field('email_from', [employee.id])[employee.id]
 
-                    # 3. Inject acknowledgment button into email body.
+                    # 3. Compute ARC data and build summary table
+                    arc_summary = self._build_arc_summary_html(employee, int(self.year))
+
+                    # 4. Inject ARC summary + acknowledgment button into email body.
                     # Stage 1 notice: no PDF — the signed PDF arrives in Stage 2
                     # after the employee confirms via the portal link below.
                     ack_block = Markup('''
@@ -214,7 +217,7 @@ class ArcReportWizard(models.TransientModel):
                                 &#x1F512; Al confirmar recibir&#xe1; el PDF firmado con sello patronal.
                             </p>
                         </div>''') % ack_url
-                    body_with_ack = (body_html or Markup('')) + ack_block
+                    body_with_ack = (body_html or Markup('')) + arc_summary + ack_block
 
                     # 4. Send Stage 1 notice (no PDF attachment)
                     mail = self.env['mail.mail'].sudo().create({
@@ -245,6 +248,96 @@ class ArcReportWizard(models.TransientModel):
             'view_mode': 'form',
             'target': 'new',
         }
+
+
+    def _build_arc_summary_html(self, employee, year):
+        """Build an HTML ARC summary table for inclusion in the Stage 1 email."""
+        arc_model = self.env['report.ueipab_payroll_enhancements.arc_annual_report']
+        data = arc_model._compute_employee_arc(employee, year)
+        months = data.get('months', [])
+        totals = data.get('totals', {})
+        contract = data.get('contract')
+        ari_pct = (getattr(contract, 'ueipab_ari_withholding_rate', 0.0) or 0.0) if contract else 0.0
+        cedula = employee.identification_id or employee.ssnid or 'N/D'
+
+        def fmt(val):
+            return '{:,.2f}'.format(val or 0.0)
+
+        # Month rows — only non-empty months
+        rows_html = ''
+        for i, m in enumerate(months):
+            if m.get('is_empty'):
+                continue
+            bg = '#f5f5f5' if i % 2 else '#ffffff'
+            rows_html += (
+                '<tr style="background:%s;">'
+                '<td style="padding:5px 8px;border:1px solid #ddd;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;">%s</td>'
+                '<td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-weight:bold;">%s</td>'
+                '</tr>'
+            ) % (
+                bg, m.get('month_name', ''),
+                fmt(m.get('gross_ves')), fmt(m.get('sso_ves')),
+                fmt(m.get('faov_ves')), fmt(m.get('paro_ves')),
+                fmt(m.get('net_taxable_ves')), fmt(m.get('ari_ves')),
+            )
+
+        html = Markup(
+            '<div style="margin:24px 0;font-family:Arial,sans-serif;font-size:12px;">'
+            '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;'
+            'background:#e8eaf6;border-radius:6px;overflow:hidden;">'
+            '<tr><td style="padding:8px 14px;color:#1a237e;font-weight:bold;font-size:13px;">'
+            'Resumen ARC &#8212; Ejercicio Fiscal {year}'
+            '</td></tr>'
+            '<tr><td style="padding:4px 14px 10px;color:#555;">'
+            '<strong>Empleado:</strong> {name} &nbsp;&nbsp;'
+            '<strong>C&#xe9;dula:</strong> {cedula} &nbsp;&nbsp;'
+            '<strong>Tasa AR-I Retenida:</strong> {ari_pct}%'
+            '</td></tr>'
+            '</table>'
+            '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+            '<thead><tr style="background:#1a237e;color:white;text-align:center;">'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">Mes</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">Remun. Gravable (Bs.)</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">SSO (Bs.)</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">FAOV (Bs.)</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">PARO (Bs.)</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">Base Imponible (Bs.)</th>'
+            '<th style="padding:6px 8px;border:1px solid #aaa;">ISLR Retenido (Bs.)</th>'
+            '</tr></thead>'
+            '<tbody>{rows}</tbody>'
+            '<tfoot><tr style="background:#1a237e;color:white;font-weight:bold;text-align:right;">'
+            '<td style="padding:6px 8px;border:1px solid #aaa;text-align:left;">TOTAL</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_gross}</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_sso}</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_faov}</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_paro}</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_net}</td>'
+            '<td style="padding:6px 8px;border:1px solid #aaa;">{t_ari}</td>'
+            '</tr></tfoot>'
+            '</table>'
+            '<p style="font-size:10px;color:#888;margin-top:6px;">'
+            '* Todas las cifras en Bol&#xed;vares (Bs.) al tipo de cambio BCV de cada per&#xed;odo. '
+            'Base Imponible = Remun. Gravable &#8722; SSO &#8722; FAOV &#8722; PARO.'
+            '</p></div>'
+        ).format(
+            year=year,
+            name=employee.name,
+            cedula=cedula,
+            ari_pct='{:.1f}'.format(ari_pct),
+            rows=Markup(rows_html),
+            t_gross=fmt(totals.get('gross_ves')),
+            t_sso=fmt(totals.get('sso_ves')),
+            t_faov=fmt(totals.get('faov_ves')),
+            t_paro=fmt(totals.get('paro_ves')),
+            t_net=fmt(totals.get('net_taxable_ves')),
+            t_ari=fmt(totals.get('ari_ves')),
+        )
+        return html
 
 
 class ArcReportWizardResult(models.TransientModel):
