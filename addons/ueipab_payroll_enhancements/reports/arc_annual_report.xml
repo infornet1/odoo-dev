@@ -190,12 +190,13 @@
                          SIGNATURE BLOCK
                          ================================================ -->
                     <t t-set="ack_info" t-value="report.get('ack_info', {})"/>
+                    <t t-set="base_url" t-value="company.env['ir.config_parameter'].sudo().get_param('web.base.url', '')"/>
                     <table style="width:100%;border-collapse:collapse;margin-top:60px;">
                         <tr>
                             <!-- Employer: signature image + label -->
                             <td style="width:45%;text-align:center;padding:0 10px;vertical-align:bottom;">
                                 <div style="margin-bottom:0;">
-                                    <img src="/ueipab_payroll_enhancements/static/img/firma_sello_gp.jpg"
+                                    <img t-att-src="base_url + '/ueipab_payroll_enhancements/static/img/firma_sello_gp.jpg'"
                                          style="max-height:90px;max-width:210px;object-fit:contain;"/>
                                 </div>
                                 <div style="border-top:1px solid #444;padding-top:6px;

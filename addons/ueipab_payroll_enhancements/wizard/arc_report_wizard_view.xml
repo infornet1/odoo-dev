@@ -19,8 +19,9 @@
                         </div>
 
                         <div class="alert alert-info" role="alert">
-                            Seleccione el ejercicio fiscal y los empleados. Puede imprimir
-                            el PDF o enviarlo por correo electrónico en lote.
+                            <strong>Flujo en 2 etapas:</strong>
+                            Etapa 1 (aquí): se envía un aviso por correo con enlace de confirmación, sin PDF.
+                            Etapa 2 (automática): al confirmar, el empleado recibe el PDF firmado con sello patronal y su firma digital.
                         </div>
 
                         <group>
@@ -36,7 +37,7 @@
                             <group string="Envío por Correo">
                                 <field name="email_template_id"
                                        options="{'no_create': True}"
-                                       help="Requerida solo para el envío por correo. El PDF ARC se adjunta automáticamente."/>
+                                       help="Plantilla para el aviso (Etapa 1). El PDF firmado se envía automáticamente en Etapa 2 cuando el empleado confirma."/>
                             </group>
                         </group>
                     </div>
