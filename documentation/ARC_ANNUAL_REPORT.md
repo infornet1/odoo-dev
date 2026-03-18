@@ -14,15 +14,19 @@ Generates and distributes the SENIAT-mandated **Comprobante de Retenciones de Im
 
 ## Features
 
+- **Two-stage workflow** — Stage 1: notice email without PDF; Stage 2: signed PDF after employee confirms
 - **PDF per employee** — portrait Letter, dark-blue header, monthly detail table (Bs. only)
-- **Batch email wizard** — select fiscal year + optional employee filter; sends with `mail.mail`
+- **Employer signature/seal in PDF** — `firma_sello_gp.jpg` embedded in left signature column
+- **Digital ack block in PDF** — right column shows employee name, cédula, confirmation timestamp (UTC), IP when confirmed
+- **Batch email wizard** — select fiscal year + optional employee filter; sends Stage 1 notice emails
 - **Simulation** — months without confirmed payslips are estimated using contract ARI % × historical BCV rate
 - **Contract date windowing** — respects `date_start` / `date_end`; no rows before hire date
-- **CC to HR** — every ARC email copies `recursoshumanos@ueipab.edu.ve`
-- **Acknowledgment portal** — employee clicks link in email → confirms receipt → IP + timestamp recorded
-- **Ack confirmation email** — auto-sent to employee (CC: HR) when they confirm; template `email_template_arc_ack_confirmation`
-- **Ack status tracker** — Payroll → Reports → Estado ARC; tree view grouped by fiscal year showing sent/pending/confirmed per employee
-- **Acknowledgment reset** — HR manager can reset via `action_reset_acknowledgment()`
+- **CC to HR** — every ARC email (Stage 1 and Stage 2) copies `recursoshumanos@ueipab.edu.ve`
+- **One-time portal guard** — "Ya Confirmado" page shown if employee clicks again after first confirmation
+- **Stage 2 auto-PDF** — on confirm: cert model calls `action_send_final_pdf()` → generates signed PDF → emails via `email_template_arc_final_pdf`
+- **Ack confirmation email** — secondary notice email sent to employee (CC: HR); template `email_template_arc_ack_confirmation`
+- **Ack status tracker** — Payroll → Reports → Estado ARC; tree view with state badge (Pendiente / Notificado / Confirmado)
+- **Acknowledgment reset** — HR manager can reset via `action_reset_acknowledgment()` (clears ack data + resets state to `pending`)
 
 ---
 
@@ -32,10 +36,29 @@ Generates and distributes the SENIAT-mandated **Comprobante de Retenciones de Im
 
 | Model | Type | Description |
 |-------|------|-------------|
-| `report.ueipab_payroll_enhancements.arc_annual_report` | AbstractModel | Report values provider |
-| `arc.employee.certificate` | Model (permanent) | One record per employee+year; stores ack state |
-| `arc.report.wizard` | TransientModel | Wizard: year, employee filter, email template |
+| `report.ueipab_payroll_enhancements.arc_annual_report` | AbstractModel | Report values provider; fetches cert ack_info per employee for PDF signature block |
+| `arc.employee.certificate` | Model (permanent) | One record per employee+year; tracks state (`pending`/`notified`/`acknowledged`) + ack audit trail |
+| `arc.report.wizard` | TransientModel | Stage 1 wizard: year, employee filter, email template |
 | `arc.report.wizard.result` | TransientModel | Per-employee send status row |
+
+### Two-Stage Workflow
+
+```
+Stage 1 — Wizard (HR action)
+  HR opens wizard → selects year + employees + template
+  For each employee:
+    1. arc.employee.certificate created/updated → state = notified
+    2. Notice email sent (NO PDF) with portal confirm link
+    3. Wizard shows sent/error per employee
+
+Stage 2 — Portal (Employee action)
+  Employee clicks link in email → /arc/ack/init/ → /arc/acknowledge/
+  Employee clicks "Confirmar" → POST /arc/acknowledge/.../confirm
+    1. cert.write(is_acknowledged=True, acknowledged_date, ip, ua, state=acknowledged)
+    2. cert.action_send_final_pdf() → PDF regenerated (now includes employer seal
+       left column + digital ack block right column) → emailed via email_template_arc_final_pdf
+    3. email_template_arc_ack_confirmation also sent (plain text confirmation receipt)
+```
 
 ### Controllers
 
@@ -44,8 +67,8 @@ Both live in `controllers/payslip_acknowledgment.py`:
 | Route | Auth | Purpose |
 |-------|------|---------|
 | `GET /arc/ack/init/<id>/<token>` | `none` | **Session-setter**: reads `?db=` → `ensure_db()` → redirects to the real page |
-| `GET /arc/acknowledge/<id>/<token>` | `public` | Shows confirmation form |
-| `POST /arc/acknowledge/<id>/<token>/confirm` | `public` | Records acknowledgment |
+| `GET /arc/acknowledge/<id>/<token>` | `public` | Shows confirmation form (one-time guard: shows "Ya Confirmado" if already acked) |
+| `POST /arc/acknowledge/<id>/<token>/confirm` | `public` | Records acknowledgment; triggers Stage 2 PDF generation + delivery |
 
 #### Multi-database session design
 
@@ -95,10 +118,11 @@ Months outside this window render as empty dashes.
 
 ## Email Templates
 
-| Template ID | Model | Purpose |
-|-------------|-------|---------|
-| `email_template_arc_annual` | `hr.employee` | Outbound ARC delivery (wizard renders + injects ack button via `Markup`) |
-| `email_template_arc_ack_confirmation` | `arc.employee.certificate` | Confirmation receipt sent automatically when employee acknowledges; CC to HR |
+| Template ID | Model | Stage | Purpose |
+|-------------|-------|-------|---------|
+| `email_template_arc_annual` | `hr.employee` | 1 | Notice email: wizard renders + injects ack button via `Markup`; **no PDF** |
+| `email_template_arc_final_pdf` | `arc.employee.certificate` | 2 | Signed PDF delivery: auto-sent by `action_send_final_pdf()` after employee confirms |
+| `email_template_arc_ack_confirmation` | `arc.employee.certificate` | 2 | Plain confirmation receipt; also sent on confirm; CC to HR |
 
 ### `web.base.url` note
 In the testing environment (direct Odoo port, no SSL): `http://64.23.157.121:8019`. Using the domain (`dev.ueipab.edu.ve`) triggers browser HSTS and forces HTTPS on port 8019 which has no SSL. Set via:
@@ -113,8 +137,9 @@ self.env.cr.commit()
 **Menu:** Payroll → Reports → Estado ARC
 
 Tree view on `arc.employee.certificate`, pre-grouped by fiscal year:
-- Green rows = confirmed; grey rows = pending
-- Filters: Confirmados / Pendientes
+- Green rows = `acknowledged`; blue rows = `notified`; grey rows = `pending`
+- `state` badge column: Pendiente / Notificado / Confirmado
+- Filters: Confirmados / Notificados / Pendientes
 - Group-by: Ejercicio Fiscal, Empleado
 - Hidden column `acknowledged_ip` available via column selector
 
@@ -129,14 +154,20 @@ Tree view on `arc.employee.certificate`, pre-grouped by fiscal year:
 
 ---
 
-## Wizard Usage
+## Wizard Usage (Stage 1)
 
 1. Go to **Payroll → Reports → Comprobante ARC**
 2. Set **Ejercicio Fiscal** (default: previous year)
 3. Optionally filter by specific employees (leave blank = all with active contracts)
-4. Click **Vista Previa PDF** to generate a multi-page preview
-5. Select an email template and click **Enviar por Email**
+4. Click **Vista Previa PDF** to preview the unsigned ARC (no employer seal — will appear after confirmation)
+5. Select a notice email template (e.g. `ARC Anual - Comprobante de Retenciones ISLR`) and click **Enviar por Email**
 6. Watch progress; results shown per employee with status icons
+7. Cert state → `notified`; PDF will be auto-sent (Stage 2) after each employee confirms
+
+**Stage 2 is fully automatic.** When the employee clicks the portal link and confirms:
+- PDF is re-generated with employer seal (left column) + digital ack block (right column)
+- Signed PDF emailed to employee + CC to HR
+- Cert state → `acknowledged` (visible in Estado ARC)
 
 ---
 
@@ -147,3 +178,4 @@ Tree view on `arc.employee.certificate`, pre-grouped by fiscal year:
 | 17.0.1.55.0 | Initial release: PDF, batch email, ack portal |
 | 17.0.1.55.1 | Fix: multi-database session (auth=none init route + server_wide_modules); nginx arc proxy; web.base.url = IP:8019 for testing |
 | 17.0.1.56.0 | CC to HR on outbound emails; ack confirmation email to employee+HR; Estado ARC tracking list view |
+| 17.0.1.57.0 | Two-stage workflow: Stage 1 notice email (no PDF); Stage 2 auto-signed PDF on confirm; employer seal image in PDF left column; digital ack block in PDF right column; `state` field on cert (pending/notified/acknowledged); `email_template_arc_final_pdf` new template |

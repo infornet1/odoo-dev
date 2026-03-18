@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.56.0',
+    'version': '17.0.1.57.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -112,6 +112,7 @@ Advance Payment System (Pago Adelanto):
         'data/email_template_ack_confirmation.xml',  # Acknowledgment confirmation email
         'data/arc_email_template.xml',  # ARC annual withholding certificate email
         'data/arc_ack_confirmation_template.xml',  # ARC acknowledgment confirmation email
+        'data/arc_final_pdf_template.xml',  # ARC Stage 2 signed PDF delivery email
 
         # 4. Views (which may inherit or use actions from above)
         'views/hr_payslip_employees_views.xml',

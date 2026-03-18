@@ -5,10 +5,15 @@ ARC Employee Certificate
 Permanent record per (employee, fiscal year) tracking:
   - When the ARC was sent and to which email
   - Whether the employee acknowledged receipt via the portal link
+  - Two-stage workflow: notified → acknowledged (signed PDF sent on confirm)
 """
+import base64
+import logging
 import uuid
 
 from odoo import api, fields, models
+
+_logger = logging.getLogger(__name__)
 
 
 class ArcEmployeeCertificate(models.Model):
@@ -25,6 +30,12 @@ class ArcEmployeeCertificate(models.Model):
     year = fields.Char(string='Ejercicio Fiscal', required=True)
 
     access_token = fields.Char(string='Token', copy=False, readonly=True)
+
+    state = fields.Selection([
+        ('pending', 'Pendiente'),
+        ('notified', 'Notificado'),
+        ('acknowledged', 'Confirmado'),
+    ], string='Estado', default='pending', tracking=True)
 
     sent_date = fields.Datetime(string='Fecha de Envío', readonly=True)
     sent_email = fields.Char(string='Correo Destino', readonly=True)
@@ -71,10 +82,56 @@ class ArcEmployeeCertificate(models.Model):
         # where no active session exists (e.g. employee clicking from email).
         return '%s/arc/ack/init/%s/%s?db=%s' % (base_url, self.id, self.access_token, db)
 
+    def action_send_final_pdf(self):
+        """Stage 2: generate signed PDF (employer seal + digital ack block) and email to employee.
+
+        Called automatically by the portal controller after the employee confirms receipt.
+        The PDF is generated fresh so it includes the employer signature image and the
+        employee's digital acknowledgment details (timestamp, IP, device).
+        """
+        self.ensure_one()
+        employee = self.employee_id
+        year = int(self.year)
+
+        try:
+            report_model = self.env['ir.actions.report']
+            pdf_bytes, _ = report_model.sudo()._render_qweb_pdf(
+                'ueipab_payroll_enhancements.arc_annual_report',
+                res_ids=[employee.id],
+                data={'employee_ids': [employee.id], 'year': year},
+            )
+
+            filename = 'ARC_%s_%s_Firmado.pdf' % (self.year, employee.name.replace(' ', '_'))
+            attachment = self.env['ir.attachment'].create({
+                'name': filename,
+                'type': 'binary',
+                'datas': base64.b64encode(pdf_bytes).decode(),
+                'mimetype': 'application/pdf',
+                'res_model': self._name,
+                'res_id': self.id,
+            })
+
+            tmpl = self.env.ref(
+                'ueipab_payroll_enhancements.email_template_arc_final_pdf',
+                raise_if_not_found=False,
+            )
+            if tmpl:
+                tmpl.sudo().send_mail(
+                    self.id,
+                    force_send=True,
+                    email_values={'attachment_ids': [(4, attachment.id)]},
+                )
+            else:
+                _logger.warning('ARC final PDF template not found; skipping final email for cert %s', self.id)
+
+        except Exception:
+            _logger.exception('action_send_final_pdf failed for cert %s (employee %s)', self.id, employee.name)
+
     def action_reset_acknowledgment(self):
         self.write({
             'is_acknowledged': False,
             'acknowledged_date': False,
             'acknowledged_ip': False,
             'acknowledged_user_agent': False,
+            'state': 'pending',
         })

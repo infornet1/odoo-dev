@@ -189,11 +189,17 @@
                     <!-- ================================================
                          SIGNATURE BLOCK
                          ================================================ -->
+                    <t t-set="ack_info" t-value="report.get('ack_info', {})"/>
                     <table style="width:100%;border-collapse:collapse;margin-top:60px;">
                         <tr>
-                            <td style="width:45%;text-align:center;padding:0 10px;">
+                            <!-- Employer: signature image + label -->
+                            <td style="width:45%;text-align:center;padding:0 10px;vertical-align:bottom;">
+                                <div style="margin-bottom:0;">
+                                    <img src="/ueipab_payroll_enhancements/static/img/firma_sello_gp.jpg"
+                                         style="max-height:90px;max-width:210px;object-fit:contain;"/>
+                                </div>
                                 <div style="border-top:1px solid #444;padding-top:6px;
-                                            font-size:9px;color:#333;margin-top:50px;">
+                                            font-size:9px;color:#333;">
                                     Firma y Sello del Agente de Retención
                                 </div>
                                 <div style="font-size:8.5px;color:#666;margin-top:2px;">
@@ -201,14 +207,43 @@
                                 </div>
                             </td>
                             <td style="width:10%;"/>
-                            <td style="width:45%;text-align:center;padding:0 10px;">
-                                <div style="border-top:1px solid #444;padding-top:6px;
-                                            font-size:9px;color:#333;margin-top:50px;">
-                                    Firma del Beneficiario
-                                </div>
-                                <div style="font-size:8.5px;color:#666;margin-top:2px;">
-                                    <t t-esc="employee.name"/>
-                                </div>
+                            <!-- Employee: digital ack block (if confirmed) or blank line -->
+                            <td style="width:45%;text-align:center;padding:0 10px;vertical-align:bottom;">
+                                <t t-if="ack_info.get('is_acknowledged')">
+                                    <div style="border:1px solid #1a237e;border-radius:6px;
+                                                padding:8px 10px;background:#f0f4ff;
+                                                text-align:left;font-size:8px;margin-bottom:0;">
+                                        <div style="color:#1a237e;font-weight:bold;
+                                                    margin-bottom:4px;font-size:9px;">
+                                            &#x2713; Firma Digital del Beneficiario
+                                        </div>
+                                        <div><strong>Empleado:</strong>
+                                            <t t-esc="employee.name"/>
+                                        </div>
+                                        <div><strong>C&#xe9;dula:</strong>
+                                            <t t-esc="employee.identification_id or '-'"/>
+                                        </div>
+                                        <div><strong>Fecha (UTC):</strong>
+                                            <t t-esc="ack_info['acknowledged_date'].strftime('%d/%m/%Y %H:%M:%S') if ack_info.get('acknowledged_date') else '-'"/>
+                                        </div>
+                                        <div><strong>IP:</strong>
+                                            <t t-esc="ack_info.get('acknowledged_ip') or '-'"/>
+                                        </div>
+                                        <div style="margin-top:4px;color:#555;font-size:7.5px;">
+                                            Confirmaci&#xf3;n electr&#xf3;nica irrevocable
+                                            registrada en el sistema UEIPAB.
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="border-top:1px solid #444;padding-top:6px;
+                                                font-size:9px;color:#333;margin-top:50px;">
+                                        Firma del Beneficiario
+                                    </div>
+                                    <div style="font-size:8.5px;color:#666;margin-top:2px;">
+                                        <t t-esc="employee.name"/>
+                                    </div>
+                                </t>
                             </td>
                         </tr>
                     </table>

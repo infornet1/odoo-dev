@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-ARC Annual Withholding Certificate Wizard
+ARC Annual Withholding Certificate Wizard (Stage 1)
 
 Standalone wizard accessible from Payroll > Reports.
 Allows HR to:
   1. Select fiscal year and employees.
   2. Preview a multi-employee PDF.
-  3. Send individual PDFs by email in batch with real-time progress.
+  3. Send Stage 1 notice emails in batch (no PDF attached).
+
+Two-stage workflow:
+  Stage 1 (Wizard): notice email with portal confirmation link. Cert state → notified.
+  Stage 2 (Portal): employee clicks confirm → signed PDF generated (employer seal +
+                    digital ack block) and emailed automatically. Cert state → acknowledged.
 """
 
-import base64
 import logging
 from datetime import date, datetime
 
@@ -159,9 +163,13 @@ class ArcReportWizard(models.TransientModel):
         return self.action_process_all()
 
     def action_process_all(self):
-        """Send ARC PDF email to each pending employee, committing after each."""
+        """Stage 1: send notice email to each pending employee, committing after each.
+
+        No PDF is attached at this stage. The signed PDF (with employer seal and
+        digital acknowledgment block) is generated and emailed automatically in
+        Stage 2 when the employee confirms receipt via the portal link.
+        """
         self.ensure_one()
-        report_model = self.env['ir.actions.report']
 
         for result in self.result_ids.filtered(lambda r: r.status == 'pending'):
             employee = result.employee_id
@@ -174,46 +182,26 @@ class ArcReportWizard(models.TransientModel):
                 self.no_email_count += 1
             else:
                 try:
-                    # 1. Generate individual PDF for this employee + year
-                    pdf_bytes, _ = report_model.sudo()._render_qweb_pdf(
-                        'ueipab_payroll_enhancements.arc_annual_report',
-                        res_ids=[employee.id],
-                        data={'employee_ids': [employee.id], 'year': int(self.year)},
-                    )
-
-                    # 2. Create ir.attachment
-                    filename = 'ARC_%s_%s.pdf' % (
-                        self.year,
-                        employee.name.replace(' ', '_'),
-                    )
-                    attachment = self.env['ir.attachment'].create({
-                        'name': filename,
-                        'type': 'binary',
-                        'datas': base64.b64encode(pdf_bytes).decode(),
-                        'mimetype': 'application/pdf',
-                        'res_model': 'hr.employee',
-                        'res_id': employee.id,
-                    })
-
-                    # 3. Create/update acknowledgment certificate and get ack URL
+                    # 1. Create/update acknowledgment certificate and get ack URL
                     cert = self.env['arc.employee.certificate'].sudo().get_or_create(
                         employee.id, self.year
                     )
                     cert.sudo().write({
                         'sent_date': datetime.utcnow(),
                         'sent_email': result.employee_email,
+                        'state': 'notified',
                     })
                     ack_url = cert._get_ack_url()
 
-                    # 4. Render template fields individually (Odoo 17 API)
+                    # 2. Render template fields individually (Odoo 17 API)
                     tmpl = self.email_template_id
                     subject   = tmpl._render_field('subject',   [employee.id])[employee.id]
                     body_html = tmpl._render_field('body_html', [employee.id])[employee.id]
                     email_from = tmpl._render_field('email_from', [employee.id])[employee.id]
 
-                    # 5. Inject acknowledgment button into email body
-                    # Must use Markup() so the HTML is not escaped when appended
-                    # to the Markup object returned by _render_field.
+                    # 3. Inject acknowledgment button into email body.
+                    # Stage 1 notice: no PDF — the signed PDF arrives in Stage 2
+                    # after the employee confirms via the portal link below.
                     ack_block = Markup('''
                         <div style="text-align:center;margin:28px 0 10px;">
                             <a href="%s"
@@ -223,19 +211,18 @@ class ArcReportWizard(models.TransientModel):
                                 &#x2705; Confirmar Recepci&#xF3;n del ARC
                             </a>
                             <p style="font-size:11px;color:#999;margin-top:8px;">
-                                &#x1F512; Su confirmaci&#xF3;n queda registrada con fecha, hora e IP.
+                                &#x1F512; Al confirmar recibir&#xe1; el PDF firmado con sello patronal.
                             </p>
                         </div>''') % ack_url
                     body_with_ack = (body_html or Markup('')) + ack_block
 
-                    # 6. Create and send mail.mail
+                    # 4. Send Stage 1 notice (no PDF attachment)
                     mail = self.env['mail.mail'].sudo().create({
                         'subject': subject or 'Comprobante ARC %s' % self.year,
                         'email_from': email_from or '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
                         'email_to': result.employee_email,
                         'email_cc': 'recursoshumanos@ueipab.edu.ve',
                         'body_html': body_with_ack,
-                        'attachment_ids': [(4, attachment.id)],
                     })
                     mail.sudo().send()
 

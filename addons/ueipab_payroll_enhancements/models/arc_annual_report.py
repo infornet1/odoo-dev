@@ -45,9 +45,27 @@ class ArcAnnualReport(models.AbstractModel):
 
         employees = self.env['hr.employee'].browse(employee_ids)
 
+        # Pre-fetch acknowledgment certificates for these employees + year
+        certs = self.env['arc.employee.certificate'].sudo().search([
+            ('employee_id', 'in', list(employee_ids)),
+            ('year', '=', str(year)),
+        ])
+        cert_map = {c.employee_id.id: c for c in certs}
+
         reports = []
         for employee in employees:
-            reports.append(self._compute_employee_arc(employee, year))
+            report = self._compute_employee_arc(employee, year)
+            cert = cert_map.get(employee.id)
+            if cert and cert.is_acknowledged:
+                report['ack_info'] = {
+                    'is_acknowledged': True,
+                    'acknowledged_date': cert.acknowledged_date,
+                    'acknowledged_ip': cert.acknowledged_ip or '',
+                    'acknowledged_user_agent': cert.acknowledged_user_agent or '',
+                }
+            else:
+                report['ack_info'] = {'is_acknowledged': False}
+            reports.append(report)
 
         return {
             'doc_ids': employee_ids,

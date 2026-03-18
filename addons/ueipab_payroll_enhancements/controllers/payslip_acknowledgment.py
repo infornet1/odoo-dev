@@ -469,8 +469,14 @@ class ArcAcknowledgmentController(http.Controller):
                     'acknowledged_date': datetime.utcnow(),
                     'acknowledged_ip': ip[:100],
                     'acknowledged_user_agent': ua[:250],
+                    'state': 'acknowledged',
                 })
-                # Send ARC acknowledgment confirmation email to the employee (CC to HR)
+                # Stage 2: generate signed PDF (employer seal + digital ack block)
+                # and email it to the employee. Also send the plain ack confirmation.
+                try:
+                    cert.sudo().action_send_final_pdf()
+                except Exception:
+                    pass  # PDF delivery failure must not block the portal response
                 try:
                     tmpl = request.env.ref(
                         'ueipab_payroll_enhancements.email_template_arc_ack_confirmation',

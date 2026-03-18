@@ -5,12 +5,18 @@
         <field name="name">arc.employee.certificate.tree</field>
         <field name="model">arc.employee.certificate</field>
         <field name="arch" type="xml">
-            <tree string="Estado ARC" decoration-success="is_acknowledged == True" decoration-muted="is_acknowledged == False">
+            <tree string="Estado ARC"
+                  decoration-success="state == 'acknowledged'"
+                  decoration-info="state == 'notified'"
+                  decoration-muted="state == 'pending'">
                 <field name="year"/>
                 <field name="employee_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'acknowledged'"
+                       decoration-info="state == 'notified'"
+                       decoration-muted="state == 'pending'"/>
                 <field name="sent_date"/>
                 <field name="sent_email"/>
-                <field name="is_acknowledged" widget="boolean" string="Confirmado"/>
                 <field name="acknowledged_date"/>
                 <field name="acknowledged_ip" optional="hide"/>
             </tree>
@@ -28,6 +34,7 @@
                         <group>
                             <field name="employee_id"/>
                             <field name="year"/>
+                            <field name="state" widget="badge"/>
                             <field name="sent_date"/>
                             <field name="sent_email"/>
                         </group>
@@ -51,8 +58,9 @@
             <search string="ARC Certificates">
                 <field name="employee_id"/>
                 <field name="year"/>
-                <filter name="acknowledged" string="Confirmados" domain="[('is_acknowledged','=',True)]"/>
-                <filter name="pending" string="Pendientes" domain="[('is_acknowledged','=',False)]"/>
+                <filter name="acknowledged" string="Confirmados" domain="[('state','=','acknowledged')]"/>
+                <filter name="notified" string="Notificados" domain="[('state','=','notified')]"/>
+                <filter name="pending" string="Pendientes" domain="[('state','=','pending')]"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_year" string="Ejercicio Fiscal" context="{'group_by': 'year'}"/>
                     <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>

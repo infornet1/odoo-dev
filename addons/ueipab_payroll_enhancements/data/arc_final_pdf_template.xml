@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="0">
+<odoo noupdate="1">
 
     <!-- ================================================================
-         Email Template: ARC Annual Withholding Certificate
-         Model: hr.employee — body rendered per employee, PDF + ack link
-         injected by the wizard at send time.
+         Email Template: ARC Final Signed PDF (Stage 2)
+         Model: arc.employee.certificate
+         Sent automatically after employee confirms receipt via portal.
+         The wizard attaches the signed PDF (employer seal + digital ack block)
+         via email_values={'attachment_ids': [...]}.
          ================================================================ -->
-    <record id="email_template_arc_annual" model="mail.template">
-        <field name="name">ARC Anual - Comprobante de Retenciones ISLR</field>
-        <field name="model_id" ref="hr.model_hr_employee"/>
+    <record id="email_template_arc_final_pdf" model="mail.template">
+        <field name="name">ARC Anual - PDF Firmado (Etapa 2)</field>
+        <field name="model_id" ref="ueipab_payroll_enhancements.model_arc_employee_certificate"/>
         <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
-        <field name="email_to">{{object.work_email}}</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
         <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
-        <field name="subject">📋 Comprobante ARC │ Ejercicio Fiscal {{datetime.datetime.now().year - 1}} │ {{object.name}}</field>
+        <field name="subject">📄 ARC {{object.year}} — PDF Firmado │ {{object.employee_id.name}}</field>
 
         <field name="body_html" type="html">
             <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
@@ -21,73 +23,74 @@
                             border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.1);
                             overflow:hidden;">
 
-                    <!-- ── Top banner ── -->
+                    <!-- Top banner -->
                     <div style="background:linear-gradient(135deg,#1a237e 0%,#283593 100%);
                                 color:white;padding:28px 30px;text-align:center;">
-
-                        <!-- Company logo -->
                         <t t-set="base_url" t-value="object.env['ir.config_parameter'].sudo().get_param('web.base.url')"/>
                         <div style="margin-bottom:14px;">
                             <img t-att-src="base_url + '/ueipab_payroll_enhancements/static/img/ueipab_logo.png'"
                                  style="max-height:70px;max-width:200px;" alt="UEIPAB"/>
                         </div>
-
                         <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:0.5px;">
-                            📋 Comprobante ARC
+                            📄 ARC Firmado — Ejercicio Fiscal <t t-out="object.year"/>
                         </h1>
                         <p style="margin:6px 0 0;font-size:14px;opacity:0.9;">
-                            Comprobante de Retenciones de ISLR
-                        </p>
-                        <p style="margin:4px 0 0;font-size:13px;opacity:0.75;">
-                            Instituto Privado Andrés Bello, CA
+                            Comprobante de Retenciones de ISLR con Firma Digital
                         </p>
                     </div>
 
                     <div style="padding:30px;">
 
                         <p style="font-size:15px;color:#333;margin-bottom:18px;">
-                            Estimado/a <strong t-out="object.name"/>,
+                            Estimado/a <strong t-out="object.employee_id.name"/>,
                         </p>
 
                         <p style="font-size:14px;color:#555;line-height:1.7;margin-bottom:20px;">
-                            En cumplimiento con las disposiciones del Código Orgánico Tributario y la
-                            Ley de Impuesto Sobre la Renta (LISLR), le notificamos la disponibilidad de su
-                            <strong>Comprobante de Retenciones en la Fuente (Formulario ARC)</strong>
-                            correspondiente al ejercicio fiscal concluido.
-                            <strong>Confirme la recepción</strong> con el botón de abajo para recibir el
-                            PDF firmado con el sello del Agente de Retención.
+                            Adjunto encontrará su <strong>Comprobante ARC</strong> correspondiente al
+                            ejercicio fiscal <strong t-out="object.year"/>, firmado con el sello del
+                            Agente de Retención e incorporando su confirmación de recepción digital.
                         </p>
 
-                        <!-- Info box -->
+                        <!-- Ack details box -->
                         <div style="background:#e8eaf6;border-left:4px solid #1a237e;
                                     padding:14px 18px;border-radius:4px;margin:20px 0;">
                             <p style="font-size:14px;color:#1a237e;margin:0 0 8px;">
-                                <strong>ℹ️ ¿Cómo funciona?</strong>
+                                <strong>&#x2705; Datos de su Confirmación Digital</strong>
                             </p>
-                            <ul style="font-size:13px;color:#444;line-height:1.7;
-                                       margin:0;padding-left:18px;">
-                                <li>Haga clic en el botón para confirmar que ha recibido su ARC.</li>
-                                <li>Al confirmar, recibirá el PDF firmado con el sello patronal y su firma digital.</li>
-                                <li>Use ese documento para su declaración de ISLR ante el SENIAT.</li>
-                            </ul>
+                            <p style="font-size:13px;color:#444;margin:4px 0;">
+                                <strong>Empleado:</strong>
+                                <t t-out="object.employee_id.name"/>
+                            </p>
+                            <p style="font-size:13px;color:#444;margin:4px 0;">
+                                <strong>Cédula:</strong>
+                                <t t-out="object.employee_id.identification_id or '-'"/>
+                            </p>
+                            <p style="font-size:13px;color:#444;margin:4px 0;">
+                                <strong>Ejercicio Fiscal:</strong>
+                                <t t-out="object.year"/>
+                            </p>
+                            <t t-if="object.acknowledged_date">
+                                <p style="font-size:13px;color:#444;margin:4px 0;">
+                                    <strong>Fecha de Confirmación (UTC):</strong>
+                                    <t t-out="object.acknowledged_date"/>
+                                </p>
+                            </t>
+                            <t t-if="object.acknowledged_ip">
+                                <p style="font-size:13px;color:#444;margin:4px 0;">
+                                    <strong>Dirección IP:</strong>
+                                    <t t-out="object.acknowledged_ip"/>
+                                </p>
+                            </t>
                         </div>
 
-                        <!-- Contact box -->
+                        <!-- Usage note -->
                         <div style="background:#e8f4f8;border-left:4px solid #0288d1;
                                     padding:12px 16px;border-radius:4px;margin:20px 0;">
-                            <p style="font-size:14px;color:#333;margin:0 0 6px;">
-                                <strong>💬 ¿Dudas o consultas?</strong>
-                            </p>
                             <p style="font-size:13px;color:#555;line-height:1.5;margin:0;">
-                                Escriba a
-                                <a href="mailto:recursoshumanos@ueipab.edu.ve"
-                                   style="color:#0288d1;text-decoration:none;">
-                                    recursoshumanos@ueipab.edu.ve
-                                </a>.
+                                Conserve este documento para su declaración de ISLR ante el SENIAT.
+                                Fue generado conforme al Decreto 1808.
                             </p>
                         </div>
-
-                        <!-- NOTE: ack button is injected here by the wizard -->
 
                         <p style="font-size:12px;color:#aaa;font-style:italic;margin:28px 0 0;">
                             Este documento fue generado automáticamente por el sistema de nómina de UEIPAB.
@@ -107,7 +110,6 @@
                 </div><!-- /card -->
             </div><!-- /outer -->
         </field>
-        <!-- No report_template_ids — PDF is attached manually by the wizard -->
     </record>
 
 </odoo>
