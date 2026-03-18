@@ -1,0 +1,296 @@
+# -*- coding: utf-8 -*-
+"""
+ARC Annual Withholding Certificate Wizard
+
+Standalone wizard accessible from Payroll > Reports.
+Allows HR to:
+  1. Select fiscal year and employees.
+  2. Preview a multi-employee PDF.
+  3. Send individual PDFs by email in batch with real-time progress.
+"""
+
+import base64
+import logging
+from datetime import date, datetime
+
+from markupsafe import Markup
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
+
+REPORT_REF = 'ueipab_payroll_enhancements.action_report_arc_annual'
+
+
+class ArcReportWizard(models.TransientModel):
+    """Wizard for generating and distributing ARC annual certificates."""
+
+    _name = 'arc.report.wizard'
+    _description = 'Comprobante ARC - Asistente'
+
+    # ------------------------------------------------------------------
+    # Fields
+    # ------------------------------------------------------------------
+
+    year = fields.Char(
+        string='Ejercicio Fiscal',
+        required=True,
+        default=lambda self: str(date.today().year - 1),
+    )
+
+    employee_ids = fields.Many2many(
+        'hr.employee',
+        string='Filtrar por empleado(s)',
+        help='Deje vacío para incluir todos los empleados con contrato activo. '
+             'Seleccione uno o más para limitar el reporte.',
+    )
+
+    employee_count = fields.Integer(
+        string='Empleados seleccionados',
+        compute='_compute_employee_count',
+    )
+
+    email_template_id = fields.Many2one(
+        'mail.template',
+        string='Plantilla de Correo',
+        domain="[('model', '=', 'hr.employee')]",
+        help='Plantilla usada para el cuerpo del correo. El PDF ARC se adjunta automáticamente.',
+    )
+
+    state = fields.Selection([
+        ('select', 'Seleccionar'),
+        ('sending', 'Enviando'),
+        ('done', 'Completado'),
+    ], default='select', string='Estado')
+
+    # Progress counters
+    total_count = fields.Integer(string='Total', readonly=True, default=0)
+    processed_count = fields.Integer(string='Procesados', readonly=True, default=0)
+    sent_count = fields.Integer(string='Enviados', readonly=True, default=0)
+    failed_count = fields.Integer(string='Fallidos', readonly=True, default=0)
+    no_email_count = fields.Integer(string='Sin Email', readonly=True, default=0)
+    progress_percent = fields.Float(string='Progreso %', compute='_compute_progress')
+    current_employee = fields.Char(string='Empleado actual', readonly=True)
+
+    result_ids = fields.One2many(
+        'arc.report.wizard.result',
+        'wizard_id',
+        string='Resultados',
+    )
+
+    # ------------------------------------------------------------------
+    # Computed
+    # ------------------------------------------------------------------
+
+    @api.depends('employee_ids')
+    def _compute_employee_count(self):
+        for wiz in self:
+            wiz.employee_count = len(wiz._get_selected_employees())
+
+    @api.depends('processed_count', 'total_count')
+    def _compute_progress(self):
+        for wiz in self:
+            wiz.progress_percent = (
+                (wiz.processed_count / wiz.total_count * 100)
+                if wiz.total_count else 0.0
+            )
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _get_selected_employees(self):
+        if self.employee_ids:
+            return self.employee_ids
+        # Default: all employees with an active (open) contract
+        contracts = self.env['hr.contract'].search([('state', '=', 'open')])
+        return contracts.mapped('employee_id')
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    def action_preview_pdf(self):
+        """Open a multi-employee PDF preview (one page per employee)."""
+        self.ensure_one()
+        employees = self._get_selected_employees()
+        if not employees:
+            raise UserError(_('No hay empleados seleccionados.'))
+
+        data = {
+            'employee_ids': employees.ids,
+            'year': int(self.year),
+        }
+        report = self.env.ref(REPORT_REF)
+        return report.report_action(docids=employees.ids, data=data)
+
+    def action_start_sending(self):
+        """Initialise result lines and transition to sending state."""
+        self.ensure_one()
+        if not self.email_template_id:
+            raise UserError(_('Seleccione una plantilla de correo antes de enviar.'))
+
+        employees = self._get_selected_employees()
+        if not employees:
+            raise UserError(_('No hay empleados seleccionados.'))
+
+        # Create one result record per employee
+        result_vals = []
+        for emp in employees:
+            result_vals.append({
+                'wizard_id': self.id,
+                'employee_id': emp.id,
+                'employee_name': emp.name,
+                'employee_email': emp.work_email or '',
+                'has_email': bool(emp.work_email),
+                'status': 'pending',
+            })
+        self.env['arc.report.wizard.result'].create(result_vals)
+
+        self.write({
+            'state': 'sending',
+            'total_count': len(employees),
+            'processed_count': 0,
+            'sent_count': 0,
+            'failed_count': 0,
+            'no_email_count': 0,
+        })
+        return self.action_process_all()
+
+    def action_process_all(self):
+        """Send ARC PDF email to each pending employee, committing after each."""
+        self.ensure_one()
+        report_model = self.env['ir.actions.report']
+
+        for result in self.result_ids.filtered(lambda r: r.status == 'pending'):
+            employee = result.employee_id
+            self.current_employee = employee.name
+            result.status = 'sending'
+            self.env.cr.commit()
+
+            if not result.has_email:
+                result.write({'status': 'no_email', 'error_message': 'Sin dirección de email'})
+                self.no_email_count += 1
+            else:
+                try:
+                    # 1. Generate individual PDF for this employee + year
+                    pdf_bytes, _ = report_model.sudo()._render_qweb_pdf(
+                        'ueipab_payroll_enhancements.arc_annual_report',
+                        res_ids=[employee.id],
+                        data={'employee_ids': [employee.id], 'year': int(self.year)},
+                    )
+
+                    # 2. Create ir.attachment
+                    filename = 'ARC_%s_%s.pdf' % (
+                        self.year,
+                        employee.name.replace(' ', '_'),
+                    )
+                    attachment = self.env['ir.attachment'].create({
+                        'name': filename,
+                        'type': 'binary',
+                        'datas': base64.b64encode(pdf_bytes).decode(),
+                        'mimetype': 'application/pdf',
+                        'res_model': 'hr.employee',
+                        'res_id': employee.id,
+                    })
+
+                    # 3. Create/update acknowledgment certificate and get ack URL
+                    cert = self.env['arc.employee.certificate'].sudo().get_or_create(
+                        employee.id, self.year
+                    )
+                    cert.sudo().write({
+                        'sent_date': datetime.utcnow(),
+                        'sent_email': result.employee_email,
+                    })
+                    ack_url = cert._get_ack_url()
+
+                    # 4. Render template fields individually (Odoo 17 API)
+                    tmpl = self.email_template_id
+                    subject   = tmpl._render_field('subject',   [employee.id])[employee.id]
+                    body_html = tmpl._render_field('body_html', [employee.id])[employee.id]
+                    email_from = tmpl._render_field('email_from', [employee.id])[employee.id]
+
+                    # 5. Inject acknowledgment button into email body
+                    # Must use Markup() so the HTML is not escaped when appended
+                    # to the Markup object returned by _render_field.
+                    ack_block = Markup('''
+                        <div style="text-align:center;margin:28px 0 10px;">
+                            <a href="%s"
+                               style="display:inline-block;background:linear-gradient(135deg,#1a237e,#283593);
+                                      color:white;padding:14px 32px;border-radius:8px;font-size:15px;
+                                      font-weight:bold;text-decoration:none;letter-spacing:0.3px;">
+                                &#x2705; Confirmar Recepci&#xF3;n del ARC
+                            </a>
+                            <p style="font-size:11px;color:#999;margin-top:8px;">
+                                &#x1F512; Su confirmaci&#xF3;n queda registrada con fecha, hora e IP.
+                            </p>
+                        </div>''') % ack_url
+                    body_with_ack = (body_html or Markup('')) + ack_block
+
+                    # 6. Create and send mail.mail
+                    mail = self.env['mail.mail'].sudo().create({
+                        'subject': subject or 'Comprobante ARC %s' % self.year,
+                        'email_from': email_from or '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+                        'email_to': result.employee_email,
+                        'body_html': body_with_ack,
+                        'attachment_ids': [(4, attachment.id)],
+                    })
+                    mail.sudo().send()
+
+                    result.write({'status': 'sent'})
+                    self.sent_count += 1
+
+                except Exception as exc:
+                    _logger.exception('ARC email failed for employee %s', employee.name)
+                    result.write({'status': 'error', 'error_message': str(exc)[:250]})
+                    self.failed_count += 1
+
+            self.processed_count += 1
+            self.env.cr.commit()
+
+        self.write({'state': 'done', 'current_employee': False})
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+
+class ArcReportWizardResult(models.TransientModel):
+    """Per-employee result row for the ARC batch email wizard."""
+
+    _name = 'arc.report.wizard.result'
+    _description = 'ARC Wizard - Resultado por Empleado'
+
+    wizard_id = fields.Many2one('arc.report.wizard', required=True, ondelete='cascade')
+    employee_id = fields.Many2one('hr.employee', string='Empleado', readonly=True)
+    employee_name = fields.Char(string='Nombre', readonly=True)
+    employee_email = fields.Char(string='Correo', readonly=True)
+    has_email = fields.Boolean(readonly=True)
+
+    status = fields.Selection([
+        ('pending', 'Pendiente'),
+        ('sending', 'Enviando'),
+        ('sent', 'Enviado'),
+        ('no_email', 'Sin Email'),
+        ('error', 'Error'),
+    ], string='Estado', default='pending')
+
+    error_message = fields.Char(string='Detalle del error', readonly=True)
+
+    status_icon = fields.Char(string='', compute='_compute_status_icon')
+
+    @api.depends('status')
+    def _compute_status_icon(self):
+        icons = {
+            'pending': '⏳',
+            'sending': '📤',
+            'sent': '✅',
+            'no_email': '⚠️',
+            'error': '❌',
+        }
+        for rec in self:
+            rec.status_icon = icons.get(rec.status, '')

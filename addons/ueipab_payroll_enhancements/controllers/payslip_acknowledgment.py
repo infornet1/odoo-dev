@@ -333,3 +333,167 @@ class PayslipAcknowledgmentController(http.Controller):
                 self._render_html_page('Error', content, 'error'),
                 [('Content-Type', 'text/html')]
             )
+
+
+class ArcAcknowledgmentController(http.Controller):
+    """Controller for ARC annual certificate acknowledgment portal pages."""
+
+    @http.route(
+        '/arc/ack/init/<int:cert_id>/<string:token>',
+        type='http', auth='none', csrf=False
+    )
+    def arc_ack_init(self, cert_id, token, **kw):
+        """Set the session database and redirect to the real ack page.
+
+        auth='none' so it is included in Odoo's nodb_routing_map (requires
+        the module to be in server_wide_modules).  Uses the standard
+        ensure_db() helper: on the first visit with no session it sets
+        session.db from the ?db= query param and redirects back to the same
+        URL; on the second visit (session.db is set) it falls through and
+        redirects to the auth='public' confirmation page.
+        """
+        from odoo.addons.web.controllers.utils import ensure_db
+        ensure_db()          # sets session.db from ?db= and self-redirects if needed
+        db = request.session.db or ''
+        redirect_url = '/arc/acknowledge/%d/%s?db=%s' % (cert_id, token, db)
+        return request.redirect(redirect_url, code=302, local=True)
+
+    @http.route(
+        '/arc/acknowledge/<int:cert_id>/<string:token>',
+        type='http', auth='public', csrf=False
+    )
+    def arc_acknowledge_page(self, cert_id, token, **kw):
+        """Display the ARC acknowledgment landing page."""
+        _render = PayslipAcknowledgmentController()._render_html_page
+
+        try:
+            cert = request.env['arc.employee.certificate'].sudo().search([
+                ('id', '=', cert_id),
+                ('access_token', '=', token),
+            ], limit=1)
+
+            if not cert:
+                content = '''
+                    <div class="icon">❌</div>
+                    <h1>Enlace Inválido</h1>
+                    <div class="content">
+                        <p>El enlace no es válido o ha expirado.</p>
+                        <p>Por favor contacte a Recursos Humanos.</p>
+                    </div>'''
+                return request.make_response(
+                    _render('Enlace Inválido', content, 'error'),
+                    [('Content-Type', 'text/html')]
+                )
+
+            if cert.is_acknowledged:
+                ack_date = cert.acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
+                content = f'''
+                    <div class="icon">✅</div>
+                    <h1>Ya Confirmado</h1>
+                    <div class="content">
+                        <p><strong>Empleado:</strong> {cert.employee_id.name}</p>
+                        <p><strong>Ejercicio Fiscal:</strong> {cert.year}</p>
+                        <p style="margin-top:15px;">Este ARC ya fue confirmado el</p>
+                        <p><strong>{ack_date}</strong></p>
+                    </div>'''
+                return request.make_response(
+                    _render('Ya Confirmado', content, 'success'),
+                    [('Content-Type', 'text/html')]
+                )
+
+            db_name = request.db or ''
+            content = f'''
+                <div class="icon" style="background:#1a237e;">📋</div>
+                <h1>Confirmar Recepción del ARC</h1>
+                <div class="content">
+                    <p><strong>Empleado:</strong> {cert.employee_id.name}</p>
+                    <p><strong>Cédula:</strong> {cert.employee_id.identification_id or '-'}</p>
+                    <p><strong>Ejercicio Fiscal:</strong> {cert.year}</p>
+                    <hr style="margin:20px 0;border:none;border-top:1px solid #eee;">
+                    <p style="color:#666;font-size:14px;">
+                        Al hacer click confirma que ha recibido el Comprobante de
+                        Retenciones de ISLR (ARC) correspondiente al ejercicio fiscal {cert.year}.
+                    </p>
+                </div>
+                <form action="/arc/acknowledge/{cert_id}/{token}/confirm?db={db_name}" method="POST"
+                      onsubmit="var btn=this.querySelector('button'); btn.disabled=true; btn.textContent='⏳ Procesando...';">
+                    <button type="submit" class="btn">✅ Confirmar Recepción del ARC</button>
+                </form>
+                <p style="margin-top:15px;color:#999;font-size:12px;">
+                    🔒 Su confirmación quedará registrada con fecha, hora e IP
+                </p>'''
+            return request.make_response(
+                _render('Confirmar Recepción ARC', content, 'info'),
+                [('Content-Type', 'text/html')]
+            )
+
+        except Exception as e:
+            content = f'''
+                <div class="icon">❌</div>
+                <h1>Error del Sistema</h1>
+                <div class="content"><p>Ocurrió un error: {str(e)[:200]}</p></div>'''
+            return request.make_response(
+                _render('Error', content, 'error'),
+                [('Content-Type', 'text/html')]
+            )
+
+    @http.route(
+        '/arc/acknowledge/<int:cert_id>/<string:token>/confirm',
+        type='http', auth='public', methods=['POST'], csrf=False
+    )
+    def arc_acknowledge_confirm(self, cert_id, token, **kw):
+        """Record the ARC acknowledgment."""
+        _render = PayslipAcknowledgmentController()._render_html_page
+
+        try:
+            cert = request.env['arc.employee.certificate'].sudo().search([
+                ('id', '=', cert_id),
+                ('access_token', '=', token),
+            ], limit=1)
+
+            if not cert:
+                content = '''
+                    <div class="icon">❌</div><h1>Enlace Inválido</h1>
+                    <div class="content"><p>El enlace no es válido.</p></div>'''
+                return request.make_response(
+                    _render('Error', content, 'error'),
+                    [('Content-Type', 'text/html')]
+                )
+
+            if not cert.is_acknowledged:
+                ip = request.httprequest.environ.get('HTTP_X_FORWARDED_FOR',
+                     request.httprequest.environ.get('REMOTE_ADDR', ''))
+                ua = request.httprequest.user_agent.string if request.httprequest.user_agent else ''
+                cert.write({
+                    'is_acknowledged': True,
+                    'acknowledged_date': datetime.utcnow(),
+                    'acknowledged_ip': ip[:100],
+                    'acknowledged_user_agent': ua[:250],
+                })
+
+            content = f'''
+                <div class="icon">✅</div>
+                <h1>Recepción Confirmada</h1>
+                <div class="content">
+                    <p><strong>Empleado:</strong> {cert.employee_id.name}</p>
+                    <p><strong>Ejercicio Fiscal:</strong> {cert.year}</p>
+                    <p style="margin-top:15px;color:#28a745;font-weight:bold;">
+                        Ha confirmado exitosamente la recepción de su Comprobante ARC.
+                    </p>
+                    <p style="margin-top:10px;color:#666;font-size:13px;">
+                        Puede cerrar esta ventana.
+                    </p>
+                </div>'''
+            return request.make_response(
+                _render('Recepción Confirmada', content, 'success'),
+                [('Content-Type', 'text/html')]
+            )
+
+        except Exception as e:
+            content = f'''
+                <div class="icon">❌</div><h1>Error</h1>
+                <div class="content"><p>{str(e)[:200]}</p></div>'''
+            return request.make_response(
+                _render('Error', content, 'error'),
+                [('Content-Type', 'text/html')]
+            )

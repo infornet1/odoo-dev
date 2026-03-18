@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="arc_annual_report">
+        <t t-call="web.basic_layout">
+            <t t-foreach="reports" t-as="report">
+                <t t-set="employee" t-value="report['employee']"/>
+                <t t-set="company"  t-value="report['company']"/>
+                <t t-set="year"     t-value="report['year']"/>
+                <t t-set="months"   t-value="report['months']"/>
+                <t t-set="totals"   t-value="report['totals']"/>
+
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;
+                            color:#222;padding:12px 18px;page-break-after:always;">
+
+                    <!-- ================================================
+                         HEADER
+                         ================================================ -->
+                    <div style="text-align:center;margin-bottom:10px;">
+                        <div style="font-size:13px;font-weight:bold;letter-spacing:0.5px;
+                                    text-transform:uppercase;border-bottom:2px solid #1a237e;
+                                    padding-bottom:4px;color:#1a237e;">
+                            Comprobante de Retenciones de Impuesto Sobre la Renta (ARC)
+                        </div>
+                        <div style="font-size:11px;font-weight:bold;margin-top:4px;">
+                            Ejercicio Fiscal: <t t-esc="year"/>
+                        </div>
+                    </div>
+
+                    <!-- ================================================
+                         PARTIES TABLE
+                         ================================================ -->
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;
+                                  border:1px solid #aaa;">
+                        <tr>
+                            <!-- Agente de Retención -->
+                            <td style="width:50%;vertical-align:top;padding:6px 8px;
+                                       border-right:1px solid #aaa;">
+                                <div style="font-weight:bold;font-size:9px;text-transform:uppercase;
+                                            color:#555;margin-bottom:4px;">
+                                    Agente de Retención
+                                </div>
+                                <div style="font-weight:bold;">
+                                    <t t-esc="company.name"/>
+                                </div>
+                                <div>RIF: <t t-esc="company.vat or 'J-00000000-0'"/></div>
+                                <div>
+                                    <t t-esc="company.street or ''"/>
+                                    <t t-if="company.city">, <t t-esc="company.city"/></t>
+                                    <t t-if="company.state_id">, <t t-esc="company.state_id.name"/></t>
+                                </div>
+                            </td>
+                            <!-- Beneficiario -->
+                            <td style="width:50%;vertical-align:top;padding:6px 8px;">
+                                <div style="font-weight:bold;font-size:9px;text-transform:uppercase;
+                                            color:#555;margin-bottom:4px;">
+                                    Beneficiario
+                                </div>
+                                <div style="font-weight:bold;">
+                                    <t t-esc="employee.name"/>
+                                </div>
+                                <div>
+                                    Cédula:
+                                    <t t-esc="employee.identification_id or employee.ssnid or 'N/D'"/>
+                                </div>
+                                <div>
+                                    Cargo:
+                                    <t t-esc="employee.job_id.name if employee.job_id else 'N/D'"/>
+                                </div>
+                                <div>
+                                    Departamento:
+                                    <t t-esc="employee.department_id.name if employee.department_id else 'N/D'"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- ================================================
+                         DETAIL TABLE
+                         ================================================ -->
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:6px;
+                                  font-size:9.5px;">
+                        <!-- Column headers -->
+                        <thead>
+                            <tr style="background:#1a237e;color:white;text-align:center;">
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:10%;">Mes</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:20%;">Remun. Gravable (Bs.)</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:13%;">SSO (Bs.)</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:13%;">FAOV (Bs.)</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:13%;">PARO (Bs.)</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:18%;">Base Imponible (Bs.)</th>
+                                <th style="padding:5px 4px;border:1px solid #aaa;
+                                           width:13%;">ISLR Retenido (Bs.)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="months" t-as="m">
+                                <t t-if="not m.get('is_empty')">
+                                    <tr t-att-style="'background:%s;' % ('white' if m_index % 2 == 0 else '#f5f5f5')">
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:left;">
+                                            <t t-esc="m['month_name']"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('gross_ves', 0.0))"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('sso_ves', 0.0))"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('faov_ves', 0.0))"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('paro_ves', 0.0))"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('net_taxable_ves', 0.0))"/>
+                                        </td>
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;
+                                                   font-weight:bold;">
+                                            <t t-esc="'{:,.2f}'.format(m.get('ari_ves', 0.0))"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                                <t t-else="">
+                                    <!-- Empty / future month: still render a blank row -->
+                                    <tr style="background:#fafafa;color:#bbb;">
+                                        <td style="padding:4px 6px;border:1px solid #ddd;text-align:left;">
+                                            <t t-esc="m['month_name']"/>
+                                        </td>
+                                        <td colspan="6" style="padding:4px 6px;border:1px solid #ddd;
+                                                               text-align:center;font-style:italic;">
+                                            —
+                                        </td>
+                                    </tr>
+                                </t>
+                            </t>
+                        </tbody>
+
+                        <!-- Totals row -->
+                        <tfoot>
+                            <tr style="background:#1a237e;color:white;font-weight:bold;
+                                       text-align:right;">
+                                <td style="padding:5px 6px;border:1px solid #aaa;
+                                           text-align:left;">TOTAL</td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('gross_ves', 0.0))"/>
+                                </td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('sso_ves', 0.0))"/>
+                                </td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('faov_ves', 0.0))"/>
+                                </td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('paro_ves', 0.0))"/>
+                                </td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('net_taxable_ves', 0.0))"/>
+                                </td>
+                                <td style="padding:5px 6px;border:1px solid #aaa;">
+                                    <t t-esc="'{:,.2f}'.format(totals.get('ari_ves', 0.0))"/>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <!-- ================================================
+                         FOOTNOTES
+                         ================================================ -->
+                    <div style="font-size:8.5px;color:#555;margin-top:6px;margin-bottom:12px;">
+                        <div>
+                            · Remuneración Gravable: salario + prima + bono (excluye Cesta Ticket —
+                              exento per Decreto Ley de Alimentación).
+                        </div>
+                        <div>
+                            · Base Imponible = Remun. Gravable − SSO − FAOV − PARO.
+                        </div>
+                        <div>
+                            · Todas las cifras están expresadas en Bolívares (Bs.) al tipo de cambio
+                              BCV correspondiente a cada período.
+                        </div>
+                    </div>
+
+                    <!-- ================================================
+                         SIGNATURE BLOCK
+                         ================================================ -->
+                    <table style="width:100%;border-collapse:collapse;margin-top:60px;">
+                        <tr>
+                            <td style="width:45%;text-align:center;padding:0 10px;">
+                                <div style="border-top:1px solid #444;padding-top:6px;
+                                            font-size:9px;color:#333;margin-top:50px;">
+                                    Firma y Sello del Agente de Retención
+                                </div>
+                                <div style="font-size:8.5px;color:#666;margin-top:2px;">
+                                    <t t-esc="company.name"/>
+                                </div>
+                            </td>
+                            <td style="width:10%;"/>
+                            <td style="width:45%;text-align:center;padding:0 10px;">
+                                <div style="border-top:1px solid #444;padding-top:6px;
+                                            font-size:9px;color:#333;margin-top:50px;">
+                                    Firma del Beneficiario
+                                </div>
+                                <div style="font-size:8.5px;color:#666;margin-top:2px;">
+                                    <t t-esc="employee.name"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="text-align:center;font-size:8px;color:#999;margin-top:10px;">
+                        Generado el <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/>
+                        · <t t-esc="company.name"/> · Ejercicio Fiscal <t t-esc="year"/>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -15,3 +15,5 @@ from . import liquidacion_breakdown_report
 from . import finiquito_report
 from . import payslip_compact_report
 from . import aguinaldos_disbursement_report
+from . import arc_annual_report
+from . import arc_employee_certificate

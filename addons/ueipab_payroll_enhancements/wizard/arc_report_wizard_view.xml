@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         ARC Annual Withholding Certificate - Wizard Views
+         ================================================================ -->
+
+    <record id="arc_report_wizard_view_form" model="ir.ui.view">
+        <field name="name">arc.report.wizard.form</field>
+        <field name="model">arc.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Comprobante ARC - Retenciones ISLR">
+
+                <sheet>
+
+                    <!-- ── SELECT STATE ──────────────────────────────── -->
+                    <div invisible="state != 'select'">
+                        <div class="oe_title">
+                            <h2>Comprobante ARC — Ejercicio Fiscal</h2>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            Seleccione el ejercicio fiscal y los empleados. Puede imprimir
+                            el PDF o enviarlo por correo electrónico en lote.
+                        </div>
+
+                        <group>
+                            <group string="Parámetros">
+                                <field name="year"/>
+                                <field name="employee_ids"
+                                       widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       placeholder="Todos los empleados con contrato activo"/>
+                                <field name="employee_count" readonly="1"
+                                       string="Empleados a incluir"/>
+                            </group>
+                            <group string="Envío por Correo">
+                                <field name="email_template_id"
+                                       options="{'no_create': True}"
+                                       help="Requerida solo para el envío por correo. El PDF ARC se adjunta automáticamente."/>
+                            </group>
+                        </group>
+                    </div>
+
+                    <!-- ── SENDING STATE ─────────────────────────────── -->
+                    <div invisible="state not in ('sending', 'done')">
+                        <div class="oe_title">
+                            <h2 invisible="state != 'sending'">Enviando comprobantes ARC…</h2>
+                            <h2 invisible="state != 'done'">Envío completado</h2>
+                        </div>
+
+                        <group>
+                            <group>
+                                <field name="year" readonly="1"/>
+                                <field name="current_employee" readonly="1"
+                                       invisible="state == 'done'"/>
+                            </group>
+                            <group>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label for="progress_percent"/>
+                                        <field name="progress_percent" widget="progressbar"
+                                               options="{'editable': false}"/>
+                                    </div>
+                                </div>
+                            </group>
+                        </group>
+
+                        <group string="Resumen">
+                            <group>
+                                <field name="processed_count" string="Procesados"/>
+                                <field name="total_count" string="Total"/>
+                            </group>
+                            <group>
+                                <field name="sent_count" string="Enviados"/>
+                                <field name="no_email_count" string="Sin Email"/>
+                                <field name="failed_count" string="Fallidos"/>
+                            </group>
+                        </group>
+
+                        <field name="result_ids" readonly="1" nolabel="1">
+                            <tree decoration-success="status == 'sent'"
+                                  decoration-warning="status == 'no_email'"
+                                  decoration-danger="status == 'error'"
+                                  decoration-muted="status == 'pending'"
+                                  decoration-info="status == 'sending'">
+                                <field name="employee_name" string="Empleado"/>
+                                <field name="employee_email" string="Correo"/>
+                                <field name="status" string="Estado"/>
+                                <field name="error_message" string="Detalle"/>
+                            </tree>
+                        </field>
+
+                        <div class="alert alert-success" role="alert"
+                             invisible="state != 'done' or failed_count > 0 or no_email_count > 0">
+                            <strong>¡Todos los comprobantes fueron enviados exitosamente!</strong>
+                        </div>
+                        <div class="alert alert-warning" role="alert"
+                             invisible="state != 'done' or (failed_count == 0 and no_email_count == 0)">
+                            <strong>Completado con advertencias.</strong> Revise la columna Estado para más detalles.
+                        </div>
+                    </div>
+
+                    <!-- Hidden -->
+                    <field name="state" invisible="1"/>
+
+                </sheet>
+
+                <!-- Footer — buttons at form level with state visibility -->
+                <footer>
+                    <button name="action_preview_pdf"
+                            string="Vista Previa PDF"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'select' or employee_count == 0"/>
+                    <button name="action_start_sending"
+                            string="Enviar por Correo"
+                            type="object"
+                            class="btn-secondary"
+                            icon="fa-paper-plane"
+                            invisible="state != 'select' or employee_count == 0"/>
+                    <button string="Cancelar"
+                            special="cancel"
+                            class="btn-secondary"
+                            invisible="state != 'select'"/>
+                    <button string="Cerrar"
+                            special="cancel"
+                            class="btn-primary"
+                            invisible="state != 'done'"/>
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- Window action for standalone menu entry -->
+    <record id="action_arc_report_wizard" model="ir.actions.act_window">
+        <field name="name">Comprobante ARC</field>
+        <field name="res_model">arc.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="arc_report_wizard_view_form"/>
+    </record>
+
+</odoo>

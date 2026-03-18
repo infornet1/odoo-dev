@@ -43,6 +43,14 @@
               sequence="15"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report: Comprobante ARC Anual -->
+    <menuitem id="menu_arc_annual_report"
+              name="Comprobante ARC (ISLR Anual)"
+              parent="menu_payroll_reports"
+              action="action_arc_report_wizard"
+              sequence="18"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 3: Payroll Taxes (PLACEHOLDER) -->
     <menuitem id="menu_payroll_taxes"
               name="Payroll Taxes"

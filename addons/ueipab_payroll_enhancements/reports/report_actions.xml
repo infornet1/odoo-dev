@@ -140,4 +140,32 @@
         <field name="print_report_name">'Comprobante_Pago_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_to.strftime('%Y%m%d'))</field>
     </record>
 
+
+    <!-- Paper Format for ARC Annual Report -->
+    <record id="paperformat_arc_annual" model="report.paperformat">
+        <field name="name">ARC Annual Certificate Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">12</field>
+        <field name="margin_left">12</field>
+        <field name="margin_right">12</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <!-- Report Action for ARC Annual Certificate -->
+    <record id="action_report_arc_annual" model="ir.actions.report">
+        <field name="name">Comprobante ARC Anual</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.arc_annual_report</field>
+        <field name="report_file">ueipab_payroll_enhancements.arc_annual_report</field>
+        <field name="paperformat_id" ref="paperformat_arc_annual"/>
+        <field name="print_report_name">'ARC_%s_%s' % (object.name.replace(' ', '_'), context.get('year', ''))</field>
+    </record>
+
 </odoo>
