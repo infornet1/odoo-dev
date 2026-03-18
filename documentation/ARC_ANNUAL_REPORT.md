@@ -1,8 +1,8 @@
 # ARC Annual Withholding Certificate (Comprobante ARC)
 
 **Status:** Production-ready (testing)
-**Module:** `ueipab_payroll_enhancements` v17.0.1.55.x
-**Menu:** Payroll → Reports → Comprobante ARC
+**Module:** `ueipab_payroll_enhancements` v17.0.1.56.x
+**Menus:** Payroll → Reports → Comprobante ARC | Estado ARC
 
 ---
 
@@ -18,7 +18,10 @@ Generates and distributes the SENIAT-mandated **Comprobante de Retenciones de Im
 - **Batch email wizard** — select fiscal year + optional employee filter; sends with `mail.mail`
 - **Simulation** — months without confirmed payslips are estimated using contract ARI % × historical BCV rate
 - **Contract date windowing** — respects `date_start` / `date_end`; no rows before hire date
+- **CC to HR** — every ARC email copies `recursoshumanos@ueipab.edu.ve`
 - **Acknowledgment portal** — employee clicks link in email → confirms receipt → IP + timestamp recorded
+- **Ack confirmation email** — auto-sent to employee (CC: HR) when they confirm; template `email_template_arc_ack_confirmation`
+- **Ack status tracker** — Payroll → Reports → Estado ARC; tree view grouped by fiscal year showing sent/pending/confirmed per employee
 - **Acknowledgment reset** — HR manager can reset via `action_reset_acknowledgment()`
 
 ---
@@ -90,11 +93,30 @@ Months outside this window render as empty dashes.
 
 ---
 
-## Email Template
+## Email Templates
 
-Template: `email_template_arc_annual` (model: `hr.employee`)
+| Template ID | Model | Purpose |
+|-------------|-------|---------|
+| `email_template_arc_annual` | `hr.employee` | Outbound ARC delivery (wizard renders + injects ack button via `Markup`) |
+| `email_template_arc_ack_confirmation` | `arc.employee.certificate` | Confirmation receipt sent automatically when employee acknowledges; CC to HR |
 
-The wizard renders the template fields individually via `_render_field()` (Odoo 17 API), then injects the acknowledgment button block using `markupsafe.Markup` before sending.
+### `web.base.url` note
+In the testing environment (direct Odoo port, no SSL): `http://64.23.157.121:8019`. Using the domain (`dev.ueipab.edu.ve`) triggers browser HSTS and forces HTTPS on port 8019 which has no SSL. Set via:
+```bash
+docker exec odoo-dev-web /usr/bin/odoo shell -d testing --no-http
+self.env['ir.config_parameter'].sudo().set_param('web.base.url', 'http://64.23.157.121:8019')
+self.env.cr.commit()
+```
+
+## Acknowledgment Status Tracking
+
+**Menu:** Payroll → Reports → Estado ARC
+
+Tree view on `arc.employee.certificate`, pre-grouped by fiscal year:
+- Green rows = confirmed; grey rows = pending
+- Filters: Confirmados / Pendientes
+- Group-by: Ejercicio Fiscal, Empleado
+- Hidden column `acknowledged_ip` available via column selector
 
 ---
 
@@ -123,4 +145,5 @@ The wizard renders the template fields individually via `_render_field()` (Odoo 
 | Version | Change |
 |---------|--------|
 | 17.0.1.55.0 | Initial release: PDF, batch email, ack portal |
-| 17.0.1.55.1 | Fix: multi-database session (auth=none init route + server_wide_modules); remove dead model reference in controller |
+| 17.0.1.55.1 | Fix: multi-database session (auth=none init route + server_wide_modules); nginx arc proxy; web.base.url = IP:8019 for testing |
+| 17.0.1.56.0 | CC to HR on outbound emails; ack confirmation email to employee+HR; Estado ARC tracking list view |

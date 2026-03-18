@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="email_template_arc_ack_confirmation" model="mail.template">
+        <field name="name">ARC Ack Confirmation</field>
+        <field name="model_id" ref="ueipab_payroll_enhancements.model_arc_employee_certificate"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">&#x2705; ARC {{object.year}} confirmado — {{object.employee_id.name}}</field>
+        <field name="body_html" type="html">
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9f9f9">
+                <div style="background:white;padding:30px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1)">
+                    <t t-set="base_url" t-value="object.env['ir.config_parameter'].sudo().get_param('web.base.url')"/>
+                    <div style="text-align:center;margin-bottom:20px">
+                        <img t-att-src="base_url + '/ueipab_payroll_enhancements/static/img/ueipab_logo.png'" style="max-height:80px" alt="UEIPAB"/>
+                    </div>
+                    <div style="text-align:center;margin-bottom:25px">
+                        <div style="display:inline-block;background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:white;padding:15px 25px;border-radius:8px;font-size:18px;font-weight:bold">
+                            &#x2705; Recepci&#xF3;n ARC Confirmada
+                        </div>
+                    </div>
+                    <p style="font-size:16px;color:#333;margin-bottom:20px">
+                        Estimado/a <strong t-out="object.employee_id.name"/>,
+                    </p>
+                    <p style="font-size:15px;color:#555;line-height:1.6;margin-bottom:20px">
+                        Le confirmamos que su <strong>Comprobante ARC</strong> ha sido recibido y confirmado exitosamente en nuestro sistema.
+                    </p>
+                    <div style="background:#e8eaf6;padding:20px;border-left:4px solid #1a237e;margin:25px 0;border-radius:4px">
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Empleado:</strong> <t t-out="object.employee_id.name"/>
+                        </p>
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>C&#xe9;dula:</strong> <t t-out="object.employee_id.identification_id or '-'"/>
+                        </p>
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Ejercicio Fiscal:</strong> <t t-out="object.year"/>
+                        </p>
+                        <t t-if="object.acknowledged_date">
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Fecha de Confirmaci&#xF3;n:</strong> <t t-out="object.acknowledged_date"/>
+                        </p>
+                        </t>
+                        <t t-if="object.acknowledged_ip">
+                        <p style="font-size:14px;color:#333;margin:5px 0">
+                            <strong>Direcci&#xF3;n IP:</strong> <t t-out="object.acknowledged_ip"/>
+                        </p>
+                        </t>
+                    </div>
+                    <p style="font-size:13px;color:#777;margin-top:20px">
+                        Conserve este correo como respaldo de su confirmaci&#xF3;n.
+                    </p>
+                    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e0e0e0">
+                        <p style="font-size:14px;color:#333;margin:4px 0">Cordialmente,</p>
+                        <p style="font-size:14px;font-weight:bold;color:#333;margin:4px 0">Departamento de Recursos Humanos</p>
+                        <p style="font-size:13px;color:#555;margin:4px 0">Instituto Privado Andr&#xe9;s Bello (UEIPAB)</p>
+                    </div>
+                </div>
+            </div>
+        </field>
+    </record>
+</odoo>

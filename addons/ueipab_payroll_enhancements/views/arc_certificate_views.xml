@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree view -->
+    <record id="view_arc_certificate_tree" model="ir.ui.view">
+        <field name="name">arc.employee.certificate.tree</field>
+        <field name="model">arc.employee.certificate</field>
+        <field name="arch" type="xml">
+            <tree string="Estado ARC" decoration-success="is_acknowledged == True" decoration-muted="is_acknowledged == False">
+                <field name="year"/>
+                <field name="employee_id"/>
+                <field name="sent_date"/>
+                <field name="sent_email"/>
+                <field name="is_acknowledged" widget="boolean" string="Confirmado"/>
+                <field name="acknowledged_date"/>
+                <field name="acknowledged_ip" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form view -->
+    <record id="view_arc_certificate_form" model="ir.ui.view">
+        <field name="name">arc.employee.certificate.form</field>
+        <field name="model">arc.employee.certificate</field>
+        <field name="arch" type="xml">
+            <form string="ARC Certificate">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="employee_id"/>
+                            <field name="year"/>
+                            <field name="sent_date"/>
+                            <field name="sent_email"/>
+                        </group>
+                        <group>
+                            <field name="is_acknowledged" widget="boolean"/>
+                            <field name="acknowledged_date"/>
+                            <field name="acknowledged_ip"/>
+                            <field name="acknowledged_user_agent"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search view -->
+    <record id="view_arc_certificate_search" model="ir.ui.view">
+        <field name="name">arc.employee.certificate.search</field>
+        <field name="model">arc.employee.certificate</field>
+        <field name="arch" type="xml">
+            <search string="ARC Certificates">
+                <field name="employee_id"/>
+                <field name="year"/>
+                <filter name="acknowledged" string="Confirmados" domain="[('is_acknowledged','=',True)]"/>
+                <filter name="pending" string="Pendientes" domain="[('is_acknowledged','=',False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_year" string="Ejercicio Fiscal" context="{'group_by': 'year'}"/>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Window action -->
+    <record id="action_arc_certificate_status" model="ir.actions.act_window">
+        <field name="name">Estado ARC</field>
+        <field name="res_model">arc.employee.certificate</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_arc_certificate_search"/>
+        <field name="context">{'search_default_group_year': 1}</field>
+    </record>
+</odoo>

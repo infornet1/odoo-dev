@@ -470,6 +470,16 @@ class ArcAcknowledgmentController(http.Controller):
                     'acknowledged_ip': ip[:100],
                     'acknowledged_user_agent': ua[:250],
                 })
+                # Send ARC acknowledgment confirmation email to the employee (CC to HR)
+                try:
+                    tmpl = request.env.ref(
+                        'ueipab_payroll_enhancements.email_template_arc_ack_confirmation',
+                        raise_if_not_found=False,
+                    )
+                    if tmpl:
+                        tmpl.sudo().send_mail(cert.id, force_send=True)
+                except Exception:
+                    pass  # confirmation email failure must not block the portal response
 
             content = f'''
                 <div class="icon">✅</div>

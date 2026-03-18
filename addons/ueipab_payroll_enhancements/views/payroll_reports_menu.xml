@@ -51,6 +51,14 @@
               sequence="18"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report: Estado ARC (acknowledgment tracker) -->
+    <menuitem id="menu_arc_certificate_status"
+              name="Estado ARC"
+              parent="menu_payroll_reports"
+              action="action_arc_certificate_status"
+              sequence="19"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 3: Payroll Taxes (PLACEHOLDER) -->
     <menuitem id="menu_payroll_taxes"
               name="Payroll Taxes"

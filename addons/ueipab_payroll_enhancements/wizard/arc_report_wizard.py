@@ -233,6 +233,7 @@ class ArcReportWizard(models.TransientModel):
                         'subject': subject or 'Comprobante ARC %s' % self.year,
                         'email_from': email_from or '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
                         'email_to': result.employee_email,
+                        'email_cc': 'recursoshumanos@ueipab.edu.ve',
                         'body_html': body_with_ack,
                         'attachment_ids': [(4, attachment.id)],
                     })
