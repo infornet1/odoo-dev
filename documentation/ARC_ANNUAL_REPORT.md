@@ -15,9 +15,9 @@ Generates and distributes the SENIAT-mandated **Comprobante de Retenciones de Im
 ## Features
 
 - **Two-stage workflow** — Stage 1: notice email without PDF; Stage 2: signed PDF after employee confirms
-- **PDF per employee** — portrait Letter, dark-blue header, monthly detail table (Bs. only)
-- **Employer signature/seal in PDF** — `firma_sello_gp.jpg` embedded in left signature column
-- **Digital ack block in PDF** — right column shows employee name, cédula, confirmation timestamp (UTC), IP when confirmed
+- **PDF per employee** — portrait Letter, company logo centered at top, dark-blue header, monthly detail table (Bs. only)
+- **Employer signature/seal in PDF** — `firma_sello_gp.jpg` embedded in left signature column (base64 data URI, no HTTP request required)
+- **Digital ack block in PDF** — right column shows employee name, cédula, confirmation timestamp (VET GMT−4), IP when confirmed
 - **Batch email wizard** — select fiscal year + optional employee filter; sends Stage 1 notice emails
 - **Simulation** — months without confirmed payslips are estimated using contract ARI % × historical BCV rate
 - **Contract date windowing** — respects `date_start` / `date_end`; no rows before hire date
@@ -179,3 +179,4 @@ Tree view on `arc.employee.certificate`, pre-grouped by fiscal year:
 | 17.0.1.55.1 | Fix: multi-database session (auth=none init route + server_wide_modules); nginx arc proxy; web.base.url = IP:8019 for testing |
 | 17.0.1.56.0 | CC to HR on outbound emails; ack confirmation email to employee+HR; Estado ARC tracking list view |
 | 17.0.1.57.0 | Two-stage workflow: Stage 1 notice email (no PDF); Stage 2 auto-signed PDF on confirm; employer seal image in PDF left column; digital ack block in PDF right column; `state` field on cert (pending/notified/acknowledged); `email_template_arc_final_pdf` new template |
+| 17.0.1.58.0 | PDF enhancements: company logo centered at top; signature boxes restructured as inner tables (wkhtmltopdf-safe layout); ack timestamp converted to VET (UTC−4) labeled "Fecha (VET GMT-4)"; Stage 2 email fix: replaced `send_mail()` with direct `mail.mail.create()` to prevent `email_to=False` bug in Odoo 17 pipeline; employer seal `firma_sello_gp.jpg` permissions fixed to 644 |

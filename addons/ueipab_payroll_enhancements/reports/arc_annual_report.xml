@@ -13,6 +13,16 @@
                             color:#222;padding:12px 18px;page-break-after:always;">
 
                     <!-- ================================================
+                         COMPANY LOGO
+                         ================================================ -->
+                    <t t-if="company_logo_src">
+                        <div style="text-align:center;margin-bottom:10px;">
+                            <img t-att-src="company_logo_src"
+                                 style="max-height:80px;max-width:280px;object-fit:contain;"/>
+                        </div>
+                    </t>
+
+                    <!-- ================================================
                          HEADER
                          ================================================ -->
                     <div style="text-align:center;margin-bottom:10px;">
@@ -190,61 +200,99 @@
                          SIGNATURE BLOCK
                          ================================================ -->
                     <t t-set="ack_info" t-value="report.get('ack_info', {})"/>
-                    <table style="width:100%;border-collapse:collapse;margin-top:60px;">
+                    <!-- Signature boxes: inner-table layout so wkhtmltopdf
+                         keeps image contained and label pinned to bottom -->
+                    <table style="width:100%;border-collapse:collapse;margin-top:40px;">
                         <tr>
-                            <!-- Employer: signature image (base64 data URI, no HTTP needed) + label -->
-                            <td style="width:45%;text-align:center;padding:0 10px;vertical-align:bottom;">
-                                <t t-if="signature_src">
-                                    <div style="margin-bottom:0;">
-                                        <img t-att-src="signature_src"
-                                             style="max-height:90px;max-width:210px;object-fit:contain;"/>
-                                    </div>
-                                </t>
-                                <div style="border-top:1px solid #444;padding-top:6px;
-                                            font-size:9px;color:#333;">
-                                    Firma y Sello del Agente de Retención
-                                </div>
-                                <div style="font-size:8.5px;color:#666;margin-top:2px;">
-                                    <t t-esc="company.name"/>
-                                </div>
+                            <!-- Employer box -->
+                            <td style="width:47%;padding:0 6px;vertical-align:top;">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <!-- Image row: fixed height, image centred, clipped inside -->
+                                    <tr>
+                                        <td style="height:150px;text-align:center;
+                                                   vertical-align:middle;padding:10px 12px 6px;
+                                                   overflow:hidden;">
+                                            <t t-if="signature_src">
+                                                <img t-att-src="signature_src"
+                                                     style="max-height:130px;max-width:200px;
+                                                            object-fit:contain;display:block;
+                                                            margin:0 auto;"/>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                    <!-- Label row -->
+                                    <tr>
+                                        <td style="padding:6px 12px 10px;text-align:center;">
+                                            <div style="font-size:9px;color:#333;font-weight:bold;">
+                                                Firma y Sello del Agente de Retención
+                                            </div>
+                                            <div style="font-size:8.5px;color:#666;margin-top:3px;">
+                                                <t t-esc="company.name"/>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
-                            <td style="width:10%;"/>
-                            <!-- Employee: digital ack block (if confirmed) or blank line -->
-                            <td style="width:45%;text-align:center;padding:0 10px;vertical-align:bottom;">
+
+                            <td style="width:6%;"/>
+
+                            <!-- Employee box -->
+                            <td style="width:47%;padding:0 6px;vertical-align:top;">
                                 <t t-if="ack_info.get('is_acknowledged')">
-                                    <div style="border:1px solid #1a237e;border-radius:6px;
-                                                padding:8px 10px;background:#f0f4ff;
-                                                text-align:left;font-size:8px;margin-bottom:0;">
-                                        <div style="color:#1a237e;font-weight:bold;
-                                                    margin-bottom:4px;font-size:9px;">
-                                            &#x2713; Firma Digital del Beneficiario
-                                        </div>
-                                        <div><strong>Empleado:</strong>
-                                            <t t-esc="employee.name"/>
-                                        </div>
-                                        <div><strong>C&#xe9;dula:</strong>
-                                            <t t-esc="employee.identification_id or '-'"/>
-                                        </div>
-                                        <div><strong>Fecha (UTC):</strong>
-                                            <t t-esc="ack_info['acknowledged_date'].strftime('%d/%m/%Y %H:%M:%S') if ack_info.get('acknowledged_date') else '-'"/>
-                                        </div>
-                                        <div><strong>IP:</strong>
-                                            <t t-esc="ack_info.get('acknowledged_ip') or '-'"/>
-                                        </div>
-                                        <div style="margin-top:4px;color:#555;font-size:7.5px;">
-                                            Confirmaci&#xf3;n electr&#xf3;nica irrevocable
-                                            registrada en el sistema UEIPAB.
-                                        </div>
-                                    </div>
+                                    <!-- Digital ack block -->
+                                    <table style="width:100%;border-collapse:collapse;
+                                                  background:#f0f4ff;">
+                                        <tr>
+                                            <td style="padding:12px 14px 8px;text-align:center;">
+                                                <div style="color:#1a237e;font-weight:bold;
+                                                            margin-bottom:6px;font-size:9.5px;">
+                                                    &#x2713; Firma Digital del Beneficiario
+                                                </div>
+                                                <div style="font-size:8.5px;margin-bottom:3px;">
+                                                    <strong>Empleado:</strong>
+                                                    <t t-esc="employee.name"/>
+                                                </div>
+                                                <div style="font-size:8.5px;margin-bottom:3px;">
+                                                    <strong>C&#xe9;dula:</strong>
+                                                    <t t-esc="employee.identification_id or '-'"/>
+                                                </div>
+                                                <div style="font-size:8.5px;margin-bottom:3px;">
+                                                    <strong>Fecha (VET GMT-4):</strong>
+                                                    <t t-esc="ack_info['acknowledged_date'].strftime('%d/%m/%Y %H:%M:%S') if ack_info.get('acknowledged_date') else '-'"/>
+                                                </div>
+                                                <div style="font-size:8.5px;margin-bottom:8px;">
+                                                    <strong>IP:</strong>
+                                                    <t t-esc="ack_info.get('acknowledged_ip') or '-'"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:6px 14px 10px;text-align:center;">
+                                                <div style="color:#555;font-size:7.5px;">
+                                                    Confirmaci&#xf3;n electr&#xf3;nica irrevocable
+                                                    registrada en el sistema UEIPAB.
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </t>
                                 <t t-else="">
-                                    <div style="border-top:1px solid #444;padding-top:6px;
-                                                font-size:9px;color:#333;margin-top:50px;">
-                                        Firma del Beneficiario
-                                    </div>
-                                    <div style="font-size:8.5px;color:#666;margin-top:2px;">
-                                        <t t-esc="employee.name"/>
-                                    </div>
+                                    <!-- Blank signature box (same height as employer box) -->
+                                    <table style="width:100%;border-collapse:collapse;">
+                                        <tr>
+                                            <td style="height:150px;padding:10px 12px 6px;"/>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:6px 12px 10px;text-align:center;">
+                                                <div style="font-size:9px;color:#333;font-weight:bold;">
+                                                    Firma del Beneficiario
+                                                </div>
+                                                <div style="font-size:8.5px;color:#666;margin-top:3px;">
+                                                    <t t-esc="employee.name"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </t>
                             </td>
                         </tr>

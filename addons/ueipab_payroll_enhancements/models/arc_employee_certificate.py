@@ -116,11 +116,21 @@ class ArcEmployeeCertificate(models.Model):
                 raise_if_not_found=False,
             )
             if tmpl:
-                tmpl.sudo().send_mail(
-                    self.id,
-                    force_send=True,
-                    email_values={'attachment_ids': [(4, attachment.id)]},
-                )
+                # Render fields individually (same pattern as the Stage 1 wizard)
+                # to avoid send_mail's internal pipeline stripping email_to.
+                subject = tmpl._render_field('subject', [self.id])[self.id]
+                body_html = tmpl._render_field('body_html', [self.id])[self.id]
+                email_from = tmpl._render_field('email_from', [self.id])[self.id]
+                email_to = self.sent_email or employee.work_email or ''
+                mail = self.env['mail.mail'].sudo().create({
+                    'subject': subject or 'ARC %s — PDF Firmado' % self.year,
+                    'email_from': email_from or '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+                    'email_to': email_to,
+                    'email_cc': 'recursoshumanos@ueipab.edu.ve',
+                    'body_html': body_html,
+                    'attachment_ids': [(4, attachment.id)],
+                })
+                mail.sudo().send()
             else:
                 _logger.warning('ARC final PDF template not found; skipping final email for cert %s', self.id)
 

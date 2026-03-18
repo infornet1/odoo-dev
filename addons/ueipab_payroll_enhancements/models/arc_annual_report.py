@@ -11,7 +11,9 @@ BCV exchange rates.
 import base64
 import calendar
 import os
-from datetime import date
+from datetime import date, timedelta
+
+VET_OFFSET = timedelta(hours=-4)  # Venezuela Time = UTC−4
 
 from odoo import api, models
 
@@ -59,9 +61,10 @@ class ArcAnnualReport(models.AbstractModel):
             report = self._compute_employee_arc(employee, year)
             cert = cert_map.get(employee.id)
             if cert and cert.is_acknowledged:
+                ack_date_vet = (cert.acknowledged_date + VET_OFFSET) if cert.acknowledged_date else None
                 report['ack_info'] = {
                     'is_acknowledged': True,
-                    'acknowledged_date': cert.acknowledged_date,
+                    'acknowledged_date': ack_date_vet,
                     'acknowledged_ip': cert.acknowledged_ip or '',
                     'acknowledged_user_agent': cert.acknowledged_user_agent or '',
                 }
@@ -82,6 +85,11 @@ class ArcAnnualReport(models.AbstractModel):
         except Exception:
             pass
 
+        company = self.env.company
+        company_logo_src = ''
+        if company.logo:
+            company_logo_src = 'data:image/png;base64,' + company.logo.decode('utf-8')
+
         return {
             'doc_ids': employee_ids,
             'doc_model': 'hr.employee',
@@ -89,8 +97,9 @@ class ArcAnnualReport(models.AbstractModel):
             'data': data,
             'reports': reports,
             'year': year,
-            'company': self.env.company,
+            'company': company,
             'signature_src': signature_src,
+            'company_logo_src': company_logo_src,
         }
 
     # ------------------------------------------------------------------
