@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.59.0',
+    'version': '17.0.1.60.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """

@@ -494,7 +494,7 @@ class ArcAcknowledgmentController(http.Controller):
                     <p><strong>Empleado:</strong> {cert.employee_id.name}</p>
                     <p><strong>Ejercicio Fiscal:</strong> {cert.year}</p>
                     <p style="margin-top:15px;color:#28a745;font-weight:bold;">
-                        Ha confirmado exitosamente la recepción de su Comprobante ARC.
+                        Ha confirmado exitosamente la recepción de su Comprobante ARC, ya se ha enviado el PDF final a su correo electrónico.
                     </p>
                     <p style="margin-top:10px;color:#666;font-size:13px;">
                         Puede cerrar esta ventana.

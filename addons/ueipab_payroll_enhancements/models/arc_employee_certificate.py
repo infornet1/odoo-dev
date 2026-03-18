@@ -48,11 +48,17 @@ class ArcEmployeeCertificate(models.Model):
     acknowledged_user_agent = fields.Char(string='Dispositivo', readonly=True)
 
     display_name = fields.Char(compute='_compute_display_name', store=True)
+    certificate_number = fields.Char(compute='_compute_certificate_number')
 
     @api.depends('employee_id', 'year')
     def _compute_display_name(self):
         for rec in self:
             rec.display_name = 'ARC %s — %s' % (rec.year, rec.employee_id.name or '')
+
+    @api.depends('year')
+    def _compute_certificate_number(self):
+        for rec in self:
+            rec.certificate_number = 'ARC-%s-%05d' % (rec.year or '0000', rec.id or 0)
 
     # ------------------------------------------------------------------
 

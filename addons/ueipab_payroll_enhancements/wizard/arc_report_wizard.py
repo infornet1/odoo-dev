@@ -200,7 +200,7 @@ class ArcReportWizard(models.TransientModel):
                     email_from = tmpl._render_field('email_from', [employee.id])[employee.id]
 
                     # 3. Compute ARC data and build summary table
-                    arc_summary = self._build_arc_summary_html(employee, int(self.year))
+                    arc_summary = self._build_arc_summary_html(employee, int(self.year), cert=cert)
 
                     # 4. Inject ARC summary + acknowledgment button into email body.
                     # Stage 1 notice: no PDF — the signed PDF arrives in Stage 2
@@ -211,7 +211,7 @@ class ArcReportWizard(models.TransientModel):
                                style="display:inline-block;background:linear-gradient(135deg,#1a237e,#283593);
                                       color:white;padding:14px 32px;border-radius:8px;font-size:15px;
                                       font-weight:bold;text-decoration:none;letter-spacing:0.3px;">
-                                &#x2705; Confirmar Recepci&#xF3;n del ARC
+                                &#x2705; Confirmar y emitir el Comprobante de ARC
                             </a>
                             <p style="font-size:11px;color:#999;margin-top:8px;">
                                 &#x1F512; Al confirmar recibir&#xe1; el PDF firmado con sello patronal.
@@ -250,7 +250,7 @@ class ArcReportWizard(models.TransientModel):
         }
 
 
-    def _build_arc_summary_html(self, employee, year):
+    def _build_arc_summary_html(self, employee, year, cert=None):
         """Build an HTML ARC summary table for inclusion in the Stage 1 email."""
         arc_model = self.env['report.ueipab_payroll_enhancements.arc_annual_report']
         data = arc_model._compute_employee_arc(employee, year)
@@ -259,6 +259,18 @@ class ArcReportWizard(models.TransientModel):
         contract = data.get('contract')
         ari_pct = (getattr(contract, 'ueipab_ari_withholding_rate', 0.0) or 0.0) if contract else 0.0
         cedula = employee.identification_id or employee.ssnid or 'N/D'
+        cert_number = cert.certificate_number if cert else ''
+
+        # Company logo as base64 data URI
+        company = self.env.company
+        logo_tag = ''
+        if company.logo:
+            logo_src = 'data:image/png;base64,' + company.logo.decode('utf-8')
+            logo_tag = (
+                '<div style="text-align:center;margin-bottom:16px;">'
+                '<img src="%s" style="max-height:70px;max-width:220px;object-fit:contain;" alt=""/>'
+                '</div>'
+            ) % logo_src
 
         def fmt(val):
             return '{:,.2f}'.format(val or 0.0)
@@ -287,11 +299,15 @@ class ArcReportWizard(models.TransientModel):
             )
 
         html = Markup(
+            '{logo}'
             '<div style="margin:24px 0;font-family:Arial,sans-serif;font-size:12px;">'
             '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;'
             'background:#e8eaf6;border-radius:6px;overflow:hidden;">'
             '<tr><td style="padding:8px 14px;color:#1a237e;font-weight:bold;font-size:13px;">'
             'Resumen ARC &#8212; Ejercicio Fiscal {year}'
+            '<t t-if="cert_number"> &nbsp;'
+            '<span style="font-size:11px;font-weight:normal;color:#555;">'
+            'N&#xba; {cert_number}</span></t>'
             '</td></tr>'
             '<tr><td style="padding:4px 14px 10px;color:#555;">'
             '<strong>Empleado:</strong> {name} &nbsp;&nbsp;'
@@ -325,10 +341,12 @@ class ArcReportWizard(models.TransientModel):
             'Base Imponible = Remun. Gravable &#8722; SSO &#8722; FAOV &#8722; PARO.'
             '</p></div>'
         ).format(
+            logo=Markup(logo_tag),
             year=year,
             name=employee.name,
             cedula=cedula,
             ari_pct='{:.1f}'.format(ari_pct),
+            cert_number=cert_number,
             rows=Markup(rows_html),
             t_gross=fmt(totals.get('gross_ves')),
             t_sso=fmt(totals.get('sso_ves')),

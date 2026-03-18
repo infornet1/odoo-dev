@@ -61,6 +61,7 @@ class ArcAnnualReport(models.AbstractModel):
         for employee in employees:
             report = self._compute_employee_arc(employee, year)
             cert = cert_map.get(employee.id)
+            cert_number = cert.certificate_number if cert else ''
             if cert and cert.is_acknowledged:
                 ack_date_vet = (cert.acknowledged_date + VET_OFFSET) if cert.acknowledged_date else None
                 report['ack_info'] = {
@@ -71,6 +72,7 @@ class ArcAnnualReport(models.AbstractModel):
                 }
             else:
                 report['ack_info'] = {'is_acknowledged': False}
+            report['certificate_number'] = cert_number
             reports.append(report)
 
         # Embed employer signature image as base64 data URI so wkhtmltopdf
