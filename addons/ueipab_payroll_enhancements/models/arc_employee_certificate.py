@@ -35,13 +35,13 @@ class ArcEmployeeCertificate(models.Model):
         ('pending', 'Pendiente'),
         ('notified', 'Notificado'),
         ('acknowledged', 'Confirmado'),
-    ], string='Estado', default='pending', tracking=True)
+    ], string='Estado', default='pending')
 
     sent_date = fields.Datetime(string='Fecha de Envío', readonly=True)
     sent_email = fields.Char(string='Correo Destino', readonly=True)
 
     is_acknowledged = fields.Boolean(
-        string='Recibido', default=False, tracking=True,
+        string='Recibido', default=False,
     )
     acknowledged_date = fields.Datetime(string='Fecha de Confirmación', readonly=True)
     acknowledged_ip = fields.Char(string='IP', readonly=True)

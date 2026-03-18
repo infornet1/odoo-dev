@@ -8,7 +8,9 @@ Missing payslip periods are simulated using contract rates and historical
 BCV exchange rates.
 """
 
+import base64
 import calendar
+import os
 from datetime import date
 
 from odoo import api, models
@@ -67,6 +69,19 @@ class ArcAnnualReport(models.AbstractModel):
                 report['ack_info'] = {'is_acknowledged': False}
             reports.append(report)
 
+        # Embed employer signature image as base64 data URI so wkhtmltopdf
+        # doesn't need an outbound HTTP request (avoids failures in Docker).
+        signature_src = ''
+        try:
+            img_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                'static', 'img', 'firma_sello_gp.jpg',
+            )
+            with open(img_path, 'rb') as fh:
+                signature_src = 'data:image/jpeg;base64,' + base64.b64encode(fh.read()).decode()
+        except Exception:
+            pass
+
         return {
             'doc_ids': employee_ids,
             'doc_model': 'hr.employee',
@@ -75,6 +90,7 @@ class ArcAnnualReport(models.AbstractModel):
             'reports': reports,
             'year': year,
             'company': self.env.company,
+            'signature_src': signature_src,
         }
 
     # ------------------------------------------------------------------
