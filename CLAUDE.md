@@ -135,7 +135,7 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.60.0 | Deploying 2026-03-18 |
+| ueipab_payroll_enhancements | 17.0.1.60.0 | Deployed 2026-03-18 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
