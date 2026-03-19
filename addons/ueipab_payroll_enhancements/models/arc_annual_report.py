@@ -249,12 +249,12 @@ class ArcAnnualReport(models.AbstractModel):
         gross_ves = (salary_usd + extrabonus_usd + bonus_usd) * rate
         salary_ves = salary_usd * rate
 
-        # SSO 4%, FAOV 1% — applied on base salary only (ueipab_salary_v2)
-        # PARO/INCES 0.5% applies to Utilidades only, not regular monthly nómina → 0
+        # SSO 4%, FAOV 1%, PARO 0.5% — all applied on base salary (ueipab_salary_v2)
+        # VE_PARO_DED_V2 rule confirmed: salary_v2 × 0.005 — runs in regular nómina
         # ARI mirrors VE_ARI_DED_V2: salary_v2 × ari_rate (base salary only)
         sso_ves = salary_ves * 0.04
         faov_ves = salary_ves * 0.01
-        paro_ves = 0.0
+        paro_ves = salary_ves * 0.005
         net_taxable_ves = gross_ves - sso_ves - faov_ves - paro_ves
         ari_ves = salary_ves * ari_pct
 
