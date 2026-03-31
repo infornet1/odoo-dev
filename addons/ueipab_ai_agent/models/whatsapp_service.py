@@ -131,6 +131,58 @@ class WhatsAppService(models.AbstractModel):
         _logger.info("WhatsApp message sent successfully to %s", normalized_phone)
         return {'message_id': result.get('data', {}).get('id', 0)}
 
+    def send_media(self, phone, url, caption=''):
+        """Send a WhatsApp image/media message via MassivaMóvil API.
+
+        Args:
+            phone: Recipient phone number (any Venezuelan format)
+            url: Publicly accessible URL of the image/media file
+            caption: Optional text caption displayed below the image
+        Returns dict with message_id on success.
+        """
+        credits_ok = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.credits_ok', 'True').lower() == 'true'
+        if not credits_ok:
+            _logger.warning("Credit Guard: WhatsApp send blocked — credits depleted")
+            raise UserError(_("AI Agent desactivado: creditos insuficientes. "
+                              "Contacte soporte@ueipab.edu.ve."))
+
+        global _last_send_time
+        config = self._get_config()
+        api_url = config['base_url'].rstrip('/') + '/send/whatsapp'
+        normalized_phone = self._normalize_phone(phone)
+
+        data = {
+            'secret': config['secret'],
+            'account': config['account_id'],
+            'recipient': normalized_phone,
+            'type': 'media',
+            'url': url,
+        }
+        if caption:
+            data['message'] = caption
+
+        self._throttle_send()
+
+        _logger.info("WhatsApp media send to %s: %s", normalized_phone, url)
+
+        try:
+            response = requests.post(api_url, data=data, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException as e:
+            _logger.error("WhatsApp media API error: %s", e)
+            raise UserError(_("Error al enviar imagen WhatsApp: %s") % str(e))
+
+        if result.get('status') != 200:
+            error_msg = result.get('message', 'Unknown error')
+            _logger.error("WhatsApp media API returned error: %s", error_msg)
+            raise UserError(_("Error de WhatsApp API (media): %s") % error_msg)
+
+        _last_send_time = time.time()
+        _logger.info("WhatsApp media sent successfully to %s", normalized_phone)
+        return {'message_id': result.get('data', {}).get('id', 0)}
+
     def validate_phone(self, phone):
         """Validate a WhatsApp phone number via MassivaMóvil API.
 

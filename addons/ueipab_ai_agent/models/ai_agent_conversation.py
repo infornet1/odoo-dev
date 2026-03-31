@@ -410,6 +410,11 @@ class AiAgentConversation(models.Model):
                     'ai_output_tokens': output_tokens,
                 })
 
+            # Send flyer if requested (after farewell text, before resolving)
+            flyer_key = action.get('resolution_data', {}).get('flyer_key')
+            if flyer_key and hasattr(skill_handler, 'send_flyer'):
+                skill_handler.send_flyer(self, flyer_key)
+
             self.action_resolve(action.get('summary', ''), action.get('resolution_data'))
             return
 
@@ -452,6 +457,11 @@ class AiAgentConversation(models.Model):
             'ai_input_tokens': input_tokens,
             'ai_output_tokens': output_tokens,
         })
+
+        # Send flyer after text reply if Claude requested one
+        flyer_key = action.get('flyer_key')
+        if flyer_key and hasattr(skill_handler, 'send_flyer'):
+            skill_handler.send_flyer(self, flyer_key)
 
         self.write({
             'state': 'waiting',

@@ -5,6 +5,22 @@ from . import register_skill, get_ve_greeting
 
 _logger = logging.getLogger(__name__)
 
+# Flyers available to send via WhatsApp.
+# key → (filename, short description for Claude's reference)
+_FLYERS = {
+    'inscripcion':          ('inscripcion.png',          'Inscripciones abiertas año escolar 2026-2027 — $197.38/año, 17.72% descuento hasta el 1 de mayo'),
+    'pronto_pago':          ('pronto_pago.png',          'Pronto pago: mensualidad congelada a $162.39 si pagas en los primeros 10 días del mes'),
+    'tarjeta_credito':      ('tarjeta_credito.png',      'Aceptamos tarjetas de crédito nacionales e internacionales sin comisiones adicionales'),
+    'english':              ('english.png',              'MOA School: Cursos de Inglés After School, grupos pequeños, $38/mes'),
+    'robotica':             ('robotica.png',             'Clases de Robótica con Kurios — 2 clases/semana, $52/mes, inscripción gratis'),
+    'dibujo':               ('dibujo.png',               'Curso de Dibujo y Pintura — 3 meses, 4h semanales, $38/mes'),
+    'bachillerato_virtual': ('bachillerato_virtual.png', 'Bachillerato Virtual 100% online — inscríbete ya'),
+}
+
+def _get_flyer_url(base_url, filename):
+    """Build the public Odoo static URL for a flyer."""
+    return f"{base_url.rstrip('/')}/ueipab_ai_agent/static/flyers/{filename}"
+
 # Shared institutional knowledge block (same content as bounce_resolution)
 _INSTITUTIONAL_KNOWLEDGE = (
     "CONOCIMIENTO INSTITUCIONAL:\n"
@@ -74,17 +90,27 @@ class GeneralInquirySkill:
             else "- Este contacto NO está registrado en el sistema. Si no dice su nombre, pregúntaselo de forma natural.\n"
         )
 
+        flyer_list = "\n".join(
+            f"  - {key}: {desc}" for key, (_, desc) in _FLYERS.items()
+        )
+
         return (
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
             + _INSTITUTIONAL_KNOWLEDGE
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx
+            + "\nFLYERS DISPONIBLES (imágenes informativas que puedes enviar):\n"
+            + flyer_list + "\n"
             + "\nINSTRUCCIONES:\n"
             "- Comunícate siempre en español venezolano, cálida y profesionalmente.\n"
             "- Salúdala y preséntate brevemente como asistente del colegio.\n"
             "- Entiende su consulta. Responde preguntas generales con el conocimiento institucional que tienes "
             "(medios de pago, mensualidades, fechas, información general del colegio).\n"
+            "- Si la persona pregunta por inscripciones, mensualidad, cursos extracurriculares, métodos de pago "
+            "u otros temas cubiertos por un flyer disponible, añade ACTION:SEND_FLYER:clave al final de tu "
+            "respuesta (usa exactamente la clave de la lista de flyers). Solo un flyer por respuesta.\n"
+            "  Ejemplo: ACTION:SEND_FLYER:inscripcion\n"
             "- Si la consulta es sobre facturación, deuda, saldo, estado de cuenta, ajuste de cobro o pagos "
             "pendientes: infórmale que la canalizarás con el equipo de Pagos y Facturación "
             "(pagos@ueipab.edu.ve) que la atenderá a la brevedad. Usa ACTION:HANDOFF con ruta 'billing'.\n"
@@ -98,8 +124,8 @@ class GeneralInquirySkill:
             "  Ejemplo soporte:     ACTION:HANDOFF:Carlos López|Solicitud de constancia de estudios|support\n"
             "- Si no logras obtener el nombre, usa 'Desconocido' en el marcador.\n"
             "- No uses emojis. No reveles que eres un sistema automático a menos que pregunten directamente.\n"
-            "- IMPORTANTE: ACTION:HANDOFF es un comando interno. El cliente NO lo ve. Siempre inclúyelo "
-            "al final de la respuesta cuando aplique.\n"
+            "- IMPORTANTE: ACTION:SEND_FLYER y ACTION:HANDOFF son comandos internos. El cliente NO los ve. "
+            "Inclúyelos siempre al final de la respuesta cuando apliquen.\n"
         )
 
     def get_greeting(self, conversation, context):
@@ -117,8 +143,21 @@ class GeneralInquirySkill:
         text = re.sub(r'ACTION:\w+[^\n]*', '', ai_response)
         return text.strip()
 
+    def _get_base_url(self, conversation):
+        return conversation.env['ir.config_parameter'].sudo().get_param(
+            'web.base.url', 'https://odoo.ueipab.edu.ve'
+        )
+
     def process_ai_response(self, conversation, ai_response, context):
-        """Parse AI response for ACTION:HANDOFF marker."""
+        """Parse AI response for ACTION:SEND_FLYER and ACTION:HANDOFF markers."""
+        # Check for flyer send request
+        flyer_match = re.search(r'ACTION:SEND_FLYER:(\w+)', ai_response, re.MULTILINE)
+        flyer_key = flyer_match.group(1).strip() if flyer_match else None
+        if flyer_key and flyer_key not in _FLYERS:
+            _logger.warning("general_inquiry: unknown flyer key '%s', ignoring", flyer_key)
+            flyer_key = None
+
+        # Check for handoff
         handoff_match = re.search(
             r'ACTION:HANDOFF:([^|\n]+)\|([^|\n]+)(?:\|(\w+))?$',
             ai_response,
@@ -132,7 +171,7 @@ class GeneralInquirySkill:
                 route = 'support'
             visible_text = self._extract_visible_text(ai_response)
             team = 'Pagos y Facturación' if route == 'billing' else 'Soporte'
-            return {
+            result = {
                 'resolve': True,
                 'farewell_message': visible_text or ai_response,
                 'summary': f'Transferido a {team}: {captured_name} — {captured_summary}',
@@ -141,10 +180,35 @@ class GeneralInquirySkill:
                     'captured_name': captured_name,
                     'summary': captured_summary,
                     'route': route,
+                    'flyer_key': flyer_key,
                 },
             }
+            return result
 
-        return {'message': ai_response}
+        visible_text = self._extract_visible_text(ai_response)
+        result = {'message': visible_text or ai_response}
+        if flyer_key:
+            result['flyer_key'] = flyer_key
+        return result
+
+    def send_flyer(self, conversation, flyer_key):
+        """Send a flyer image via WhatsApp for the given key."""
+        if flyer_key not in _FLYERS:
+            return
+        filename, description = _FLYERS[flyer_key]
+        base_url = self._get_base_url(conversation)
+        url = _get_flyer_url(base_url, filename)
+        dry_run = conversation.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.dry_run', 'True').lower() == 'true'
+        if dry_run:
+            _logger.info("DRY_RUN: would send flyer '%s' to %s: %s", flyer_key, conversation.phone, url)
+            return
+        wa_service = conversation.env['ai.agent.whatsapp.service']
+        try:
+            wa_service.send_media(conversation.phone, url)
+            _logger.info("Flyer '%s' sent to %s", flyer_key, conversation.phone)
+        except Exception as e:
+            _logger.error("Failed to send flyer '%s' to %s: %s", flyer_key, conversation.phone, e)
 
     def on_resolve(self, conversation, resolution_data):
         """Send handoff email to soporte@ueipab.edu.ve with full transcript."""
