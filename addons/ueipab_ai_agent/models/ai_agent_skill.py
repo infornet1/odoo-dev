@@ -26,6 +26,13 @@ class AiAgentSkill(models.Model):
     # WhatsApp template
     greeting_template = fields.Text('Plantilla Saludo Inicial')
 
+    # Schedule control
+    respect_schedule = fields.Boolean(
+        'Respetar Horario', default=True,
+        help='Si está activo, Glenda solo responde este skill dentro del horario de '
+             'contacto configurado. Desactívalo para skills que deben atender 24/7 '
+             '(ej. Consulta General).')
+
     # Link to source model
     source_model = fields.Char('Modelo Origen')
 

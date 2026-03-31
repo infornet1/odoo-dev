@@ -50,5 +50,18 @@
             <field name="greeting_template">Hola {nombre}, soy Glenda del departamento de Recursos Humanos de UEIPAB. Estamos actualizando los datos de nuestro personal y necesito verificar algunos datos contigo. Solo tomara unos minutos.</field>
         </record>
 
+        <record id="skill_general_inquiry" model="ai.agent.skill">
+            <field name="name">Consulta General</field>
+            <field name="code">general_inquiry</field>
+            <field name="respect_schedule" eval="False"/>
+            <field name="description">Atender mensajes entrantes no solicitados. Glenda responde preguntas generales con conocimiento institucional y transfiere al equipo de soporte cuando la consulta requiere atención personalizada.</field>
+            <field name="source_model"></field>
+            <field name="model_name">claude-haiku-4-5-20251001</field>
+            <field name="max_turns">10</field>
+            <field name="timeout_hours">24</field>
+            <field name="system_prompt">Eres Glenda, asistente virtual del Instituto Privado Andrés Bello. Atiendes consultas generales de quienes escriben a este número de WhatsApp.</field>
+            <field name="greeting_template">Buen día. Le saluda Glenda, asistente virtual del Instituto Privado Andrés Bello. ¿En qué le puedo ayudar?</field>
+        </record>
+
     </data>
 </odoo>

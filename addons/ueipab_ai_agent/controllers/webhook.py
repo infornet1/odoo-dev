@@ -75,10 +75,9 @@ class AiAgentWebhook(http.Controller):
             _logger.info("WhatsApp webhook: no active conversation for %s", normalized_phone)
             return {'status': 'ok', 'message': 'No active conversation'}
 
-        # Check duplicate
+        # Check duplicate (global, not per-conversation)
         existing = request.env['ai.agent.message'].sudo().search([
             ('whatsapp_message_id', '=', wa_id),
-            ('conversation_id', '=', conversation.id),
         ], limit=1)
         if existing:
             _logger.info("WhatsApp webhook: duplicate message %d", wa_id)

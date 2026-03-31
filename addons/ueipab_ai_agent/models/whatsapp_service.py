@@ -156,8 +156,14 @@ class WhatsAppService(models.AbstractModel):
 
         return result.get('status') == 200
 
-    def fetch_received(self, limit=50, page=1):
+    def fetch_received(self, limit=50, page=1, account_id=None):
         """Fetch received WhatsApp messages via polling API.
+
+        Args:
+            account_id: MassivaMóvil unique_id for a specific WA account.
+                        When provided the API filters to that account only,
+                        preventing messages from other linked accounts
+                        (backup / tertiary) from leaking in.
 
         Returns list of message dicts.
         """
@@ -169,6 +175,8 @@ class WhatsAppService(models.AbstractModel):
             'limit': limit,
             'page': page,
         }
+        if account_id:
+            params['account'] = account_id
 
         try:
             response = requests.get(url, params=params, timeout=30)

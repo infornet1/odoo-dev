@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.15.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.28.0 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -46,7 +46,8 @@ addons/ueipab_ai_agent/
 │   ├── __init__.py                     # Skill registry + decorator
 │   ├── bounce_resolution.py            # Bounce email resolution skill
 │   ├── bill_reminder.py                # Invoice due date reminder skill
-│   └── billing_support.py             # Balance inquiry support skill
+│   ├── billing_support.py             # Balance inquiry support skill
+│   └── general_inquiry.py             # 24/7 inbound inquiry handler (new v1.26.0)
 ├── controllers/
 │   └── webhook.py                      # WhatsApp webhook endpoint
 ├── wizard/
@@ -81,6 +82,7 @@ Stores configuration for each business process (skill).
 | `timeout_hours` | Integer | Hours to wait before timeout |
 | `reminder_interval_hours` | Integer | Hours between reminders (default: 24) |
 | `max_reminders` | Integer | Max reminders before timeout (default: 2) |
+| `respect_schedule` | Boolean | If True, skill is gated by contact schedule. Set False for 24/7 skills like `general_inquiry` (default: True) |
 | `source_model` | Char | Linked Odoo model name |
 | `greeting_template` | Text | Optional greeting template |
 
@@ -97,7 +99,7 @@ Tracks each WhatsApp conversation with a customer.
 | `source_model` | Char | Origin model (generic reference) |
 | `source_id` | Integer | Origin record ID |
 | `agent_message_ids` | One2many | WhatsApp messages |
-| `turn_count` | Integer | Computed: inbound message count |
+| `turn_count` | Integer | Computed: inbound messages with non-empty body or attachment (empty dedup-only records excluded) |
 | `resolution_summary` | Text | Summary when resolved |
 | `reminder_count` | Integer | Reminders sent (resets on reply) |
 | `last_reminder_date` | Datetime | When last reminder was sent |
@@ -158,11 +160,18 @@ class MySkill:
 
 ### Available Skills
 
-| Code | Purpose | Resolution Triggers |
-|------|---------|-------------------|
-| `bounce_resolution` | Ask for new email when old one bounced. Includes Akdemia family email context to prevent duplicate proposals. | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
-| `bill_reminder` | Friendly invoice due date reminder | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
-| `billing_support` | Balance inquiry and billing Q&A | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
+| Code | Purpose | 24/7 | Max Turns | Resolution Triggers |
+|------|---------|------|-----------|-------------------|
+| `bounce_resolution` | Ask for new email when old one bounced. Includes Akdemia family email context to prevent duplicate proposals. | No | 5 | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
+| `bill_reminder` | Friendly invoice due date reminder | No | 3 | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
+| `billing_support` | Balance inquiry and billing Q&A | No | 4 | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
+| `general_inquiry` | Handles unsolicited inbound messages. Answers general questions (fees, payment methods, school info) and routes to billing or support team via email handoff. | **Yes** | 10 | `ACTION:HANDOFF:name\|summary\|route` where route = `billing` or `support` |
+
+**general_inquiry routing:**
+- Billing/debt/payment inquiries → `pagos@ueipab.edu.ve` (Pagos y Facturación team)
+- All other inquiries (documents, student matters, complaints, general support) → `soporte@ueipab.edu.ve`
+
+On handoff, a full transcript email is sent to the appropriate team with the customer's name, phone, Odoo contact status, inquiry summary, and the complete conversation transcript.
 
 ## System Parameters
 
@@ -329,8 +338,9 @@ Glenda only initiates outbound WhatsApp messages during allowed hours (Venezuela
 **Holiday support (v1.15.0):** Venezuelan public holidays automatically use the weekend schedule (09:30-19:00) even when they fall on weekdays. Holidays are stored as comma-separated `MM-DD` values in `ai_agent.holidays` and editable from the Dashboard Configuracion tab.
 
 **Behavior:**
-- **Cron-initiated outbound** (reminders, timeouts, poll processing): Blocked outside schedule. Crons skip silently and retry next run.
+- **Cron-initiated outbound** (reminders, timeouts, poll processing): Blocked outside schedule for skills with `respect_schedule=True` (all business skills). Crons skip silently and retry next run.
 - **Customer-initiated replies** (webhook): Glenda responds anytime. If the customer is messaging, they're awake.
+- **24/7 skills** (`respect_schedule=False`): The `general_inquiry` skill ignores the schedule entirely — inbound messages are processed and replied to at any hour, including nights and weekends.
 - **Edge case**: Glenda sends reminder at 20:20, customer replies at 20:45 (after cutoff). Webhook processes the reply immediately -- conversation continues. But if the customer doesn't reply and the next cron fires at 21:00, it skips until morning.
 
 **Configurable via System Parameters:**
@@ -516,25 +526,25 @@ Both testing and production share the same WhatsApp account (+584148321963). To 
 
 ## Known Issues
 
-### Poll Cron Transaction Rollback Bug (2026-03-02)
+### Poll Cron Transaction Rollback Bug (2026-03-02) — RESOLVED (v1.19.0)
 
-**Status:** Open — Identified during HR data collection testing with Rafael Perez and Lorena Reyes.
+**Status:** Fixed — Identified during HR data collection testing with Rafael Perez and Lorena Reyes.
 
 **Symptom:** Customer receives recursive/duplicate WhatsApp messages from Glenda with the same content. Inbound messages are NOT logged in Odoo despite being present in the MassivaMóvil received API.
 
-**Root Cause:** `_cron_poll_messages()` (line 829-853) processes all conversation batches in a single transaction with **no error isolation**. If `action_process_reply()` raises an exception for ANY conversation:
-1. The entire cron transaction rolls back (all Odoo records lost)
+**Root Cause:** `_cron_poll_messages()` processed all conversation batches in a single transaction with **no error isolation**. If `action_process_reply()` raised an exception for ANY conversation:
+1. The entire cron transaction rolled back (all Odoo records lost)
 2. But Claude API calls and WhatsApp sends already executed (irreversible external calls)
-3. Next cron cycle: dedup check fails (records were rolled back) → same messages re-processed → recursive
+3. Next cron cycle: dedup check failed (records were rolled back) → same messages re-processed → recursive
 
 **Evidence (Conv #30 — Rafael Perez):** 12 inbound WA messages in MassivaMóvil API (IDs 205945-205973), zero logged in Odoo. Poll cron running every 1 minute, conversation in `waiting` state for ~2 hours.
 
-**Secondary Issue — Duplicate Conversations (Conv #31/#32 — Lorena Reyes):** Two active conversations for the same phone. Dedup check is per-conversation (`conversation_id = X`), so the same WA message (#205917) was processed by both conversations → double Claude calls, double WA sends.
+**Secondary Issue — Duplicate Conversations (Conv #31/#32 — Lorena Reyes):** Two active conversations for the same phone. Dedup check was per-conversation (`conversation_id = X`), so the same WA message (#205917) was processed by both conversations → double Claude calls, double WA sends.
 
-**Recommended Fixes:**
-1. **Critical:** Wrap each conversation processing in `try/except` with `cr.savepoint()` for error isolation
-2. **Important:** Make WA message dedup global (not per-conversation) to prevent cross-conversation duplicates
-3. **Important:** Add wizard validation to prevent creating duplicate active conversations for the same phone
+**Fixes Applied (v1.19.0):**
+1. **Error isolation:** Each conversation processing wrapped in `try/except` with `cr.savepoint()` — if one fails, others still commit
+2. **Global dedup:** WA message dedup is now global (not per-conversation) in both poll cron and webhook controller
+3. **Phone duplicate guard:** Wizard prevents creating duplicate active conversations for the same phone number
 
 ---
 

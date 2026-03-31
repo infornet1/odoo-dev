@@ -85,7 +85,10 @@ class AiAgentConversation(models.Model):
 
     def _compute_turn_count(self):
         for rec in self:
-            rec.turn_count = len(rec.agent_message_ids.filtered(lambda m: m.direction == 'inbound'))
+            # Only count inbound messages with actual content — empty records are
+            # dedup-only markers and must not inflate the turn limit counter.
+            rec.turn_count = len(rec.agent_message_ids.filtered(
+                lambda m: m.direction == 'inbound' and (m.body or m.attachment_url)))
 
     def _get_conversation_history(self):
         """Format messages as Claude API conversation history.
@@ -754,6 +757,127 @@ class AiAgentConversation(models.Model):
         return True
 
     @api.model
+    def _get_or_create_general_inquiry_conversation(self, phone, sender_account=''):
+        """Return an active general_inquiry conversation for an unknown inbound phone.
+
+        Creates a new conversation (and a placeholder partner if needed) when
+        the message arrives on the dedicated primary WA account, the phone is not
+        a group ID, and hasn't been seen in the last 24 hours.
+        Returns None if the message should be ignored.
+
+        Args:
+            phone: normalized customer phone number
+            sender_account: raw 'account' field from MassivaMóvil API (the WA
+                account that received the message)
+        """
+        import re as _re
+        from datetime import timedelta
+
+        icp = self.env['ir.config_parameter'].sudo()
+        wa_service = self.env['ai.agent.whatsapp.service']
+
+        # Reject group IDs (contain '@')
+        if '@' in phone:
+            return None
+
+        primary_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_primary_phone', '')
+        )
+
+        # Only handle messages arriving on the dedicated primary number.
+        # Old backup / tertiary numbers may still receive unrelated business
+        # messages — those must be ignored entirely for general_inquiry.
+        if sender_account:
+            normalized_account = wa_service._normalize_phone(sender_account)
+            if normalized_account != primary_phone:
+                return None
+
+        # Skip messages from our own WA account phones (avoid self-loops)
+        backup_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_backup_phone', '')
+        )
+        own_phones = {p for p in (primary_phone, backup_phone) if p}
+        if phone in own_phones:
+            return None
+
+        # If a general_inquiry conversation already exists for this phone in the
+        # last 24h, return it if still open; otherwise skip (avoid re-triggering).
+        cutoff = fields.Datetime.now() - timedelta(hours=24)
+        existing = self.search([
+            ('phone', '=', phone),
+            ('skill_id.code', '=', 'general_inquiry'),
+            ('create_date', '>=', cutoff),
+        ], limit=1, order='create_date desc')
+        if existing:
+            if existing.state in ('active', 'waiting'):
+                return existing
+            return None  # already handled in the last 24h
+
+        # Locate the skill record
+        skill = self.env['ai.agent.skill'].sudo().search(
+            [('code', '=', 'general_inquiry')], limit=1
+        )
+        if not skill:
+            _logger.warning("general_inquiry skill not found — cannot create conversation for %s", phone)
+            return None
+
+        # Find an Odoo partner matching this phone.
+        # Odoo stores VE phones with spaces (+58 414 2337463) while the API
+        # returns them in E.164 (+584142337463).  Build a set of candidate
+        # values covering both formats and skip placeholder partners.
+        all_digits = _re.sub(r'[^\d]', '', phone)  # e.g. '584142337463'
+        phone_candidates = []
+        if len(all_digits) == 12 and all_digits.startswith('58'):
+            local10 = all_digits[2:]  # '4142337463'
+            area, num = local10[:3], local10[3:]
+            # Prioritize formatted (Odoo-standard) before raw E.164
+            phone_candidates = [
+                f'+58 {area} {num}',  # '+58 414 2337463'
+                f'0{local10}',        # '04142337463'
+                phone,                # '+584142337463' (E.164 fallback)
+            ]
+        else:
+            phone_candidates = [phone]
+        _NO_PLACEHOLDER = ('name', 'not like', 'Consulta WhatsApp')
+        partner = None
+        for cand in phone_candidates:
+            partner = self.env['res.partner'].sudo().search(
+                ['&', _NO_PLACEHOLDER, '|', ('phone', '=', cand), ('mobile', '=', cand)],
+                limit=1,
+            )
+            if partner:
+                break
+        if not partner and len(all_digits) >= 7:
+            # Last-resort: match on last 7 digits (local number without area code)
+            last7 = all_digits[-7:]
+            partner = self.env['res.partner'].sudo().search([
+                '&', _NO_PLACEHOLDER,
+                '|', ('phone', 'like', last7), ('mobile', 'like', last7),
+            ], limit=1)
+
+        if not partner:
+            partner = self.env['res.partner'].sudo().create({
+                'name': f'Consulta WhatsApp {phone}',
+                'mobile': phone,
+                'customer_rank': 1,
+            })
+            _logger.info("Created placeholder partner for unknown WA contact: %s", phone)
+
+        conversation = self.sudo().create({
+            'skill_id': skill.id,
+            'partner_id': partner.id,
+            'phone': phone,
+            'state': 'active',
+            'last_message_date': fields.Datetime.now(),
+            'last_sender': 'customer',
+        })
+        _logger.info(
+            "Created general_inquiry conversation %d for phone %s (partner: %s)",
+            conversation.id, phone, partner.name,
+        )
+        return conversation
+
+    @api.model
     def _cron_poll_messages(self):
         """Cron: poll WhatsApp API for incoming messages (fallback to webhook).
 
@@ -763,8 +887,11 @@ class AiAgentConversation(models.Model):
         """
         if not self._is_active_environment():
             return
-        if not self._is_within_schedule():
-            return
+
+        # Schedule is enforced per-conversation based on skill.respect_schedule.
+        # Skills with respect_schedule=False (e.g. general_inquiry) are always
+        # processed; critical business skills are gated by the contact window.
+        within_schedule = self._is_within_schedule()
 
         wa_service = self.env['ai.agent.whatsapp.service']
         dry_run = self.env['ir.config_parameter'].sudo().get_param(
@@ -775,8 +902,17 @@ class AiAgentConversation(models.Model):
             _logger.info("DRY_RUN: Would poll WhatsApp for new messages")
             return
 
+        # Poll all accounts (no account_id filter) during the transition period
+        # after switching to the dedicated primary number (+584148321989, 2026-03-30).
+        # Existing waiting conversations were contacted from the old number — their
+        # replies must still be caught. The dedup guard (whatsapp_message_id) and
+        # sender_account check in _get_or_create_general_inquiry_conversation prevent
+        # duplicates and spurious general_inquiry creation from backup/tertiary numbers.
+        # TODO: restore account_id filter once all pre-switch waiting convs are drained.
+        icp = self.env['ir.config_parameter'].sudo()
+
         try:
-            messages = wa_service.fetch_received(limit=50)
+            messages = wa_service.fetch_received(limit=50, account_id=None)
         except Exception as e:
             _logger.error("Failed to poll WhatsApp messages: %s", e)
             return
@@ -792,8 +928,13 @@ class AiAgentConversation(models.Model):
             body = msg.get('message', '')
             wa_id = msg.get('id', 0)
             attachment = msg.get('attachment')
+            sender_account = msg.get('account', '')
 
             if not phone or (not body and not attachment):
+                continue
+
+            # Reject group IDs early (before searching conversations)
+            if '@' in raw_phone:
                 continue
 
             # Find active conversation for this phone
@@ -803,13 +944,24 @@ class AiAgentConversation(models.Model):
             ], limit=1, order='last_message_date desc')
 
             if not conversation:
-                _logger.info("No active conversation for phone %s, ignoring message", phone)
+                conversation = self._get_or_create_general_inquiry_conversation(
+                    phone, sender_account=sender_account
+                )
+                if not conversation:
+                    _logger.info("No active conversation for phone %s, ignoring message", phone)
+                    continue
+                _logger.info("General inquiry conversation %d created for phone %s", conversation.id, phone)
+
+            # Enforce schedule per skill: skip scheduled skills outside contact window
+            if conversation.skill_id.respect_schedule and not within_schedule:
+                _logger.info(
+                    "Outside schedule: deferring reply for skill '%s' (conv %d, %s)",
+                    conversation.skill_id.code, conversation.id, phone)
                 continue
 
-            # Check if message already processed
+            # Check if message already processed (global, not per-conversation)
             existing = self.env['ai.agent.message'].search([
                 ('whatsapp_message_id', '=', wa_id),
-                ('conversation_id', '=', conversation.id),
             ], limit=1)
             if existing:
                 continue
@@ -825,32 +977,38 @@ class AiAgentConversation(models.Model):
                 'attachment': attachment if attachment else None,
             })
 
-        # Phase 2: Process each conversation batch
+        # Phase 2: Process each conversation batch (isolated per conversation)
         for conv_id, data in conv_groups.items():
             conv = data['conversation']
             items = data['items']
-            if len(items) == 1:
-                item = items[0]
-                conv.action_process_reply(
-                    item['body'], wa_message_id=item['wa_id'],
-                    attachment_url=item.get('attachment'),
-                )
-            else:
-                combined = '\n'.join(item['body'] for item in items if item['body'])
-                _logger.info(
-                    "Conversation %d: batching %d messages into single interaction",
-                    conv_id, len(items))
-                first_att = items[0].get('attachment')
-                extra_atts = [{'url': i['attachment'], 'wa_id': i['wa_id']}
-                              for i in items[1:] if i.get('attachment')]
-                extra_ids = [i['wa_id'] for i in items[1:] if not i.get('attachment')]
-                conv.action_process_reply(
-                    combined,
-                    wa_message_id=items[0]['wa_id'],
-                    extra_wa_ids=extra_ids or None,
-                    attachment_url=first_att,
-                    extra_attachments=extra_atts or None,
-                )
+            try:
+                with self.env.cr.savepoint():
+                    if len(items) == 1:
+                        item = items[0]
+                        conv.action_process_reply(
+                            item['body'], wa_message_id=item['wa_id'],
+                            attachment_url=item.get('attachment'),
+                        )
+                    else:
+                        combined = '\n'.join(item['body'] for item in items if item['body'])
+                        _logger.info(
+                            "Conversation %d: batching %d messages into single interaction",
+                            conv_id, len(items))
+                        first_att = items[0].get('attachment')
+                        extra_atts = [{'url': i['attachment'], 'wa_id': i['wa_id']}
+                                      for i in items[1:] if i.get('attachment')]
+                        extra_ids = [i['wa_id'] for i in items[1:] if not i.get('attachment')]
+                        conv.action_process_reply(
+                            combined,
+                            wa_message_id=items[0]['wa_id'],
+                            extra_wa_ids=extra_ids or None,
+                            attachment_url=first_att,
+                            extra_attachments=extra_atts or None,
+                        )
+            except Exception as e:
+                _logger.error(
+                    "Error processing conversation %d (%s): %s",
+                    conv_id, conv.partner_id.name, e)
 
     @api.model
     def _cron_check_timeouts(self):
@@ -864,10 +1022,9 @@ class AiAgentConversation(models.Model):
         """
         if not self._is_active_environment():
             return
-        if not self._is_within_schedule():
-            return
 
         from datetime import timedelta
+        within_schedule = self._is_within_schedule()
         conversations = self.search([
             ('state', '=', 'waiting'),
         ])
@@ -875,6 +1032,9 @@ class AiAgentConversation(models.Model):
         now = fields.Datetime.now()
         for conv in conversations:
             skill = conv.skill_id
+            # Skip reminders/timeouts outside schedule for skills that respect it
+            if skill.respect_schedule and not within_schedule:
+                continue
             interval_hours = skill.reminder_interval_hours or 24
             max_reminders = skill.max_reminders if skill.max_reminders >= 0 else 2
 

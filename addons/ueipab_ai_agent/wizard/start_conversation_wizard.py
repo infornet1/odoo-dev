@@ -46,6 +46,18 @@ class StartConversationWizard(models.TransientModel):
             # Escalated conversation — close it and allow retry with new number
             existing.write({'state': 'failed'})
 
+        # Check for duplicate conversation by phone (different partner, same number)
+        phone_dup = self.env['ai.agent.conversation'].search([
+            ('phone', '=', normalized_phone),
+            ('state', 'in', ('draft', 'active', 'waiting')),
+            ('id', '!=', existing.id if existing else 0),
+        ], limit=1)
+        if phone_dup:
+            raise UserError(_(
+                "Ya existe una conversacion activa con este numero de telefono (%s) "
+                "para el contacto %s. Cierre o resuelva la conversacion existente primero."
+            ) % (normalized_phone, phone_dup.partner_id.name))
+
         # Create conversation
         conversation = self.env['ai.agent.conversation'].create({
             'skill_id': self.skill_id.id,

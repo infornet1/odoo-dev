@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.13.0 | **Status:** Testing (Live with real customers) | **Date:** 2026-02-14
+**Version:** 17.0.1.28.0 | **Status:** Testing (Live with real customers) | **Date:** 2026-03-31
 
 ## What Is Glenda
 
@@ -21,14 +21,21 @@ She operates as "Glenda, asistente de Colegio Andres Bello" — a warm, professi
 
 ### Contact Schedule
 
-Glenda only initiates contact during allowed hours (VET, GMT-4):
+Glenda's schedule behavior depends on the skill:
+
+| Skill | Schedule |
+|-------|----------|
+| `bounce_resolution`, `bill_reminder`, `billing_support`, `hr_data_collection` | Business hours only (see below) |
+| `general_inquiry` | **24/7 — no schedule restriction** |
+
+**Business hours (VET, GMT-4):**
 
 | Day | Hours |
 |-----|-------|
 | Weekdays | 06:30 - 20:30 |
-| Weekends | 09:30 - 19:00 |
+| Weekends & Holidays | 09:30 - 19:00 |
 
-Customer-initiated replies (webhook) are processed anytime.
+Customer-initiated replies to business-hours skills are also processed anytime (webhook path). The schedule gates cron-driven outbound only.
 
 ---
 
@@ -63,6 +70,32 @@ Customer-initiated replies (webhook) are processed anytime.
 | **Alternative Phone** | Family member answers, provides different phone for the real contact | Phone saved on conversation, pre-fills wizard on re-trigger | `ACTION:ALTERNATIVE_PHONE:04XXXXXXXXX` |
 | **Remove Only** | Contact has other working emails, doesn't want to add another | Bounced email removed, remaining emails kept | `RESOLVED:REMOVE_ONLY` |
 | **Declined** | Customer refuses to provide alternative email | Logged, conversation closed, state stays `contacted` | `RESOLVED:DECLINED` |
+
+---
+
+## General Inquiry Skill (v1.26.0+)
+
+Glenda now handles **unsolicited inbound messages** — when an unknown phone sends a WhatsApp to the Glenda number with no active conversation. This uses the `general_inquiry` skill which operates 24/7 (no schedule restriction).
+
+### What She Does
+
+1. Greets the person warmly, introduces herself as an assistant of the school.
+2. Identifies the contact in Odoo (by phone number). If recognized, addresses them by name.
+3. Answers general questions using institutional knowledge: monthly fees, payment methods, bank accounts, Zelle, Binance, Mercantil portal.
+4. Routes complex or personal inquiries to the human team via email handoff.
+
+### Handoff Routing
+
+| Inquiry Type | Routed To |
+|-------------|-----------|
+| Billing / debt / balance / payment adjustments | `pagos@ueipab.edu.ve` (Pagos y Facturación) |
+| Documents, student matters, complaints, general support | `soporte@ueipab.edu.ve` (Soporte) |
+
+On handoff, Glenda sends a detailed email to the appropriate team with: customer phone, name, Odoo contact status, inquiry summary, and the full conversation transcript.
+
+### Trigger
+
+The 24h cooldown guard prevents re-triggering a general_inquiry conversation too quickly for the same number. After 24h of inactivity, a new inquiry from the same number creates a fresh conversation.
 
 ---
 
@@ -197,7 +230,7 @@ Customer-initiated replies (webhook) are processed anytime.
 
 ---
 
-## Production Readiness Review (2026-02-14)
+## Production Readiness Review (Updated 2026-03-04)
 
 ### Deployment Model
 
@@ -209,21 +242,27 @@ All 7 system cron scripts run on the **dev server** (where Freescout MySQL is lo
             │  7 System Cron Scripts       │            │  Odoo 17 (ueipab17)      │
             │  Freescout MySQL (local)     │ ──XML-RPC──│  ueipab_ai_agent module  │
             │  /var/www/dev/odoo_api_bridge│            │  ueipab_bounce_log       │
-            │  Google Sheets API           │            │  4 Odoo Crons            │
-            │  Akdemia Scraper (Playwright)│            │  Webhook endpoint        │
+            │  Google Sheets API           │            │  ueipab_hr_employee      │
+            │  Akdemia Scraper (Playwright)│            │  5 Odoo Crons            │
+            │                              │ ←─Webhook──│  Webhook endpoint        │
             └──────────────────────────────┘            └──────────────────────────┘
 ```
 
 ### Gap Analysis
 
-#### GAP 1: Odoo Modules Not Installed in Production
+#### GAP 1: Odoo Modules Not Installed in Production — BLOCKER
 
-| Module | Required | Status |
-|--------|----------|--------|
-| `ueipab_bounce_log` v17.0.1.4.0 | Hard dependency | **NOT INSTALLED** |
-| `ueipab_ai_agent` v17.0.1.13.0 | Primary module | **NOT INSTALLED** |
+Three modules must be installed in order (dependency chain):
 
-**Action:** Copy modules to `/home/vision/ueipab17/addons/`, install `ueipab_bounce_log` first, then `ueipab_ai_agent`.
+| Module | Version | Required By | Prod Status |
+|--------|---------|-------------|-------------|
+| `ueipab_hr_employee` | (latest) | `ueipab_ai_agent` depends | **NOT FOUND** on prod addons path |
+| `ueipab_bounce_log` | 17.0.1.4.0 | `ueipab_ai_agent` depends | **NOT FOUND** on prod addons path |
+| `ueipab_ai_agent` | 17.0.1.19.0 | Primary module | **NOT FOUND** on prod addons path |
+
+**Already installed in prod (no action):** `contacts`, `mail`, `mass_mailing`, `account`, `hr`, `hr_payroll_community`.
+
+**Action:** Copy all 3 modules to `/home/vision/ueipab17/addons/`. Install in order: `ueipab_hr_employee` → `ueipab_bounce_log` → `ueipab_ai_agent`.
 
 #### GAP 2: Config Files Missing on Production
 
@@ -233,56 +272,73 @@ All 7 system cron scripts run on the **dev server** (where Freescout MySQL is lo
 | `anthropic_api.json` | Module (post_init_hook) | `/opt/odoo-dev/config/` | `/home/vision/ueipab17/config/` |
 | `google_sheets_credentials.json` | Bridge scripts only (dev server) | `/opt/odoo-dev/config/` | **N/A — stays on dev server** |
 
-**Action:** Copy `whatsapp_massiva.json` and `anthropic_api.json` to production. Sheets creds stay on dev.
+**Note:** Config files no longer exist on dev filesystem (deleted after initial load). Values are stored in `ir.config_parameter`. For production, either: (a) recreate JSON files temporarily for `post_init_hook`, or (b) manually set ~30 `ai_agent.*` system parameters after install.
 
-#### GAP 3: Webhook URL Not Configured
+**Action:** Recreate JSON config files on production server before module install. Remove after `post_init_hook` loads values.
 
-MassivaMóvil webhook callback must point to production Odoo:
-- **Current:** Not set (polling-only mode in testing)
-- **Required:** `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp`
+#### GAP 3: Webhook — Enhancement for Real-Time Response — NEW
 
-**Action:** Configure in MassivaMóvil dashboard. Verify production Nginx passes `/ai-agent/` to Odoo.
+**Current state:** Testing uses **polling-only** mode (cron every 1 minute). No webhook configured.
+
+**Production plan:** Enable MassivaMóvil webhook for **near-instant** message processing (~1-3s vs up to 60s polling delay). Keep polling cron as fallback.
+
+**Architecture with webhook enabled:**
+```
+Customer sends WA msg
+        │
+        ├──► MassivaMóvil ──webhook POST──► Odoo /ai-agent/webhook/whatsapp
+        │                                        │
+        │                                   Process immediately
+        │                                   (Claude + reply in ~3s)
+        │
+        └──► Poll cron (1 min) ──GET /api/get/wa.received──► Dedup catches it
+                                                              (already processed)
+```
+
+**Benefits:**
+- Customer gets reply in ~3 seconds instead of up to 60 seconds
+- Better conversation flow (feels like real-time chat)
+- Polling cron serves as safety net only (catches any webhook failures)
+- Global dedup (v1.19.0) ensures no double-processing between webhook + poll
+
+**Requirements:**
+- Production Nginx must route `/ai-agent/` to Odoo backend (currently returns **404**)
+- MassivaMóvil dashboard: Tools → Webhooks → set callback URL
+- Webhook URL: `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp`
+- `ai_agent.whatsapp_api_secret` must be set (webhook validates secret)
+
+**Action:**
+1. Add Nginx location block for `/ai-agent/` → proxy to Odoo container
+2. Configure callback URL in MassivaMóvil dashboard
+3. Test with a curl POST to verify 200 response
+4. Poll cron stays active as fallback (can reduce interval to 5 min)
 
 #### GAP 4: System Crons — TARGET_ENV and DRY_RUN Flags
 
 | Cron File | Script | Current TARGET_ENV | Current DRY_RUN | Production Change Needed |
 |-----------|--------|-------------------|-----------------|--------------------------|
 | `ai_agent_bounce_processor` | `daily_bounce_processor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
-| `ai_agent_email_checker` | `ai_agent_email_checker.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
-| `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
+| `ai_agent_email_checker` | `ai_agent_email_checker.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
+| `ai_agent_escalation` | `ai_agent_escalation_bridge.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 | `ai_agent_resolution` | `ai_agent_resolution_bridge.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 | `ai_agent_wa_health` | `ai_agent_wa_health_monitor.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
-| `customer_matching` | `customer_matching_daily.py` | testing | **LIVE** (`--live`, switched 2026-02-14) | Change `TARGET_ENV=production` |
+| `customer_matching` | `customer_matching_daily.py` | testing | **LIVE** (`--live`) | Change `TARGET_ENV=production` |
 
-**Status:** All 6 crons are LIVE as of 2026-02-14. Only `TARGET_ENV` switch needed for production.
+**Status:** All 6 crons are LIVE. Only `TARGET_ENV` switch needed for production.
+
+**Note:** `ai_agent_email_checker` and `ai_agent_hr_email_checker` both lack `TARGET_ENV` in their cron — they read Odoo config from JSON (which has hardcoded `testing` db). Must update JSON or add `TARGET_ENV` support.
 
 #### GAP 5: Akdemia Pipeline Path Dependencies
 
-The Akdemia scraper and orchestrator live under `/var/www/dev/odoo_api_bridge/` on the dev server. This is **NOT a blocker** — these scripts always run on the dev server (Playwright/Chrome is installed there). They reach Odoo via XML-RPC.
-
-| Path | Used By | Runs On | Production Impact |
-|------|---------|---------|-------------------|
-| `/var/www/dev/odoo_api_bridge/scripts/customer_matching_daily.py` | customer_matching cron | dev server | None — stays on dev |
-| `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` | orchestrator | dev server | None — stays on dev |
-| `/var/www/dev/odoo_api_bridge/akdemia_downloads/` | scraper output | dev server | None — stays on dev |
-| `/opt/odoo-dev/scripts/akdemia_email_sync.py` | orchestrator (subprocess) | dev server | TARGET_ENV must be `production` |
-
-**Status:** No path changes needed. Only TARGET_ENV switch.
+Not a blocker — all scripts run on dev server. Only `TARGET_ENV` switch needed. See [Akdemia Data Pipeline](AKDEMIA_DATA_PIPELINE.md).
 
 #### ~~GAP 6: Escalation Bridge & Email Checker are DRY_RUN~~ RESOLVED (2026-02-14)
 
-Both scripts switched to **LIVE** on 2026-02-14:
-- **Escalation bridge** — `--live` added to `/etc/cron.d/ai_agent_escalation`. Freescout tickets + WA group alerts now created for real.
-- **Email checker** — `--live` argparse flag added to script + cron updated in `/etc/cron.d/ai_agent_email_checker`. Customer verification email replies now auto-resolve conversations.
+Both scripts switched to **LIVE** on 2026-02-14.
 
-#### GAP 7: Freescout API Migration (Optional but Recommended)
+#### GAP 7: Freescout API Migration (Optional)
 
-Current scripts use **direct MySQL** for Freescout operations. This works but:
-- Bypasses Laravel event system (must manually set `user_updated_at=NOW()`)
-- Fragile if Freescout schema changes
-- No API purchase yet ([plan](FREESCOUT_API_MIGRATION_PLAN.md))
-
-**Status:** Not a blocker. Direct SQL works. API migration is a future improvement.
+Not a blocker. Direct MySQL works. See [Freescout API Migration Plan](FREESCOUT_API_MIGRATION_PLAN.md).
 
 #### GAP 8: Credit Guard Production Calibration
 
@@ -291,7 +347,7 @@ Current scripts use **direct MySQL** for Freescout operations. This works but:
 - When topping up credits, MUST increase this limit proportionally
 - WA sends checked against MassivaMóvil Plan 500 subscription
 
-**Action:** Set appropriate `claude_spend_limit_usd` based on actual credit balance at go-live.
+**Action:** Set appropriate `claude_spend_limit_usd` based on actual Anthropic credit balance at go-live.
 
 #### GAP 9: Bounce Log Data (Initial Load)
 
@@ -310,32 +366,56 @@ When production goes live, testing must stop processing to avoid double-sending 
 
 #### GAP 11: Partner/MC Data Drift (prod vs test)
 
-Dry-run sync comparison (2026-02-14) showed:
-- **19 partners** where testing has extra family emails (Phase 5 enrichment)
-- **22 mailing contacts** with same extra emails
-- **9 partners** in production but not testing (new enrollments)
-- **0 emails** only in production (testing is superset)
+Initial analysis (2026-02-14) showed 19 partner + 22 MC diffs. Most resolved by Phase 5 sync. Recent sync (2026-03-04): 3 employee contacts synced (Daniel Bongianni, Rafael Pérez, Lorena Reyes).
 
-**Status:** Not a blocker. Production will catch up when Phase 5 runs against production data. New enrollments will be picked up by bounce processor.
+**Status:** Not a blocker. Production will catch up when Phase 5 runs against production data.
+
+#### GAP 12: Odoo Cron Configuration — NEW
+
+Testing has **5 Odoo crons** (inside the module):
+
+| Cron | Testing Interval | Production Recommendation |
+|------|-----------------|--------------------------|
+| Poll WhatsApp Messages | 1 min | **5 min** (webhook handles real-time; polling is fallback only) |
+| Check Conversation Timeouts | 1 hour | 1 hour (unchanged) |
+| Credit Guard | 30 min | 30 min (unchanged) |
+| Archive Attachments | 2 hours | 2 hours (unchanged) |
+| Stagger HR Data Collection | 30 min | 30 min (unchanged) |
+
+**Action:** After webhook is live, increase poll cron interval to 5 min in production to reduce unnecessary API calls to MassivaMóvil.
+
+#### GAP 13: HR Data Collection Skill (New Since Original Plan) — NEW
+
+The `hr_data_collection` skill was added after the original migration plan. It depends on `ueipab_hr_employee` module (GAP 1) and has its own Stagger cron.
+
+**Consideration:** Decide whether HR Data Collection skill should be active in production from day 1, or enabled in a later phase. If active, the Stagger cron must be enabled and HR employee records must be populated.
 
 ### Production Migration Sequence
 
 ```
 Phase A — Prepare (no user impact)
   [ ] Backup production database
-  [ ] Copy ueipab_bounce_log + ueipab_ai_agent to /home/vision/ueipab17/addons/
-  [ ] Copy whatsapp_massiva.json + anthropic_api.json to /home/vision/ueipab17/config/
-  [ ] Install ueipab_bounce_log on production
-  [ ] Install ueipab_ai_agent on production
-  [ ] Verify ir.config_parameter values loaded
+  [ ] Copy ueipab_hr_employee to /home/vision/ueipab17/addons/
+  [ ] Copy ueipab_bounce_log to /home/vision/ueipab17/addons/
+  [ ] Copy ueipab_ai_agent to /home/vision/ueipab17/addons/
+  [ ] Create /home/vision/ueipab17/config/ directory
+  [ ] Copy whatsapp_massiva.json + anthropic_api.json to production config/
+  [ ] Install modules in order: ueipab_hr_employee → ueipab_bounce_log → ueipab_ai_agent
+  [ ] Verify ir.config_parameter values loaded (~30 ai_agent.* params)
   [ ] Set ai_agent.dry_run = True (safety first)
   [ ] Set ai_agent.active_db = 'DB_UEIPAB'
   [ ] Set ai_agent.claude_spend_limit_usd = appropriate value
 
-Phase B — Configure & Dry Test (no user impact)
-  [ ] Configure MassivaMóvil webhook → https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
-  [ ] Verify Nginx passes /ai-agent/ to Odoo
-  [ ] Update all 6 cron files: TARGET_ENV=production (keep DRY_RUN)
+Phase B — Webhook & Nginx Setup (new — enables real-time responses)
+  [ ] Add Nginx location block: /ai-agent/ → proxy_pass to Odoo container
+  [ ] Test: curl -X POST https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
+      (should return JSON error about invalid secret, NOT 404)
+  [ ] Configure MassivaMóvil dashboard: Tools → Webhooks → callback URL
+  [ ] Verify webhook secret matches ai_agent.whatsapp_api_secret param
+  [ ] Optional: reduce poll cron interval from 1 min to 5 min (webhook is primary)
+
+Phase C — Configure & Dry Test (no user impact)
+  [ ] Update all 6 host cron files: TARGET_ENV=production (keep --live)
   [ ] Run bounce processor DRY → verify it detects bounces from Freescout
   [ ] Run resolution bridge DRY → verify it sees resolved BLs
   [ ] Run escalation bridge DRY → verify it detects escalations
@@ -343,14 +423,21 @@ Phase B — Configure & Dry Test (no user impact)
   [ ] Run WA health monitor DRY → verify it checks active number
   [ ] Set ai_agent.active_db = '' on TESTING (disable testing crons)
 
-Phase C — Go Live (staged)
+Phase D — Go Live (staged)
   [ ] Run bounce processor LIVE → creates initial bounce log records
-  [ ] Enable cron --live flags: resolution bridge, bounce processor, WA health
+  [ ] Enable host crons --live: resolution bridge, bounce processor, WA health
   [ ] Set ai_agent.dry_run = False on production
-  [ ] Monitor: first Glenda conversation end-to-end
-  [ ] Enable cron --live flags: escalation bridge, email checker
-  [ ] Enable cron --live: customer_matching (Akdemia pipeline)
+  [ ] Monitor: first Glenda conversation end-to-end (verify webhook real-time)
+  [ ] Enable host crons --live: escalation bridge, email checker
+  [ ] Enable host cron --live: customer_matching (Akdemia pipeline)
   [ ] Monitor Credit Guard for 48h (check ai_agent.credits_ok stays True)
+  [ ] Verify poll cron + webhook coexist without duplicate messages (global dedup)
+
+Phase E — Post-Launch Optimization
+  [ ] Confirm webhook response times (<5s end-to-end)
+  [ ] Reduce poll cron to 5 min if webhook proves reliable
+  [ ] Review HR Data Collection skill activation for production
+  [ ] Schedule Credit Guard limit review (align with Anthropic credit top-ups)
 ```
 
 ---

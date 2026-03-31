@@ -201,3 +201,4 @@ from . import bounce_resolution
 from . import bill_reminder
 from . import billing_support
 from . import hr_data_collection
+from . import general_inquiry
