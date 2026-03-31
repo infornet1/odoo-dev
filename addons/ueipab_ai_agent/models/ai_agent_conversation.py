@@ -797,9 +797,11 @@ class AiAgentConversation(models.Model):
         # Only handle messages arriving on the dedicated primary number.
         # Old backup / tertiary numbers may still receive unrelated business
         # messages — those must be ignored entirely for general_inquiry.
+        # NOTE: sender_account is the MassivaMóvil account UUID, not a phone —
+        # compare against ai_agent.whatsapp_account_id (the primary account UUID).
         if sender_account:
-            normalized_account = wa_service._normalize_phone(sender_account)
-            if normalized_account != primary_phone:
+            primary_account_id = icp.get_param('ai_agent.whatsapp_account_id', '')
+            if primary_account_id and sender_account != primary_account_id:
                 return None
 
         # Skip messages from our own WA account phones (avoid self-loops)
@@ -947,6 +949,13 @@ class AiAgentConversation(models.Model):
             if '@' in raw_phone:
                 continue
 
+            # Dedup check FIRST — if this message was already processed, skip
+            # entirely before doing any conversation lookup or creation.
+            if self.env['ai.agent.message'].search([
+                ('whatsapp_message_id', '=', wa_id),
+            ], limit=1):
+                continue
+
             # Find active conversation for this phone
             conversation = self.search([
                 ('phone', '=', phone),
@@ -967,13 +976,6 @@ class AiAgentConversation(models.Model):
                 _logger.info(
                     "Outside schedule: deferring reply for skill '%s' (conv %d, %s)",
                     conversation.skill_id.code, conversation.id, phone)
-                continue
-
-            # Check if message already processed (global, not per-conversation)
-            existing = self.env['ai.agent.message'].search([
-                ('whatsapp_message_id', '=', wa_id),
-            ], limit=1)
-            if existing:
                 continue
 
             if conversation.id not in conv_groups:
