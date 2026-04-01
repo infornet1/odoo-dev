@@ -156,11 +156,10 @@ class WhatsAppService(models.AbstractModel):
             'secret': config['secret'],
             'account': config['account_id'],
             'recipient': normalized_phone,
-            'type': 'media',
+            'type': 'photo',
             'url': url,
+            'message': caption or 'Informacion adicional',
         }
-        if caption:
-            data['message'] = caption
 
         self._throttle_send()
 
@@ -181,7 +180,9 @@ class WhatsAppService(models.AbstractModel):
 
         _last_send_time = time.time()
         _logger.info("WhatsApp media sent successfully to %s", normalized_phone)
-        return {'message_id': result.get('data', {}).get('id', 0)}
+        data = result.get('data') or {}
+        msg_id = data.get('messageId') or data.get('id') or 0
+        return {'message_id': int(msg_id) if str(msg_id).isdigit() else 0}
 
     def validate_phone(self, phone):
         """Validate a WhatsApp phone number via MassivaMóvil API.
