@@ -795,20 +795,21 @@ class AiAgentConversation(models.Model):
         )
 
         # Only handle messages arriving on the dedicated primary number.
-        # Old backup / tertiary numbers may still receive unrelated business
-        # messages — those must be ignored entirely for general_inquiry.
-        # NOTE: sender_account is the MassivaMóvil account UUID, not a phone —
-        # compare against ai_agent.whatsapp_account_id (the primary account UUID).
+        # The MassivaMóvil API returns the receiving account as a phone number
+        # in the message's 'account' field — compare normalized against primary_phone.
         if sender_account:
-            primary_account_id = icp.get_param('ai_agent.whatsapp_account_id', '')
-            if primary_account_id and sender_account != primary_account_id:
+            normalized_account = wa_service._normalize_phone(sender_account)
+            if normalized_account != primary_phone:
                 return None
 
         # Skip messages from our own WA account phones (avoid self-loops)
         backup_phone = wa_service._normalize_phone(
             icp.get_param('ai_agent.whatsapp_backup_phone', '')
         )
-        own_phones = {p for p in (primary_phone, backup_phone) if p}
+        tertiary_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_tertiary_phone', '')
+        )
+        own_phones = {p for p in (primary_phone, backup_phone, tertiary_phone) if p}
         if phone in own_phones:
             return None
 
@@ -914,17 +915,13 @@ class AiAgentConversation(models.Model):
             _logger.info("DRY_RUN: Would poll WhatsApp for new messages")
             return
 
-        # Poll all accounts (no account_id filter) during the transition period
-        # after switching to the dedicated primary number (+584148321989, 2026-03-30).
-        # Existing waiting conversations were contacted from the old number — their
-        # replies must still be caught. The dedup guard (whatsapp_message_id) and
-        # sender_account check in _get_or_create_general_inquiry_conversation prevent
-        # duplicates and spurious general_inquiry creation from backup/tertiary numbers.
-        # TODO: restore account_id filter once all pre-switch waiting convs are drained.
+        # Poll primary account only. Pre-switch waiting conversations (contacted
+        # from old number before 2026-03-30 switch) have fully drained.
         icp = self.env['ir.config_parameter'].sudo()
+        primary_account_id = icp.get_param('ai_agent.whatsapp_account_id', '') or None
 
         try:
-            messages = wa_service.fetch_received(limit=50, account_id=None)
+            messages = wa_service.fetch_received(limit=50, account_id=primary_account_id)
         except Exception as e:
             _logger.error("Failed to poll WhatsApp messages: %s", e)
             return
