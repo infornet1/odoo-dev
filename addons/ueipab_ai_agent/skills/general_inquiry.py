@@ -18,8 +18,8 @@ _FLYERS = {
 }
 
 def _get_flyer_url(base_url, filename):
-    """Build the public Odoo static URL for a flyer."""
-    return f"{base_url.rstrip('/')}/ueipab_ai_agent/static/flyers/{filename}"
+    """Build the public URL for a flyer file."""
+    return f"{base_url.rstrip('/')}/{filename}"
 
 # Shared institutional knowledge block (same content as bounce_resolution)
 _INSTITUTIONAL_KNOWLEDGE = (
@@ -145,7 +145,7 @@ class GeneralInquirySkill:
 
     def _get_base_url(self, conversation):
         return conversation.env['ir.config_parameter'].sudo().get_param(
-            'web.base.url', 'https://odoo.ueipab.edu.ve'
+            'ai_agent.flyer_base_url', 'https://dev.ueipab.edu.ve/flyers'
         )
 
     def process_ai_response(self, conversation, ai_response, context):
