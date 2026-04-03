@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB AI Agent',
-    'version': '17.0.1.29.4',
+    'version': '17.0.1.29.5',
     'category': 'Services',
     'summary': 'AI-powered WhatsApp agent for automated customer interactions',
     'author': 'UEIPAB',

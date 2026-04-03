@@ -915,13 +915,17 @@ class AiAgentConversation(models.Model):
             _logger.info("DRY_RUN: Would poll WhatsApp for new messages")
             return
 
-        # Poll primary account only. Pre-switch waiting conversations (contacted
-        # from old number before 2026-03-30 switch) have fully drained.
+        # Poll primary account only. MassivaMóvil API ignores the 'account'
+        # filter param and returns messages from ALL linked accounts, so we
+        # enforce the primary-account restriction ourselves per-message below.
         icp = self.env['ir.config_parameter'].sudo()
-        primary_account_id = icp.get_param('ai_agent.whatsapp_account_id', '') or None
+        primary_account_id = icp.get_param('ai_agent.whatsapp_account_id', '') or ''
+        primary_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_primary_phone', '')
+        )
 
         try:
-            messages = wa_service.fetch_received(limit=50, account_id=primary_account_id)
+            messages = wa_service.fetch_received(limit=50, account_id=primary_account_id or None)
         except Exception as e:
             _logger.error("Failed to poll WhatsApp messages: %s", e)
             return
@@ -945,6 +949,19 @@ class AiAgentConversation(models.Model):
             # Reject group IDs early (before searching conversations)
             if '@' in raw_phone:
                 continue
+
+            # Account guard: only process messages received on the primary number.
+            # The API returns messages from ALL linked accounts regardless of the
+            # filter param. Check both phone and UUID formats since the API may
+            # return either. Applied before any conversation lookup so existing
+            # waiting/active conversations cannot be fed from backup/tertiary numbers.
+            if sender_account:
+                normalized_sa = wa_service._normalize_phone(sender_account)
+                if normalized_sa != primary_phone and sender_account != primary_account_id:
+                    _logger.info(
+                        "Ignoring message from %s: received on non-primary account (%s)",
+                        phone, sender_account)
+                    continue
 
             # Dedup check FIRST — if this message was already processed, skip
             # entirely before doing any conversation lookup or creation.
