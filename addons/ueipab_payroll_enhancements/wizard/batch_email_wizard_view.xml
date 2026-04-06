@@ -56,7 +56,7 @@
                                   decoration-muted="not has_email"
                                   decoration-success="selected and has_email"
                                   decoration-warning="selected and not has_email">
-                                <field name="selected" widget="boolean_toggle"/>
+                                <field name="selected"/>
                                 <field name="employee_name" readonly="1"/>
                                 <field name="payslip_number" readonly="1" optional="hide"/>
                                 <field name="email_status" readonly="1"/>

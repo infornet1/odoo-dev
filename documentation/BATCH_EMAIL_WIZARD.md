@@ -112,9 +112,22 @@ The wizard uses integer fields (`payslip_id_int`) alongside Many2one fields to e
 ### Fallback Mechanism
 If payslip ID is missing, the code falls back to looking up the payslip from the batch using the employee name, ensuring emails can still be sent.
 
+## Known Issues Fixed
+
+### `boolean_toggle` Validation Error (Fixed 2026-04-06)
+**Symptom:** Clicking an individual employee checkbox in the selection list caused an `RPC_ERROR` / Validation Error:
+> *"Model: Batch Email Employee Selection (hr.payslip.batch.email.selection) — Field: Wizard (wizard_id)"*
+
+**Root Cause:** The `boolean_toggle` widget fires an immediate `webSave` on the child record when clicked. This write payload only contained the changed `selected` field — the ORM rejected it because `wizard_id` (`required=True`) was not included in the auto-save call. This is a known Odoo 17 conflict between `boolean_toggle` and `required` inverse fields in TransientModel One2many trees.
+
+**Fix:** Removed `widget="boolean_toggle"` from the `selected` field in the selection tree. The standard checkbox widget marks the row dirty and saves on row blur / form submit — no conflict with required fields.
+
+**Workaround (before fix):** Use the server-side bulk buttons (Select All / Deselect All / Select With Email Only) instead of individual toggles.
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | v1.47.0 | 2025-12-16 | Initial release with progress tracking |
 | v1.51.1 | 2026-01-02 | Added employee selection before sending |
+| v1.61.0 | 2026-04-06 | Fix: replaced `boolean_toggle` with standard checkbox on selection list |

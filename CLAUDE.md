@@ -125,11 +125,11 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.60.1 | 2026-03-19 |
+| ueipab_payroll_enhancements | 17.0.1.61.0 | 2026-04-06 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.28.0 | 2026-03-31 |
+| ueipab_ai_agent | 17.0.1.29.4 | 2026-04-01 |
 
 ### Production Environment
 
@@ -252,6 +252,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **General Inquiry skill (v1.26.0):** Handles unsolicited inbound WA messages — auto-creates conversation, identifies contact, routes handoff to `pagos@` (billing) or `soporte@` (general) based on inquiry type
 - **Billing routing (v1.28.0):** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `ACTION:HANDOFF:name|summary|support` → `soporte@ueipab.edu.ve`
 - **turn_count fix (v1.27.1):** Dedup-only records (empty body) excluded from turn counter
+- **Flyer support (v1.29.0):** `general_inquiry` can send promotional flyer images via `ACTION:SEND_FLYER:key`. Flyers served from `https://dev.ueipab.edu.ve/flyers/` (nginx `/var/www/dev/flyers/`). Config param: `ai_agent.flyer_base_url`. **⚠️ Known issue:** MassivaMóvil `type=photo` API queues successfully but images NOT delivered to end user — awaiting tech support clarification. Code is in place; feature suspended pending API fix or hyperlink fallback.
 
 ### WA Poll Cron — Account Filter Note
 

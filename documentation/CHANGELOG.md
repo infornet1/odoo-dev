@@ -6,6 +6,22 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-06 - Batch Email Wizard `boolean_toggle` Fix (`ueipab_payroll_enhancements` v60.1 view patch)
+
+**Fixed `RPC_ERROR` when unchecking individual employees in the Send Emails wizard.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Clicking any individual checkbox in the employee selection list inside the "Send Emails (with Progress)" wizard threw a Validation Error: `wizard_id` missing on `hr.payslip.batch.email.selection` |
+| **Root Cause** | `boolean_toggle` widget fires an immediate `webSave` on the child record, sending only the changed field — ORM rejected because `wizard_id` (`required=True`) was absent from the auto-save payload |
+| **Fix** | Removed `widget="boolean_toggle"` from `selected` field in selection tree; standard checkbox saves on row blur / form submit, which includes full context |
+| **File** | `wizard/batch_email_wizard_view.xml` — 1-line change |
+| **Deployed** | View-only patch applied directly; production manifest version unchanged (60.1) |
+
+**Workaround that worked before fix:** Use "Select All" / "Deselect All" / "Select With Email Only" bulk buttons.
+
+---
+
 ### 2026-02-08 - Contact Data Sync Fix (Bounce Log + Partner Emails)
 
 **Fixed cross-reference inconsistencies between Odoo, Freescout bounces, Customers sheet, and Akdemia.**
