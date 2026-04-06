@@ -53,6 +53,18 @@ class BatchEmailWizard(models.TransientModel):
         string='Employee Selection'
     )
 
+    # Filtered view for confirm step — only selected employees
+    selected_ids = fields.Many2many(
+        'hr.payslip.batch.email.selection',
+        string='Selected Employees',
+        compute='_compute_selected_ids',
+    )
+
+    @api.depends('selection_ids.selected')
+    def _compute_selected_ids(self):
+        for wizard in self:
+            wizard.selected_ids = wizard.selection_ids.filtered(lambda s: s.selected)
+
     # Progress tracking
     total_count = fields.Integer(string='Total Payslips', compute='_compute_counts', store=False)
     selected_count = fields.Integer(string='Selected', compute='_compute_counts', store=False)

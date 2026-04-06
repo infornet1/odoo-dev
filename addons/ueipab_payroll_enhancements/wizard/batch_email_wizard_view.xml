@@ -100,16 +100,12 @@
 
                         <!-- Show selected employees summary -->
                         <group string="Selected Employees" col="1">
-                            <field name="selection_ids" nolabel="1" readonly="1"
-                                   domain="[('selected', '=', True)]"
+                            <field name="selected_ids" nolabel="1" readonly="1"
                                    options="{'no_open': True}">
-                                <tree decoration-muted="not has_email" editable="bottom" create="false" delete="false">
+                                <tree decoration-muted="not has_email" create="false" delete="false">
                                     <field name="employee_name" string="Employee"/>
                                     <field name="employee_email" string="Email"/>
                                     <field name="has_email" column_invisible="1"/>
-                                    <field name="payslip_id" column_invisible="1"/>
-                                    <field name="payslip_id_int" column_invisible="1"/>
-                                    <field name="selected" column_invisible="1"/>
                                 </tree>
                             </field>
                         </group>
