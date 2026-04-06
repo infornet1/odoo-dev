@@ -114,6 +114,15 @@ If payslip ID is missing, the code falls back to looking up the payslip from the
 
 ## Known Issues Fixed
 
+### Confirm Step Shows All Employees Instead of Selected Only (Fixed 2026-04-06)
+**Symptom:** Step 2 "Confirm Email Sending" → "Selected Employees" section displayed all employees regardless of whether they were checked or not in step 1.
+
+**Root Cause:** `domain="[('selected', '=', True)]"` on a One2many `<field>` element in an Odoo 17 form view does not filter displayed records — it only restricts new record creation. All records in `selection_ids` were rendered unconditionally.
+
+**Fix:** Added computed `Many2many` field `selected_ids` on the wizard model that filters `selection_ids` server-side to `selected=True` records. The confirm block now uses `selected_ids` instead of `selection_ids` with the broken domain. Also removed `editable="bottom"` from the readonly summary tree.
+
+---
+
 ### `boolean_toggle` Validation Error (Fixed 2026-04-06)
 **Symptom:** Clicking an individual employee checkbox in the selection list caused an `RPC_ERROR` / Validation Error:
 > *"Model: Batch Email Employee Selection (hr.payslip.batch.email.selection) — Field: Wizard (wizard_id)"*
@@ -131,3 +140,4 @@ If payslip ID is missing, the code falls back to looking up the payslip from the
 | v1.47.0 | 2025-12-16 | Initial release with progress tracking |
 | v1.51.1 | 2026-01-02 | Added employee selection before sending |
 | v1.61.0 | 2026-04-06 | Fix: replaced `boolean_toggle` with standard checkbox on selection list |
+| v1.61.1 | 2026-04-06 | Fix: confirm step now shows only selected employees via computed `selected_ids` field |

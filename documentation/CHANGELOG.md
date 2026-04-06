@@ -6,6 +6,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-06 - Batch Email Wizard Confirm Step Filter Fix (`ueipab_payroll_enhancements` view patch)
+
+**Fixed confirm step showing all employees instead of only selected ones.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Step 2 "Selected Employees" section displayed all employees regardless of selection state |
+| **Root Cause** | `domain` on One2many field in Odoo 17 form views does not filter displayed records — only restricts new record creation |
+| **Fix** | Added computed `Many2many` field `selected_ids` filtered server-side; confirm block uses `selected_ids` instead of `selection_ids` with broken domain |
+| **Files** | `wizard/batch_email_wizard.py` (+computed field), `wizard/batch_email_wizard_view.xml` (field swap) |
+| **Deployed** | Both testing and production |
+
+---
+
 ### 2026-04-06 - Batch Email Wizard `boolean_toggle` Fix (`ueipab_payroll_enhancements` v60.1 view patch)
 
 **Fixed `RPC_ERROR` when unchecking individual employees in the Send Emails wizard.**
