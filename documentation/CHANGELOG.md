@@ -6,6 +6,22 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-07 - Advance Payment Email Template Fix (Testing + Production, DB-only)
+
+**Fixed "Payslip Email - Advance Payment - Employee Delivery" showing half the correct advance amount.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Email showed `advance_amt = net_wage × (advance_pct/100)` — double-reducing an amount already reduced by salary rules. E.g. GUSTAVO PERDOMO (50% advance, net=$88.46): email showed Bs. 20,988.63 instead of Bs. 41,977.26 |
+| **Root Cause (template)** | `advance_amt` t-set used old formula. `full_salary` t-set was missing so the "neto total" reference line also showed wrong value |
+| **Root Cause (why prior fix failed)** | In Odoo 17, `body_html` is stored as JSONB `{"en_US":"...", "es_VE":"..."}`. Prior fix ran with `lang=False` which updates a neutral fallback Python reads — but does NOT update the `en_US` key used by the UI at send time. The email was rendered using the unfixed `en_US` key |
+| **Fix** | Explicitly iterate `['en_US', 'es_VE']` with `tpl.with_context(lang=lang)` to write each JSONB key directly. Updated `fix_advance_payment_template.py` accordingly |
+| **Testing** | Template id=65, both `en_US` and `es_VE` keys fixed. Verified: Bs. 41,977.26 ✓ |
+| **Production** | Template id=44, `en_US` key fixed (was missed by prior SQL fix). `es_VE` was already correct. Verified via render test ✓ |
+| **Correct formula** | `advance_amt = net_wage` (already the advance), `full_salary = net_wage × (100/advance_pct)` for reference line |
+
+---
+
 ### 2026-04-07 - PAY1 Sequence Conflict — Permanent Auto-fix (`ueipab_payroll_enhancements` v1.61.2)
 
 **Implemented two-layer permanent prevention of PAY1 sequence/date mismatch errors.**
