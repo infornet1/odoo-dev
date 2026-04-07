@@ -6,6 +6,34 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-06 - MARZO31-15 Batch Validation Fix — PAY1 Sequence/Date Mismatch (Production operational fix)
+
+**Fixed validation error preventing confirmation of payslip batch MARZO31-15 (id=42, 19 employees).**
+
+| Item | Details |
+|------|---------|
+| **Error** | `"The Date (03/31/2026) doesn't match the sequence number of the related Journal Entry (PAY1/2026/04/0006)"` |
+| **Root Cause** | PAY1 journal sequence had already advanced to April (`04`) because a prior April-period payslip (ISMARY ARCILA `PAY1/2026/04/0001`) was posted with a March 31 accounting date, pushing the sequence counter into April. All subsequent entries get `PAY1/2026/04/*` sequence numbers. Odoo 17 validates that the entry date month matches the sequence month — March 31 vs April sequence = rejected. |
+| **Fix** | Set `date` (accounting date) field to `2026-04-01` on all 19 draft payslips via Odoo shell. `hr_payroll_account_community` uses `slip.date or slip.date_to` for the journal entry date — with `date=NULL` it fell back to `date_to` (2026-03-31). |
+| **Action** | `env['hr.payslip'].browse([batch_42_slip_ids]).write({'date': date(2026, 4, 1)})` |
+
+**Result:** 19 journal entries posted as `PAY1/2026/04/0006` → `PAY1/2026/04/0024`, all dated 2026-04-01. Batch closed successfully.
+
+**Accounting Impact:**
+
+| Account | Debit | Credit |
+|---------|-------|--------|
+| `5.1.01.10.001` Nómina (Docentes) | 3,013.85 | 29.20 |
+| `1.1.01.02.001` Banco Venezuela | 29.20 | 3,013.85 |
+| **Net payroll expense / bank outflow** | **2,984.65** | **2,984.65** |
+
+**Period note:** These 19 entries (payroll period 2026-03-16→31) post to **April's accounting period** (date=2026-04-01), not March. All other MARZO31 batches posted on 2026-03-31. Finance team informed: March P&L understated by USD 2,984.65; April overstated by same amount. No system correction needed unless March books require restatement.
+
+**Root cause pattern — how to avoid in future:**
+> When posting April-period payslips with a March 31 accounting date, Odoo's PAY1 sequence advances to April. Any remaining March-dated payslips then fail with this mismatch. Solution: always post out-of-period payslips with an accounting date that matches the current sequence month, or confirm all March payslips before confirming any April-period ones.
+
+---
+
 ### 2026-04-06 - Batch Email Wizard Confirm Step Filter Fix (`ueipab_payroll_enhancements` view patch)
 
 **Fixed confirm step showing all employees instead of only selected ones.**
