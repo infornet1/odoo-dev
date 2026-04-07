@@ -11,8 +11,15 @@ Enhancements:
     3. Cancel Workflow: Cancel batches instead of deleting (audit trail policy)
 """
 
+import calendar
+import logging
+import re
+from datetime import date as date_type, timedelta
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 class HrPayslipRun(models.Model):
@@ -98,6 +105,16 @@ class HrPayslipRun(models.Model):
     )
 
     # ========================================
+    # DATE CHECK FIELDS
+    # ========================================
+
+    date_check_acknowledged = fields.Boolean(
+        string='Date Check Acknowledged',
+        default=False,
+        help='Set when user has reviewed and acknowledged date logic warnings.',
+    )
+
+    # ========================================
     # REMAINDER PAYMENT FIELDS
     # ========================================
 
@@ -148,6 +165,22 @@ class HrPayslipRun(models.Model):
         elif not self.is_remainder_batch:
             # Reset to default when unchecking remainder batch
             self.advance_percentage = 100.0
+
+    @api.onchange('is_advance_payment')
+    def _onchange_is_advance_payment(self):
+        """Auto-select email template based on advance payment flag."""
+        if self.is_advance_payment:
+            template = self.env['mail.template'].search([
+                ('name', '=', 'Payslip Email - Advance Payment - Employee Delivery'),
+                ('model', '=', 'hr.payslip')
+            ], limit=1)
+        else:
+            template = self.env['mail.template'].search([
+                ('name', '=', 'Payslip Email - Employee Delivery'),
+                ('model', '=', 'hr.payslip')
+            ], limit=1)
+        if template:
+            self.email_template_id = template
 
     def _default_email_template(self):
         """Return default email template: 'Payslip Email - Employee Delivery'"""
@@ -239,6 +272,293 @@ class HrPayslipRun(models.Model):
         for batch in self:
             # total_net_amount already has advance % applied via salary rules
             batch.advance_total_amount = batch.total_net_amount
+
+    # ========================================
+    # WRITE OVERRIDE
+    # ========================================
+
+    def write(self, vals):
+        if 'date_start' in vals or 'date_end' in vals:
+            vals['date_check_acknowledged'] = False
+        return super().write(vals)
+
+    # ========================================
+    # DATE LOGIC VALIDATION
+    # ========================================
+
+    _MONTH_MAP = {
+        'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+        'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+        'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12,
+    }
+    _MONTH_ES = {v: k for k, v in _MONTH_MAP.items()}
+    _REGULAR_STRUCTS = ('NOMINA_VE', 'NOMINA_VE_V2')
+
+    def _get_payroll_sequence_month(self):
+        """Return (year, month) of the latest posted entry in the payroll journal, or None.
+
+        Queries account_move for the highest sequence name in the journal used by
+        this batch's payslips (e.g. PAY1/2026/04/0024 → (2026, 4)).
+        Returns None if no entries found or name pattern does not match.
+        """
+        self.ensure_one()
+        slips_with_journal = self.slip_ids.filtered(lambda s: s.journal_id)
+        if not slips_with_journal:
+            return None
+        journal = slips_with_journal[0].journal_id
+
+        last_move = self.env['account.move'].search([
+            ('journal_id', '=', journal.id),
+            ('state', '=', 'posted'),
+            ('name', '!=', '/'),
+        ], order='name desc', limit=1)
+
+        if not last_move or not last_move.name:
+            return None
+
+        m = re.match(r'^[^/]+/(\d{4})/(\d{2})/', last_move.name)
+        if not m:
+            return None
+        return int(m.group(1)), int(m.group(2))
+
+    def _get_seq_fix_date(self):
+        """Return suggested accounting date to resolve a PAY1 sequence conflict, or None.
+
+        Returns the first day of the sequence month when the journal sequence has
+        already advanced beyond the batch's period-end month.  Returns None when
+        there is no conflict (no adjustment needed).
+        """
+        seq_info = self._get_payroll_sequence_month()
+        if not seq_info or not self.date_end:
+            return None
+        seq_year, seq_month = seq_info
+        if (seq_year, seq_month) > (self.date_end.year, self.date_end.month):
+            return date_type(seq_year, seq_month, 1)
+        return None
+
+    # ========================================
+    # VALIDATE OVERRIDE — sequence auto-fix
+    # ========================================
+
+    def action_validate_payslips(self):
+        """Override to silently fix PAY1 sequence/date conflicts before confirming.
+
+        Safety-net layer: if the date-check wizard was bypassed (e.g. user
+        acknowledged without fixing), auto-set slip.date to the first day of
+        the sequence month so Odoo's sequence/date validation does not block
+        confirmation.  Logs the adjustment; no popup is shown.
+        """
+        for batch in self:
+            seq_fix_date = batch._get_seq_fix_date()
+            if not seq_fix_date:
+                continue
+            draft_slips = batch.slip_ids.filtered(lambda s: s.state == 'draft')
+            slips_to_fix = [
+                s for s in draft_slips
+                if not s.date
+                or (s.date.year, s.date.month) < (seq_fix_date.year, seq_fix_date.month)
+            ]
+            if slips_to_fix:
+                for slip in slips_to_fix:
+                    slip.date = seq_fix_date
+                _logger.info(
+                    'PAY1 sequence auto-fix: set accounting date to %s on %d payslip(s) in batch "%s"',
+                    seq_fix_date, len(slips_to_fix), batch.name,
+                )
+        return super().action_validate_payslips()
+
+    def _collect_date_issues(self):
+        """Run all date validation checks. Returns list of issue dicts."""
+        self.ensure_one()
+        issues = []
+
+        if not self.date_start or not self.date_end or not self.slip_ids:
+            return issues
+
+        batch_start = self.date_start
+        batch_end = self.date_end
+        batch_slip_ids = self.slip_ids.ids
+
+        # ---- Check 1: Overlap with existing confirmed payslips ----
+        for slip in self.slip_ids:
+            if not slip.employee_id or not slip.struct_id:
+                continue
+            overlapping = self.env['hr.payslip'].search([
+                ('id', 'not in', batch_slip_ids),
+                ('employee_id', '=', slip.employee_id.id),
+                ('struct_id', '=', slip.struct_id.id),
+                ('state', 'in', ['done', 'paid']),
+                ('date_from', '<=', fields.Date.to_string(batch_end)),
+                ('date_to', '>=', fields.Date.to_string(batch_start)),
+            ])
+            for ov in overlapping:
+                issues.append({
+                    'severity': 'blocker',
+                    'employee_name': slip.employee_id.name,
+                    'description': 'Overlaps with confirmed payslip %s' % (ov.number or ov.name),
+                    'detail': '%s → %s (%s)' % (ov.date_from, ov.date_to, ov.struct_id.name),
+                })
+
+        # ---- Check 2: Gap from expected next period (per employee+struct) ----
+        seen = set()
+        for slip in self.slip_ids:
+            if not slip.employee_id or not slip.struct_id:
+                continue
+            key = (slip.employee_id.id, slip.struct_id.id)
+            if key in seen:
+                continue
+            seen.add(key)
+            last = self.env['hr.payslip'].search([
+                ('id', 'not in', batch_slip_ids),
+                ('employee_id', '=', slip.employee_id.id),
+                ('struct_id', '=', slip.struct_id.id),
+                ('state', 'in', ['done', 'paid']),
+            ], order='date_to desc', limit=1)
+            if not last:
+                continue
+            expected_start = last.date_to + timedelta(days=1)
+            gap = (batch_start - expected_start).days
+            if gap > 1:
+                issues.append({
+                    'severity': 'warning',
+                    'employee_name': slip.employee_id.name,
+                    'description': 'Gap of %d day(s) since last payslip' % gap,
+                    'detail': 'Last ended %s → expected start %s, batch starts %s' % (
+                        last.date_to, expected_start, batch_start
+                    ),
+                })
+
+        # ---- Check 3: Quincena alignment (only for regular payroll structures) ----
+        regular_slips = self.slip_ids.filtered(
+            lambda s: s.struct_id and s.struct_id.code in self._REGULAR_STRUCTS
+        )
+        if regular_slips:
+            last_day = calendar.monthrange(batch_end.year, batch_end.month)[1]
+            is_q1 = (batch_start.day == 1 and batch_end.day == 15
+                     and batch_start.month == batch_end.month)
+            is_q2 = (batch_start.day == 16 and batch_end.day == last_day
+                     and batch_start.month == batch_end.month)
+            if not is_q1 and not is_q2:
+                issues.append({
+                    'severity': 'warning',
+                    'employee_name': '',
+                    'description': 'Dates do not match standard quincena periods',
+                    'detail': '%s → %s is not 1-15 or 16-%d of the same month' % (
+                        batch_start, batch_end, last_day
+                    ),
+                })
+
+        # ---- Check 4: Batch name vs date month ----
+        name_upper = (self.name or '').upper()
+        name_month = next(
+            (num for word, num in self._MONTH_MAP.items() if word in name_upper), None
+        )
+        if name_month and name_month != batch_start.month:
+            issues.append({
+                'severity': 'info',
+                'employee_name': '',
+                'description': 'Batch name suggests %s but dates are in %s' % (
+                    self._MONTH_ES.get(name_month, str(name_month)),
+                    self._MONTH_ES.get(batch_start.month, str(batch_start.month)),
+                ),
+                'detail': 'Name: "%s" | Dates: %s → %s' % (self.name, batch_start, batch_end),
+            })
+
+        # ---- Check 5: PAY1 journal sequence / accounting date conflict ----
+        seq_fix_date = self._get_seq_fix_date()
+        if seq_fix_date:
+            issues.append({
+                'severity': 'info',
+                'employee_name': '',
+                'description': 'PAY1 sequence is already in %s — accounting dates need adjustment' % (
+                    seq_fix_date.strftime('%B %Y')
+                ),
+                'detail': (
+                    'Payslip period ends %s but PAY1 journal sequence is already at %02d/%d. '
+                    'Click "Auto-fix Accounting Dates" to set payslip accounting dates to %s '
+                    '(or validate — the system will adjust automatically).'
+                ) % (batch_end, seq_fix_date.month, seq_fix_date.year, seq_fix_date),
+                'seq_fix_date': seq_fix_date,
+            })
+
+        return issues
+
+    def _open_date_check_wizard(self, issues, sync_done=False):
+        """Create and return wizard action for the given issues."""
+        has_blocker = any(i['severity'] == 'blocker' for i in issues)
+        _cls = {'blocker': 'danger', 'warning': 'warning', 'info': 'info'}
+        _lbl = {'blocker': 'Blocker', 'warning': 'Warning', 'info': 'Info'}
+        _ord = {'blocker': 0, 'warning': 1, 'info': 2}
+        rows = ''.join(
+            '<tr>'
+            '<td><span class="badge text-bg-{cls}">{lbl}</span></td>'
+            '<td>{emp}</td>'
+            '<td>{desc}</td>'
+            '<td><small class="text-muted">{detail}</small></td>'
+            '</tr>'.format(
+                cls=_cls[i['severity']],
+                lbl=_lbl[i['severity']],
+                emp=i.get('employee_name') or '—',
+                desc=i['description'],
+                detail=i.get('detail', ''),
+            )
+            for i in sorted(issues, key=lambda x: _ord[x['severity']])
+        )
+        html = (
+            '<table class="table table-sm table-bordered">'
+            '<thead><tr>'
+            '<th style="width:100px">Severity</th>'
+            '<th>Employee</th><th>Issue</th><th>Detail</th>'
+            '</tr></thead>'
+            '<tbody>%s</tbody></table>' % rows
+        )
+        seq_fix_date = next(
+            (i['seq_fix_date'] for i in issues if i.get('seq_fix_date')), None
+        )
+        wizard = self.env['hr.payslip.run.date.check.wizard'].create({
+            'run_id': self.id,
+            'sync_done': sync_done,
+            'has_blocker': has_blocker,
+            'issues_html': html,
+            'seq_fix_date': seq_fix_date,
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Date Logic Issues — %s') % self.name,
+            'res_model': 'hr.payslip.run.date.check.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+    def action_check_date_logic(self):
+        """Manually run date logic checks and show results."""
+        self.ensure_one()
+        if not self.slip_ids:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Payslips'),
+                    'message': _('Add payslips to the batch before running date checks.'),
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+        issues = self._collect_date_issues()
+        if not issues:
+            self.date_check_acknowledged = True
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('All Checks Passed'),
+                    'message': _('No date logic issues found for batch %s.') % self.name,
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        return self._open_date_check_wizard(issues)
 
     # ========================================
     # BUSINESS METHODS
@@ -497,7 +817,11 @@ class HrPayslipRun(models.Model):
             if non_draft_slips:
                 message += _('\n\nNote: %d non-draft payslip(s) were skipped.') % len(non_draft_slips)
 
-            # Show success message
+            # Run date logic check — show wizard if issues, notification if clean
+            issues = batch._collect_date_issues()
+            if issues:
+                return batch._open_date_check_wizard(issues, sync_done=True)
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',

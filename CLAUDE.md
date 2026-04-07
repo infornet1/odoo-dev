@@ -125,7 +125,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.61.0 | 2026-04-06 |
+| ueipab_payroll_enhancements | 17.0.1.61.2 | 2026-04-07 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -339,7 +339,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [V2 Migration Plan](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md)
 
 ### Known Issues
-- **PAY1 Journal Sequence/Date Mismatch (2026-04-06) — RESOLVED:** MARZO31-15 batch (19 employees) failed validation with `"Date (03/31/2026) doesn't match sequence PAY1/2026/04/0006"`. Caused by a prior April-period payslip posted with March 31 accounting date advancing the PAY1 sequence to April. Fix: set `slip.date = 2026-04-01` on all 19 draft payslips via Odoo shell. Entries posted as `PAY1/2026/04/0006–0024` (date 2026-04-01). **Accounting note:** these March-period entries fall in April's ledger period. See [Changelog](documentation/CHANGELOG.md). **Future prevention:** confirm all same-period payslips before confirming out-of-period ones, or ensure accounting dates are consistent.
+- **PAY1 Journal Sequence/Date Mismatch — PERMANENTLY FIXED (v1.61.2, 2026-04-07):** Two-layer auto-fix implemented. Layer 1: date-check wizard detects the conflict and offers "Auto-fix Accounting Dates" button. Layer 2: `action_validate_payslips()` override silently sets `slip.date` to first day of sequence month before confirming. Historical incidents: MARZO31-15 (19 employees, 2026-04-06) and MARZO31-G3 (1 employee, 2026-04-07) both required manual shell fix. See [Changelog](documentation/CHANGELOG.md).
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (fixed in upstream master, update Freescout when next release ships)
 - **Quincena Salary Rule Fix (2026-02-25) — RESOLVED:** All V2 salary rules (9 prod + 10 test) fixed from `period_days / 30.0` to `monthly / 2.0`. FEBRERO28 batch cancelled, recomputed, reconfirmed. VEB differences (~Bs. 407,086 total) paid to all 44 employees, corrected comprobantes emailed, journal entries verified `posted`, HR letter distributed. See [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md).

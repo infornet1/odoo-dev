@@ -6,6 +6,33 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-07 - PAY1 Sequence Conflict — Permanent Auto-fix (`ueipab_payroll_enhancements` v1.61.2)
+
+**Implemented two-layer permanent prevention of PAY1 sequence/date mismatch errors.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | When the PAY1 journal sequence advances into a new month (e.g. April), payslips with `date_to` still in the prior month (e.g. March 31) fail validation: `"The Date (03/31/2026) doesn't match the sequence number PAY1/2026/04/xxxx"` |
+| **Layer 1 — Early Warning** | `_collect_date_issues()` (Check 5) detects the sequence/date mismatch before the user clicks Validate. The date check wizard displays an **"Auto-fix Accounting Dates"** button that sets `slip.date` on all draft payslips to the first day of the sequence month. |
+| **Layer 2 — Safety Net** | `action_validate_payslips()` override auto-detects any remaining conflict just before confirming payslips and silently sets `slip.date` if needed. Logs the adjustment via Python logger. No popup shown. |
+| **Detection method** | Queries `account_move` for the latest posted entry in the payslip journal; extracts year/month from name pattern `PAY1/YYYY/MM/NNNN`. Compares against batch `date_end`. |
+| **Files** | `models/hr_payslip_run.py` (+3 methods), `wizard/payslip_batch_date_check_wizard.py` (+`seq_fix_date` field, +`action_fix_accounting_dates`), `wizard/payslip_batch_date_check_wizard_view.xml` (info banner + button) |
+| **Version** | `17.0.1.61.2` |
+
+---
+
+### 2026-04-07 - MARZO31-G3 Batch Validation Fix — PAY1 Sequence/Date Mismatch (Production operational fix)
+
+**Fixed validation error preventing confirmation of DAVID HERNANDEZ payslip in MARZO31-G3 (batch id=43).**
+
+| Item | Details |
+|------|---------|
+| **Error** | `"The Date (03/31/2026) doesn't match the sequence number PAY1/2026/04/0025"` |
+| **Root Cause** | Same pattern as MARZO31-15 (2026-04-06): PAY1 sequence locked in April 2026, payslip `date=NULL` falls back to `date_to=2026-03-31` → sequence mismatch |
+| **Fix** | Permanent fix (v1.61.2) handles this automatically at validate time |
+
+---
+
 ### 2026-04-06 - MARZO31-15 Batch Validation Fix — PAY1 Sequence/Date Mismatch (Production operational fix)
 
 **Fixed validation error preventing confirmation of payslip batch MARZO31-15 (id=42, 19 employees).**
