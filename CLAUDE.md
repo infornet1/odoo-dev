@@ -318,6 +318,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Advance Payment System](documentation/ADVANCE_PAYMENT_SYSTEM.md)
 - [Comprobante de Pago](documentation/COMPROBANTE_DE_PAGO.md)
 - [Payslip Acknowledgment System](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md)
+- [Payslip Ack Status Report](documentation/PAYSLIP_ACK_STATUS_REPORT.md)
 - [Batch Email Wizard](documentation/BATCH_EMAIL_WIZARD.md)
 - [Email Templates](documentation/EMAIL_TEMPLATES.md)
 - [Cybrosys Module Modifications](documentation/CYBROSYS_MODULE_MODIFICATIONS.md)
