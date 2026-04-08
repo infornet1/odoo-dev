@@ -6,6 +6,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-08 - Ack Reminder Email CC Fix (v1.61.4)
+
+**Added CC to `recursoshumanos@ueipab.edu.ve` on acknowledgment reminder emails.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Reminder emails sent to employees had no CC — HR had no visibility |
+| **Root Cause** | `email_cc` field missing from `email_template_ack_reminder.xml` |
+| **Fix** | Added `email_cc` field + changed template to `noupdate="0"` so upgrades apply it. Reset `ir_model_data.noupdate=false` in testing DB before re-upgrade |
+| **File** | `data/email_template_ack_reminder.xml` |
+| **Version** | `17.0.1.61.4` |
+| **Deployed** | Testing 2026-04-08 — Production pending |
+
 ### 2026-04-08 - Ack Reminder Wizard Layout Fix (v1.61.3)
 
 **Fixed "📊 Resumen de Resultados" step not fully expanding in the reminder wizard.**

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo noupdate="0">
     <!-- Acknowledgment Reminder Email Template -->
     <record id="email_template_payslip_ack_reminder" model="mail.template">
         <field name="name">Payslip Ack Reminder</field>
@@ -7,6 +7,7 @@
         <!-- Jinja2 for headers -->
         <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
         <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
         <field name="subject">⏰ Recordatorio: Confirmar recepción de comprobante │ {{object.number}}</field>
 
         <!-- QWeb ONLY for body_html -->
