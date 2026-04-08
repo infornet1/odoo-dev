@@ -68,25 +68,23 @@
                 </notebook>
 
                 <!-- Results summary when done -->
-                <group invisible="state != 'done'">
-                    <notebook>
-                        <page string="📊 Resumen de Resultados">
-                            <field name="pending_line_ids" nolabel="1" readonly="1">
-                                <tree create="false" delete="false">
-                                    <field name="employee_id"/>
-                                    <field name="payslip_number"/>
-                                    <field name="work_email"/>
-                                    <field name="reminder_count" string="# Total"/>
-                                    <field name="status"
-                                           decoration-success="status == 'sent'"
-                                           decoration-danger="status == 'failed'"
-                                           decoration-warning="status == 'no_email'"/>
-                                    <field name="error_message" optional="hide"/>
-                                </tree>
-                            </field>
-                        </page>
-                    </notebook>
-                </group>
+                <notebook invisible="state != 'done'">
+                    <page string="📊 Resumen de Resultados">
+                        <field name="pending_line_ids" nolabel="1" readonly="1">
+                            <tree create="false" delete="false">
+                                <field name="employee_id"/>
+                                <field name="payslip_number"/>
+                                <field name="work_email"/>
+                                <field name="reminder_count" string="# Total"/>
+                                <field name="status"
+                                       decoration-success="status == 'sent'"
+                                       decoration-danger="status == 'failed'"
+                                       decoration-warning="status == 'no_email'"/>
+                                <field name="error_message" optional="hide"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
 
                 <footer invisible="state == 'done'">
                     <button name="action_send_reminders" type="object"

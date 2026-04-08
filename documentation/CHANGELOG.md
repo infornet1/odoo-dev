@@ -6,6 +6,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-08 - Ack Reminder Wizard Layout Fix (v1.61.3)
+
+**Fixed "📊 Resumen de Resultados" step not fully expanding in the reminder wizard.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Step 2 (done state) results panel was constrained — not full width |
+| **Root Cause** | `<notebook>` for results was wrapped inside a `<group>` element, which applies Odoo's 2-column constrained layout. Step 1 notebook was placed directly in the form (full width), but step 2 was not |
+| **Fix** | Removed `<group>` wrapper, applied `invisible="state != 'done'"` directly on `<notebook>` — same pattern as step 1 |
+| **File** | `wizard/ack_reminder_wizard_view.xml` |
+| **Version** | `17.0.1.61.3` |
+| **Deployed** | Testing + Production 2026-04-08 |
+
 ### 2026-04-07 - Advance Payment Email Template Fix (Testing + Production, DB-only)
 
 **Fixed "Payslip Email - Advance Payment - Employee Delivery" showing half the correct advance amount.**
