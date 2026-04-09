@@ -6,6 +6,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-08 - LIQUID_ANTIGUEDAD_V2 Bug Fix (DB-only, both envs)
+
+**Fixed incorrect antigüedad calculation for terminated+rehired employees.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Employees with `previous_liquidation_date < contract.date_start` (terminated + rehired with a gap) had their antigüedad computed from `original_hire_date` without deducting the prior paid period — effectively paying decades of full seniority instead of only the current contract period |
+| **Root Cause** | Validation `previous_liquidation >= contract.date_start` was too strict. For rehired employees, the prior liquidation naturally falls before the new contract start, so the check always failed and fell back to full history |
+| **Fix** | Changed to `previous_liquidation > original_hire AND net_months > 0` — correctly computes net antigüedad regardless of rehire gap |
+| **Affected rule** | `LIQUID_ANTIGUEDAD_V2` — prod id=29, test id=59 |
+| **Script updated** | `scripts/create_production_salary_structures.py` |
+| **Deployed** | Testing 2026-04-08, Production 2026-04-08 (direct DB update, no module upgrade needed) |
+| **Impact audit** | Only 1 confirmed V2 liquidation in production (SLIP/313 STEFANY ROMERO) — not affected. Open issue: SLIP/447 JOSEFINA RODRIGUEZ (draft) — see [resolution doc](JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) |
+
 ### 2026-04-08 - Ack Reminder Email CC Fix (v1.61.4)
 
 **Added CC to `recursoshumanos@ueipab.edu.ve` on acknowledgment reminder emails.**

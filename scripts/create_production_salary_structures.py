@@ -374,6 +374,9 @@ result = prestaciones_days * integral_daily'''
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': '''# Antigüedad: 2 days per month with historical tracking support
+# FIXED 2026-04-08: Relaxed previous_liquidation validation to support terminated+rehired employees
+#   Old: previous_liquidation >= contract.date_start (broke when rehire gap exists)
+#   New: previous_liquidation > original_hire AND net_months > 0
 service_months = LIQUID_SERVICE_MONTHS_V2 or 0.0
 antiguedad_daily = LIQUID_ANTIGUEDAD_DAILY_V2 or 0.0
 
@@ -401,15 +404,16 @@ else:
         total_days = (payslip.date_to - original_hire).days
         total_months = total_days / 30.0
 
-        # Validate previous_liquidation is after contract start
-        if previous_liquidation and previous_liquidation >= contract.date_start:
-            # Valid previous liquidation - deduct already-paid antiguedad period
+        # Valid previous liquidation: must be after original hire and yield positive net
+        if previous_liquidation and previous_liquidation > original_hire:
             paid_days = (previous_liquidation - original_hire).days
             paid_months = paid_days / 30.0
-
-            # Net antiguedad owed = Total - Already paid
             net_months = total_months - paid_months
-            antiguedad_days = net_months * 2
+            if net_months > 0:
+                antiguedad_days = net_months * 2
+            else:
+                # previous_liquidation is after date_to (edge case)
+                antiguedad_days = 0.0
         else:
             # No valid previous liquidation - calculate for total seniority
             antiguedad_days = total_months * 2
