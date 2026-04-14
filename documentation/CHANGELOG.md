@@ -31,7 +31,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 | **Fix** | Replaced V1 `else` branch in both files with safe fallback: `salary = wage`, `bonus = 0.0`. Only fires for edge cases (missing contract or `ueipab_salary_v2` not set) — all V2 employees unaffected |
 | **Files** | `models/payroll_disbursement_wizard.py`, `reports/payroll_disbursement_detail_report.xml` |
 | **Version** | `17.0.1.61.5` |
-| **Deployed** | Testing 2026-04-14 — Production pending |
+| **Deployed** | Testing + Production 2026-04-14 |
 
 ### 2026-04-08 - Ack Reminder Email CC Fix (v1.61.4)
 
