@@ -365,11 +365,11 @@ class PayrollDisbursementWizard(models.TransientModel):
                         (payslip.contract_id.ueipab_bonus_v2 or 0.0) + \
                         (payslip.contract_id.cesta_ticket_usd or 0.0)
             else:
-                # V1: Calculate from deduction_base using 70/30 split
-                deduction_base = payslip.contract_id.ueipab_deduction_base or 0.0
-                salary = deduction_base * 0.70
-                bonus = (deduction_base * 0.30) + \
-                        ((payslip.contract_id.wage or 0.0) - deduction_base)
+                # V1 fallback (ueipab_deduction_base removed Nov 2025 in v2.0.0)
+                # Safe fallback: use wage for salary, 0 for bonus
+                # Only triggered if contract missing or ueipab_salary_v2 not set
+                salary = payslip.contract_id.wage or 0.0
+                bonus = 0.0
 
             # Prorate by period
             period_days = (payslip.date_to - payslip.date_from).days + 1

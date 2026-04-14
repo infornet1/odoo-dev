@@ -20,6 +20,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 | **Deployed** | Testing 2026-04-08, Production 2026-04-08 (direct DB update, no module upgrade needed) |
 | **Impact audit** | Only 1 confirmed V2 liquidation in production (SLIP/313 STEFANY ROMERO) — not affected. Open issue: SLIP/447 JOSEFINA RODRIGUEZ (draft) — see [resolution doc](JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) |
 
+### 2026-04-14 - Disbursement Report V1 Fallback Fix (v1.61.5)
+
+**Fixed crash when generating Payroll Disbursement Report for payslips with missing or no-V2 contract.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | `AttributeError: 'hr.contract' object has no attribute 'ueipab_deduction_base'` when downloading the report |
+| **Root Cause** | `ueipab_deduction_base` was intentionally removed from `ueipab_hr_contract` v2.0.0 (2025-11-24, commit `e953099`) but two V1 fallback references were left in `payroll_disbursement_wizard.py` and `payroll_disbursement_detail_report.xml`. Triggered by MAIRELSY MOTTA's payslip having no contract (expired contract not renewed in time) |
+| **Fix** | Replaced V1 `else` branch in both files with safe fallback: `salary = wage`, `bonus = 0.0`. Only fires for edge cases (missing contract or `ueipab_salary_v2` not set) — all V2 employees unaffected |
+| **Files** | `models/payroll_disbursement_wizard.py`, `reports/payroll_disbursement_detail_report.xml` |
+| **Version** | `17.0.1.61.5` |
+| **Deployed** | Testing 2026-04-14 — Production pending |
+
 ### 2026-04-08 - Ack Reminder Email CC Fix (v1.61.4)
 
 **Added CC to `recursoshumanos@ueipab.edu.ve` on acknowledgment reminder emails.**
