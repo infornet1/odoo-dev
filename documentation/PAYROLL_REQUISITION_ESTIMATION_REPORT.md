@@ -159,6 +159,7 @@ If advance_percentage < 100: column 11 shown, otherwise omitted.
 |---|---|---|
 | 2026-04-15 | — | Initial design doc created. Status: Planned |
 | 2026-04-15 | v1.62.0 | Built and deployed to testing. Model, wizard view, QWeb PDF, Excel export, menu item. Smoke test passed: 47 active contracts, VEB rate 477.1488 @ 2026-04-13. |
+| 2026-04-15 | v1.62.1 | Fix: exchange rate source label blank in Excel/PDF output. Root cause: Odoo 17 web_save drops invisible fields from payload; `exchange_rate_source` is invisible when USD is selected at form open, so onchange value is never persisted. Fix: re-derive label at export time via `_get_rate_source_label()` which uses `exchange_rate_date` if available, otherwise re-queries `res.currency.rate`. |
 
 ---
 

@@ -197,6 +197,30 @@ class PayrollRequisitionWizard(models.TransientModel):
             return 1.0
         return self.exchange_rate or 1.0
 
+    def _get_rate_source_label(self):
+        """
+        Derive the exchange rate source label at export time.
+
+        We re-query res.currency.rate rather than relying on exchange_rate_source
+        being persisted, because Odoo 17 web_save drops invisible fields from the
+        payload (exchange_rate_source is invisible when USD is selected at form open).
+        """
+        self.ensure_one()
+        usd = self.env.ref('base.USD')
+        if self.currency_id == usd:
+            return 'USD'
+        # If exchange_rate_date was persisted, use it directly
+        if self.exchange_rate_date:
+            return 'BCV al %s' % self.exchange_rate_date.strftime('%d/%m/%Y')
+        # Otherwise re-query the latest available rate record
+        rate_record = self.env['res.currency.rate'].search(
+            [('currency_id', '=', self.currency_id.id)],
+            limit=1, order='name desc'
+        )
+        if rate_record:
+            return 'BCV al %s' % rate_record.name.strftime('%d/%m/%Y')
+        return 'Tasa personalizada'
+
     def _compute_contract_data(self, contract):
         """
         Compute estimated payroll figures for one contract.
@@ -312,7 +336,7 @@ class PayrollRequisitionWizard(models.TransientModel):
             'currency_name': self.currency_id.name,
             'currency_symbol': self.currency_id.symbol,
             'exchange_rate': rate,
-            'exchange_rate_source': self.exchange_rate_source or 'USD',
+            'exchange_rate_source': self._get_rate_source_label(),
             'is_advance': self.is_advance,
             'advance_percentage': self.advance_percentage,
             'employees': employee_data,
@@ -399,7 +423,7 @@ class PayrollRequisitionWizard(models.TransientModel):
         )
         rate_label = (
             'Tasa: %s  |  Fuente: %s' % (
-                '{:,.4f}'.format(rate) + ' VEB/USD', self.exchange_rate_source
+                '{:,.4f}'.format(rate) + ' VEB/USD', self._get_rate_source_label()
             ) if self.currency_id.name == 'VEB'
             else 'Moneda: USD'
         )
