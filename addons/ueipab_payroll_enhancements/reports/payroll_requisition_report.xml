@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Requisición Preliminar de Nómina — PDF Report
+         Landscape Letter, same paper format as Disbursement Detail
+         ======================================== -->
+
+    <!-- Report Template -->
+    <template id="payroll_requisition_doc">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page" style="font-family: 'Courier New', monospace; font-size: 9pt;">
+
+                    <!-- ====== HEADER ====== -->
+                    <div class="row" style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #333;">
+                        <div class="col-12 text-center">
+                            <h3 style="font-family: 'Courier New', monospace; margin-bottom: 3px; margin-top: 0;">
+                                <strong>REQUISICIÓN PRELIMINAR DE NÓMINA</strong>
+                                <span style="color: #CC0000; font-size: 10pt;">  [ESTIMADO]</span>
+                            </h3>
+                            <p style="margin: 2px 0; font-size: 9pt;">
+                                <strong><t t-esc="data.get('period_label', '')"/></strong>
+                            </p>
+                            <p style="margin: 2px 0; font-size: 8pt;">
+                                Moneda: <strong><t t-esc="data.get('currency_name', '')"/>
+                                    (<t t-esc="data.get('currency_symbol', '')"/>)</strong>
+                                <t t-if="data.get('currency_name') == 'VEB'">
+                                    | Tasa: <strong><t t-esc="'{:,.4f}'.format(data.get('exchange_rate', 1.0))"/> VEB/USD</strong>
+                                    | Fuente: <t t-esc="data.get('exchange_rate_source', '')"/>
+                                </t>
+                                <t t-if="data.get('is_advance')">
+                                    | <span style="color: #E65100;"><strong>ADELANTO <t t-esc="int(data.get('advance_percentage', 0))"/>%</strong></span>
+                                </t>
+                            </p>
+                            <p style="margin: 2px 0; font-size: 7pt; color: #666;">
+                                Fecha de generación: <t t-esc="data.get('report_date', '')"/>
+                                | Empleados: <t t-esc="data.get('employee_count', 0)"/>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- ====== TABLE ====== -->
+                    <table class="table table-sm table-bordered"
+                           style="font-family: 'Courier New', monospace; font-size: 7.5pt; margin-top: 8px; width: 100%;">
+                        <thead style="background-color: #4F81BD; color: white;">
+                            <tr>
+                                <th style="width: 2%;  text-align: center; padding: 3px;">#</th>
+                                <th style="width: 9%;  text-align: center; padding: 3px;">Cédula</th>
+                                <th style="width: 18%; padding: 3px;">Empleado</th>
+                                <th style="width: 8%;  text-align: right; padding: 3px;">Salario</th>
+                                <th style="width: 8%;  text-align: right; padding: 3px;">Bono</th>
+                                <th style="width: 8%;  text-align: right; padding: 3px;">Bruto</th>
+                                <th style="width: 5%;  text-align: right; padding: 3px;">ARI %</th>
+                                <th style="width: 8%;  text-align: right; padding: 3px;">ARI</th>
+                                <th style="width: 7%;  text-align: right; padding: 3px;">SSO 4%</th>
+                                <th style="width: 7%;  text-align: right; padding: 3px;">FAOV 1%</th>
+                                <th style="width: 8%;  text-align: right; padding: 3px;">Total Ded.</th>
+                                <th style="width: 9%;  text-align: right; padding: 3px;">
+                                    Neto <t t-esc="data.get('currency_name', '')"/>
+                                </th>
+                                <t t-if="data.get('is_advance')">
+                                    <th style="width: 9%; text-align: right; padding: 3px;">
+                                        Adelanto <t t-esc="int(data.get('advance_percentage', 0))"/>%
+                                    </th>
+                                </t>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="seq" t-value="1"/>
+                            <t t-foreach="data.get('employees', [])" t-as="emp">
+                                <tr>
+                                    <td style="text-align: center; padding: 2px;"><t t-esc="seq"/></td>
+                                    <td style="text-align: center; padding: 2px;"><t t-esc="emp.get('identification_id', '')"/></td>
+                                    <td style="padding: 2px;"><t t-esc="emp.get('employee_name', '')"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('salary_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('bonus_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('gross_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:.2f}%'.format(emp.get('ari_rate_pct', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('ari_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('sso_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('faov_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px;"><t t-esc="'{:,.2f}'.format(emp.get('total_deductions_display', 0.0))"/></td>
+                                    <td style="text-align: right; padding: 2px; color: #0066CC;"><strong><t t-esc="'{:,.2f}'.format(emp.get('net_display', 0.0))"/></strong></td>
+                                    <t t-if="data.get('is_advance')">
+                                        <td style="text-align: right; padding: 2px; color: #E65100;"><strong><t t-esc="'{:,.2f}'.format(emp.get('advance_amt_display', 0.0))"/></strong></td>
+                                    </t>
+                                </tr>
+                                <t t-set="seq" t-value="seq + 1"/>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <!-- ====== SUMMARY ====== -->
+                    <t t-set="totals" t-value="data.get('totals', {})"/>
+                    <t t-set="cur_sym" t-value="data.get('currency_symbol', '$')"/>
+                    <t t-set="cur_name" t-value="data.get('currency_name', 'USD')"/>
+
+                    <div class="row mt-3" style="font-size: 9pt; border-top: 2px solid #333; padding-top: 10px;">
+                        <div class="col-6">
+                            <p style="margin: 3px 0;">
+                                <strong>Empleados:</strong> <t t-esc="data.get('employee_count', 0)"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Salario:</strong>
+                                <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('salary', 0.0))"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Bono:</strong>
+                                <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('bonus', 0.0))"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Bruto:</strong>
+                                <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('gross', 0.0))"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>Total Deducciones:</strong>
+                                <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('total_deductions', 0.0))"/>
+                            </p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p style="margin: 3px 0; font-size: 11pt;">
+                                <strong>Total Neto (<t t-esc="cur_name"/>):</strong>
+                                <span style="color: #0066CC; font-size: 12pt;">
+                                    <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('net', 0.0))"/>
+                                </span>
+                            </p>
+                            <p style="margin: 6px 0 3px 0; padding-top: 5px; border-top: 1px solid #ccc;">
+                                <strong>Impuesto 9% s/Neto (<t t-esc="cur_name"/>):</strong>
+                                <span style="color: #CC6600;">
+                                    <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('tax_9pct', 0.0))"/>
+                                </span>
+                            </p>
+                            <t t-if="data.get('is_advance')">
+                                <p style="margin: 6px 0 3px 0; padding-top: 5px; border-top: 1px solid #ccc;">
+                                    <strong>Total Adelanto <t t-esc="int(data.get('advance_percentage', 0))"/>% (<t t-esc="cur_name"/>):</strong>
+                                    <span style="color: #E65100; font-size: 11pt;">
+                                        <t t-esc="cur_sym"/> <t t-esc="'{:,.2f}'.format(totals.get('advance_amt', 0.0))"/>
+                                    </span>
+                                </p>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- ====== FOOTER NOTE ====== -->
+                    <div class="row mt-3" style="font-size: 7pt; color: #666;">
+                        <div class="col-12">
+                            <p style="margin: 0;">
+                                <strong>ESTIMADO:</strong>
+                                Este reporte es una estimación preliminar generada desde datos de contrato activos.
+                                Los valores reales pueden diferir al procesar la nómina definitiva.
+                                <strong>Salario:</strong> campo <em>Salario V2</em> del contrato / 2 (quincena fija).
+                                <strong>Bono:</strong> ExtraBonus V2 + Bonus V2 + Cesta Ticket (exento de deducciones).
+                                <strong>SSO:</strong> 4% sobre salario. <strong>FAOV:</strong> 1% sobre salario.
+                                <strong>ARI:</strong> % variable desde contrato, aplicado sobre salario.
+                                PARO (0.5%) no incluido — aplica solo a Utilidades.
+                                <t t-if="data.get('currency_name') == 'VEB'">
+                                    Conversión VEB: valores USD × tasa indicada. No modifica la base de datos.
+                                </t>
+                            </p>
+                        </div>
+                    </div>
+
+                </div><!-- /page -->
+            </t><!-- /external_layout -->
+        </t><!-- /html_container -->
+    </template>
+
+    <!-- Report Action (model = wizard, docids = [wizard.id]) -->
+    <record id="action_report_payroll_requisition" model="ir.actions.report">
+        <field name="name">Requisición Preliminar de Nómina</field>
+        <field name="model">payroll.requisition.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.payroll_requisition_doc</field>
+        <field name="report_file">ueipab_payroll_enhancements.payroll_requisition_doc</field>
+        <field name="print_report_name">'Requisicion_Preliminar_Nomina'</field>
+        <field name="paperformat_id" ref="paperformat_payroll_disbursement_detail"/>
+    </record>
+
+</odoo>

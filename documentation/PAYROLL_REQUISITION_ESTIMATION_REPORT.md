@@ -1,7 +1,7 @@
 # Requisición Preliminar de Nómina — Estimation Report
 
 **Created:** 2026-04-15
-**Status:** 🔵 Planned
+**Status:** 🟢 Testing
 **Module:** `ueipab_payroll_enhancements`
 **Based on:** Payroll Disbursement Detail Report
 
@@ -158,6 +158,7 @@ If advance_percentage < 100: column 11 shown, otherwise omitted.
 | Date | Version | Change |
 |---|---|---|
 | 2026-04-15 | — | Initial design doc created. Status: Planned |
+| 2026-04-15 | v1.62.0 | Built and deployed to testing. Model, wizard view, QWeb PDF, Excel export, menu item. Smoke test passed: 47 active contracts, VEB rate 477.1488 @ 2026-04-13. |
 
 ---
 

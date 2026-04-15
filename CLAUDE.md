@@ -48,7 +48,7 @@
 | 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
 | 31 | HR Data Collection (Glenda) | Testing | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 | 32 | Payslip Ack Confirmation Email | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
-| 33 | Payroll Requisition Estimation Report | Planned | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
+| 33 | Payroll Requisition Estimation Report | Testing | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
 
 ---
 
@@ -318,7 +318,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 ### Ad-hoc Queries
 - [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag, with quantity and amount due
 
-### Planned Reports
+### Planned / Testing Reports
 - [Payroll Requisition Estimation Report](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) — Preliminary payroll cost estimate from active contracts (no payslips needed), single currency per run, auto-populated BCV rate
 
 ### Features

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.61.5',
+    'version': '17.0.1.62.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -97,6 +97,7 @@ Advance Payment System (Pago Adelanto):
         'wizard/aguinaldos_disbursement_wizard_view.xml',
         'wizard/arc_report_wizard_view.xml',
         'wizard/payslip_batch_date_check_wizard_view.xml',
+        'wizard/payroll_requisition_wizard_view.xml',
 
         # 3. Report Templates & Actions
         'reports/disbursement_list_report.xml',
@@ -107,6 +108,7 @@ Advance Payment System (Pago Adelanto):
         'reports/payslip_compact_report.xml',
         'reports/aguinaldos_disbursement_report.xml',
         'reports/arc_annual_report.xml',
+        'reports/payroll_requisition_report.xml',
         'reports/report_actions.xml',
         'data/mail_template_payslip.xml',  # After reports (depends on action_report_payslip_compact)
         'data/email_template_ack_reminder.xml',  # Acknowledgment reminder email template

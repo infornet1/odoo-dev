@@ -17,3 +17,4 @@ from . import payslip_compact_report
 from . import aguinaldos_disbursement_report
 from . import arc_annual_report
 from . import arc_employee_certificate
+from . import payroll_requisition_wizard

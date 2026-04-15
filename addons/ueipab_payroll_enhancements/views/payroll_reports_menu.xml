@@ -11,6 +11,14 @@
               sequence="50"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report 0: Requisición Preliminar de Nómina (Estimation) -->
+    <menuitem id="menu_payroll_requisition_estimation"
+              name="Requisición Preliminar de Nómina"
+              parent="menu_payroll_reports"
+              action="action_payroll_requisition_wizard"
+              sequence="5"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 1: Payroll Disbursement Detail (FULLY WORKING) -->
     <menuitem id="menu_payroll_disbursement_detail"
               name="Payroll Disbursement Detail"

@@ -6,3 +6,4 @@ from . import batch_email_wizard
 from . import ack_reminder_wizard
 from . import aguinaldos_disbursement_wizard
 from . import arc_report_wizard
+from . import payslip_batch_date_check_wizard

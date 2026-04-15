@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================
+         Payroll Requisition Estimation Wizard
+         ======================================== -->
+
+    <record id="payroll_requisition_wizard_view_form" model="ir.ui.view">
+        <field name="name">payroll.requisition.wizard.form</field>
+        <field name="model">payroll.requisition.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Requisición Preliminar de Nómina">
+                <group>
+                    <group string="Período">
+                        <field name="period_type" widget="radio"/>
+                        <field name="period_month" string="Mes / Año"/>
+                    </group>
+                    <group string="Moneda y Tasa">
+                        <field name="currency_id"
+                               options="{'no_create': True, 'no_open': True}"
+                               domain="[('name', 'in', ['USD', 'VEB'])]"/>
+                        <field name="show_exchange_rate" invisible="1"/>
+                        <field name="exchange_rate"
+                               invisible="not show_exchange_rate"
+                               required="show_exchange_rate"
+                               widget="float"
+                               options="{'digits': [12, 4]}"/>
+                        <field name="exchange_rate_date"
+                               invisible="not show_exchange_rate"
+                               readonly="1"
+                               string="Fecha de tasa"/>
+                        <field name="exchange_rate_source"
+                               invisible="not show_exchange_rate"
+                               readonly="1"
+                               string="Fuente"/>
+                    </group>
+                </group>
+                <group>
+                    <group string="Filtros Opcionales">
+                        <field name="department_ids"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"/>
+                        <field name="employee_ids"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"/>
+                    </group>
+                    <group string="Opciones de Salida">
+                        <field name="is_advance"/>
+                        <field name="advance_percentage"
+                               invisible="not is_advance"
+                               required="is_advance"/>
+                        <field name="output_format" widget="radio"/>
+                    </group>
+                </group>
+
+                <group>
+                    <group>
+                        <label for="employee_count"/>
+                        <div class="o_row">
+                            <field name="employee_count" class="oe_inline"/>
+                            <span class="text-muted"> contrato(s) activo(s) encontrado(s)</span>
+                        </div>
+                    </group>
+                </group>
+
+                <footer>
+                    <button name="action_generate_report"
+                            string="Generar Estimado"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-download"/>
+                    <button string="Cancelar"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_payroll_requisition_wizard" model="ir.actions.act_window">
+        <field name="name">Requisición Preliminar de Nómina</field>
+        <field name="res_model">payroll.requisition.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="payroll_requisition_wizard_view_form"/>
+    </record>
+
+</odoo>
