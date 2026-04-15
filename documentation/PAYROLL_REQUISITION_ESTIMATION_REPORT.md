@@ -163,7 +163,7 @@ If advance_percentage < 100: column 11 shown, otherwise omitted.
 | 2026-04-15 | v1.62.1 | Fix: exchange rate source label blank in Excel/PDF output. Root cause: Odoo 17 web_save drops invisible fields from payload; `exchange_rate_source` is invisible when USD is selected at form open, so onchange value is never persisted. Fix: re-derive label at export time via `_get_rate_source_label()` which uses `exchange_rate_date` if available, otherwise re-queries `res.currency.rate`. |
 | 2026-04-15 | v1.62.1 | Deployed to production (DB_UEIPAB). Module upgrade clean, container restarted. |
 | 2026-04-15 | v1.62.2 | Feat: configurable partner tag filter (`allowed_tag_ids`) added to wizard. Pre-filled with Empleado/Personal Administrativo/Profesor by default. Empty = no filter. Field path: `employee_id.work_contact_id.category_id`. Deployed to testing and production. |
-| 2026-04-15 | v1.62.2 | **Known data gap:** As of 2026-04-15, only 5 of 46 active employees in production have an allowed tag on their contact (Daniel Bongianni, Giovanni Vezza, Lorena Reyes, MAIRELSY MOTTA, RAFAEL ANGEL PÉREZ ARÉVALO). The remaining 41 employees need `Empleado`, `Personal Administrativo`, or `Profesor` tagged on their Odoo contact record for the filter to include them. Until then, leave `allowed_tag_ids` empty to run unfiltered. |
+| 2026-04-15 | v1.62.2 | **Data fix:** Tagged 39 employees in production with `Empleado` via direct SQL (`res_partner_res_partner_category_rel`). All 44 payroll employees now have at least one allowed tag. ISMARY ARCILA and Jessica Bolivar retain existing tags (Proveedor / Sistema) with Empleado added. Tag filter now returns full headcount in production. |
 
 ---
 
