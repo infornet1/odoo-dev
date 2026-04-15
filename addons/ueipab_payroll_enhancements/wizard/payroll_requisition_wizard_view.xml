@@ -34,6 +34,9 @@
                 </group>
                 <group>
                     <group string="Filtros Opcionales">
+                        <field name="allowed_tag_ids"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"/>
                         <field name="department_ids"
                                widget="many2many_tags"
                                options="{'no_create': True}"/>

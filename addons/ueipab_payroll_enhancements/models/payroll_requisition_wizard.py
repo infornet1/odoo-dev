@@ -104,6 +104,18 @@ class PayrollRequisitionWizard(models.TransientModel):
         help='Filtrar por departamento. Dejar vacío = todos.'
     )
 
+    allowed_tag_ids = fields.Many2many(
+        'res.partner.category',
+        'payroll_req_wizard_tag_rel',
+        'wizard_id', 'tag_id',
+        string='Etiquetas de Contacto',
+        default=lambda self: self.env['res.partner.category'].search([
+            ('name', 'in', ['Empleado', 'Personal Administrativo', 'Profesor'])
+        ]),
+        help='Solo se incluyen empleados cuyo contacto tenga al menos una de estas etiquetas. '
+             'Dejar vacío = sin filtro por etiqueta (todos los contratos activos).'
+    )
+
     # ========================================
     # OUTPUT FORMAT
     # ========================================
@@ -173,6 +185,10 @@ class PayrollRequisitionWizard(models.TransientModel):
             domain.append(('employee_id', 'in', self.employee_ids.ids))
         if self.department_ids:
             domain.append(('employee_id.department_id', 'in', self.department_ids.ids))
+        if self.allowed_tag_ids:
+            domain.append(
+                ('employee_id.work_contact_id.category_id', 'in', self.allowed_tag_ids.ids)
+            )
         contracts = self.env['hr.contract'].search(domain)
         return contracts.sorted(lambda c: c.employee_id.name or '')
 
