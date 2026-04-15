@@ -26,11 +26,9 @@
                                options="{'digits': [12, 4]}"/>
                         <field name="exchange_rate_date"
                                invisible="not show_exchange_rate"
-                               readonly="1"
                                string="Fecha de tasa"/>
                         <field name="exchange_rate_source"
                                invisible="not show_exchange_rate"
-                               readonly="1"
                                string="Fuente"/>
                     </group>
                 </group>

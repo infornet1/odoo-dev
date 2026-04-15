@@ -60,13 +60,11 @@ class PayrollRequisitionWizard(models.TransientModel):
 
     exchange_rate_date = fields.Date(
         string='Fecha de Tasa',
-        readonly=True,
         help='Fecha del registro de tasa utilizado para el auto-llenado.'
     )
 
     exchange_rate_source = fields.Char(
         string='Fuente de Tasa',
-        readonly=True,
         default='',
     )
 
@@ -178,10 +176,16 @@ class PayrollRequisitionWizard(models.TransientModel):
         contracts = self.env['hr.contract'].search(domain)
         return contracts.sorted(lambda c: c.employee_id.name or '')
 
+    _MONTHS_ES = {
+        1: 'ENERO', 2: 'FEBRERO', 3: 'MARZO', 4: 'ABRIL',
+        5: 'MAYO', 6: 'JUNIO', 7: 'JULIO', 8: 'AGOSTO',
+        9: 'SEPTIEMBRE', 10: 'OCTUBRE', 11: 'NOVIEMBRE', 12: 'DICIEMBRE',
+    }
+
     def _get_period_label(self):
-        """Return human-readable period label, e.g. 'Quincena 1 — Mayo 2026'."""
+        """Return human-readable period label, e.g. 'Quincena 1 — MAYO 2026'."""
         self.ensure_one()
-        month_name = self.period_month.strftime('%B %Y').upper()
+        month_name = '%s %s' % (self._MONTHS_ES[self.period_month.month], self.period_month.year)
         q = 'Quincena 1 (1–15)' if self.period_type == 'q1' else 'Quincena 2 (16–fin)'
         return '%s — %s' % (q, month_name)
 
