@@ -314,6 +314,9 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Relacion Breakdown](documentation/RELACION_BREAKDOWN_REPORT.md)
 - [Finiquito Report](documentation/FINIQUITO_REPORT.md)
 
+### Ad-hoc Queries
+- [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag, with quantity and amount due
+
 ### Features
 - [Advance Payment System](documentation/ADVANCE_PAYMENT_SYSTEM.md)
 - [Comprobante de Pago](documentation/COMPROBANTE_DE_PAGO.md)
