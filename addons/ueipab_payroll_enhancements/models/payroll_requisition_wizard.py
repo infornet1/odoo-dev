@@ -487,14 +487,14 @@ class PayrollRequisitionWizard(models.TransientModel):
         row += 2
         tax_9 = totals['net'] * 0.09
         summary = [
-            ('Total Bruto (%s)' % cur_name, totals['gross']),
-            ('Total Deducciones (%s)' % cur_name, totals['total_deductions']),
-            ('Total Neto (%s)' % cur_name, totals['net']),
-            ('Impuesto 9% s/Neto (%s)' % cur_name, tax_9),
+            (f'Total Bruto ({cur_name})', totals['gross']),
+            (f'Total Deducciones ({cur_name})', totals['total_deductions']),
+            (f'Total Neto ({cur_name})', totals['net']),
+            (f'Impuesto 9% s/Neto ({cur_name})', tax_9),
         ]
         if self.is_advance:
             summary.append(
-                ('Total Adelanto %d%% (%s)' % (int(self.advance_percentage), cur_name),
+                (f'Total Adelanto {int(self.advance_percentage)}% ({cur_name})',
                  totals['advance_amt'])
             )
         for label, val in summary:
