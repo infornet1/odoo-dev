@@ -198,6 +198,9 @@ class PayrollRequisitionWizard(models.TransientModel):
         9: 'SEPTIEMBRE', 10: 'OCTUBRE', 11: 'NOVIEMBRE', 12: 'DICIEMBRE',
     }
 
+    # Venezuelan legal SSO monthly ceiling (Bs.) — same constant as VE_SSO_DED_V2 rule
+    _SSO_CEILING_BS = 1300.0
+
     def _get_period_label(self):
         """Return human-readable period label, e.g. 'Quincena 1 — MAYO 2026'."""
         self.ensure_one()
@@ -212,6 +215,24 @@ class PayrollRequisitionWizard(models.TransientModel):
         if self.currency_id == usd:
             return 1.0
         return self.exchange_rate or 1.0
+
+    def _get_veb_rate_for_sso_cap(self):
+        """
+        Return the VEB/USD rate to use for the SSO ceiling conversion.
+
+        For VEB reports: uses the wizard's exchange_rate (already set).
+        For USD reports: looks up the latest available VEB rate, since the
+        SSO ceiling is defined in Bs and must be converted to USD for comparison
+        against ueipab_salary_v2 (which is stored in USD).
+        """
+        self.ensure_one()
+        usd = self.env.ref('base.USD')
+        if self.currency_id != usd and self.exchange_rate > 0:
+            return self.exchange_rate
+        rate_rec = self.env['res.currency.rate'].search(
+            [('currency_id.name', '=', 'VEB')], limit=1, order='name desc'
+        )
+        return rate_rec.company_rate if rate_rec else 0.0
 
     def _get_rate_source_label(self):
         """
@@ -263,7 +284,18 @@ class PayrollRequisitionWizard(models.TransientModel):
         # Deductions — applied on salary portion only (bonus exempt)
         ari_rate = (contract.ueipab_ari_withholding_rate or 0.0) / 100.0
         ari = salary_q * ari_rate
-        sso = salary_q * 0.04    # 4%
+
+        # SSO 4% with Venezuelan legal ceiling (Bs. 1,300/month)
+        # Mirrors VE_SSO_DED_V2 rule: min(salary_usd, ceiling_usd) × 4% / 2
+        # salary here is monthly USD (ueipab_salary_v2); ceiling converted via VEB rate
+        veb_rate = self._get_veb_rate_for_sso_cap()
+        if veb_rate > 0:
+            sso_ceiling_usd = self._SSO_CEILING_BS / veb_rate
+            sso_base = min(salary, sso_ceiling_usd)  # salary = monthly USD
+        else:
+            sso_base = salary
+        sso = (sso_base * 0.04) / 2.0  # quincena USD
+
         faov = salary_q * 0.01   # 1%
         # PARO (0.5%) only for Utilidades — skip in quincena estimation
 

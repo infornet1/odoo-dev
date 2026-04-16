@@ -53,7 +53,7 @@ Calculates from `hr.contract` V2 fields directly. No dependency on payslip state
 | `ueipab_ari_percentage` | ARI deduction rate |
 
 Deduction rates applied (V2 standard):
-- SSO: 4% of salary
+- SSO: 4% of salary, **capped at Bs. 1,300/month** (Venezuelan legal ceiling — mirrors `VE_SSO_DED_V2` rule). Ceiling converted to USD via wizard exchange rate: `min(salary_usd, 1300/rate) × 4% / 2`
 - FAOV: 1% of salary
 - PARO (INCES): 0.5% — Utilidades only, not applied in quincena estimation
 - ARI: variable % from contract field
@@ -164,6 +164,7 @@ If advance_percentage < 100: column 11 shown, otherwise omitted.
 | 2026-04-15 | v1.62.1 | Deployed to production (DB_UEIPAB). Module upgrade clean, container restarted. |
 | 2026-04-15 | v1.62.2 | Feat: configurable partner tag filter (`allowed_tag_ids`) added to wizard. Pre-filled with Empleado/Personal Administrativo/Profesor by default. Empty = no filter. Field path: `employee_id.work_contact_id.category_id`. Deployed to testing and production. |
 | 2026-04-15 | v1.62.2 | **Data fix:** Tagged 39 employees in production with `Empleado` via direct SQL (`res_partner_res_partner_category_rel`). All 44 payroll employees now have at least one allowed tag. ISMARY ARCILA and Jessica Bolivar retain existing tags (Proveedor / Sistema) with Empleado added. Tag filter now returns full headcount in production. |
+| 2026-04-16 | v1.62.3 | Fix: SSO 4% was calculated without Venezuelan legal cap, overstating deductions by ~1,427 Bs/employee (e.g. Lorena Reyes net diff: −1,242 Bs). Root cause: flat `salary_q × 4%` vs actual rule `min(salary_usd, 1300_bs/rate) × 4% / 2`. Fix: mirrors `VE_SSO_DED_V2` salary rule — added `_SSO_CEILING_BS = 1300.0` and `_get_veb_rate_for_sso_cap()`. Residual difference vs confirmed payslip ≈ +182 Bs (= PARO 0.5% which is excluded by design + minor rate timing). Deployed testing + production. |
 
 ---
 
