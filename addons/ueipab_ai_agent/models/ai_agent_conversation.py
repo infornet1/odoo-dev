@@ -1120,8 +1120,10 @@ class AiAgentConversation(models.Model):
     def _cron_check_credits(self):
         """Cron: check MassivaMóvil + Anthropic credit levels.
 
-        Sets ai_agent.credits_ok = False if either service is low,
-        sends email alert to soporte + gustavo.
+        Uses a consecutive-failure counter (ai_agent.credits_fail_count) to
+        avoid false-positive alerts from transient network timeouts.
+        Kill switch + alert only fires after N consecutive failures
+        (ai_agent.credits_fail_threshold, default 2).
         """
         if not self._is_active_environment():
             return
@@ -1132,16 +1134,32 @@ class AiAgentConversation(models.Model):
 
         credits_ok = wa_ok and claude_ok
         was_ok = ICP.get_param('ai_agent.credits_ok', 'True').lower() == 'true'
+        threshold = int(ICP.get_param('ai_agent.credits_fail_threshold', '2'))
+        fail_count = int(ICP.get_param('ai_agent.credits_fail_count', '0'))
 
-        if not credits_ok and was_ok:
-            # Transition OK → NOT OK: kill switch + alert
-            ICP.set_param('ai_agent.credits_ok', 'False')
-            self._send_credit_alert(wa_ok, wa_detail, claude_ok, claude_detail)
-            _logger.warning("Credit Guard: KILL SWITCH activated — outbound disabled")
-        elif credits_ok and not was_ok:
-            # Transition NOT OK → OK: auto-recover
-            ICP.set_param('ai_agent.credits_ok', 'True')
-            _logger.info("Credit Guard: credits restored, re-enabling AI Agent")
+        if credits_ok:
+            # Clean check — reset counter
+            if fail_count > 0:
+                ICP.set_param('ai_agent.credits_fail_count', '0')
+                _logger.info("Credit Guard: transient issue cleared (was %d/%d fails)", fail_count, threshold)
+            if not was_ok:
+                # Recovery: NOT OK → OK
+                ICP.set_param('ai_agent.credits_ok', 'True')
+                _logger.info("Credit Guard: credits restored, re-enabling AI Agent")
+        else:
+            new_count = fail_count + 1
+            ICP.set_param('ai_agent.credits_fail_count', str(new_count))
+            _logger.warning(
+                "Credit Guard: consecutive failure %d/%d — WA: %s | Claude: %s",
+                new_count, threshold, wa_detail, claude_detail,
+            )
+            if new_count >= threshold and was_ok:
+                # Confirmed failure: kill switch + alert
+                ICP.set_param('ai_agent.credits_ok', 'False')
+                self._send_credit_alert(wa_ok, wa_detail, claude_ok, claude_detail, new_count, threshold)
+                _logger.warning(
+                    "Credit Guard: KILL SWITCH activated after %d consecutive failures", new_count
+                )
 
     def _check_whatsapp_credits(self):
         """Check MassivaMóvil subscription remaining sends.
@@ -1193,8 +1211,8 @@ class AiAgentConversation(models.Model):
                   f"tokens: {total_in:,} in / {total_out:,} out)")
         return (spend < spend_limit, detail)
 
-    def _send_credit_alert(self, wa_ok, wa_detail, claude_ok, claude_detail):
-        """Send email alert when credits are low."""
+    def _send_credit_alert(self, wa_ok, wa_detail, claude_ok, claude_detail, fail_count=1, threshold=1):
+        """Send email alert when credits are confirmed low (after N consecutive failures)."""
         problems = []
         if not wa_ok:
             problems.append(wa_detail)
@@ -1207,6 +1225,8 @@ class AiAgentConversation(models.Model):
             '<p>El sistema de AI Agent ha sido <strong>desactivado automaticamente</strong> '
             'por creditos insuficientes:</p>'
             f'<ul>{items_html}</ul>'
+            f'<p><em>Confirmado tras {fail_count} chequeos consecutivos fallidos '
+            f'(umbral: {threshold}). No es una alerta transitoria.</em></p>'
             '<p>Todas las conversaciones de WhatsApp y consultas a Claude AI '
             'han sido pausadas hasta que se recarguen los creditos.</p>'
             '<p><strong>Accion requerida:</strong> Recargar creditos en el servicio '

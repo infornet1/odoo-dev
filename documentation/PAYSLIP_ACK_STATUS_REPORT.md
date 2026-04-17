@@ -59,6 +59,19 @@ GROUP BY r.name, r.date_end
 ORDER BY r.date_end DESC;
 ```
 
+### Employee Emails (for pending ack employees)
+
+```sql
+SELECT DISTINCT e.name AS employee, e.work_email
+FROM hr_payslip s
+JOIN hr_employee e ON e.id = s.employee_id
+JOIN hr_payslip_run r ON r.id = s.payslip_run_id
+WHERE r.state = 'close'
+  AND s.state IN ('done', 'paid')
+  AND s.is_acknowledged = false
+ORDER BY e.name ASC;
+```
+
 ### Total Counts (quick overview)
 
 ```sql
@@ -106,7 +119,13 @@ Claude returns the results as a markdown table. If there are many rows, ask to s
 
 > "Can you separate the table in groups of 8?"
 
-Claude will split the results into multiple tables of 8 rows each, numbered **Group 1 of N**, **Group 2 of N**, etc.
+Claude will split the results into multiple tables of 8 rows each, numbered by global row position.
+
+To get a plain-text email list (one per line, copy-paste ready):
+
+> "Can you list all emails of pending ack employees?"
+
+Claude returns one email per line with no extra formatting.
 
 ---
 

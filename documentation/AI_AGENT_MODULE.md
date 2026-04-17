@@ -1,6 +1,6 @@
 # AI Agent Module (ueipab_ai_agent)
 
-**Version:** 17.0.1.28.0 | **Status:** Testing | **Installed:** 2026-02-07
+**Version:** 17.0.1.29.4 | **Status:** Testing | **Installed:** 2026-02-07
 
 ## Overview
 
@@ -173,6 +173,19 @@ class MySkill:
 
 On handoff, a full transcript email is sent to the appropriate team with the customer's name, phone, Odoo contact status, inquiry summary, and the complete conversation transcript.
 
+**general_inquiry flyer support (v1.29.0):**
+When a customer asks about a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Claude appends `ACTION:SEND_FLYER:key` to its response and the skill sends the flyer image via WhatsApp after the text reply.
+
+Available flyer keys: `inscripcion`, `pronto_pago`, `tarjeta_credito`, `english`, `robotica`, `dibujo`, `bachillerato_virtual`.
+
+Flyer images are stored in `/var/www/dev/flyers/` and served via nginx at `https://dev.ueipab.edu.ve/flyers/`. The base URL is configurable via `ai_agent.flyer_base_url` system parameter.
+
+> **⚠️ Known Limitation (as of 2026-04-01):** MassivaMóvil `type=photo` API requests return `status: 200` and queue the message, but images are **not delivered** to the WhatsApp end user. Multiple tests with PNG/JPEG files and public URLs confirmed: text messages arrive normally but media does not. Awaiting MassivaMóvil tech support clarification.
+>
+> **Current state:** The flyer code path is fully implemented (`send_media()` in `whatsapp_service.py`, `send_flyer()` in `general_inquiry.py`, flyer injection in the conversation processor). In dry_run=False mode the API call is made but delivery is not confirmed. Until MassivaMóvil support resolves the issue, the flyer feature should be considered non-functional.
+>
+> **Proposed fallback (not yet implemented):** Serve each flyer as an HTML landing page with Open Graph meta tags so that pasting the URL into WhatsApp renders a rich preview. The URL would be appended to Claude's text reply instead of a separate media API call. Requires nginx `try_files` for extensionless URLs and a minimal HTML template per flyer.
+
 ## System Parameters
 
 | Key | Default | Description |
@@ -187,13 +200,16 @@ On handoff, a full transcript email is sent to the appropriate team with the cus
 | `ai_agent.claude_base_url` | (from config) | Anthropic API base URL |
 | `ai_agent.claude_model` | `claude-haiku-4-5-20251001` | Default AI model |
 | `ai_agent.claude_anthropic_version` | `2023-06-01` | API version header |
+| `ai_agent.flyer_base_url` | `https://dev.ueipab.edu.ve/flyers` | Public base URL for general_inquiry promotional flyers (served via nginx from `/var/www/dev/flyers/`) |
 | `ai_agent.credits_ok` | `True` | Kill switch — `False` blocks all outbound API calls |
 | `ai_agent.wa_sends_threshold` | `50` | Minimum remaining WA sends before alert/kill switch |
 | `ai_agent.claude_spend_limit_usd` | `4.50` | Max cumulative USD spend before alert (90% of $5) |
 | `ai_agent.claude_input_rate` | `0.000001` | $/token for Haiku 4.5 input ($1/MTok) |
 | `ai_agent.claude_output_rate` | `0.000005` | $/token for Haiku 4.5 output ($5/MTok) |
+| `ai_agent.credits_fail_threshold` | `2` | Consecutive failed checks before kill switch activates (v1.29.6) |
+| `ai_agent.credits_fail_count` | `0` | Internal counter — resets to 0 on any clean check (v1.29.6) |
 
-## Credit Guard (v1.5.0)
+## Credit Guard (v1.5.0 / updated v1.29.6)
 
 Automatic monitoring of API credit levels with kill switch to prevent mid-conversation failures when credits are exhausted.
 
@@ -212,18 +228,25 @@ Cron (every 30 min) → _cron_check_credits()
     │
     ├─ 1. Check MassivaMóvil: GET /api/get/subscription
     │     → remaining = wa_send.limit - wa_send.used
-    │     → alert if remaining < threshold (default 50)
+    │     → fail if remaining < threshold (default 50)
+    │     → fail (transient) if API timeout/network error
     │
     ├─ 2. Check Anthropic: aggregate ai.agent.message tokens → calculate USD
     │     → Haiku 4.5: $0.000001/input_tok + $0.000005/output_tok
-    │     → alert if spend > limit (default $4.50 of $5.00)
+    │     → fail if spend > limit (default $4.50 of $5.00)
     │
-    ├─ 3. If either depleted (transition OK → NOT OK):
-    │     → Set ai_agent.credits_ok = False (kill switch)
-    │     → Send email alert to soporte + gustavo
+    ├─ 3. If clean check:
+    │     → Reset credits_fail_count to 0
+    │     → If was disabled: set credits_ok = True (auto-recover)
     │
-    └─ 4. If both OK and currently disabled (transition NOT OK → OK):
-          → Set ai_agent.credits_ok = True (auto-recover)
+    ├─ 4. If failed check:
+    │     → Increment credits_fail_count
+    │     → If count < threshold (default 2): log warning only, NO alert
+    │     → If count >= threshold AND was OK:
+    │           → Set ai_agent.credits_ok = False (kill switch)
+    │           → Send email alert (includes consecutive count in body)
+    │
+    └─ (count resets to 0 on any clean check)
 ```
 
 ### Kill Switch Enforcement
@@ -243,10 +266,11 @@ Sent only on OK → NOT OK transition (not repeated every 30 min):
 
 ### Design Decisions
 
-1. **Fail-safe:** If MassivaMóvil API errors during check, treat as depleted (block outbound rather than risk sending with no credits)
-2. **Auto-recover:** When credits are replenished and next cron check passes, `credits_ok` flips back to `True` automatically
-3. **One alert per transition:** Email sent only on state change, not every check cycle
-4. **No schedule check:** Credit monitoring runs 24/7 (not restricted to contact hours)
+1. **Consecutive-failure threshold (v1.29.6):** Kill switch activates only after N failed checks in a row (default 2). A single transient timeout never triggers an alert — the counter resets on the next clean check.
+2. **Fail-safe:** If MassivaMóvil API errors during check, it counts as a failure toward the threshold (not immediately fatal, but persistent errors will still kill the switch).
+3. **Auto-recover:** When credits are replenished and next cron check passes, `credits_ok` flips back to `True` and `credits_fail_count` resets to 0 automatically.
+4. **One alert per transition:** Email sent only on OK → NOT OK state change, not every check cycle.
+5. **No schedule check:** Credit monitoring runs 24/7 (not restricted to contact hours).
 
 ### Important: Cumulative Claude Spend
 

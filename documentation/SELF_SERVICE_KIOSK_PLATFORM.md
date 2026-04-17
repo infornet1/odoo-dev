@@ -256,6 +256,40 @@ No Odoo login required. Simple identification methods:
 2. **QR Code**: WhatsApp notification includes a QR with an encrypted token → customer shows to tablet camera
 3. **Pickup Code**: 6-digit code sent via WhatsApp (e.g., "Su codigo de retiro: 847291")
 
+**CRITICAL — Closed System Validation:**
+
+The kiosk is a **delivery channel for known customers only**, not a public registration point. Authentication requires the customer to exist in Odoo with a valid Representante tag:
+
+1. Customer inputs cedula (e.g., `V12345678`)
+2. Odoo searches `res.partner` where `vat = 'V12345678'`
+3. Partner **must** have `category_id` IN `(25, 26)` — tag `Representante` (ID 25) or `Representante PDVSA` (ID 26)
+4. **If no match or missing tag** → screen shows "No se encontro su registro" → no actions available, no documents shown
+5. **If valid match** → proceed to show pending `self.service.document` records
+
+This means only the **318 known Representante contacts** (244 Rep + 74 PDVSA, both environments synced) can use the kiosk. A person not in the system gets nothing — they cannot browse, request, or print any document.
+
+```python
+# Authentication logic (server-side)
+VALID_TAG_IDS = [25, 26]  # Representante, Representante PDVSA
+
+def _authenticate_customer(self, cedula):
+    """Validate cedula against known Representante contacts."""
+    partner = self.env['res.partner'].search([
+        ('vat', '=', cedula),
+        ('category_id', 'in', VALID_TAG_IDS),
+    ], limit=1)
+    if not partner:
+        return {'success': False, 'error': 'NOT_FOUND'}
+    return {
+        'success': True,
+        'partner_id': partner.id,
+        'name': partner.name,
+        'documents': self._get_pending_documents(partner),
+    }
+```
+
+For **employee services** (payslip certs, employment letters), a separate authentication rule applies — validated against `hr.employee` records instead of partner tags. This is Phase 6 scope.
+
 The PWA calls Odoo JSON-RPC to validate and fetch pending documents:
 
 ```
@@ -412,15 +446,24 @@ For invoices to be legally valid in Venezuela:
             |                    |
             v                    v
     [Identification Screen]
-    - Numpad for cedula input
+    - Numpad for cedula input (e.g., V12345678)
     - OR "Escanear QR" button (camera)
     - OR "Tengo un codigo" (6-digit input)
             |
             v
+    [Validation] ── cedula NOT found in res.partner ──> [Error Screen]
+    - res.partner.vat match?                            "No se encontro su registro.
+    - Has tag Representante (25)                         Contacte a administracion."
+      or Representante PDVSA (26)?                       Auto-return to welcome 10s
+            |
+         VALID
+            v
     [My Documents Screen]
+    - "Bienvenido, [Partner Name]"
     - List of ready documents (cards)
     - Each card: type icon, reference, date, status
     - Tap card -> document preview
+    - No documents? -> "No tiene documentos pendientes"
             |
             v
     [Document Detail Screen]
@@ -550,7 +593,7 @@ The self-service document creation hooks into the existing `account.move` workfl
 | Concern | Mitigation |
 |---------|------------|
 | Kiosk tablet theft | Wall-mount enclosure, Android device lock, MDM remote wipe |
-| Unauthorized document access | Pickup code (6-digit, time-limited) + cedula validation |
+| Unauthorized document access | Cedula must match `res.partner` with tag Representante/PDVSA (IDs 25/26). No tag = no access. Pickup codes are 6-digit, time-limited. |
 | API abuse | Rate limiting on self-service endpoints, device API keys |
 | Banco Plaza credentials | Stored in ir.config_parameter, API-KEY-SECRET never transmitted |
 | HMAC replay attacks | Incrementing nonce (timestamp-based) per Banco Plaza spec |

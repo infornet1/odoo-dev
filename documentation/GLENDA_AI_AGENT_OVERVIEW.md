@@ -93,6 +93,24 @@ Glenda now handles **unsolicited inbound messages** — when an unknown phone se
 
 On handoff, Glenda sends a detailed email to the appropriate team with: customer phone, name, Odoo contact status, inquiry summary, and the full conversation transcript.
 
+### Promotional Flyers (v1.29.0)
+
+When a customer's question matches a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Glenda sends the relevant flyer image via WhatsApp alongside her text reply.
+
+| Flyer Key | Content |
+|-----------|---------|
+| `inscripcion` | Inscripciones abiertas 2026-2027 — $197.38/año, 17.72% descuento hasta 1 mayo |
+| `pronto_pago` | Mensualidad congelada a $162.39 si pagas en los primeros 10 días del mes |
+| `tarjeta_credito` | Tarjetas de crédito nacionales e internacionales sin comisiones |
+| `english` | MOA School: Cursos de Inglés After School, $38/mes |
+| `robotica` | Robótica con Kurios — 2 clases/semana, $52/mes |
+| `dibujo` | Curso de Dibujo y Pintura — 3 meses, 4h semanales, $38/mes |
+| `bachillerato_virtual` | Bachillerato Virtual 100% online |
+
+Flyer images are hosted at `https://dev.ueipab.edu.ve/flyers/` (nginx-served, public).
+
+> **⚠️ Known Limitation (as of 2026-04-01):** The MassivaMóvil API accepts `type=photo` requests with status 200 and queues them, but images are **not delivered** to the WhatsApp end user. Confirmed through multiple tests. Awaiting MassivaMóvil tech support clarification. The code infrastructure is fully in place — once the API issue is resolved (or a hyperlink-based fallback is implemented), flyer delivery will work automatically.
+
 ### Trigger
 
 The 24h cooldown guard prevents re-triggering a general_inquiry conversation too quickly for the same number. After 24h of inactivity, a new inquiry from the same number creates a fresh conversation.

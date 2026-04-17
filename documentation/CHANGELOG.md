@@ -4,6 +4,39 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## Testing Deployments
+
+### 2026-04-17 - Batch Date Logic Validator (v1.61.0, testing only)
+
+**New feature: automatic date consistency check on payslip batches.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Batches could be created/saved with wrong dates (e.g. MARZO31-7 had April dates) with no warning until the error was noticed manually |
+| **Feature** | New "Check Date Logic" button on batch form runs 4 checks: (1) overlap with existing confirmed payslips, (2) gap from expected next period, (3) quincena alignment for V2 structures, (4) batch name vs date month mismatch |
+| **UX** | Issues shown in modal wizard with severity (Blocker/Warning/Info). User can fix dates or acknowledge and proceed |
+| **Auto-trigger** | Check runs automatically after "Sync Dates to Payslips" — shows wizard instead of success notification if issues found |
+| **Override** | `date_check_acknowledged` flag on batch. Resets automatically whenever batch dates change |
+| **New files** | `wizard/payslip_batch_date_check_wizard.py`, `wizard/payslip_batch_date_check_wizard_view.xml` |
+| **Version** | `17.0.1.61.0` |
+| **Deployed** | Testing 2026-04-17 |
+
+### 2026-04-17 - Credit Guard False-Positive Fix (ueipab_ai_agent v1.29.6, testing only)
+
+**Eliminated false-positive credit alert emails caused by transient MassivaMóvil API timeouts.**
+
+| Item | Details |
+|------|---------|
+| **Problem** | Credit Guard fail-safe treated any API error (including 15s read timeout) as depleted credits, immediately activating the kill switch and sending an alert email — even when credits were fine |
+| **Root Cause** | `_cron_check_credits()` had no retry or confirmation logic — one failure = immediate alert |
+| **Fix** | Added consecutive-failure counter (`ai_agent.credits_fail_count`). Kill switch only activates after N consecutive failures (configurable via `ai_agent.credits_fail_threshold`, default 2). Any clean check resets the counter to 0 |
+| **Alert email** | Now includes confirmation count: "Confirmado tras 2 chequeos consecutivos fallidos (umbral: 2). No es una alerta transitoria." |
+| **New params** | `ai_agent.credits_fail_threshold` (default `2`), `ai_agent.credits_fail_count` (internal counter) |
+| **Version** | `17.0.1.29.6` |
+| **Deployed** | Testing 2026-04-17 |
+
+---
+
 ## Production Deployments
 
 ### 2026-04-08 - LIQUID_ANTIGUEDAD_V2 Bug Fix (DB-only, both envs)

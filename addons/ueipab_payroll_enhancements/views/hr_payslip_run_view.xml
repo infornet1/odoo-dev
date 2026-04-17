@@ -50,6 +50,19 @@
                         icon="fa-calendar"
                         help="Update all draft payslips with the batch date range"
                         invisible="not slip_ids"/>
+                <button name="action_check_date_logic"
+                        type="object"
+                        string="Check Date Logic"
+                        class="oe_link"
+                        icon="fa-shield"
+                        help="Validate batch dates against employee payslip history"
+                        invisible="not slip_ids"/>
+                <span invisible="not date_check_acknowledged"
+                      class="badge text-bg-secondary ms-1"
+                      title="Date warnings were reviewed and acknowledged">
+                    <i class="fa fa-check"/> Dates OK
+                </span>
+                <field name="date_check_acknowledged" invisible="1"/>
             </field>
         </field>
     </record>
