@@ -6,6 +6,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-17 - Forecast Tarifas 2026-2027 Sep (ueipab_ai_agent v1.29.9, testing only)
+
+**Added upcoming September 2026 projected pricing to Glenda's institutional knowledge.**
+
+| Item | Details |
+|------|---------|
+| **New knowledge** | Proyected rates effective September 1, 2026 (start of 2026-2027 school year): Inscripción $264,48 · Mensualidad $264,48 · Pronto pago $241,16 (8,816% discount, first 10 days of month) |
+| **Current rates retained** | $197,38 inscripción / mensualidad, pronto pago $162,39 — labeled "vigente hasta agosto 2026" |
+| **Glenda behavior** | Answers correctly for current OR upcoming rates depending on what the customer asks. If asked whether price will increase: confirms Sep 1 adjustment without alarming. Recommends pagos@ to confirm for specific cases |
+| **Version** | `17.0.1.29.9` |
+| **Deployed** | Testing 2026-04-17 |
+
 ### 2026-04-17 - General Inquiry Timeout Fix (ueipab_ai_agent v1.29.8, testing only)
 
 **Fixed three bugs that caused `general_inquiry` conversations to stay permanently stuck in `waiting` state.**
