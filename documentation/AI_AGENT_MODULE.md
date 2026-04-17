@@ -165,13 +165,22 @@ class MySkill:
 | `bounce_resolution` | Ask for new email when old one bounced. Includes Akdemia family email context to prevent duplicate proposals. | No | 5 | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
 | `bill_reminder` | Friendly invoice due date reminder | No | 3 | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
 | `billing_support` | Balance inquiry and billing Q&A | No | 4 | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
-| `general_inquiry` | Handles unsolicited inbound messages. Answers general questions (fees, payment methods, school info) and routes to billing or support team via email handoff. | **Yes** | 10 | `ACTION:HANDOFF:name\|summary\|route` where route = `billing` or `support` |
+| `general_inquiry` | Handles unsolicited inbound messages. Answers general questions (fees, payment methods, school info) and routes to billing or support team via email handoff. | **Yes** | 10 | `ACTION:HANDOFF:name\|summary\|route` where route = `billing`, `support`, or `pdvsa_retention` |
 
 **general_inquiry routing:**
 - Billing/debt/payment inquiries → `pagos@ueipab.edu.ve` (Pagos y Facturación team)
+- PDVSA/Petropiar distressed existing family (`pdvsa_retention`) → `pagos@ueipab.edu.ve` — urgent email with ⚠️ subject prefix
 - All other inquiries (documents, student matters, complaints, general support) → `soporte@ueipab.edu.ve`
 
 On handoff, a full transcript email is sent to the appropriate team with the customer's name, phone, Odoo contact status, inquiry summary, and the complete conversation transcript.
+
+**general_inquiry PDVSA/Petropiar policy (v1.29.7):**
+The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued for 2026-2027. Glenda knows this and handles two scenarios:
+- **Scenario A** — New prospect identifying as PDVSA/Petropiar: informs discontinuation cordially, routes to `billing`.
+- **Scenario B** — Existing 2025-2026 enrolled family expressing economic hardship: responds with maximum empathy, invites Director meeting, fires urgent retention alert via `pdvsa_retention` route. Subject: `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación — {name}`.
+
+**general_inquiry 2026-2027 enrollment knowledge (v1.29.7):**
+Updated `_INSTITUTIONAL_KNOWLEDGE` with current year costs: Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39 · Seguro escolar $15 · Enciclopedia de Inglés $30 · Olimpiadas Recreativas $10 · Enciclopedia digital bachillerato $36 · Competencia Kurios $10 (si seleccionado) · Competencia MOA inglés $25 (si seleccionado). Logística para Regionales/Nacionales a cargo de los padres.
 
 **general_inquiry flyer support (v1.29.0):**
 When a customer asks about a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Claude appends `ACTION:SEND_FLYER:key` to its response and the skill sends the flyer image via WhatsApp after the text reply.

@@ -21,6 +21,22 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 | **Version** | `17.0.1.61.0` |
 | **Deployed** | Testing 2026-04-17 |
 
+### 2026-04-17 - Glenda 2026-2027 Knowledge Update + PDVSA Policy (ueipab_ai_agent v1.29.7, testing only)
+
+**Updated `general_inquiry` skill with 2026-2027 enrollment costs and new PDVSA/Petropiar policy.**
+
+| Item | Details |
+|------|---------|
+| **Year updated** | `_INSTITUTIONAL_KNOWLEDGE` now reflects año escolar 2026-2027 |
+| **New costs** | Inscripción $197,38 · Seguro escolar $15 (was $10) · Enciclopedia de Inglés $30 (replaces Guía de inglés $15) · Olimpiadas Recreativas $10 · Enciclopedia digital bachillerato $36 · Competencia Kurios $10 (si seleccionado) · Competencia MOA inglés $25 (si seleccionado) |
+| **Logística** | Encuentros Regionales/Nacionales: traslados a cargo de los padres |
+| **PDVSA policy** | New "POLÍTICA PDVSA / PETROPIAR 2026-2027" section: benefit of 35% credit advance **discontinued**. New prospects: 100% upfront at BCV rate. Existing enrolled families expressing distress: empathetic handling + urgent retention alert |
+| **Scenario A** | New PDVSA prospect → inform discontinuation, billing handoff |
+| **Scenario B** | Existing 2025-2026 family expressing hardship → empathetic calm, invite Director meeting, urgent `pdvsa_retention` route email to `pagos@ueipab.edu.ve` with ⚠️ subject |
+| **New route** | `pdvsa_retention` added to valid handoff routes. On-resolve sends urgent alert: `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación — {name}` |
+| **Version** | `17.0.1.29.7` |
+| **Deployed** | Testing 2026-04-17 |
+
 ### 2026-04-17 - Credit Guard False-Positive Fix (ueipab_ai_agent v1.29.6, testing only)
 
 **Eliminated false-positive credit alert emails caused by transient MassivaMóvil API timeouts.**

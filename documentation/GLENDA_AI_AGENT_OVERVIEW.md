@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.28.0 | **Status:** Testing (Live with real customers) | **Date:** 2026-03-31
+**Version:** 17.0.1.29.7 | **Status:** Testing (Live with real customers) | **Date:** 2026-04-17
 
 ## What Is Glenda
 
@@ -48,6 +48,8 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 | **Family context** | All Akdemia-registered parents for this family — names, cedulas, emails, role (Representante/Representante.1). Warns if customer proposes an email already used by another parent | v1.12.0 |
 | **Message batching** | Reads ALL customer messages before responding (customers send multiple short WhatsApp messages in rapid succession) | v1.11.0 |
 | **Image/screenshot support** | Can see images customers send (screenshots, photos). Uses Claude vision to interpret content. Images archived locally before MassivaMóvil URL expiry | v1.13.0 |
+| **2026-2027 enrollment knowledge** | Current year costs: Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39 · Seguro $15 · Enciclopedia inglés $30 · Olimpiadas $10 · Enciclopedia digital bachillerato $36 · Competencia Kurios $10 (si seleccionado) · Competencia MOA inglés $25 (si seleccionado). Logística Regionales/Nacionales a cargo de padres | v1.29.7 |
+| **PDVSA/Petropiar policy** | Knows 2026-2027 policy: benefit discontinued. Scenario A (new prospect) → informs change, billing handoff. Scenario B (existing distressed family) → empathetic calm, invites Director meeting, fires urgent retention alert to pagos@ | v1.29.7 |
 | **Verification email** | Can trigger a real verification email to any address and wait for customer confirmation | v1.8.0 |
 
 ---
@@ -86,12 +88,24 @@ Glenda now handles **unsolicited inbound messages** — when an unknown phone se
 
 ### Handoff Routing
 
-| Inquiry Type | Routed To |
-|-------------|-----------|
-| Billing / debt / balance / payment adjustments | `pagos@ueipab.edu.ve` (Pagos y Facturación) |
-| Documents, student matters, complaints, general support | `soporte@ueipab.edu.ve` (Soporte) |
+| Route | Inquiry Type | Routed To |
+|-------|-------------|-----------|
+| `billing` | Billing / debt / balance / payment adjustments | `pagos@ueipab.edu.ve` (Pagos y Facturación) |
+| `support` | Documents, student matters, complaints, general support | `soporte@ueipab.edu.ve` (Soporte) |
+| `pdvsa_retention` | Existing 2025-2026 PDVSA/Petropiar family expressing economic hardship | `pagos@ueipab.edu.ve` — **urgent** alert email |
 
 On handoff, Glenda sends a detailed email to the appropriate team with: customer phone, name, Odoo contact status, inquiry summary, and the full conversation transcript.
+
+For `pdvsa_retention` route, the subject is prefixed with `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación` and includes a risk summary and required action prompt.
+
+### PDVSA / Petropiar Policy (v1.29.7)
+
+The 35% credit advance benefit offered in 2025-2026 has been **discontinued for 2026-2027**.
+
+| Scenario | Who | Glenda's Behavior |
+|----------|-----|-------------------|
+| **A — New prospect** | Employee of PDVSA/Petropiar with no prior enrollment | Explains discontinuation clearly but cordially. 100% upfront at BCV rate. Handoff to `billing` |
+| **B — Existing distressed family** | Enrolled in 2025-2026, expressing "no puedo pagar", "voy a salir", etc. | Responds with maximum empathy and calm. Affirms the school values their family. Invites Director meeting. Fires urgent retention alert (`pdvsa_retention`) |
 
 ### Promotional Flyers (v1.29.0)
 
