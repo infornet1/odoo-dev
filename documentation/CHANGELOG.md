@@ -6,6 +6,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-17 - General Inquiry Timeout Fix (ueipab_ai_agent v1.29.8, testing only)
+
+**Fixed three bugs that caused `general_inquiry` conversations to stay permanently stuck in `waiting` state.**
+
+| Item | Details |
+|------|---------|
+| **Bug 1 — Missing `get_reminder_message`** | `general_inquiry` skill never implemented this method. `_send_reminder()` called it unconditionally → `AttributeError` every time the cron tried to send a 24h follow-up. Crash prevented `reminder_count` from ever incrementing, so `action_timeout()` was never reached. Conversations stuck forever |
+| **Root cause confirmed** | Cron logged `ERROR: Call from cron AI Agent: Check Conversation Timeouts ... failed` every hour since a general_inquiry conv entered waiting state. Conv 100 stayed `waiting` from 2026-04-03 to 2026-04-17 (14 days) instead of timing out after 72h |
+| **Fix 1** | Added `get_reminder_message()` to `GeneralInquirySkill`. Reminder 1: gentle follow-up ("¿Pude ayudarte?"). Reminder 2: friendly closing ("Si necesitas información en otro momento...") |
+| **Bug 2 — No error isolation in timeout cron** | `_cron_check_timeouts` had no `try/except` per conversation. One bad conversation crashed the ENTIRE cron run for all skills, leaving other waiting conversations also unprocessed |
+| **Fix 2** | Wrapped each conversation's `_send_reminder()` / `action_timeout()` call in `try/except` with savepoint. One failure now logs an error and continues to the next conversation |
+| **Bug 3 — max_turns=10 too low for general_inquiry** | Conversations can accumulate turns across unrelated sessions if timeout never fires. 10 turns exhausted by a mix of old (Apr 3) and new (Apr 17) interactions. The PDVSA question (turn 10) got no reply |
+| **Fix 3** | `max_turns` raised from 10 → 25 for `general_inquiry` skill. Updated directly in DB (record has `noupdate="1"`) |
+| **Cascade effect** | Conv 100 (14-day-old stale conv) appended Apr 17 enrollment inquiry to itself. PDVSA question at turn 10 got no reply. Customer went unanswered |
+| **Version** | `17.0.1.29.8` |
+| **Deployed** | Testing 2026-04-17 |
+
 ### 2026-04-17 - Batch Date Logic Validator (v1.61.0, testing only)
 
 **New feature: automatic date consistency check on payslip batches.**

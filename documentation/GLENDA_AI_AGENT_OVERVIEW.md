@@ -50,6 +50,7 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 | **Image/screenshot support** | Can see images customers send (screenshots, photos). Uses Claude vision to interpret content. Images archived locally before MassivaMóvil URL expiry | v1.13.0 |
 | **2026-2027 enrollment knowledge** | Current year costs: Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39 · Seguro $15 · Enciclopedia inglés $30 · Olimpiadas $10 · Enciclopedia digital bachillerato $36 · Competencia Kurios $10 (si seleccionado) · Competencia MOA inglés $25 (si seleccionado). Logística Regionales/Nacionales a cargo de padres | v1.29.7 |
 | **PDVSA/Petropiar policy** | Knows 2026-2027 policy: benefit discontinued. Scenario A (new prospect) → informs change, billing handoff. Scenario B (existing distressed family) → empathetic calm, invites Director meeting, fires urgent retention alert to pagos@ | v1.29.7 |
+| **Timeout follow-up** | After 24h of silence Glenda sends a gentle follow-up ("¿Pude ayudarte?"). After 48h a final courtesy closing. After 72h conversation auto-closes. `max_turns` for general_inquiry raised to 25 | v1.29.8 |
 | **Verification email** | Can trigger a real verification email to any address and wait for customer confirmation | v1.8.0 |
 
 ---

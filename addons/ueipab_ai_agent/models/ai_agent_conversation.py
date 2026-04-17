@@ -1071,10 +1071,16 @@ class AiAgentConversation(models.Model):
             if now <= deadline:
                 continue
 
-            if conv.reminder_count < max_reminders:
-                conv._send_reminder()
-            else:
-                conv.action_timeout()
+            try:
+                with self.env.cr.savepoint():
+                    if conv.reminder_count < max_reminders:
+                        conv._send_reminder()
+                    else:
+                        conv.action_timeout()
+            except Exception as e:
+                _logger.error(
+                    "Timeout cron: error processing conversation %d (%s skill): %s",
+                    conv.id, conv.skill_id.code, e)
 
     @api.model
     def _cron_archive_attachments(self):

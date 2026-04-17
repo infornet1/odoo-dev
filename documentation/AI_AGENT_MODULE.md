@@ -165,7 +165,7 @@ class MySkill:
 | `bounce_resolution` | Ask for new email when old one bounced. Includes Akdemia family email context to prevent duplicate proposals. | No | 5 | `RESOLVED:email@new.com`, `RESOLVED:RESTORE`, `RESOLVED:DECLINED`, `ACTION:ESCALATE:desc` (intermediate) |
 | `bill_reminder` | Friendly invoice due date reminder | No | 3 | `RESOLVED:PAID`, `RESOLVED:EXTENSION` |
 | `billing_support` | Balance inquiry and billing Q&A | No | 4 | `RESOLVED:DONE`, `RESOLVED:DISPUTE` |
-| `general_inquiry` | Handles unsolicited inbound messages. Answers general questions (fees, payment methods, school info) and routes to billing or support team via email handoff. | **Yes** | 10 | `ACTION:HANDOFF:name\|summary\|route` where route = `billing`, `support`, or `pdvsa_retention` |
+| `general_inquiry` | Handles unsolicited inbound messages. Answers general questions (fees, payment methods, school info) and routes to billing or support team via email handoff. | **Yes** | 25 | `ACTION:HANDOFF:name\|summary\|route` where route = `billing`, `support`, or `pdvsa_retention` |
 
 **general_inquiry routing:**
 - Billing/debt/payment inquiries → `pagos@ueipab.edu.ve` (Pagos y Facturación team)

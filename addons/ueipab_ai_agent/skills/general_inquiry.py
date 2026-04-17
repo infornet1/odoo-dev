@@ -155,6 +155,24 @@ class GeneralInquirySkill:
             "Inclúyelos siempre al final de la respuesta cuando apliquen.\n"
         )
 
+    def get_reminder_message(self, conversation, context, reminder_count):
+        """Return a gentle follow-up message for stale general_inquiry conversations."""
+        from . import get_ve_greeting
+        saludo = get_ve_greeting()
+        agent_name = context.get('agent_name', 'Glenda')
+        institution = context.get('institution', 'Instituto Privado Andrés Bello')
+        if reminder_count == 0:
+            return (
+                f"{saludo}! Soy {agent_name} del {institution}. "
+                "¿Pude ayudarte con tu consulta? Si tienes alguna pregunta adicional, "
+                "con gusto te atiendo."
+            )
+        return (
+            f"{saludo}. Te escribo por última vez desde {institution}. "
+            "Si necesitas información sobre el colegio en otro momento, "
+            "no dudes en escribirnos. ¡Hasta pronto!"
+        )
+
     def get_greeting(self, conversation, context):
         """Fallback greeting if conversation is started manually via action_start."""
         saludo = get_ve_greeting()
