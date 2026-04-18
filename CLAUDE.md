@@ -331,6 +331,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Features
 - [Advance Payment System](documentation/ADVANCE_PAYMENT_SYSTEM.md)
+- [Adelanto Prestaciones Payment Receipt Ack](documentation/ADELANTO_PRESTACIONES_PAYMENT_RECEIPT_ACK.md) — Deferred: two-phase ack design for LIQUID_VE_V2 (consent + payment receipt), pending bank integration
 - [Comprobante de Pago](documentation/COMPROBANTE_DE_PAGO.md)
 - [Payslip Acknowledgment System](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md)
 - [Payslip Ack Status Report](documentation/PAYSLIP_ACK_STATUS_REPORT.md)
