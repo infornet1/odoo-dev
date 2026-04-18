@@ -6,6 +6,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-18 - Multi-Student Quotation Engine (ueipab_ai_agent v1.30.0, testing only)
+
+**Glenda can now generate full enrollment quotations for families with multiple children.**
+
+| Item | Details |
+|------|---------|
+| **Sibling discounts** | 1st child: full price · 2nd: 5% off mensualidad · 3rd: 6% · 4th+: 7%. Inscripción at full price per child. Discounts stack with pronto pago (applied on already-discounted mensualidad) |
+| **Pre-calculated table** | Per-child amounts embedded in knowledge: 1st $264,48 (PP $241,16) · 2nd $251,26 (PP $229,11) · 3rd $248,61 (PP $226,69) · 4th+ $245,97 (PP $224,28) |
+| **Quote flow** | If student count not stated, Glenda asks first. Presents per-child breakdown + total mensual (regular and pronto pago) + total inscripción |
+| **Handoff** | After quote, hands off to `billing` with structured summary: N alumnos, total mensualidad, total PP, total inscripción |
+| **Email subject** | Quotation emails automatically get subject `[Glenda] Cotización solicitada` (detected from summary keyword "cotización") |
+| **Version** | `17.0.1.30.0` |
+| **Deployed** | Testing 2026-04-18 |
+
 ### 2026-04-17 - Forecast Tarifas 2026-2027 Sep (ueipab_ai_agent v1.29.9, testing only)
 
 **Added upcoming September 2026 projected pricing to Glenda's institutional knowledge.**

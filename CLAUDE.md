@@ -130,7 +130,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.29.9 | 2026-04-17 |
+| ueipab_ai_agent | 17.0.1.30.0 | 2026-04-18 |
 
 ### Production Environment
 
@@ -256,6 +256,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **Flyer support (v1.29.0):** `general_inquiry` can send promotional flyer images via `ACTION:SEND_FLYER:key`. Flyers served from `https://dev.ueipab.edu.ve/flyers/` (nginx `/var/www/dev/flyers/`). Config param: `ai_agent.flyer_base_url`. **⚠️ Known issue:** MassivaMóvil `type=photo` API queues successfully but images NOT delivered to end user — awaiting tech support clarification. Code is in place; feature suspended pending API fix or hyperlink fallback.
 - **Credit Guard consecutive-failure fix (v1.29.6):** Kill switch only activates after N consecutive failures (`ai_agent.credits_fail_threshold`, default 2). Prevents false-positive alerts from transient API timeouts. Alert email confirms: "Confirmado tras N chequeos consecutivos fallidos".
 - **2026-2027 enrollment knowledge + PDVSA policy (v1.29.7):** `general_inquiry` `_INSTITUTIONAL_KNOWLEDGE` updated for año escolar 2026-2027. New costs: Inscripción $197,38, Seguro $15, Enciclopedia inglés $30, Enciclopedia digital bachillerato $36, Competencia Kurios $10, Competencia MOA $25. PDVSA/Petropiar benefit discontinued — Scenario A (new prospect) → billing handoff; Scenario B (existing distressed family) → empathetic + `pdvsa_retention` urgent alert to `pagos@`.
+- **Multi-student quotation engine (v1.30.0):** Sibling discounts: 2nd child 5%, 3rd 6%, 4th+ 7% on mensualidad (inscripción full price per child). Pre-calculated per-child table in knowledge. Glenda asks number of children if not stated, presents per-child breakdown + totals (regular and pronto pago), then hands off to billing with structured quote in summary. Quotation emails flagged with special subject.
 - **Forecast tarifas Sep 2026 (v1.29.9):** `general_inquiry` now knows projected rates effective Sep 1, 2026: inscripción $264,48, mensualidad $264,48, pronto pago $241,16 (8,816% discount). Current $197,38 rates labeled "hasta agosto 2026". Glenda handles both current and upcoming rate questions and confirms price increase on Sep 1.
 - **general_inquiry timeout fix (v1.29.8):** Three bugs fixed: (1) `get_reminder_message` was missing from `general_inquiry` skill → `AttributeError` crashed timeout cron every hour, conversations never timed out; (2) no per-conversation `try/except` in `_cron_check_timeouts` → one bad conv crashed entire cron run for all skills; (3) `max_turns` raised 10→25 for `general_inquiry` to handle multi-session accumulation. Root cause: conv 100 was stuck waiting 14 days (Apr 3–17), new enrollment inquiry appended to stale conv, PDVSA question hit turn limit with no reply.
 

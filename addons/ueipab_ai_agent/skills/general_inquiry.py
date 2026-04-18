@@ -42,6 +42,18 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "    Competencia Kurios: $10 (solo si el alumno es seleccionado)\n"
     "    Competencia MOA inglés: $25 (solo si el alumno es seleccionado)\n"
     "    Encuentros Regionales/Nacionales (Olimpiadas Recreativas, Robótica, Inglés): traslados y logística a cargo de los padres\n"
+    "DESCUENTOS POR HERMANOS (aplica sobre mensualidad):\n"
+    "- 1er alumno: tarifa completa (sin descuento)\n"
+    "- 2do alumno: 5% de descuento sobre mensualidad\n"
+    "- 3er alumno: 6% de descuento sobre mensualidad\n"
+    "- 4to alumno en adelante: 7% de descuento sobre mensualidad\n"
+    "- Los descuentos de hermano y pronto pago se acumulan (el pronto pago se aplica sobre la mensualidad ya descontada)\n"
+    "- Inscripción: precio completo por alumno, sin descuento por hermano\n"
+    "TABLA DE MENSUALIDAD POR ALUMNO (tarifas Sep 2026, proyectadas):\n"
+    "  1er alumno: mensualidad $264,48 | pronto pago $241,16\n"
+    "  2do alumno: mensualidad $251,26 | pronto pago $229,11\n"
+    "  3er alumno: mensualidad $248,61 | pronto pago $226,69\n"
+    "  4to alumno en adelante: mensualidad $245,97 | pronto pago $224,28\n"
     "POLÍTICA PDVSA / PETROPIAR 2026-2027:\n"
     "- Período anterior (2025-2026): existía un beneficio especial — la institución emitía la factura con un crédito anticipado del 35% y esperaba que el empleador reembolsara al empleado.\n"
     "- Período 2026-2027: este beneficio queda DESCONTINUADO por la situación socioeconómica del país y la situación financiera de la institución.\n"
@@ -134,6 +146,22 @@ class GeneralInquirySkill:
             "- Si la consulta requiere acceso a otros datos personales (documentos, trámites, asuntos del "
             "alumno, quejas, etc.): infórmale que la conectarás con el equipo de soporte "
             "(soporte@ueipab.edu.ve). Usa ACTION:HANDOFF con ruta 'support'.\n"
+            "COTIZACIÓN MULTI-ALUMNO:\n"
+            "- Si el representante menciona más de 1 hijo O pregunta por descuentos por hermanos o costo total, "
+            "prepara una cotización detallada usando la tabla de mensualidad por alumno del conocimiento institucional.\n"
+            "- Si no indicó cuántos alumnos tiene, pregúntalo antes de cotizar.\n"
+            "- La cotización debe mostrar: (a) por cada alumno: mensualidad con descuento de hermano aplicado, "
+            "(b) total mensualidad regular, (c) total mensualidad con pronto pago, (d) total inscripciones.\n"
+            "- Formato sugerido de cotización (texto plano, sin tablas markdown):\n"
+            "  1er alumno: $264,48/mes\n"
+            "  2do alumno: $251,26/mes (5% desc. hermano)\n"
+            "  ...\n"
+            "  TOTAL mensualidad: $XXX,XX\n"
+            "  TOTAL con pronto pago (10 primeros dias): $XXX,XX\n"
+            "  Inscripcion por alumno: $264,48 x N = $XXX,XX\n"
+            "- Luego de presentar la cotización, haz el handoff a 'billing' incluyendo en el resumen: "
+            "numero de alumnos, total mensualidad, total con pronto pago y total inscripcion. "
+            "Ejemplo: ACTION:HANDOFF:Ana Perez|Cotizacion 3 alumnos: mens $764,35 (PP $696,96) insc $793,44|billing\n"
             "TARIFAS VIGENTES vs PRÓXIMAS:\n"
             "- Si preguntan por costos ACTUALES (antes de septiembre 2026): inscripción $197,38, mensualidad $197,38 (pronto pago $162,39).\n"
             "- Si preguntan por costos del PRÓXIMO AÑO ESCOLAR o a partir de septiembre 2026: inscripción proyectada $264,48, mensualidad proyectada $264,48 (pronto pago $241,16 con 8,816% de descuento los primeros 10 días). Aclara que son tarifas proyectadas y recomienda confirmar con pagos@ueipab.edu.ve.\n"
@@ -327,10 +355,23 @@ Se les invitó a conversar con el Director para evaluar su situación particular
 <p>Saludos,<br/><b>Glenda — Asistente Virtual</b><br/>Instituto Privado Andrés Bello</p>
 """
         else:
-            subject = f"[Glenda] Consulta entrante — WhatsApp {phone}"
+            is_quotation = 'cotizacion' in summary.lower() or 'cotización' in summary.lower()
+            if is_quotation:
+                subject = f"[Glenda] Cotización solicitada — WhatsApp {phone} — {captured_name}"
+                intro_html = (
+                    "<p>Un prospecto solicitó una <strong>cotización por número de alumnos</strong> "
+                    "a través de WhatsApp. Glenda generó la cotización en la conversación. "
+                    "El detalle se encuentra en el resumen y en la transcripción.</p>"
+                )
+            else:
+                subject = f"[Glenda] Consulta entrante — WhatsApp {phone}"
+                intro_html = (
+                    "<p>Un cliente se comunicó a través de WhatsApp al número de Glenda "
+                    "y necesita atención personalizada.</p>"
+                )
             body_html = f"""
 <p>Hola {team_name},</p>
-<p>Un cliente se comunicó a través de WhatsApp al número de Glenda y necesita atención personalizada.</p>
+{intro_html}
 <table style="border-collapse:collapse;margin:10px 0;">
   <tr><td style="padding:4px 14px 4px 0;font-weight:bold;">Teléfono:</td><td>{phone}</td></tr>
   <tr><td style="padding:4px 14px 4px 0;font-weight:bold;">Nombre indicado:</td><td>{captured_name}</td></tr>
