@@ -6,6 +6,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-18 - Annual Extras in Quotation (ueipab_ai_agent v1.30.1, testing only)
+
+**Extended quotation engine to include one-time annual costs and full first-month total.**
+
+| Item | Details |
+|------|---------|
+| **Annual one-time costs** | Seguro escolar $15 + Enciclopedia de Inglés $30 + Olimpiadas Recreativas $10 = **$55/alumno** (no sibling discount, full price per student) |
+| **Bachillerato extra** | +$36 Enciclopedia digital bachillerato per bachillerato-level student. Glenda asks if any student is in bachillerato before quoting |
+| **Optional costs excluded** | Competencia Kurios ($10) and Competencia MOA inglés ($25) are conditional (only if selected by school) — NOT included in standard quote |
+| **Quote format** | 4 sections: (1) mensualidad per child with sibling discount, (2) inscripción total, (3) costos anuales total, (4) TOTAL PRIMER MES = inscripción + extras + mensualidad (regular and pronto pago) |
+| **Example 2 students** | Primer mes regular $1.154,70 / con pronto pago $1.109,23 |
+| **Version** | `17.0.1.30.1` |
+| **Deployed** | Testing 2026-04-18 |
+
 ### 2026-04-18 - Multi-Student Quotation Engine (ueipab_ai_agent v1.30.0, testing only)
 
 **Glenda can now generate full enrollment quotations for families with multiple children.**
