@@ -4,6 +4,14 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## Production Deployments
+
+### 2026-04-18 - Adelanto de Prestaciones Sociales Email Template (ueipab_payroll_enhancements v1.62.2)
+
+**Deployed to production DB_UEIPAB. Template id=50. Files deployed: hr_payslip.py, payslip_acknowledgment.py, __manifest__.py, mail_template_payslip.xml. Body applied via direct SQL (psycopg2). Production Odoo restarted.**
+
+---
+
 ## Testing Deployments
 
 ### 2026-04-18 - Adelanto de Prestaciones Sociales Email Template (ueipab_payroll_enhancements v1.62.2)
