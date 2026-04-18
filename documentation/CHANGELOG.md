@@ -6,6 +6,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-18 - Farewell Message Fix After Resolved Conversation (ueipab_ai_agent v1.30.2, testing only)
+
+**Fixed: post-handoff farewell messages ("Gracias", "saludos") silently dropped.**
+
+| Item | Details |
+|------|---------|
+| **Root cause** | `_get_or_create_general_inquiry_conversation()` 24h cooldown blocked ALL terminal states equally. When a customer sent a farewell after a resolved handoff, the guard found the resolved conv within 24h and returned `None` — message dropped, no reply |
+| **Example** | Gustavo received 5-student quotation at 00:34, replied "Gracias saludos" shortly after → Glenda never acknowledged it |
+| **Fix** | Cooldown now distinguishes terminal states: `timeout`/`failed` → still blocked (unresponsive or broken); `resolved` → **allow new conversation** so Glenda can give a brief, warm acknowledgment |
+| **Behavior after fix** | Customer who says "Gracias" after a handoff gets a natural closing reply from Glenda instead of silence |
+| **Version** | `17.0.1.30.2` |
+| **Deployed** | Testing 2026-04-18 |
+
 ### 2026-04-18 - Annual Extras in Quotation (ueipab_ai_agent v1.30.1, testing only)
 
 **Extended quotation engine to include one-time annual costs and full first-month total.**

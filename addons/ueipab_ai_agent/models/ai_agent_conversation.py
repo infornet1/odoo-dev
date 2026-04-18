@@ -824,7 +824,10 @@ class AiAgentConversation(models.Model):
         if existing:
             if existing.state in ('active', 'waiting'):
                 return existing
-            return None  # already handled in the last 24h
+            if existing.state in ('timeout', 'failed'):
+                return None  # unresponsive or broken conv — don't re-open within 24h
+            # state == 'resolved': customer engaged and completed — allow new conv
+            # (e.g. farewell "Gracias" after a handoff deserves an acknowledgment)
 
         # Locate the skill record
         skill = self.env['ai.agent.skill'].sudo().search(
