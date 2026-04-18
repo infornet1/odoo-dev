@@ -308,8 +308,9 @@
             </div>
         </field>
 
-        <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_liquidacion_breakdown'))]"/>
-        <field name="template_fs">LIQUIDACION_${(object.number or '').replace('/','_')}_${object.employee_id.name.replace(' ','_')}.pdf</field>
+        <!-- PDF attachment intentionally disabled during body refinement phase -->
+        <!-- Re-enable: eval="[(4, ref('ueipab_payroll_enhancements.action_report_liquidacion_breakdown'))]" -->
+
     </record>
 
 </odoo>
