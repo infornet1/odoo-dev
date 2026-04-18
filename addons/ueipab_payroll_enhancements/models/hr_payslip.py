@@ -203,6 +203,35 @@ class HrPayslip(models.Model):
         rate = self.exchange_rate_used or 1.0
         return '{:,.2f}'.format(amount * rate)
 
+    def get_next_period_start(self):
+        """Return date_to + 1 day formatted dd/MM/yyyy for adelanto agreement."""
+        self.ensure_one()
+        from datetime import timedelta
+        return (self.date_to + timedelta(days=1)).strftime('%d/%m/%Y')
+
+    def get_original_hire_date_fmt(self):
+        """Return contract original hire date formatted dd/MM/yyyy."""
+        self.ensure_one()
+        hire = self.contract_id.ueipab_original_hire_date if self.contract_id else None
+        return hire.strftime('%d/%m/%Y') if hire else 'N/A'
+
+    def get_today_day(self):
+        """Return current day number as string (email send date)."""
+        from datetime import date
+        return str(date.today().day)
+
+    def get_today_month_es(self):
+        """Return current month in Spanish (email send date)."""
+        from datetime import date
+        months = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',6:'junio',
+                  7:'julio',8:'agosto',9:'septiembre',10:'octubre',11:'noviembre',12:'diciembre'}
+        return months[date.today().month]
+
+    def get_today_year(self):
+        """Return current year as string (email send date)."""
+        from datetime import date
+        return str(date.today().year)
+
     def get_ack_timestamp_vet(self):
         """Return acknowledged_date formatted in Venezuela Time (UTC-4).
 

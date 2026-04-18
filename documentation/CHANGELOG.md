@@ -6,6 +6,28 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-18 - Adelanto de Prestaciones Sociales Email Template (ueipab_payroll_enhancements v1.62.2)
+
+**New email template for LIQUID_VE_V2 payslips with legal agreement body and structure-aware ack landing page.**
+
+| Item | Details |
+|------|---------|
+| **Template name** | `Adelanto de Prestaciones Sociales` (DB id=71 testing) |
+| **Structure** | `LIQUID_VE_V2` only |
+| **Color scheme** | Navy blue gradient (`#1a2c5b → #2471a3`) — distinct from red liquidación template |
+| **Body** | Four legal clauses (PRIMERO–CUARTO) with company/employee data, period dates, net VEB amount, signing date |
+| **Amounts** | All in VEB via `get_liq_veb()` / `get_liq_net_veb()` helpers |
+| **Key fields** | `date_from/date_to` for period, `ueipab_original_hire_date` for hire date, `get_next_period_start()` for day after period end |
+| **Signing date** | Uses email send date (today) via `get_today_day/month_es/year()` helpers — not `date_to` |
+| **Hardcoded rep** | `GUSTAVO PERDOMO`, `Representante Legal`, `V15128008` |
+| **Ack button** | "Enviar conformidad digital para recibir mi pago" |
+| **PDF attachment** | Disabled during body refinement — re-enable via `action_report_liquidacion_breakdown` ref in XML |
+| **Landing page** | Branches on `struct_id.code == 'LIQUID_VE_V2'` — adelanto-specific title/subtitle/button; all other structures see generic text |
+| **New helpers in hr_payslip.py** | `get_liq_veb(code)`, `get_liq_net_veb()`, `get_next_period_start()`, `get_original_hire_date_fmt()`, `get_today_day()`, `get_today_month_es()`, `get_today_year()` |
+| **Business flow** | Batch stays DRAFT → email sent → employee reviews and acknowledges → HR confirms receipt → batch confirmed/closed |
+| **Template body** | Managed via direct SQL (`jsonb_set`) — ORM `Html` sanitizer strips custom method calls |
+| **Version** | `17.0.1.62.2` |
+
 ### 2026-04-18 - Farewell Message Fix After Resolved Conversation (ueipab_ai_agent v1.30.2, testing only)
 
 **Fixed: post-handoff farewell messages ("Gracias", "saludos") silently dropped.**

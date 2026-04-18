@@ -166,9 +166,20 @@ class PayslipAcknowledgmentController(http.Controller):
             # Get db from request
             db_name = request.db or request.httprequest.args.get('db', '')
 
+            # Landing page text varies by payslip structure
+            is_adelanto = payslip.struct_id and payslip.struct_id.code == 'LIQUID_VE_V2'
+            if is_adelanto:
+                ack_title    = "Confirmar Recepción Digital para recibir mi pago"
+                ack_subtitle = "Al hacer click en el botón, confirmo que he revisado los términos y condiciones para poder recibir mi pago aceptando este comprobante de pago de forma digital."
+                ack_btn      = "✅ Confirmar Recepción Digital para recibir mi pago"
+            else:
+                ack_title    = "Confirmar Recepción Digital"
+                ack_subtitle = "Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital."
+                ack_btn      = "✅ Confirmar Recepción Digital"
+
             content = f'''
                 <div class="icon" style="background: #667eea;">📋</div>
-                <h1>Confirmar Recepción Digital</h1>
+                <h1>{ack_title}</h1>
                 <div class="content">
                     <p><strong>Comprobante:</strong> {payslip.number}</p>
                     <p><strong>Empleado:</strong> {payslip.employee_id.name}</p>
@@ -176,11 +187,11 @@ class PayslipAcknowledgmentController(http.Controller):
                     <p><strong>Período:</strong> {period}</p>
                     <p><strong>Monto Neto:</strong> <span style="color: #28a745; font-weight: bold;">Bs. {net_amount_ves:,.2f}</span></p>
                     <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
-                    <p style="color: #666; font-size: 14px;">Al hacer click en el botón, confirma que ha recibido y revisado este comprobante de pago de forma digital.</p>
+                    <p style="color: #666; font-size: 14px;">{ack_subtitle}</p>
                 </div>
                 <form action="/payslip/acknowledge/{payslip_id}/{token}/confirm?db={db_name}" method="POST"
                       onsubmit="var btn=this.querySelector('button'); btn.disabled=true; btn.textContent='⏳ Procesando...';">
-                    <button type="submit" class="btn">✅ Confirmar Recepción Digital</button>
+                    <button type="submit" class="btn">{ack_btn}</button>
                 </form>
                 <p style="margin-top: 15px; color: #999; font-size: 12px;">
                     🔒 Su confirmación quedará registrada con fecha, hora e IP

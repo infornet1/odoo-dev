@@ -49,6 +49,7 @@
 | 31 | HR Data Collection (Glenda) | Testing | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 | 32 | Payslip Ack Confirmation Email | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 33 | Payroll Requisition Estimation Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
+| 34 | Adelanto de Prestaciones Sociales Email | Testing | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 
 ---
 
@@ -126,7 +127,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.61.0 | 2026-04-17 |
+| ueipab_payroll_enhancements | 17.0.1.62.2 | 2026-04-18 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
