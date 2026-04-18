@@ -136,5 +136,174 @@
         <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_payslip_compact'))]"/>
         <field name="template_fs">${(object.number or '').replace('/','_')}_${object.employee_id.name.replace(' ','_')}.pdf</field>
     </record>
+
+    <!-- ========================================
+         Template: Liquidación Venezolana V2
+         ======================================== -->
+    <record id="email_template_liquidacion_v2" model="mail.template">
+        <field name="name">Payslip Email - Liquidación Venezolana V2</field>
+        <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">📋 LIQUIDACIÓN V2 │ Nro.: {{object.number}} │ {{object.employee_id.name}}</field>
+
+        <field name="body_html" type="html">
+            <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:20px">
+                <div style="max-width:800px;margin:0 auto;background-color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden">
+
+                    <!-- HEADER BANNER -->
+                    <div style="background:linear-gradient(135deg,#7b1a1a 0%,#c0392b 100%);color:white;padding:30px;text-align:center">
+                        <h1 style="margin:0;font-size:28px;font-weight:600">📋 Liquidación Venezolana V2</h1>
+                        <p style="margin:5px 0 0 0;font-size:16px;opacity:0.9">Instituto Privado Andrés Bello, CA</p>
+                    </div>
+
+                    <div style="padding:30px">
+
+                        <!-- EMPLOYEE INFO -->
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">📋 Nro. Liquidación:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.number or 'N/A'"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">👤 Nombre y Apellido:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.employee_id.name or 'N/A'"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">🆔 Cédula:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.employee_id.identification_id or 'N/A'"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">💳 Cuenta:</span>
+                            <span style="color:#333;font-size:14px">
+                                <t t-if="object.employee_id.bank_account_id">
+                                    <t t-out="object.employee_id.bank_account_id.acc_number"/>
+                                </t>
+                                <t t-else="">N/A</t>
+                            </span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">📅 Período de Servicio:</span>
+                            <span style="color:#333;font-size:14px">
+                                <t t-if="object.contract_id.ueipab_original_hire_date">
+                                    <t t-out="object.contract_id.ueipab_original_hire_date" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/> →
+                                </t>
+                                <t t-else="">
+                                    <t t-out="object.contract_id.date_start" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/> →
+                                </t>
+                                <t t-out="object.date_to" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/>
+                            </span>
+                        </div>
+
+                        <!-- BENEFITS SECTION -->
+                        <div style="background:linear-gradient(135deg,#7b1a1a 0%,#c0392b 100%);color:white;padding:12px 20px;margin:25px -30px 15px -30px;font-size:18px;font-weight:600">✅ Prestaciones y Beneficios</div>
+                        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500;width:60%">Vacaciones</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_VACACIONES_V2'))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Bono Vacacional</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_BONO_VACACIONAL_V2'))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Utilidades</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_UTILIDADES_V2'))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Prestaciones Sociales</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_PRESTACIONES_V2'))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Antigüedad</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_ANTIGUEDAD_V2'))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Intereses sobre Prestaciones</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_INTERESES_V2'))"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- DEDUCTIONS SECTION -->
+                        <div style="background:linear-gradient(135deg,#7b1a1a 0%,#c0392b 100%);color:white;padding:12px 20px;margin:25px -30px 15px -30px;font-size:18px;font-weight:600">❌ Deducciones</div>
+                        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500;width:60%">FAOV 1% (Fondo de Ahorro Habitacional)</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(abs(object.get_line_amount('LIQUID_FAOV_V2')))"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">INCES 0.5%</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(abs(object.get_line_amount('LIQUID_INCES_V2')))"/>
+                                </td>
+                            </tr>
+                            <t t-set="prepaid_amt" t-value="object.get_line_amount('LIQUID_VACATION_PREPAID_V2')"/>
+                            <t t-if="prepaid_amt">
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Vacaciones y Bono Prepagadas</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    $ <t t-esc="'{:,.2f}'.format(abs(prepaid_amt))"/>
+                                </td>
+                            </tr>
+                            </t>
+                        </table>
+
+                        <!-- NET TOTAL BOX -->
+                        <div style="background:#f8f9fa;padding:20px;margin:25px -30px;border-top:3px solid #c0392b;border-bottom:3px solid #c0392b">
+                            <div style="display:flex;justify-content:space-between;font-size:20px;font-weight:bold;color:#7b1a1a">
+                                <span>💵 Total Neto a Cobrar (USD):</span>
+                                <span>$ <t t-esc="'{:,.2f}'.format(object.get_line_amount('LIQUID_NET_V2'))"/></span>
+                            </div>
+                        </div>
+
+                        <!-- PDF NOTE -->
+                        <div style="background:#e8f4f8;border-left:4px solid #2980b9;padding:15px 20px;margin:25px 0;border-radius:4px">
+                            <p style="font-size:14px;color:#1a5276;margin:0 0 6px"><strong>ℹ️ Relación de Liquidación adjunta</strong></p>
+                            <p style="font-size:14px;color:#555;line-height:1.5;margin:0">
+                                El PDF adjunto contiene la Relación de Liquidación completa con el desglose detallado de todos los cálculos. Por favor consérvelo como respaldo.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <!-- ACK BUTTON -->
+                    <div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);padding:25px 30px;text-align:center">
+                        <p style="margin:0 0 15px 0;color:white;font-size:16px;font-weight:600">✅ Acuso conformidad y recepción digital de esta liquidación</p>
+                        <p style="margin:0 0 20px 0;color:rgba(255,255,255,0.9);font-size:14px">Al hacer click, acusa conformidad digital de que ha recibido y revisado este documento de liquidación.</p>
+                        <a t-att-href="object._get_acknowledgment_url()" style="display:inline-block;background:white;color:#28a745;padding:15px 40px;font-size:16px;font-weight:bold;text-decoration:none;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2)">Enviar conformidad digital</a>
+                        <p style="margin:15px 0 0 0;color:rgba(255,255,255,0.8);font-size:12px">Su confirmación quedará registrada con fecha, hora e IP</p>
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div style="background:#f8f9fa;padding:20px 30px;border-top:1px solid #e0e0e0;text-align:center;font-size:13px;color:#666;line-height:1.6">
+                        <p style="margin:5px 0"><strong style="color:#c0392b">📧 ¿Dudas o consultas?</strong></p>
+                        <p style="margin:5px 0">Si usted tiene alguna duda por favor escribir inmediatamente al correo <strong style="color:#c0392b">recursoshumanos@ueipab.edu.ve</strong></p>
+                        <p style="margin-top:15px;color:#999;font-size:12px">
+                            Este es un documento generado automáticamente. Por favor, responda directamente a este correo si tiene dudas.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </field>
+
+        <field name="report_template_ids" eval="[(4, ref('ueipab_payroll_enhancements.action_report_liquidacion_breakdown'))]"/>
+        <field name="template_fs">LIQUIDACION_${(object.number or '').replace('/','_')}_${object.employee_id.name.replace(' ','_')}.pdf</field>
+    </record>
+
 </odoo>
 
