@@ -141,7 +141,7 @@
          Template: Liquidación Venezolana V2
          ======================================== -->
     <record id="email_template_liquidacion_v2" model="mail.template">
-        <field name="name">Payslip Email - Liquidación Venezolana V2</field>
+        <field name="name">Adelanto de Prestaciones Sociales</field>
         <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
         <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
         <field name="email_to">{{object.employee_id.work_email}}</field>
@@ -154,7 +154,7 @@
 
                     <!-- HEADER BANNER -->
                     <div style="background:linear-gradient(135deg,#7b1a1a 0%,#c0392b 100%);color:white;padding:30px;text-align:center">
-                        <h1 style="margin:0;font-size:28px;font-weight:600">📋 Liquidación Venezolana V2</h1>
+                        <h1 style="margin:0;font-size:28px;font-weight:600">📋 Adelanto de Prestaciones Sociales</h1>
                         <p style="margin:5px 0 0 0;font-size:16px;opacity:0.9">Instituto Privado Andrés Bello, CA</p>
                     </div>
 
