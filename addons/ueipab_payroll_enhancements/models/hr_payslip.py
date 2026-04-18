@@ -185,6 +185,24 @@ class HrPayslip(models.Model):
                 return amt
         return self.net_wage or 0.0
 
+    def get_liq_veb(self, code):
+        """Return liquidación line amount converted to VEB as a formatted string.
+
+        Uses abs() so both positive (benefits) and negative (deductions) lines
+        display cleanly. Safe to call from QWeb t-out without nested format calls.
+        """
+        self.ensure_one()
+        amount = abs(self.get_line_amount(code))
+        rate = self.exchange_rate_used or 1.0
+        return '{:,.2f}'.format(amount * rate)
+
+    def get_liq_net_veb(self):
+        """Return liquidación V2 net amount in VEB as a formatted string."""
+        self.ensure_one()
+        amount = self.get_line_amount('LIQUID_NET_V2')
+        rate = self.exchange_rate_used or 1.0
+        return '{:,.2f}'.format(amount * rate)
+
     def get_ack_timestamp_vet(self):
         """Return acknowledged_date formatted in Venezuela Time (UTC-4).
 
