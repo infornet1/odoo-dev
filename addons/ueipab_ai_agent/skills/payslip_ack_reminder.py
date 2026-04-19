@@ -100,14 +100,12 @@ class PayslipAckReminderSkill:
 
         lines.append("")
 
-        if ack_url:
-            lines.append("Por favor ingresa al siguiente enlace para confirmar:")
-            lines.append(ack_url)
-        else:
-            lines.append("Por favor comunícate con Recursos Humanos para mayor información.")
-
+        lines.append(
+            "Por favor ingresa a tu correo electrónico institucional "
+            "para que revises tu recibo de adelanto."
+        )
         lines.append("")
-        lines.append("Si tienes alguna dificultad con el enlace, responde a este mensaje y te ayudamos.")
+        lines.append("Si tienes alguna dificultad, responde a este mensaje y te ayudamos.")
 
         return "\n".join(lines)
 
@@ -115,24 +113,25 @@ class PayslipAckReminderSkill:
         agent_name = context.get('agent_name', 'Glenda')
         institution = context.get('institution', 'UEIPAB')
         first_name = context.get('first_name', 'el empleado')
-        ack_url = context.get('ack_url', '')
         payslip_number = context.get('payslip_number', '')
         period = context.get('period', '')
         net_veb = context.get('net_veb', '')
 
         return (
             f"Eres {agent_name}, asistente virtual de Recursos Humanos de {institution}.\n\n"
-            f"Tu única tarea es ayudar a {first_name} a completar la conformidad digital "
-            f"de su comprobante de pago {payslip_number} ({period}, {net_veb}).\n\n"
-            f"Enlace de conformidad: {ack_url}\n\n"
+            f"Tu única tarea es recordarle a {first_name} que revise su correo electrónico "
+            f"institucional para completar la conformidad digital de su comprobante de pago "
+            f"{payslip_number} ({period}, {net_veb}).\n\n"
             "REGLAS:\n"
-            "1. Si el empleado tiene problemas con el enlace, indica: "
+            "1. NUNCA compartas enlaces directos de confirmación por este canal.\n"
+            "2. Siempre dirige al empleado a su correo institucional.\n"
+            "3. Si el empleado tiene problemas con su correo, indica: "
             "'Por favor comunícate con Recursos Humanos a recursoshumanos@ueipab.edu.ve'\n"
-            "2. Si el empleado confirma que ya confirmó, responde: "
-            "'¡Perfecto! Gracias por confirmar, ya está registrado. Que tengas un excelente día.'\n"
-            "3. Si pregunta sobre monto o período, proporciona la información del contexto.\n"
-            "4. Comunícate en español venezolano, trato de tú, amable y conciso.\n"
-            "5. Máximo 3-4 mensajes. No discutas otros temas."
+            "4. Si el empleado confirma que ya completó la conformidad, responde: "
+            "'¡Perfecto! Gracias por confirmar. Que tengas un excelente día.'\n"
+            "5. Si pregunta sobre monto o período, proporciona la información del contexto.\n"
+            "6. Comunícate en español venezolano, trato de tú, amable y conciso.\n"
+            "7. Máximo 3-4 mensajes. No discutas otros temas."
         )
 
     def get_reminder_message(self, conversation, context, reminder_count):
@@ -144,12 +143,10 @@ class PayslipAckReminderSkill:
         lines = [
             f"Hola {first_name}, te recordamos que tu {doc_type} sigue pendiente de conformidad digital.",
             "",
+            "Por favor revisa tu correo electrónico institucional para completar la confirmación.",
+            "",
+            "Si tienes algún inconveniente, responde a este mensaje.",
         ]
-        if ack_url:
-            lines.append("Enlace de confirmación:")
-            lines.append(ack_url)
-        lines.append("")
-        lines.append("Si tienes algún inconveniente, responde a este mensaje.")
         return "\n".join(lines)
 
     def process_ai_response(self, conversation, response_text):
