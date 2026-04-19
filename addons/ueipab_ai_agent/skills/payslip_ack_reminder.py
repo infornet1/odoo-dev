@@ -4,6 +4,7 @@ Contacts employees via WhatsApp with their payslip acknowledgment URL.
 Auto-resolves when the payslip is_acknowledged flag flips to True (checked by cron).
 """
 import logging
+import re
 
 from . import register_skill, get_ve_greeting, get_first_name
 
@@ -84,7 +85,7 @@ class PayslipAckReminderSkill:
         doc_type = 'adelanto de prestaciones sociales' if is_liquid else 'comprobante de pago'
 
         lines = [
-            f"{greeting}, {first_name}. Te saluda Glenda de Recursos Humanos de {institution}.",
+            f"{greeting}, {first_name}. Te saluda Glenda, la agente de asistencia virtual de Recursos Humanos de {institution}.",
             "",
         ]
 
@@ -118,20 +119,25 @@ class PayslipAckReminderSkill:
         net_veb = context.get('net_veb', '')
 
         return (
-            f"Eres {agent_name}, asistente virtual de Recursos Humanos de {institution}.\n\n"
+            f"Eres {agent_name}, la agente de asistencia virtual de Recursos Humanos de {institution}. "
+            f"Eres un sistema automatizado, NO un empleado real.\n\n"
             f"Tu única tarea es recordarle a {first_name} que revise su correo electrónico "
             f"institucional para completar la conformidad digital de su comprobante de pago "
             f"{payslip_number} ({period}, {net_veb}).\n\n"
             "REGLAS:\n"
             "1. NUNCA compartas enlaces directos de confirmación por este canal.\n"
             "2. Siempre dirige al empleado a su correo institucional.\n"
-            "3. Si el empleado tiene problemas con su correo, indica: "
-            "'Por favor comunícate con Recursos Humanos a recursoshumanos@ueipab.edu.ve'\n"
+            "3. Si el empleado tiene CUALQUIER dificultad, problema, queja o consulta que no puedas "
+            "resolver con las reglas anteriores, emite en una línea separada: "
+            "ACTION:ESCALATE:descripcion breve del problema\n"
+            "   Luego despídete indicando que un agente humano de RRHH le contactará.\n"
             "4. Si el empleado confirma que ya completó la conformidad, responde: "
             "'¡Perfecto! Gracias por confirmar. Que tengas un excelente día.'\n"
             "5. Si pregunta sobre monto o período, proporciona la información del contexto.\n"
             "6. Comunícate en español venezolano, trato de tú, amable y conciso.\n"
-            "7. Máximo 3-4 mensajes. No discutas otros temas."
+            "7. Máximo 3-4 mensajes. No discutas otros temas.\n"
+            "8. Si presentas la acción ACTION:ESCALATE, escríbela SOLA en su propia línea, "
+            "sin markdown, sin asteriscos."
         )
 
     def get_reminder_message(self, conversation, context, reminder_count):
@@ -149,5 +155,56 @@ class PayslipAckReminderSkill:
         ]
         return "\n".join(lines)
 
-    def process_ai_response(self, conversation, response_text):
-        return []
+    def process_ai_response(self, conversation, response_text, context):
+        escalate_match = re.search(r'ACTION:ESCALATE:(.+)$', response_text, re.MULTILINE)
+        if escalate_match:
+            escalate_desc = escalate_match.group(1).strip()
+            emp_name = context.get('employee_name', 'Empleado')
+            institution = context.get('institution', 'UEIPAB')
+            payslip_number = context.get('payslip_number', '')
+            period = context.get('period', '')
+
+            odoo_base = conversation.env['ir.config_parameter'].sudo().get_param(
+                'web.base.url', 'http://localhost:8069')
+            conv_url = (
+                f"{odoo_base}/web#id={conversation.id}"
+                f"&model=ai.agent.conversation&view_type=form"
+            )
+
+            visible_text = re.sub(r'ACTION:ESCALATE:.+$', '', response_text, flags=re.MULTILINE).strip()
+
+            messages_html = ''
+            for msg in conversation.agent_message_ids.sorted('id'):
+                role = 'Empleado' if msg.role == 'user' else 'Glenda'
+                messages_html += f'<p><strong>{role}:</strong> {msg.body or ""}</p>'
+
+            body_html = (
+                f'<h3>[{institution}] Glenda — Conformidad de Recibo</h3>'
+                f'<p><strong>Empleado:</strong> {emp_name}</p>'
+                f'<p><strong>Recibo:</strong> {payslip_number} ({period})</p>'
+                f'<p><strong>Motivo de escalacion:</strong> {escalate_desc}</p>'
+                f'<p><strong>Conversacion:</strong> <a href="{conv_url}">#{conversation.id}</a></p>'
+                f'<hr/>'
+                f'<h4>Resumen de la conversacion</h4>'
+                f'{messages_html}'
+                f'<hr/>'
+                f'<p><em>Este correo fue generado automaticamente por Glenda AI. '
+                f'Requiere atencion del equipo de Recursos Humanos.</em></p>'
+            )
+
+            return {
+                'message': visible_text or response_text,
+                'escalate': escalate_desc,
+                'send_escalation_email': {
+                    'to': 'recursoshumanos@ueipab.edu.ve',
+                    'subject': (
+                        f'[GLENDA-ACK] Requiere atencion: {emp_name} — '
+                        f'{escalate_desc[:80]}'
+                    ),
+                    'body_html': body_html,
+                },
+                'resolve': True,
+                'summary': escalate_desc,
+            }
+
+        return {}
