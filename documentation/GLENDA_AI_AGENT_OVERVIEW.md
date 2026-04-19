@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.29.7 | **Status:** Testing (Live with real customers) | **Date:** 2026-04-17
+**Version:** 17.0.1.31.0 | **Status:** Testing (Live with real customers) | **Date:** 2026-04-19
 
 ## What Is Glenda
 
@@ -25,7 +25,7 @@ Glenda's schedule behavior depends on the skill:
 
 | Skill | Schedule |
 |-------|----------|
-| `bounce_resolution`, `bill_reminder`, `billing_support`, `hr_data_collection` | Business hours only (see below) |
+| `bounce_resolution`, `bill_reminder`, `billing_support`, `hr_data_collection`, `payslip_ack_reminder` | Business hours only (see below) |
 | `general_inquiry` | **24/7 — no schedule restriction** |
 
 **Business hours (VET, GMT-4):**
@@ -140,8 +140,12 @@ The 24h cooldown guard prevents re-triggering a general_inquiry conversation too
 | Cron | Interval | Purpose |
 |------|----------|---------|
 | **Poll WhatsApp Messages** | 5 min | Picks up customer WhatsApp replies from MassivaMóvil API |
-| **Check Conversation Timeouts** | Active | 24h gentle follow-up, 48h final notice, 72h auto-close |
+| **Check Conversation Timeouts** | 1 hour | 24h gentle follow-up, 48h final notice, 72h auto-close |
 | **Credit Guard** | 30 min | Monitors WA sends + Claude spend, kill switch if depleted |
+| **Archive Attachments** | 2 hours | Downloads and archives WA attachment images before MassivaMóvil URL expiry |
+| **Stagger HR Data Collection** | 30 min | Starts draft `hr_data_collection` conversations respecting capacity + schedule |
+| **Stagger Payslip Ack Reminders** | 30 min | Starts draft `payslip_ack_reminder` conversations respecting capacity + schedule |
+| **Auto-Resolve Ack Reminders** | 30 min | Detects `is_acknowledged=True` on linked payslip → auto-closes conversation |
 
 ### System Crons (Scripts on Dev Server)
 
@@ -204,12 +208,24 @@ The 24h cooldown guard prevents re-triggering a general_inquiry conversation too
 
 ---
 
-## Planned Skills (Not Yet Active)
+## Active Skills (v1.31.0)
 
-| Skill | Purpose | Key Capability Needed |
-|-------|---------|----------------------|
-| `bill_reminder` | Friendly invoice due date reminders | Access to `account.move`, payment status |
-| `billing_support` | Balance inquiry, payment confirmation, billing Q&A | Payment receipt screenshot reading (now possible with v1.13.0 image support) — extract amount, date, reference, match against open invoices |
+| Skill Code | Name | Source Model | Status | Max Turns | Schedule |
+|---|---|---|---|---|---|
+| `bounce_resolution` | Resolución de Rebotes | `mail.bounce.log` | Production-ready | 5 | Business hours |
+| `bill_reminder` | Recordatorio de Factura | `account.move` | Implemented, not yet used | 3 | Business hours |
+| `billing_support` | Soporte de Facturación | `res.partner` | Implemented, not yet used | 4 | Business hours |
+| `general_inquiry` | Consulta General | *(inbound)* | Production-ready | 25 | 24/7 |
+| `hr_data_collection` | Recolección de Datos HR | `hr.data.collection.request` | Testing | 30 | Business hours |
+| `payslip_ack_reminder` | Recordatorio de Conformidad | `hr.payslip` | Testing (v1.31.0) | 4 | Business hours |
+
+### `payslip_ack_reminder` skill (v1.31.0)
+
+- **Trigger:** HR opens payslip batch → "Recolección de Datos" wizard Tab 2 → selects unacknowledged payslips → creates draft conversations
+- **Greeting:** Identifies Glenda as *"la agente de asistencia virtual"* (virtual agent, not real staff), payslip number + period + net VEB amount, directs to institutional email — **no direct portal link**
+- **Escalation:** Any employee concern → `ACTION:ESCALATE:desc` → email to `recursoshumanos@ueipab.edu.ve` with conversation transcript + Odoo link → conversation auto-closes
+- **Auto-resolve:** `_cron_check_ack_acknowledged()` detects `is_acknowledged=True` on linked payslip, closes conversation automatically
+- **Timeout:** 48h, 1 reminder at 24h
 
 ---
 
@@ -264,7 +280,7 @@ The 24h cooldown guard prevents re-triggering a general_inquiry conversation too
 
 ---
 
-## Production Readiness Review (Updated 2026-03-04)
+## Production Readiness Review (Updated 2026-04-19)
 
 ### Deployment Model
 
@@ -284,6 +300,33 @@ All 7 system cron scripts run on the **dev server** (where Freescout MySQL is lo
 
 ### Gap Analysis
 
+#### GAP 0: Hardcoded Credentials in Bridge Scripts — SECURITY CRITICAL BLOCKER *(NEW 2026-04-19)*
+
+`ai_agent_escalation_bridge.py` and `ai_agent_resolution_bridge.py` (and `ai_agent_email_checker.py`) contain production Odoo XML-RPC passwords and Freescout MySQL password hardcoded as default fallback values in source code:
+
+```python
+ODOO_CONFIGS = {
+    'production': {
+        'password': 'f69330e5bd6ae043320f054e9df9fcbbb34522db',  # ← EXPOSED
+    }
+}
+FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '1gczp1S@3!')  # ← EXPOSED
+```
+
+**Required fixes before production go-live:**
+1. Remove all hardcoded credential fallbacks — raise `RuntimeError` if env var missing
+2. Create `/root/.odoo_agent_env_prod` (chmod 600) on dev server with production credentials
+3. Update all crontab entries to source this file before script execution
+4. Rotate both production Odoo user API key and Freescout MySQL password
+5. Audit git history — revoke any compromised credentials
+
+**Crontab pattern (after fix):**
+```bash
+*/5 * * * * root . /root/.odoo_agent_env_prod && python3 /opt/odoo-dev/scripts/ai_agent_escalation_bridge.py >> /var/log/ai_agent_escalation_prod.log 2>&1
+```
+
+---
+
 #### GAP 1: Odoo Modules Not Installed in Production — BLOCKER
 
 Three modules must be installed in order (dependency chain):
@@ -292,7 +335,7 @@ Three modules must be installed in order (dependency chain):
 |--------|---------|-------------|-------------|
 | `ueipab_hr_employee` | (latest) | `ueipab_ai_agent` depends | **NOT FOUND** on prod addons path |
 | `ueipab_bounce_log` | 17.0.1.4.0 | `ueipab_ai_agent` depends | **NOT FOUND** on prod addons path |
-| `ueipab_ai_agent` | 17.0.1.19.0 | Primary module | **NOT FOUND** on prod addons path |
+| `ueipab_ai_agent` | 17.0.1.31.0 | Primary module | **NOT FOUND** on prod addons path |
 
 **Already installed in prod (no action):** `contacts`, `mail`, `mass_mailing`, `account`, `hr`, `hr_payroll_community`.
 
@@ -404,74 +447,135 @@ Initial analysis (2026-02-14) showed 19 partner + 22 MC diffs. Most resolved by 
 
 **Status:** Not a blocker. Production will catch up when Phase 5 runs against production data.
 
-#### GAP 12: Odoo Cron Configuration — NEW
+#### GAP 12: Odoo Cron Configuration *(updated 2026-04-19)*
 
-Testing has **5 Odoo crons** (inside the module):
+Testing has **7 Odoo crons** (inside the module):
 
-| Cron | Testing Interval | Production Recommendation |
-|------|-----------------|--------------------------|
-| Poll WhatsApp Messages | 1 min | **5 min** (webhook handles real-time; polling is fallback only) |
-| Check Conversation Timeouts | 1 hour | 1 hour (unchanged) |
-| Credit Guard | 30 min | 30 min (unchanged) |
-| Archive Attachments | 2 hours | 2 hours (unchanged) |
-| Stagger HR Data Collection | 30 min | 30 min (unchanged) |
+| Cron | Testing Interval | Production Recommendation | Activate Day 1? |
+|------|-----------------|--------------------------|-----------------|
+| Poll WhatsApp Messages | 1 min | **5 min** (webhook handles real-time; polling is fallback only) | ✓ Yes |
+| Check Conversation Timeouts | 1 hour | 1 hour | After 48h stable |
+| Credit Guard | 30 min | 30 min | ✓ Yes |
+| Archive Attachments | 2 hours | 2 hours | ✓ Yes |
+| Stagger HR Data Collection | 30 min | 30 min | Phase 2 (after HR data collection launch) |
+| Stagger Payslip Ack Reminders | 30 min | 30 min | ✓ Yes (if payslip ack skill active) |
+| Auto-Resolve Ack Reminders | 30 min | 30 min | ✓ Yes (if payslip ack skill active) |
 
-**Action:** After webhook is live, increase poll cron interval to 5 min in production to reduce unnecessary API calls to MassivaMóvil.
+**Action:** After webhook is live, set poll cron to 5 min. Enable crons per column above — do not activate timeouts until system is stable for 48h.
 
-#### GAP 13: HR Data Collection Skill (New Since Original Plan) — NEW
+#### GAP 13: HR Data Collection Skill
 
-The `hr_data_collection` skill was added after the original migration plan. It depends on `ueipab_hr_employee` module (GAP 1) and has its own Stagger cron.
+The `hr_data_collection` skill depends on `ueipab_hr_employee` module (GAP 1) and has its own Stagger cron.
 
-**Consideration:** Decide whether HR Data Collection skill should be active in production from day 1, or enabled in a later phase. If active, the Stagger cron must be enabled and HR employee records must be populated.
+**Consideration:** Enable in Phase 2 (after core system is stable in production). Requires HR employee records to be populated before launching batch collection campaigns.
 
-### Production Migration Sequence
+#### GAP 14: Payslip Ack Reminder Skill (New — v1.31.0) *(NEW 2026-04-19)*
+
+The `payslip_ack_reminder` skill is new (v1.31.0, 2026-04-19). It requires:
+- `hr.payslip.is_acknowledged` field on payslips (from `ueipab_payroll_enhancements`, already in prod)
+- `hr.payslip._get_acknowledgment_url()` method (from `ueipab_payroll_enhancements`, already in prod)
+- Two new crons: Stagger Payslip Ack Reminders + Auto-Resolve Ack Reminders
+
+**Consideration:** Can be activated from day 1 alongside core module. No additional module dependencies beyond what's already deployed in production.
+
+### Production Migration Sequence *(updated 2026-04-19)*
 
 ```
+Phase 0 — Security Hardening (MUST complete before any other phase)
+  [ ] Rotate production Odoo user API key/password (tdv.devs@gmail.com)
+  [ ] Rotate Freescout MySQL password (free297)
+  [ ] Remove hardcoded credential fallbacks from bridge scripts (GAP 0)
+  [ ] Create /root/.odoo_agent_env_prod on dev server (chmod 600):
+        ODOO_URL=https://odoo.ueipab.edu.ve
+        ODOO_DB=DB_UEIPAB
+        ODOO_USER=tdv.devs@gmail.com
+        ODOO_PASSWORD=<rotated-password>
+        FREESCOUT_DB_HOST=localhost
+        FREESCOUT_DB_USER=free297
+        FREESCOUT_DB_PASSWORD=<rotated-password>
+        FREESCOUT_DB_NAME=free297
+  [ ] Update crontab entries to source /root/.odoo_agent_env_prod
+  [ ] Verify scripts still work against TESTING using new env file
+
 Phase A — Prepare (no user impact)
-  [ ] Backup production database
+  [ ] Backup production database: pg_dump DB_UEIPAB > /backup/DB_UEIPAB_<date>.sql
+  [ ] Generate webhook secret: python3 -c "import secrets; print(secrets.token_hex(32))"
   [ ] Copy ueipab_hr_employee to /home/vision/ueipab17/addons/
   [ ] Copy ueipab_bounce_log to /home/vision/ueipab17/addons/
-  [ ] Copy ueipab_ai_agent to /home/vision/ueipab17/addons/
+  [ ] Copy ueipab_ai_agent (v1.31.0) to /home/vision/ueipab17/addons/
   [ ] Create /home/vision/ueipab17/config/ directory
-  [ ] Copy whatsapp_massiva.json + anthropic_api.json to production config/
+  [ ] Copy whatsapp_massiva.json to production config/ — UPDATE:
+        webhook.secret = <generated-secret>
+        webhook.callback_url = https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
+  [ ] Copy anthropic_api.json to production config/
   [ ] Install modules in order: ueipab_hr_employee → ueipab_bounce_log → ueipab_ai_agent
   [ ] Verify ir.config_parameter values loaded (~30 ai_agent.* params)
-  [ ] Set ai_agent.dry_run = True (safety first)
-  [ ] Set ai_agent.active_db = 'DB_UEIPAB'
-  [ ] Set ai_agent.claude_spend_limit_usd = appropriate value
+  [ ] Set ai_agent.dry_run = True (safety first — change to False only in Phase D)
+  [ ] Set ai_agent.active_db = 'DB_UEIPAB' (verify auto-set by post_init_hook)
+  [ ] Set ai_agent.claude_spend_limit_usd = appropriate value (match Anthropic credit balance)
+  [ ] Verify 6 skills loaded: Contactos → AI Agent → Configuración de Skills
+  [ ] Verify 7 crons created: Settings → Automation → Scheduled Actions → Search "AI Agent"
 
-Phase B — Webhook & Nginx Setup (new — enables real-time responses)
-  [ ] Add Nginx location block: /ai-agent/ → proxy_pass to Odoo container
-  [ ] Test: curl -X POST https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
-      (should return JSON error about invalid secret, NOT 404)
-  [ ] Configure MassivaMóvil dashboard: Tools → Webhooks → callback URL
-  [ ] Verify webhook secret matches ai_agent.whatsapp_api_secret param
-  [ ] Optional: reduce poll cron interval from 1 min to 5 min (webhook is primary)
+Phase B — Webhook & Nginx Setup (enables real-time <1s responses)
+  [ ] Add Nginx location block on production server:
+        location /ai-agent/ {
+            proxy_pass http://localhost:8069;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+  [ ] Reload nginx: nginx -s reload
+  [ ] Test endpoint reachable (expect JSON error, NOT 404):
+        curl -X POST https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp \
+          -H "Content-Type: application/json" \
+          -d '{"secret":"wrong","type":"whatsapp","data":{"id":1,"phone":"+58000","message":"test"}}'
+  [ ] Configure MassivaMóvil dashboard: Tools → Webhooks:
+        Callback URL: https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
+        Secret: <generated-secret from Phase A>
+  [ ] Verify webhook secret matches ai_agent.whatsapp_api_secret param in Odoo
+  [ ] Set poll cron interval to 5 min (webhook is primary; poll is fallback only)
 
 Phase C — Configure & Dry Test (no user impact)
-  [ ] Update all 6 host cron files: TARGET_ENV=production (keep --live)
-  [ ] Run bounce processor DRY → verify it detects bounces from Freescout
-  [ ] Run resolution bridge DRY → verify it sees resolved BLs
-  [ ] Run escalation bridge DRY → verify it detects escalations
+  [ ] Update all host cron scripts TARGET_ENV=production (keep --live flags)
+  [ ] Run bounce processor DRY against production → verify Freescout bounces detected
+  [ ] Run resolution bridge DRY → verify it sees resolved BLs in prod DB
+  [ ] Run escalation bridge DRY → verify it detects escalations in prod DB
   [ ] Run email checker DRY → verify it scans Freescout conversations
-  [ ] Run WA health monitor DRY → verify it checks active number
-  [ ] Set ai_agent.active_db = '' on TESTING (disable testing crons)
+  [ ] Run WA health monitor DRY → verify active number check
+  [ ] Set ai_agent.active_db = '' on TESTING Odoo (testing crons self-skip)
+  [ ] Restart testing Odoo, confirm logs show "active_db mismatch, skipping"
 
 Phase D — Go Live (staged)
-  [ ] Run bounce processor LIVE → creates initial bounce log records
-  [ ] Enable host crons --live: resolution bridge, bounce processor, WA health
-  [ ] Set ai_agent.dry_run = False on production
-  [ ] Monitor: first Glenda conversation end-to-end (verify webhook real-time)
-  [ ] Enable host crons --live: escalation bridge, email checker
-  [ ] Enable host cron --live: customer_matching (Akdemia pipeline)
-  [ ] Monitor Credit Guard for 48h (check ai_agent.credits_ok stays True)
-  [ ] Verify poll cron + webhook coexist without duplicate messages (global dedup)
+  [ ] Set ai_agent.dry_run = False on PRODUCTION Odoo
+  [ ] Activate Odoo crons (Day 1 set):
+        ✓ Poll WhatsApp Messages (5 min)
+        ✓ Credit Guard (30 min)
+        ✓ Archive Attachments (2 hours)
+        ✓ Stagger Payslip Ack Reminders (30 min)
+        ✓ Auto-Resolve Ack Reminders (30 min)
+        ✗ Check Conversation Timeouts — enable AFTER 48h stable
+        ✗ Stagger HR Data Collection — enable in Phase 2
+  [ ] Run bounce processor LIVE → creates initial bounce log records in prod
+  [ ] Enable host crons LIVE: resolution bridge, bounce processor, WA health
+  [ ] Monitor: trigger first Glenda conversation end-to-end
+        → Verify webhook path (<3s) AND poll fallback
+        → Verify Claude AI response logged + tokens charged in Anthropic console
+        → Verify WhatsApp message appears in MassivaMóvil dashboard
+  [ ] Enable host crons LIVE: escalation bridge, email checker
+  [ ] Enable host cron LIVE: customer_matching (Akdemia pipeline)
+  [ ] Monitor Credit Guard for 48h (ai_agent.credits_ok stays True)
+  [ ] After 48h stable: enable Check Conversation Timeouts cron
 
 Phase E — Post-Launch Optimization
-  [ ] Confirm webhook response times (<5s end-to-end)
-  [ ] Reduce poll cron to 5 min if webhook proves reliable
-  [ ] Review HR Data Collection skill activation for production
+  [ ] Confirm webhook response times (<5s end-to-end measured)
+  [ ] Confirm poll cron + webhook coexist without duplicate messages (check global dedup logs)
+  [ ] Launch HR Data Collection in production (Phase 2):
+        → Enable Stagger HR Data Collection cron (30 min)
+        → Create first batch collection requests for HR team
   [ ] Schedule Credit Guard limit review (align with Anthropic credit top-ups)
+        → Claude spend is cumulative (lifetime) — must raise claude_spend_limit_usd on top-up
+  [ ] Consider nginx rate limiting on webhook route to guard against floods:
+        limit_req_zone $binary_remote_addr zone=webhook:10m rate=10r/s;
 ```
 
 ---
