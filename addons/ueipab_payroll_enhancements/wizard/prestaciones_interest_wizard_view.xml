@@ -17,8 +17,19 @@
                         <field name="payslip_ids" widget="many2many_tags"/>
                         <field name="payslip_count" invisible="1"/>
                     </group>
-                    <group>
-                        <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
+                    <group string="Moneda y Tasa">
+                        <field name="currency_id"
+                               options="{'no_create': True, 'no_open': True}"
+                               domain="[('name', 'in', ['USD', 'VEB'])]"/>
+                        <field name="show_exchange_rate" invisible="1"/>
+                        <field name="exchange_rate"
+                               invisible="not show_exchange_rate"
+                               required="show_exchange_rate"
+                               widget="float"
+                               options="{'digits': [12, 4]}"/>
+                        <field name="exchange_rate_date"
+                               invisible="not show_exchange_rate"
+                               string="Fecha de tasa"/>
                     </group>
                 </group>
                 <div class="alert alert-success" role="alert" invisible="payslip_count == 0">

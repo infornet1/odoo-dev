@@ -29,7 +29,13 @@
                             </tr>
                             <tr>
                                 <td style="background-color: #f8f9fa;"><strong>Moneda:</strong></td>
-                                <td colspan="3"><span t-esc="report_data.get('currency').name"/></td>
+                                <td><span t-esc="report_data.get('currency').name"/></td>
+                                <td style="background-color: #f8f9fa;" t-if="report_data.get('currency').name == 'VEB'"><strong>Tasa de Cambio:</strong></td>
+                                <td t-if="report_data.get('currency').name == 'VEB'">
+                                    <span t-esc="'{:,.4f}'.format(report_data.get('exchange_rate', 1.0))"/> VEB/USD —
+                                    <span t-esc="report_data.get('exchange_rate_label', '')"/>
+                                </td>
+                                <td colspan="2" t-if="report_data.get('currency').name != 'VEB'"></td>
                             </tr>
                         </table>
 
