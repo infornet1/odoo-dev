@@ -135,6 +135,12 @@ class PrestacionesInterestReport(models.AbstractModel):
         # Total interest = intereses_total_usd × wizard_rate (matches email template)
         total_interest_converted = intereses_total * wizard_rate if currency.name == 'VEB' else intereses_total
 
+        # Reconcile last row: int(service_months) drops the fractional month, leaving a
+        # remainder in the running total. Assign the correct final total to the last row
+        # so the accumulated column reaches the same figure as the footer total.
+        if monthly_data:
+            monthly_data[-1]['accumulated_interest'] = total_interest_converted
+
         totals = {
             'total_days': total_days_deposited,
             'total_prestaciones': total_prestaciones_converted,

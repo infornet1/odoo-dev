@@ -289,9 +289,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             })
 
         total_deductions = sum(d['amount'] for d in deductions)
-        # CRITICAL FIX: Calculate net from benefits - deductions (not from payslip NET conversion)
-        # This ensures consistency when interest uses accrual method
-        net_amount = total_benefits + total_deductions  # deductions are negative
+        # Net from stored LIQUID_NET_V2 × rate — avoids $0.01 float rounding from summing parts
+        net_amount = self._convert_currency(net, usd, currency, date_ref, exchange_rate)
 
         # ========================================
         # ESTIMATION MODE: Apply global reduction
