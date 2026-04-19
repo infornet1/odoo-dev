@@ -315,7 +315,7 @@ class CreateCollectionAckLine(models.TransientModel):
     _description = 'Linea de Recordatorio de Conformidad'
 
     wizard_id = fields.Many2one(
-        'hr.data.collection.create.wizard', required=True, ondelete='cascade',
+        'hr.data.collection.create.wizard', ondelete='cascade',
     )
     employee_id = fields.Many2one('hr.employee', string='Empleado', required=True)
     payslip_id = fields.Many2one('hr.payslip', string='Recibo', required=True)
