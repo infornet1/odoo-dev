@@ -167,3 +167,12 @@ Detailed breakdown report showing liquidation calculation formulas for Venezuela
 4. **Report Model Naming:**
    - `_name` must EXACTLY match template ID
    - Example: `report.ueipab_payroll_enhancements.liquidacion_breakdown_report`
+
+---
+
+## Changelog
+
+| Date | Version | Change |
+|---|---|---|
+| 2025-11-17 | v1.15.0 | Initial production release. |
+| 2026-04-19 | v1.62.4 | Fix: Interest line used `_calculate_accrued_interest()` which distributed USD interest over historical monthly VEB rates, producing a much lower VEB figure than the email template (e.g., Bs 708 vs Bs 9,490 for Virginia Verde at rate 480.2572). Root cause: historical rate redistribution introduced inconsistency between Relación and payslip-based payment amounts. Fix: replaced with `_convert_currency(intereses, usd, currency, date_ref, exchange_rate)` — same rate used for all other lines. Both reports now always show the same net. |

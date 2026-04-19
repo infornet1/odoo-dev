@@ -174,8 +174,8 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         prest_amt = self._convert_currency(prestaciones, usd, currency, date_ref, exchange_rate)
         antig_amt = self._convert_currency(antiguedad, usd, currency, date_ref, exchange_rate)
 
-        # CRITICAL FIX: Use accrual-based calculation for interest (matches Prestaciones report)
-        inter_amt = self._calculate_accrued_interest(payslip, currency, data)
+        # Convert interest at same rate as all other lines so Relación matches email template net
+        inter_amt = self._convert_currency(intereses, usd, currency, date_ref, exchange_rate)
 
         # Convert daily salaries for display in formulas
         daily_salary_display = self._convert_currency(daily_salary, usd, currency, date_ref, exchange_rate)
