@@ -27,6 +27,27 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-04-19 - Payslip Ack Reminder via Glenda (ueipab_ai_agent v1.31.0)
+
+**New `payslip_ack_reminder` skill + Tab 2 in "Recolección de Datos" wizard.**
+
+| Item | Details |
+|------|---------|
+| **Skill** | `payslip_ack_reminder` — source model `hr.payslip`, max_turns=4, timeout=48h |
+| **Wizard** | Tab 2 "Conformidades Pendientes" in existing wizard — lists `done` payslips with `is_acknowledged=False` |
+| **Message** | Greeting with payslip number, period, net VEB, acknowledgment portal URL |
+| **Auto-resolve** | CRON every 30 min checks `is_acknowledged` — auto-resolves conversation when True |
+| **Stagger CRON** | New `_cron_start_ack_reminders()` — 30 min, respects capacity (max_active=10) |
+| **LIQUID_VE_V2** | Greeting uses "adelanto de prestaciones sociales" instead of "comprobante de pago" |
+| **Duplicate guard** | Employees with existing active WA reminder shown as muted, deselected by default |
+| **New model** | `hr.data.collection.create.ack.line` (TransientModel for wizard Tab 2) |
+| **Module version** | 17.0.1.31.0 |
+| **Docs** | [PAYSLIP_ACK_REMINDER_GLENDA.md](PAYSLIP_ACK_REMINDER_GLENDA.md) |
+
+**Files changed:** `skills/payslip_ack_reminder.py` (new), `wizard/create_collection_wizard.py`, `wizard/create_collection_wizard_view.xml`, `skills/__init__.py`, `data/skills_data.xml`, `data/cron.xml`, `models/ai_agent_conversation.py`, `security/ir.model.access.csv`, `__manifest__.py`
+
+---
+
 ### 2026-04-18 - Adelanto de Prestaciones Sociales Email Template (ueipab_payroll_enhancements v1.62.2)
 
 **New email template for LIQUID_VE_V2 payslips with legal agreement body and structure-aware ack landing page.**

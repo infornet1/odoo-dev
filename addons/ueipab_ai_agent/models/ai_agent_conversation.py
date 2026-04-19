@@ -1252,3 +1252,92 @@ class AiAgentConversation(models.Model):
         })
         mail.send()
         _logger.warning("Credit Guard: ALERT sent — %s", '; '.join(problems))
+
+    @api.model
+    def _cron_start_ack_reminders(self):
+        """Stagger-start draft payslip_ack_reminder conversations.
+
+        Shares the same capacity limits as HR data collection:
+        - ai_agent.stagger_batch_size (default 2)
+        - ai_agent.stagger_max_active (default 10)
+        """
+        if not self._is_active_environment():
+            return
+
+        ICP = self.env['ir.config_parameter'].sudo()
+        skill = self.env['ai.agent.skill'].search(
+            [('code', '=', 'payslip_ack_reminder')], limit=1)
+        if not skill:
+            return
+
+        batch_size = int(ICP.get_param('ai_agent.stagger_batch_size', '2'))
+        max_active = int(ICP.get_param('ai_agent.stagger_max_active', '10'))
+        active_count = self.search_count([('state', 'in', ('active', 'waiting'))])
+
+        if active_count >= max_active:
+            _logger.info("Ack reminder stagger: at capacity (%d/%d active), skipping.",
+                         active_count, max_active)
+            return
+
+        to_start = min(batch_size, max_active - active_count)
+        drafts = self.search([
+            ('skill_id', '=', skill.id),
+            ('state', '=', 'draft'),
+        ], order='create_date asc', limit=to_start)
+
+        if not drafts:
+            return
+
+        _logger.info("Ack reminder stagger: starting %d draft conversations (active=%d/%d)",
+                     len(drafts), active_count, max_active)
+
+        for conv in drafts:
+            try:
+                conv.action_start()
+                self.env.cr.commit()
+                _logger.info("Ack reminder stagger: started conv #%d (%s)",
+                             conv.id, conv.partner_id.name)
+            except Exception:
+                self.env.cr.rollback()
+                _logger.exception("Ack reminder stagger: failed to start conv #%d", conv.id)
+
+    @api.model
+    def _cron_check_ack_acknowledged(self):
+        """Auto-resolve payslip_ack_reminder conversations when payslip is acknowledged.
+
+        Runs every 30 min. Checks active/waiting conversations where the linked
+        payslip's is_acknowledged flag is now True, and resolves them automatically.
+        """
+        if not self._is_active_environment():
+            return
+
+        skill = self.env['ai.agent.skill'].search(
+            [('code', '=', 'payslip_ack_reminder')], limit=1)
+        if not skill:
+            return
+
+        conversations = self.search([
+            ('skill_id', '=', skill.id),
+            ('source_model', '=', 'hr.payslip'),
+            ('state', 'in', ('active', 'waiting')),
+        ])
+
+        resolved = 0
+        for conv in conversations:
+            if not conv.source_id:
+                continue
+            payslip = self.env['hr.payslip'].browse(conv.source_id)
+            if not payslip.exists():
+                continue
+            if payslip.is_acknowledged:
+                try:
+                    with self.env.cr.savepoint():
+                        conv.action_resolve(
+                            summary='Conformidad recibida — empleado confirmó via portal')
+                        resolved += 1
+                        _logger.info(
+                            "Ack reminder: conv #%d auto-resolved (payslip #%d acknowledged)",
+                            conv.id, payslip.id)
+                except Exception:
+                    _logger.exception(
+                        "Ack reminder: failed to auto-resolve conv #%d", conv.id)

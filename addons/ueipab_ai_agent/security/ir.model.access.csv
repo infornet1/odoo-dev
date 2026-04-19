@@ -12,3 +12,4 @@ access_hr_data_collection_request_user,hr.data.collection.request.user,model_hr_
 access_hr_data_collection_request_manager,hr.data.collection.request.manager,model_hr_data_collection_request,base.group_system,1,1,1,1
 access_hr_data_collection_create_wizard_user,hr.data.collection.create.wizard.user,model_hr_data_collection_create_wizard,base.group_user,1,1,1,1
 access_hr_data_collection_create_line_user,hr.data.collection.create.line.user,model_hr_data_collection_create_line,base.group_user,1,1,1,1
+access_hr_data_collection_create_ack_line_user,hr.data.collection.create.ack.line.user,model_hr_data_collection_create_ack_line,base.group_user,1,1,1,1

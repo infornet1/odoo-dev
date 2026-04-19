@@ -50,6 +50,20 @@
             <field name="greeting_template">Hola {nombre}, soy Glenda del departamento de Recursos Humanos de UEIPAB. Estamos actualizando los datos de nuestro personal y necesito verificar algunos datos contigo. Solo tomara unos minutos.</field>
         </record>
 
+        <record id="skill_payslip_ack_reminder" model="ai.agent.skill">
+            <field name="name">Recordatorio de Conformidad</field>
+            <field name="code">payslip_ack_reminder</field>
+            <field name="description">Contactar empleados via WhatsApp para recordarles confirmar la recepción digital de su comprobante de pago. Se auto-cierra cuando el empleado completa la conformidad en el portal.</field>
+            <field name="source_model">hr.payslip</field>
+            <field name="model_name">claude-haiku-4-5-20251001</field>
+            <field name="max_turns">4</field>
+            <field name="timeout_hours">48</field>
+            <field name="reminder_interval_hours">24</field>
+            <field name="max_reminders">1</field>
+            <field name="system_prompt">Eres Glenda, asistente virtual de Recursos Humanos de UEIPAB. Ayudas a empleados a completar su conformidad digital de comprobantes de pago. Comunicate en espanol venezolano, trato de tu, amable y conciso.</field>
+            <field name="greeting_template">Hola {nombre}, tienes pendiente confirmar la recepcion de tu comprobante de pago.</field>
+        </record>
+
         <record id="skill_general_inquiry" model="ai.agent.skill">
             <field name="name">Consulta General</field>
             <field name="code">general_inquiry</field>

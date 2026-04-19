@@ -202,3 +202,4 @@ from . import bill_reminder
 from . import billing_support
 from . import hr_data_collection
 from . import general_inquiry
+from . import payslip_ack_reminder

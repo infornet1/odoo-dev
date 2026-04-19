@@ -6,54 +6,106 @@
         <field name="name">hr.data.collection.create.wizard.form</field>
         <field name="model">hr.data.collection.create.wizard</field>
         <field name="arch" type="xml">
-            <form string="Crear Solicitudes de Recoleccion">
+            <form string="Recoleccion de Datos / Recordatorios de Conformidad">
                 <!-- SELECT state -->
                 <div invisible="state != 'select'">
                     <group>
                         <group>
                             <field name="payslip_run_id"/>
                         </group>
-                        <group>
-                            <field name="total_count" readonly="1"/>
-                            <field name="selected_count" readonly="1"/>
-                            <field name="excluded_count" readonly="1"/>
-                        </group>
                     </group>
-                    <div class="mb-2">
-                        <button name="action_select_all" string="Seleccionar Todos"
-                                type="object" class="btn-link"/>
-                        <button name="action_deselect_all" string="Deseleccionar Todos"
-                                type="object" class="btn-link"/>
-                    </div>
-                    <field name="line_ids" nolabel="1">
-                        <tree editable="bottom"
-                              decoration-muted="has_existing_request == True"
-                              decoration-danger="has_phone == False">
-                            <field name="selected" widget="boolean_toggle"/>
-                            <field name="employee_name"/>
-                            <field name="has_phone" widget="boolean" string="Tel"/>
-                            <field name="has_cedula" widget="boolean" string="CI"/>
-                            <field name="has_address" widget="boolean" string="Dir"/>
-                            <field name="has_existing_request" widget="boolean"
-                                   string="Existente" column_invisible="True"/>
-                            <field name="existing_request_state" widget="badge"
-                                   string="Solicitud"
-                                   decoration-success="existing_request_state == 'completed'"
-                                   decoration-warning="existing_request_state == 'partial'"
-                                   decoration-info="existing_request_state == 'in_progress'"
-                                   decoration-danger="existing_request_state == 'cancelled'"
-                                   optional="show"/>
-                            <field name="employee_id" column_invisible="True"/>
-                        </tree>
-                    </field>
+
+                    <notebook>
+
+                        <!-- Tab 1: HR Data Collection -->
+                        <page string="Recoleccion de Datos HR">
+                            <group>
+                                <group>
+                                    <field name="total_count" readonly="1" string="Total"/>
+                                    <field name="selected_count" readonly="1" string="Seleccionados"/>
+                                    <field name="excluded_count" readonly="1" string="Excluidos"/>
+                                </group>
+                            </group>
+                            <div class="mb-2">
+                                <button name="action_select_all" string="Seleccionar Todos"
+                                        type="object" class="btn-link"/>
+                                <button name="action_deselect_all" string="Deseleccionar Todos"
+                                        type="object" class="btn-link"/>
+                            </div>
+                            <field name="line_ids" nolabel="1">
+                                <tree editable="bottom"
+                                      decoration-muted="has_existing_request == True"
+                                      decoration-danger="has_phone == False">
+                                    <field name="selected" widget="boolean_toggle"/>
+                                    <field name="employee_name"/>
+                                    <field name="has_phone" widget="boolean" string="Tel"/>
+                                    <field name="has_cedula" widget="boolean" string="CI"/>
+                                    <field name="has_address" widget="boolean" string="Dir"/>
+                                    <field name="has_existing_request" widget="boolean"
+                                           string="Existente" column_invisible="True"/>
+                                    <field name="existing_request_state" widget="badge"
+                                           string="Solicitud"
+                                           decoration-success="existing_request_state == 'completed'"
+                                           decoration-warning="existing_request_state == 'partial'"
+                                           decoration-info="existing_request_state == 'in_progress'"
+                                           decoration-danger="existing_request_state == 'cancelled'"
+                                           optional="show"/>
+                                    <field name="employee_id" column_invisible="True"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Tab 2: Payslip Ack Reminders -->
+                        <page string="Conformidades Pendientes">
+                            <div class="alert alert-info" role="alert">
+                                Empleados con comprobantes confirmados (done) pero sin conformidad digital.
+                                Glenda les enviará un recordatorio por WhatsApp con el enlace de confirmación.
+                            </div>
+                            <group>
+                                <group>
+                                    <field name="ack_total_count" readonly="1" string="Total Pendientes"/>
+                                    <field name="ack_selected_count" readonly="1" string="Seleccionados"/>
+                                </group>
+                            </group>
+                            <div class="mb-2">
+                                <button name="action_select_all_ack" string="Seleccionar Todos"
+                                        type="object" class="btn-link"/>
+                                <button name="action_deselect_all_ack" string="Deseleccionar Todos"
+                                        type="object" class="btn-link"/>
+                            </div>
+                            <field name="ack_line_ids" nolabel="1">
+                                <tree editable="bottom"
+                                      decoration-muted="has_existing_reminder == True"
+                                      decoration-danger="has_phone == False">
+                                    <field name="selected" widget="boolean_toggle"/>
+                                    <field name="employee_name" string="Empleado"/>
+                                    <field name="payslip_number" string="Recibo"/>
+                                    <field name="has_phone" widget="boolean" string="Tel"/>
+                                    <field name="has_existing_reminder" widget="boolean"
+                                           string="Recordatorio Activo" column_invisible="True"/>
+                                    <field name="existing_reminder_state" widget="badge"
+                                           string="Estado WA"
+                                           decoration-info="existing_reminder_state == 'waiting'"
+                                           decoration-success="existing_reminder_state == 'active'"
+                                           optional="show"/>
+                                    <field name="employee_id" column_invisible="True"/>
+                                    <field name="payslip_id" column_invisible="True"/>
+                                </tree>
+                            </field>
+                            <div invisible="ack_total_count != 0" class="text-muted text-center p-3">
+                                No hay comprobantes pendientes de conformidad en este lote.
+                            </div>
+                        </page>
+
+                    </notebook>
                 </div>
 
-                <!-- DONE state -->
-                <div invisible="state != 'done'">
+                <!-- DONE state — HR requests -->
+                <div invisible="state != 'done' or done_mode != 'hr'">
                     <div class="alert alert-success text-center" role="status">
                         <h3>
                             <i class="fa fa-check-circle"/>
-                            Se crearon <field name="created_count" readonly="1" class="d-inline"/> solicitudes
+                            Se crearon <field name="created_count" readonly="1" class="d-inline"/> solicitudes de Recoleccion de Datos
                         </h3>
                         <p>Las solicitudes se crearon en estado <strong>Borrador</strong>.
                            El CRON de stagger las iniciara automaticamente segun la capacidad disponible,
@@ -61,15 +113,39 @@
                     </div>
                 </div>
 
+                <!-- DONE state — Ack reminders -->
+                <div invisible="state != 'done' or done_mode != 'ack'">
+                    <div class="alert alert-success text-center" role="status">
+                        <h3>
+                            <i class="fa fa-check-circle"/>
+                            Se crearon <field name="ack_created_count" readonly="1" class="d-inline"/> recordatorios de conformidad via Glenda
+                        </h3>
+                        <p>Los recordatorios se crearon en estado <strong>Borrador</strong>.
+                           El CRON de stagger los enviara automaticamente con la cadencia configurada.</p>
+                    </div>
+                </div>
+
                 <field name="state" invisible="1"/>
+                <field name="done_mode" invisible="1"/>
 
                 <footer>
-                    <button name="action_create_requests" string="Crear Solicitudes"
+                    <!-- Tab 1 action -->
+                    <button name="action_create_requests"
+                            string="Crear Solicitudes RRHH"
                             type="object" class="btn-primary"
                             invisible="state != 'select'"/>
-                    <button name="action_view_requests" string="Ver Solicitudes"
+                    <!-- Tab 2 action -->
+                    <button name="action_create_ack_reminders"
+                            string="Enviar Recordatorios via Glenda"
+                            type="object" class="btn-secondary"
+                            invisible="state != 'select'"/>
+                    <!-- Done state buttons -->
+                    <button name="action_view_requests" string="Ver Solicitudes RRHH"
                             type="object" class="btn-primary"
-                            invisible="state != 'done'"/>
+                            invisible="state != 'done' or done_mode != 'hr'"/>
+                    <button name="action_view_ack_conversations" string="Ver Conversaciones"
+                            type="object" class="btn-primary"
+                            invisible="state != 'done' or done_mode != 'ack'"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"
                             invisible="state != 'select'"/>
                     <button string="Cerrar" class="btn-secondary" special="cancel"

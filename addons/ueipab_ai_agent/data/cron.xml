@@ -62,5 +62,29 @@
             <field name="active">True</field>
         </record>
 
+        <!-- Stagger-start draft payslip ack reminder conversations -->
+        <record id="ir_cron_start_ack_reminders" model="ir.cron">
+            <field name="name">AI Agent: Stagger Payslip Ack Reminders</field>
+            <field name="model_id" ref="model_ai_agent_conversation"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_start_ack_reminders()</field>
+            <field name="interval_number">30</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Auto-resolve ack reminder conversations when payslip is acknowledged -->
+        <record id="ir_cron_check_ack_acknowledged" model="ir.cron">
+            <field name="name">AI Agent: Auto-Resolve Ack Reminders</field>
+            <field name="model_id" ref="model_ai_agent_conversation"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_check_ack_acknowledged()</field>
+            <field name="interval_number">30</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+
     </data>
 </odoo>
