@@ -353,11 +353,19 @@ Three modules must be installed in order (dependency chain):
 
 **Action:** Recreate JSON config files on production server before module install. Remove after `post_init_hook` loads values.
 
-#### GAP 3: Webhook — Enhancement for Real-Time Response — NEW
+#### GAP 3: Webhook — Enhancement for Real-Time Response *(partially resolved 2026-04-19)*
 
-**Current state:** Testing uses **polling-only** mode (cron every 1 minute). No webhook configured.
+**Current state:** MassivaMóvil webhook configured. Testing endpoint active. Production nginx proxy block still pending.
 
-**Production plan:** Enable MassivaMóvil webhook for **near-instant** message processing (~1-3s vs up to 60s polling delay). Keep polling cron as fallback.
+**MassivaMóvil webhook (configured 2026-04-19):**
+
+| Field | Value |
+|---|---|
+| Webhook name | `glenda_ai_agent.whatsapp` |
+| Secret | `30803885a4b55d0dac0b88f54459e885ff0af838` (same as `api.secret`) |
+| Testing callback URL | `http://dev.ueipab.edu.ve:8019/ai-agent/webhook/whatsapp` |
+| Production callback URL | `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp` *(pending nginx)* |
+| Odoo param | `ai_agent.whatsapp_api_secret` = same secret ✓ |
 
 **Architecture with webhook enabled:**
 ```
@@ -368,27 +376,17 @@ Customer sends WA msg
         │                                   Process immediately
         │                                   (Claude + reply in ~3s)
         │
-        └──► Poll cron (1 min) ──GET /api/get/wa.received──► Dedup catches it
+        └──► Poll cron (5 min) ──GET /api/get/wa.received──► Dedup catches it
                                                               (already processed)
 ```
 
-**Benefits:**
-- Customer gets reply in ~3 seconds instead of up to 60 seconds
-- Better conversation flow (feels like real-time chat)
-- Polling cron serves as safety net only (catches any webhook failures)
-- Global dedup (v1.19.0) ensures no double-processing between webhook + poll
+**Odoo webhook controller:** `POST /ai-agent/webhook/whatsapp` (`auth='none'`, `csrf=False`)  
+**Secret validation:** Compares `data.secret` from MassivaMóvil payload against `ai_agent.whatsapp_api_secret` param. Simple string equality (not HMAC).
 
-**Requirements:**
-- Production Nginx must route `/ai-agent/` to Odoo backend (currently returns **404**)
-- MassivaMóvil dashboard: Tools → Webhooks → set callback URL
-- Webhook URL: `https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp`
-- `ai_agent.whatsapp_api_secret` must be set (webhook validates secret)
-
-**Action:**
-1. Add Nginx location block for `/ai-agent/` → proxy to Odoo container
-2. Configure callback URL in MassivaMóvil dashboard
-3. Test with a curl POST to verify 200 response
-4. Poll cron stays active as fallback (can reduce interval to 5 min)
+**Remaining action for production:**
+- Add Nginx location block on prod server (`10.124.0.3`) routing `/ai-agent/` → Odoo container port
+- Update MassivaMóvil webhook callback URL from testing to production URL
+- Test: `curl -X POST https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp -d '{"secret":"wrong"}' -H "Content-Type: application/json"` → expect JSON error, NOT 404
 
 #### GAP 4: System Crons — TARGET_ENV and DRY_RUN Flags
 
@@ -517,7 +515,12 @@ Phase A — Prepare (no user impact)
   [ ] Verify 7 crons created: Settings → Automation → Scheduled Actions → Search "AI Agent"
 
 Phase B — Webhook & Nginx Setup (enables real-time <1s responses)
-  [ ] Add Nginx location block on production server:
+  [✓] MassivaMóvil webhook configured (2026-04-19):
+        Name: glenda_ai_agent.whatsapp
+        Secret: 30803885a4b55d0dac0b88f54459e885ff0af838
+        Testing URL: http://dev.ueipab.edu.ve:8019/ai-agent/webhook/whatsapp
+  [✓] ai_agent.whatsapp_api_secret param matches webhook secret in Odoo
+  [ ] Add Nginx location block on PRODUCTION server (10.124.0.3):
         location /ai-agent/ {
             proxy_pass http://localhost:8069;
             proxy_set_header Host $host;
@@ -525,14 +528,12 @@ Phase B — Webhook & Nginx Setup (enables real-time <1s responses)
             proxy_set_header X-Forwarded-Proto $scheme;
         }
   [ ] Reload nginx: nginx -s reload
-  [ ] Test endpoint reachable (expect JSON error, NOT 404):
+  [ ] Test production endpoint reachable (expect JSON error, NOT 404):
         curl -X POST https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp \
           -H "Content-Type: application/json" \
           -d '{"secret":"wrong","type":"whatsapp","data":{"id":1,"phone":"+58000","message":"test"}}'
-  [ ] Configure MassivaMóvil dashboard: Tools → Webhooks:
-        Callback URL: https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
-        Secret: <generated-secret from Phase A>
-  [ ] Verify webhook secret matches ai_agent.whatsapp_api_secret param in Odoo
+  [ ] Update MassivaMóvil webhook callback URL from testing to production URL:
+        https://odoo.ueipab.edu.ve/ai-agent/webhook/whatsapp
   [ ] Set poll cron interval to 5 min (webhook is primary; poll is fallback only)
 
 Phase C — Configure & Dry Test (no user impact)
