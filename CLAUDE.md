@@ -163,6 +163,15 @@
 - Model naming: `report.<module>.<template_id>` (exact match)
 - TransientModel wizards need security access rules
 
+### Adelanto de Prestaciones Sociales Email Template
+- **Testing:** `mail_template` id=71 | **Production:** id=50
+- Body managed via **direct SQL only** — ORM `Html` field sanitizer strips custom QWeb method calls (`object.get_liq_veb(...)`) on every `tmpl.write({'body_html': ...})`
+- Always use: `env.cr.execute("UPDATE mail_template SET body_html = jsonb_set(body_html, '{en_US}', %s::jsonb) WHERE id=?", [json.dumps(body)])`
+- Subject field is also `jsonb` — same SQL pattern required
+- After SQL update, **restart Odoo** to flush ORM cache before sending test emails
+- Production sync via psycopg2 inside Odoo container: `psycopg2.connect(host='postgres', dbname='DB_UEIPAB', user='odoo', password='odoo8069')`
+- Color scheme: navy blue only — `#1a2c5b` (dark) / `#2471a3` (medium) / `#f0f4fa` (light bg). No red (`#c0392b`, `#7b1a1a`)
+
 ---
 
 ## Production Environment

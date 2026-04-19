@@ -6,6 +6,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-19 - Email Template Sync: Subject + Color Fixes (both envs)
+
+**Synced testing (id=71) and production (id=50) templates to identical state.**
+
+| Fix | Detail |
+|---|---|
+| Subject | `📋 LIQUIDACIÓN V2 │...` → `📋 ADELANTO PRESTACIONES │...` (production) |
+| Red colors | `#c0392b` (×5) + `#7b1a1a` (×1) → navy blue `#2471a3` / `#1a2c5b` (both envs) |
+| Legal box bg | `#fdf6f0` (orange tint) → `#f0f4fa` (light blue) (production) |
+| Result | Both templates fully navy blue, subject identical, bodies in sync |
+
+---
+
 ### 2026-04-18 - Adelanto de Prestaciones Sociales Email Template (ueipab_payroll_enhancements v1.62.2)
 
 **Deployed to production DB_UEIPAB. Template id=50. Files deployed: hr_payslip.py, payslip_acknowledgment.py, __manifest__.py, mail_template_payslip.xml. Body applied via direct SQL (psycopg2). Production Odoo restarted.**
