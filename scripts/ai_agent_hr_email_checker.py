@@ -54,18 +54,18 @@ ODOO_CONFIGS = {
         'password': '35baa2abcc6dee920fa75014f0274c8e551871ce',
     },
     'production': {
-        'url': 'https://odoo.ueipab.edu.ve',
-        'db': 'DB_UEIPAB',
-        'user': 'tdv.devs@gmail.com',
-        'password': '35baa2abcc6dee920fa75014f0274c8e551871ce',
+        'url': os.environ.get('ODOO_URL', 'https://odoo.ueipab.edu.ve'),
+        'db': os.environ.get('ODOO_DB', 'DB_UEIPAB'),
+        'user': os.environ.get('ODOO_USER', 'tdv.devs@gmail.com'),
+        'password': os.environ.get('ODOO_PASSWORD', ''),
     },
 }
 
 FREESCOUT_DB = {
-    'host': 'localhost',
-    'user': 'free297',
-    'password': '1gczp1S@3!',
-    'database': 'free297',
+    'host': os.environ.get('FREESCOUT_DB_HOST', 'localhost'),
+    'user': os.environ.get('FREESCOUT_DB_USER', 'free297'),
+    'password': os.environ.get('FREESCOUT_DB_PASSWORD', ''),
+    'database': os.environ.get('FREESCOUT_DB_NAME', 'free297'),
 }
 
 # Freescout HR mailbox

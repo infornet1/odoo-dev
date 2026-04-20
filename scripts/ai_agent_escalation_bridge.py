@@ -46,10 +46,10 @@ ODOO_CONFIGS = {
         'password': '35baa2abcc6dee920fa75014f0274c8e551871ce',
     },
     'production': {
-        'url': 'https://odoo.ueipab.edu.ve',
-        'db': 'DB_UEIPAB',
-        'user': 'tdv.devs@gmail.com',
-        'password': 'f69330e5bd6ae043320f054e9df9fcbbb34522db',
+        'url': os.environ.get('ODOO_URL', 'https://odoo.ueipab.edu.ve'),
+        'db': os.environ.get('ODOO_DB', 'DB_UEIPAB'),
+        'user': os.environ.get('ODOO_USER', 'tdv.devs@gmail.com'),
+        'password': os.environ.get('ODOO_PASSWORD', ''),
     },
 }
 
