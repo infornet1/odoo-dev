@@ -1,8 +1,8 @@
 # Prestaciones Sociales Interest Report - Implementation Documentation
 
-**Last Updated:** 2025-11-14
-**Module Version:** 1.7.0
-**Status:** ✅ COMPLETE - Issue resolved 2025-11-14
+**Last Updated:** 2026-04-19
+**Module Version:** 1.62.6
+**Status:** ✅ Production — interest total matches email template exactly at same rate
 
 ## Resolution Summary (2025-11-14)
 
@@ -492,3 +492,13 @@ Total          | $605.85      | $605.85   |           | $83.76
 - `/mnt/extra-addons/ueipab_payroll_enhancements/security/ir.model.access.csv` (added 2 access rules)
 - `/mnt/extra-addons/ueipab_payroll_enhancements/views/payroll_reports_menu.xml` (added menu item)
 - `/mnt/extra-addons/ueipab_payroll_enhancements/reports/report_actions.xml` (added report action)
+
+---
+
+## Changelog
+
+| Date | Version | Change |
+|---|---|---|
+| 2025-11-14 | v1.7.0 | Initial production release. Blank PDF fix + VEB currency support. |
+| 2026-04-19 | v1.62.5 | Fix: interest total used historical per-month BCV rates (`sum(interest/month × historical_rate_N)`), causing total to differ from email template. Root cause: no single rate input — each month used its own BCV rate from `res.currency.rate`. Fix: added `exchange_rate` + `exchange_rate_date` fields to wizard (auto-filled from latest BCV, user-editable). Report now uses wizard rate for all interest amounts; historical rate kept in "Tasa del Mes" column for display only. Rate shown in PDF header. |
+| 2026-04-19 | v1.62.6 | Fix: last-row accumulated interest was off by ~Bs 108 because `int(service_months=11.13)=11` drops the 0.13 fractional month from the accumulation loop. After loop, last row's `accumulated_interest` is now set to `total_interest_converted` so the running total reconciles exactly to the footer total. Verified: zero diff vs email template at same rate. |
