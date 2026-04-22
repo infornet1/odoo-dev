@@ -86,6 +86,7 @@
         <field name="print_report_name">'Relacion_Liquidacion_%s_%s' % (object.employee_id.name.replace(' ', '_'), object.date_to.strftime('%Y%m%d'))</field>
     </record>
 
+
     <!-- Paper Format for Finiquito Report -->
     <record id="paperformat_finiquito" model="report.paperformat">
         <field name="name">Finiquito Format</field>

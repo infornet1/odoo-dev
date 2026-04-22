@@ -368,6 +368,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             # Estimation mode flags
             'is_estimation': is_estimation,
             'reduction_percentage': reduction_percentage,
+            'report_title': data.get('report_title', 'liquidacion') if data else 'liquidacion',
         }
 
     def _convert_currency(self, amount, from_currency, to_currency, date_ref, exchange_rate=None):

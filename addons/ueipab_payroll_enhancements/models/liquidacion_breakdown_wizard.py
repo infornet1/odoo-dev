@@ -71,6 +71,16 @@ class LiquidacionBreakdownWizard(models.TransientModel):
         help='Technical field to check if VEB is selected'
     )
 
+    report_title = fields.Selection(
+        selection=[
+            ('liquidacion', 'Relación de Liquidación'),
+            ('adelanto', 'Adelanto Prestaciones Sociales'),
+        ],
+        string='Título del Reporte',
+        default='liquidacion',
+        required=True,
+    )
+
     # ========================================
     # ESTIMATION MODE FIELDS
     # ========================================
@@ -137,11 +147,18 @@ class LiquidacionBreakdownWizard(models.TransientModel):
             # Estimation mode parameters
             'is_estimation': self.is_estimation,
             'reduction_percentage': self.reduction_percentage if self.is_estimation else 0.0,
+            'report_title': self.report_title,
         }
 
-        # Generate PDF report
-        report = self.env.ref('ueipab_payroll_enhancements.action_report_liquidacion_breakdown')
-        return report.report_action(docids=self.payslip_ids.ids, data=data)
+        # Use custom PDF controller so we control the filename directly.
+        # (Odoo 17 print_report_name only exposes 'object'+'time' — no context —
+        #  and is skipped entirely when data= is passed, making dynamic naming impossible
+        #  via the standard report_action flow.)
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/liquidacion/breakdown/pdf/{self.id}',
+            'target': 'new',
+        }
 
     def action_export_xlsx(self):
         """Export report to Excel format.

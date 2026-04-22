@@ -27,6 +27,10 @@
                     </group>
                 </group>
 
+                <group string="Título del Documento PDF">
+                    <field name="report_title" widget="radio" string=""/>
+                </group>
+
                 <!-- Estimation Mode Section (only available when VEB is selected) -->
                 <field name="is_veb_currency" invisible="1"/>
                 <group string="Modo Estimación (Opcional)" invisible="not is_veb_currency">

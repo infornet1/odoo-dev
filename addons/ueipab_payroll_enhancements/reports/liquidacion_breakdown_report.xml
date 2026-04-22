@@ -17,17 +17,20 @@
 
                     <!-- Header Section -->
                     <div style="text-align: center; margin-bottom: 10px;">
-                        <!-- Dynamic title based on mode -->
+                        <!-- Dynamic title based on mode and selected title option -->
                         <t t-if="report.get('is_estimation')">
                             <h3 style="margin: 0; padding: 0; font-size: 11pt; color: #d32f2f;">ESTIMACIÓN DE LIQUIDACIÓN</h3>
                             <p style="margin: 2px 0 0 0; font-size: 7pt; color: #d32f2f; font-weight: bold;">
                                 PROYECCIÓN - NO VÁLIDO COMO DOCUMENTO OFICIAL
                             </p>
                         </t>
+                        <t t-elif="report.get('report_title') == 'adelanto'">
+                            <h3 style="margin: 0; padding: 0; font-size: 11pt;">ADELANTO PRESTACIONES SOCIALES</h3>
+                        </t>
                         <t t-else="">
                             <h3 style="margin: 0; padding: 0; font-size: 11pt;">RELACIÓN DE LIQUIDACIÓN</h3>
                         </t>
-                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Nro: <t t-esc="report['payslip'].number"/> │ Fecha Liquidación: <t t-esc="report.get('date_to_str')"/></p>
+                        <p style="margin: 3px 0 0 0; font-size: 7pt; color: #666;">Nro: <t t-esc="report['payslip'].number"/> │ <t t-if="report.get('report_title') == 'adelanto'">Fecha Adelanto:</t><t t-else="">Fecha Liquidación:</t> <t t-esc="report.get('date_to_str')"/></p>
                     </div>
 
                     <!-- Employee Information -->
@@ -189,7 +192,13 @@
                             <p style="margin: 0; text-align: justify; line-height: 1.3;">
                                 <strong>DECLARACIÓN:</strong> El suscrito trabajador declara haber recibido de la UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO la cantidad de
                                 <strong><t t-esc="'%s %s' % (report.get('currency').symbol, report.get('net_amount_formatted'))"/></strong>
-                                a su entera satisfacción por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
+                                a su entera satisfacción
+                                <t t-if="report.get('report_title') == 'adelanto'">
+                                    por concepto de adelanto de prestaciones sociales.
+                                </t>
+                                <t t-else="">
+                                    por concepto de pago de vacaciones, bono vacacional y utilidades hasta la fecha de la presente liquidación.
+                                </t>
                             </p>
                         </div>
 

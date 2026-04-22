@@ -2,8 +2,8 @@
 
 **Status:** ✅ PRODUCTION READY
 **Started:** 2025-11-17
-**Completed:** 2025-11-17
-**Module:** `ueipab_payroll_enhancements` v1.15.0
+**Last Updated:** 2026-04-22
+**Module:** `ueipab_payroll_enhancements` v1.62.7
 
 ## Purpose
 
@@ -21,6 +21,21 @@ Detailed breakdown report showing liquidation calculation formulas for Venezuela
 - Currency support: USD and VEB with exchange rates
 - Supports both V1 and V2 liquidation structures
 - **No header/footer** - Clean, professional layout
+- **PDF title selector** - Choose between "Relación de Liquidación" or "Adelanto Prestaciones Sociales"
+- **Dynamic filename** - Downloaded PDF/XLSX filename matches the selected title
+
+---
+
+## PDF Title Selector (v1.62.7)
+
+The wizard offers a **"Título del Documento PDF"** radio selector with two options:
+
+| Option | PDF Header | Subtitle | Declaration | Filename |
+|---|---|---|---|---|
+| Relación de Liquidación *(default)* | `RELACIÓN DE LIQUIDACIÓN` | `Fecha Liquidación:` | `...hasta la fecha de la presente liquidación.` | `Relacion_Liquidacion_{EMPLOYEE}_{YYYYMMDD}.pdf` |
+| Adelanto Prestaciones Sociales | `ADELANTO PRESTACIONES SOCIALES` | `Fecha Adelanto:` | `...por concepto de adelanto de prestaciones sociales.` | `Adelanto_Prestaciones_{EMPLOYEE}_{YYYYMMDD}.pdf` |
+
+**Technical note:** Odoo 17's `print_report_name` only exposes `object` and `time` in its eval scope, and is skipped entirely when `data=` is passed to `report_action` (docids not in URL path). Dynamic filename is implemented via a custom PDF controller (`/liquidacion/breakdown/pdf/<wizard_id>`), mirroring the existing XLSX controller pattern.
 
 ---
 

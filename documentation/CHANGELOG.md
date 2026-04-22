@@ -6,6 +6,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-04-22 - Relación de Liquidación PDF Title Selector (ueipab_payroll_enhancements v1.62.7)
+
+**Deployed to production DB_UEIPAB. Files: `__manifest__.py`, `models/liquidacion_breakdown_wizard.py`, `models/liquidacion_breakdown_report.py`, `wizard/liquidacion_breakdown_wizard_view.xml`, `reports/liquidacion_breakdown_report.xml`, `reports/report_actions.xml`, `controllers/liquidacion_breakdown_xlsx.py`.**
+
+| Item | Details |
+|------|---------|
+| **Feature** | New "Título del Documento PDF" radio selector in Relación de Liquidación wizard |
+| **Options** | `Relación de Liquidación` (default) / `Adelanto Prestaciones Sociales` |
+| **PDF header** | Title, subtitle (`Fecha Liquidación:` / `Fecha Adelanto:`), and declaration text all adapt to selection |
+| **Declaration text** | Adelanto mode: "...por concepto de adelanto de prestaciones sociales." |
+| **PDF filename** | `Relacion_Liquidacion_{EMPLOYEE}_{YYYYMMDD}.pdf` or `Adelanto_Prestaciones_{EMPLOYEE}_{YYYYMMDD}.pdf` |
+| **XLSX filename** | Same naming logic applied to XLSX export |
+| **Technical note** | Odoo 17 `print_report_name` only exposes `object`+`time` — no context. When `data=` is passed to `report_action`, docids are not in the URL path so `print_report_name` is never evaluated. Fixed via custom PDF controller (`/liquidacion/breakdown/pdf/<wizard_id>`) mirroring the existing XLSX controller pattern |
+| **Version** | `17.0.1.62.7` |
+
+---
+
 ### 2026-04-19 - Email Template Sync: Subject + Color Fixes (both envs)
 
 **Synced testing (id=71) and production (id=50) templates to identical state.**

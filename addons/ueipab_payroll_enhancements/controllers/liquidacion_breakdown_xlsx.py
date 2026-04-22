@@ -12,7 +12,51 @@ import xlsxwriter
 
 
 class LiquidacionBreakdownXLSXController(http.Controller):
-    """Controller for XLSX export of liquidation breakdown reports."""
+    """Controller for PDF and XLSX export of liquidation breakdown reports."""
+
+    def _build_filename(self, wizard, extension):
+        """Return the correct filename based on report_title, employee and date."""
+        if len(wizard.payslip_ids) == 1:
+            emp = wizard.payslip_ids[0].employee_id.name.replace(' ', '_')
+            date = wizard.payslip_ids[0].date_to.strftime('%Y%m%d')
+            prefix = 'Adelanto_Prestaciones' if wizard.report_title == 'adelanto' else 'Relacion_Liquidacion'
+            return f'{prefix}_{emp}_{date}.{extension}'
+        prefix = 'Adelanto_Prestaciones' if wizard.report_title == 'adelanto' else 'Relacion_Liquidacion'
+        return f'{prefix}_Multiple.{extension}'
+
+    @http.route('/liquidacion/breakdown/pdf/<int:wizard_id>', type='http', auth='user')
+    def download_liquidacion_breakdown_pdf(self, wizard_id, **kwargs):
+        """Generate and download PDF report with correct filename."""
+        wizard = request.env['liquidacion.breakdown.wizard'].browse(wizard_id)
+        if not wizard.exists():
+            return request.not_found()
+
+        data = {
+            'wizard_id': wizard.id,
+            'currency_id': wizard.currency_id.id,
+            'currency_name': wizard.currency_id.name,
+            'payslip_ids': wizard.payslip_ids.ids,
+            'use_custom_rate': wizard.use_custom_rate,
+            'custom_exchange_rate': wizard.custom_exchange_rate if wizard.use_custom_rate else None,
+            'rate_date': wizard.rate_date,
+            'is_estimation': wizard.is_estimation,
+            'reduction_percentage': wizard.reduction_percentage if wizard.is_estimation else 0.0,
+            'report_title': wizard.report_title,
+        }
+
+        report_name = 'ueipab_payroll_enhancements.liquidacion_breakdown_report'
+        pdf_content, _ = request.env['ir.actions.report']._render_qweb_pdf(
+            report_name, wizard.payslip_ids.ids, data=data
+        )
+
+        filename = self._build_filename(wizard, 'pdf')
+        return request.make_response(
+            pdf_content,
+            headers=[
+                ('Content-Type', 'application/pdf'),
+                ('Content-Disposition', content_disposition(filename)),
+            ]
+        )
 
     @http.route('/liquidacion/breakdown/xlsx/<int:wizard_id>', type='http', auth='user')
     def download_liquidacion_breakdown_xlsx(self, wizard_id, **kwargs):
@@ -303,11 +347,7 @@ class LiquidacionBreakdownXLSXController(http.Controller):
         xlsx_data = output.read()
         output.close()
 
-        # Generate filename
-        if len(wizard.payslip_ids) == 1:
-            filename = f"Relacion_Liquidacion_{wizard.payslip_ids[0].employee_id.name.replace(' ', '_')}_{currency.name}.xlsx"
-        else:
-            filename = f"Relacion_Liquidacion_Multiple_{currency.name}.xlsx"
+        filename = self._build_filename(wizard, 'xlsx')
 
         # Return file
         response = request.make_response(
