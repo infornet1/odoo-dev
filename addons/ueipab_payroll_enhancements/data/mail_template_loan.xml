@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo noupdate="0">
 
     <record id="email_template_loan_advance" model="mail.template">
         <field name="name">Adelanto de Salario – Notificación al Empleado</field>
@@ -56,19 +56,12 @@
       </div>
 
       <!-- AMOUNT BOX -->
+      <t t-set="bs_total" t-value="object.advance_bs_amount or (object.loan_amount * (object.advance_exchange_rate or 1.0))"/>
       <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);border-radius:8px;padding:22px;margin-bottom:24px;text-align:center;color:white">
         <p style="margin:0 0 6px;font-size:13px;opacity:0.85;text-transform:uppercase;letter-spacing:.5px">Monto Adelantado</p>
-        <p style="margin:0 0 4px;font-size:32px;font-weight:700">
-          $<t t-out="'{:,.2f}'.format(object.loan_amount)"/> USD
+        <p style="margin:0;font-size:32px;font-weight:700">
+          Bs. <t t-out="'{:,.2f}'.format(bs_total)"/>
         </p>
-        <t t-if="object.advance_bs_amount">
-          <p style="margin:0 0 4px;font-size:18px;opacity:0.9">
-            Bs. <t t-out="'{:,.2f}'.format(object.advance_bs_amount)"/>
-          </p>
-          <p style="margin:0;font-size:12px;opacity:0.75">
-            Tasa: Bs. <t t-out="'{:,.4f}'.format(object.advance_exchange_rate)"/> / USD
-          </p>
-        </t>
       </div>
 
       <!-- REPAYMENT SCHEDULE -->
@@ -80,7 +73,7 @@
           <tr style="background:#2471a3;color:white">
             <th style="padding:8px 12px;text-align:left">#</th>
             <th style="padding:8px 12px;text-align:left">Fecha de Descuento</th>
-            <th style="padding:8px 12px;text-align:right">Monto (USD)</th>
+            <th style="padding:8px 12px;text-align:right">Monto</th>
           </tr>
         </thead>
         <tbody>
@@ -93,7 +86,7 @@
                 <t t-out="line.date" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/>
               </td>
               <td style="padding:8px 12px;text-align:right;font-weight:600;color:#1a2c5b">
-                $<t t-out="'{:,.2f}'.format(line.amount)"/>
+                Bs. <t t-out="'{:,.2f}'.format(line.amount * (object.advance_exchange_rate or 1.0))"/>
               </td>
             </tr>
           </t>
@@ -106,10 +99,7 @@
         El suscrito trabajador declara haber recibido de la
         <strong>UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO, CA</strong>
         la cantidad de
-        <strong>$<t t-out="'{:,.2f}'.format(object.loan_amount)"/> USD</strong>
-        <t t-if="object.advance_bs_amount">
-          (<strong>Bs. <t t-out="'{:,.2f}'.format(object.advance_bs_amount)"/></strong>)
-        </t>
+        <strong>Bs. <t t-out="'{:,.2f}'.format(object.advance_bs_amount or (object.loan_amount * (object.advance_exchange_rate or 1.0)))"/></strong>
         por concepto de <strong>ADELANTO DE SALARIO</strong>, el cual será descontado
         de su nómina según el plan de recuperación indicado. Al confirmar la recepción
         digital, el trabajador acusa recibo del monto recibido y acepta las condiciones

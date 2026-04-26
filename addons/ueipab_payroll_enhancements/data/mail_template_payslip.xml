@@ -40,10 +40,10 @@
                     <div style="background:#fff3e0;border:2px solid #ff9800;padding:20px;border-radius:8px;margin:25px 0;text-align:center">
                         <p style="font-size:14px;color:#666;margin:0 0 10px;text-transform:uppercase">Monto Adelanto a Recibir</p>
                         <p style="font-size:32px;font-weight:bold;color:#e65100;margin:0">
-                            $<t t-out="'{:,.2f}'.format(object.advance_amount)"/> USD
+                            Bs. <t t-out="'{:,.2f}'.format(object.advance_amount * (object.exchange_rate_used or 1.0))"/>
                         </p>
                         <p style="font-size:13px;color:#888;margin:10px 0 0">
-                            (<t t-out="int(object.payslip_run_id.advance_percentage)"/>% de $<t t-out="'{:,.2f}'.format(object.net_wage)"/> neto total)
+                            (<t t-out="int(object.payslip_run_id.advance_percentage)"/>% de Bs. <t t-out="'{:,.2f}'.format(object.net_wage * (object.exchange_rate_used or 1.0))"/> neto total)
                         </p>
                     </div>
 
@@ -118,7 +118,7 @@
                             <p style="font-size:14px;color:#856404;margin:0 0 4px"><strong>ℹ️ Recuperación de Anticipo Salarial</strong></p>
                             <p style="font-size:13px;color:#664d03;margin:0">
                                 Este comprobante incluye un descuento de recuperación de anticipo salarial de
-                                <strong>$<t t-esc="'{:,.2f}'.format(abs(loan_ded_line[0].total))"/> USD</strong>.
+                                <strong>Bs. <t t-esc="'{:,.2f}'.format(abs(loan_ded_line[0].total) * (object.exchange_rate_used or 1.0))"/></strong>.
                                 Si tiene alguna consulta sobre este descuento, contáctenos en
                                 <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#856404">recursoshumanos@ueipab.edu.ve</a>.
                             </p>
@@ -291,13 +291,6 @@
                             </div>
                         </div>
 
-                        <!-- VEB EXCHANGE RATE REFERENCE -->
-                        <div style="background:#fff9e6;border:2px dashed #ffc107;border-radius:8px;padding:15px;margin:20px 0;text-align:center">
-                            <div style="font-size:13px;color:#856404;margin-bottom:5px">Tasa de Cambio Aplicada (Referencia)</div>
-                            <div style="font-size:22px;font-weight:bold;color:#d39e00">
-                                Bs. <t t-esc="'{:,.4f}'.format(object.exchange_rate_used or 1.0)"/> / USD
-                            </div>
-                        </div>
 
                         <!-- PDF NOTE -->
                         <div style="background:#e8f4f8;border-left:4px solid #2980b9;padding:15px 20px;margin:25px 0;border-radius:4px">
