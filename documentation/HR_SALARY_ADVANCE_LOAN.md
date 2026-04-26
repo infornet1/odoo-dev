@@ -123,10 +123,12 @@ docker restart odoo-dev-web
 ```
 
 The `post_migrate.py` script creates:
-- `VE_LOAN_DED_V2` rule + `LO` input in `VE_PAYROLL_V2`
+- `VE_LOAN_DED_V2` rule + `LO` input in `VE_PAYROLL_V2` (via `structure.rule_ids` Many2many — no `struct_id` field on `hr.salary.rule` in this version)
 - `LIQUID_LOAN_DED_V2` rule + `LO` input in `LIQUID_VE_V2`
 - Updates `VE_TOTAL_DED_V2` formula to include loan
 - Updates `LIQUID_NET_V2` formula to include loan deduction
+
+> **Note:** Migration runs automatically on first upgrade from pre-63.0. If already at 63.0 (DB version matches), run `setup_loan_rules.py` manually via Odoo shell instead.
 
 ---
 
@@ -190,4 +192,4 @@ When the business requires employee-facing requests:
 
 | Version | Date | Change |
 |---|---|---|
-| 17.0.1.63.0 | 2026-04-26 | Initial implementation — Phase 1 recovery flow |
+| 17.0.1.63.0 | 2026-04-26 | Initial implementation — Phase 1 recovery flow. Deployed to testing. |
