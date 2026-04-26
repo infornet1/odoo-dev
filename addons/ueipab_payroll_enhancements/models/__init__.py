@@ -18,3 +18,4 @@ from . import aguinaldos_disbursement_report
 from . import arc_annual_report
 from . import arc_employee_certificate
 from . import payroll_requisition_wizard
+from . import hr_loan_extension

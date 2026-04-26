@@ -111,6 +111,20 @@
                         </strong>
                     </p>
 
+                    <!-- Loan recovery notice (only shown when applicable) -->
+                    <t t-set="loan_ded_line" t-value="object.line_ids.filtered(lambda l: l.salary_rule_id.code in ('VE_LOAN_DED_V2', 'LIQUID_LOAN_DED_V2'))"/>
+                    <t t-if="loan_ded_line and loan_ded_line[0].total != 0">
+                        <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;margin:20px 0;border-radius:4px">
+                            <p style="font-size:14px;color:#856404;margin:0 0 4px"><strong>ℹ️ Recuperación de Anticipo Salarial</strong></p>
+                            <p style="font-size:13px;color:#664d03;margin:0">
+                                Este comprobante incluye un descuento de recuperación de anticipo salarial de
+                                <strong>$<t t-esc="'{:,.2f}'.format(abs(loan_ded_line[0].total))"/> USD</strong>.
+                                Si tiene alguna consulta sobre este descuento, contáctenos en
+                                <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#856404">recursoshumanos@ueipab.edu.ve</a>.
+                            </p>
+                        </div>
+                    </t>
+
                     <div style="background:#e8f4f8;padding:20px;border-left:4px solid #4267b2;margin:25px 0;border-radius:4px">
                         <p style="font-size:15px;color:#333;margin:0 0 10px"><strong>💬 ¿Dudas o consultas?</strong></p>
                         <p style="font-size:14px;color:#555;line-height:1.6;margin:0">
@@ -256,6 +270,14 @@
                                 <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Vacaciones y Bono Prepagadas</td>
                                 <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
                                     Bs. <t t-out="object.get_liq_veb('LIQUID_VACATION_PREPAID_V2')"/>
+                                </td>
+                            </tr>
+                            </t>
+                            <t t-if="object.get_line_amount('LIQUID_LOAN_DED_V2')">
+                            <tr>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;color:#555;font-weight:500">Recuperación de Anticipo Salarial</td>
+                                <td style="padding:10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#333;font-weight:600;font-size:15px">
+                                    Bs. <t t-out="object.get_liq_veb('LIQUID_LOAN_DED_V2')"/>
                                 </td>
                             </tr>
                             </t>

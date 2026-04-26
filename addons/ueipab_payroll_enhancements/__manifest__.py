@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.62.7',
+    'version': '17.0.1.63.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -78,6 +78,7 @@ Advance Payment System (Pago Adelanto):
         'hr_payroll_community',
         'ueipab_hr_contract',  # For access to custom fields if needed
         'website',  # For portal templates
+        'ohrms_loan',  # Salary advance / loan recovery system
     ],
     'data': [
         # 1. Security
@@ -123,6 +124,7 @@ Advance Payment System (Pago Adelanto):
         'views/hr_payslip_view.xml',
         'views/payslip_acknowledge_templates.xml',
         'views/arc_certificate_views.xml',
+        'views/hr_loan_views.xml',
 
         # 5. Menus (last, as they depend on everything else)
         'views/payroll_reports_menu.xml',

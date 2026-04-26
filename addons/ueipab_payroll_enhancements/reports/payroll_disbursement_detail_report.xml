@@ -72,6 +72,7 @@
                     <t t-set="total_faov" t-value="0.0"/>
                     <t t-set="total_paro" t-value="0.0"/>
                     <t t-set="total_other_deductions" t-value="0.0"/>
+                    <t t-set="total_loan_recovery" t-value="0.0"/>
                     <t t-set="total_net" t-value="0.0"/>
 
                     <!-- Payslip Details Table -->
@@ -80,15 +81,16 @@
                                 <tr>
                                     <th style="width: 2%; text-align: center; padding: 3px; font-size: 7pt;">#</th>
                                     <th style="width: 8%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
-                                    <th style="width: 15%; padding: 3px; font-size: 7pt;">Employee</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Salary</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Bonus</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
-                                    <th style="width: 9%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
-                                    <th style="width: 11%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
+                                    <th style="width: 13%; padding: 3px; font-size: 7pt;">Employee</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Salary</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Bonus</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
+                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Loan Rec.</th>
+                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
+                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -100,6 +102,7 @@
                                     <t t-set="faov_amount" t-value="0.0"/>
                                     <t t-set="paro_amount" t-value="0.0"/>
                                     <t t-set="other_deductions_amount" t-value="0.0"/>
+                                    <t t-set="loan_recovery_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
                                     <!-- Calculate SALARY and BONUS (V2 first, then V1 fallback) -->
@@ -151,8 +154,14 @@
                                         <t t-set="paro_amount" t-value="abs(paro_line[0].total)"/>
                                     </t>
 
-                                    <!-- Calculate Other Deductions (everything else negative except ARI and Social Security) -->
-                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI_DED', 'VE_ARI_DED_V2', 'VE_SSO_DED', 'VE_SSO_DED_V2', 'VE_FAOV_DED', 'VE_FAOV_DED_V2', 'VE_PARO_DED', 'VE_PARO_DED_V2', 'LIQUID_INCES'))" t-as="line">
+                                    <!-- Loan recovery deduction (separate from other deductions) -->
+                                    <t t-set="loan_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code in ('VE_LOAN_DED_V2', 'LIQUID_LOAN_DED_V2'))"/>
+                                    <t t-if="loan_line">
+                                        <t t-set="loan_recovery_amount" t-value="abs(loan_line[0].total)"/>
+                                    </t>
+
+                                    <!-- Calculate Other Deductions (everything else negative, excluding known codes and loan) -->
+                                    <t t-foreach="payslip.line_ids.filtered(lambda l: l.total &lt; 0 and l.salary_rule_id.code not in ('VE_ARI_DED', 'VE_ARI_DED_V2', 'VE_SSO_DED', 'VE_SSO_DED_V2', 'VE_FAOV_DED', 'VE_FAOV_DED_V2', 'VE_PARO_DED', 'VE_PARO_DED_V2', 'LIQUID_INCES', 'VE_LOAN_DED_V2', 'LIQUID_LOAN_DED_V2'))" t-as="line">
                                         <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
                                     </t>
 
@@ -173,6 +182,7 @@
                                     <t t-set="total_faov" t-value="total_faov + faov_amount"/>
                                     <t t-set="total_paro" t-value="total_paro + paro_amount"/>
                                     <t t-set="total_other_deductions" t-value="total_other_deductions + other_deductions_amount"/>
+                                    <t t-set="total_loan_recovery" t-value="total_loan_recovery + loan_recovery_amount"/>
                                     <t t-set="total_net" t-value="total_net + net_amount"/>
 
                                     <!-- Employee Row (multiply USD values by exchange_rate for display) -->
@@ -186,6 +196,7 @@
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(sso_amount * exchange_rate)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(faov_amount * exchange_rate)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(paro_amount * exchange_rate)"/></td>
+                                        <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(loan_recovery_amount * exchange_rate)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(other_deductions_amount * exchange_rate)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><strong><t t-esc="'{:,.2f}'.format(net_amount * exchange_rate)"/></strong></td>
                                     </tr>
@@ -216,7 +227,10 @@
                                 <strong>Total Bonus:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_bonus * exchange_rate)"/>
                             </p>
                             <p style="margin: 3px 0;">
-                                <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format((total_ari + total_sso + total_faov + total_paro + total_other_deductions) * exchange_rate)"/>
+                                <strong>Total Deductions:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format((total_ari + total_sso + total_faov + total_paro + total_loan_recovery + total_other_deductions) * exchange_rate)"/>
+                            </p>
+                            <p style="margin: 3px 0;">
+                                <strong>  Loan Recovery:</strong> <t t-esc="currency.symbol"/> <t t-esc="'{:,.2f}'.format(total_loan_recovery * exchange_rate)"/>
                             </p>
                         </div>
                         <div class="col-6 text-end">
@@ -241,6 +255,7 @@
                                 SSO = Seguro Social Obligatorio (4%).
                                 FAOV = Fondo de Ahorro Obligatorio para la Vivienda (1%).
                                 PARO = Paro Forzoso (0.5%).
+                                Loan Rec. = Salary advance recovery (hr.loan deduction).
                                 Other Ded. = All other deductions not listed above.
                                 Currency conversion: All payslip data remains in USD in database. When displaying in VEB, USD amounts are multiplied by exchange rate at report generation time only (no database modification).
                             </p>

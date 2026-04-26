@@ -255,7 +255,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         if faov != 0:
             faov_amt = self._convert_currency(faov, usd, currency, date_ref, exchange_rate)
             deductions.append({
-                'number': 1,
+                'number': len(deductions) + 1,
                 'name': 'FAOV (Fondo de Ahorro Habitacional)',
                 'formula': '1% sobre (Vacaciones + Bono Vacacional + Utilidades)',
                 'calculation': f'({curr_symbol}{self._format_amount(vacaciones_display)} + {curr_symbol}{self._format_amount(bono_vacacional_display)} + {curr_symbol}{self._format_amount(utilidades_display)}) × 1%',
@@ -266,7 +266,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
         if inces != 0:
             inces_amt = self._convert_currency(inces, usd, currency, date_ref, exchange_rate)
             deductions.append({
-                'number': 2,
+                'number': len(deductions) + 1,
                 'name': 'INCES',
                 'formula': '0.5% sobre (Utilidades)',
                 'calculation': f'({curr_symbol}{self._format_amount(utilidades_display)}) × 0.5%',
@@ -280,12 +280,41 @@ class LiquidacionBreakdownReport(models.AbstractModel):
             prepaid_detail = f'Período prepagado desde {prepaid_date.strftime("%d/%m/%Y")}' if prepaid_date else 'Deducción por pago adelantado'
 
             deductions.append({
-                'number': 3,
+                'number': len(deductions) + 1,
                 'name': 'Vacaciones y Bono Prepagadas',
                 'formula': 'Deducción por pago adelantado',
                 'calculation': prepaid_detail,
                 'amount': prepaid_amt,
                 'amount_formatted': self._format_amount(prepaid_amt),
+            })
+
+        # Loan recovery deduction (only present if employee has an approved loan with recovery_type='liquidacion')
+        loan_recovery = self._get_line_value(payslip, 'LIQUID_LOAN_DED_V2')
+        if loan_recovery != 0:
+            loan_amt = self._convert_currency(loan_recovery, usd, currency, date_ref, exchange_rate)
+            loan_formula = 'Recuperación de anticipo salarial otorgado fuera de nómina'
+            loan_calculation = f'Monto: {curr_symbol}{self._format_amount(abs(loan_amt))}'
+            try:
+                employee_loans = self.env['hr.loan'].search([
+                    ('employee_id', '=', payslip.employee_id.id),
+                    ('state', '=', 'approve'),
+                    ('recovery_type', '=', 'liquidacion'),
+                ], limit=1)
+                if employee_loans:
+                    loan_calculation = (
+                        f'Préstamo {employee_loans.name} — '
+                        f'Total: {curr_symbol}{self._format_amount(abs(self._convert_currency(employee_loans.loan_amount, usd, currency, date_ref, exchange_rate)))} — '
+                        f'Recuperado: {curr_symbol}{self._format_amount(abs(loan_amt))}'
+                    )
+            except Exception:
+                pass
+            deductions.append({
+                'number': len(deductions) + 1,
+                'name': 'Recuperación de Anticipo Salarial',
+                'formula': loan_formula,
+                'calculation': loan_calculation,
+                'amount': loan_amt,
+                'amount_formatted': self._format_amount(abs(loan_amt)),
             })
 
         total_deductions = sum(d['amount'] for d in deductions)
