@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-04-19
+**Last Updated:** 2026-04-26
 
 ## Core Instructions
 
@@ -51,7 +51,7 @@
 | 33 | Payroll Requisition Estimation Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 | 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
-| 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
+| 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 
 ---
 
@@ -129,7 +129,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.63.0 | 2026-04-26 |
+| ueipab_payroll_enhancements | 17.0.1.63.9 | 2026-04-26 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -373,6 +373,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **Quincena Salary Rule Fix (2026-02-25) — RESOLVED:** All V2 salary rules (9 prod + 10 test) fixed from `period_days / 30.0` to `monthly / 2.0`. FEBRERO28 batch cancelled, recomputed, reconfirmed. VEB differences (~Bs. 407,086 total) paid to all 44 employees, corrected comprobantes emailed, journal entries verified `posted`, HR letter distributed. See [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md).
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 - **AI Agent Poll Cron Rollback Bug (2026-03-02) — RESOLVED (v1.19.0):** Fixed in 3 parts: (1) savepoint per conversation in poll cron for error isolation, (2) global WA message dedup (not per-conversation), (3) phone-based duplicate conversation guard in wizard. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
+- **HR Loan one-loan-per-employee constraint (ohrms_loan):** `ohrms_loan.create()` blocks creating a new loan when the employee already has any approved loan with `balance_amount > 0`. The check is global (not per `recovery_type`), preventing an employee from having both a quincena + liquidacion loan simultaneously. **Workaround:** use a different employee, or clear existing loan balances first. **Option C fix** (per-recovery_type constraint override via Python MRO) designed but not yet implemented. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
 
 ### Legal
