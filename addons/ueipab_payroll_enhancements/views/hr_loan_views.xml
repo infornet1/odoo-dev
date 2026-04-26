@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Extend hr.loan form view to show recovery_type field -->
+    <!-- Extend hr.loan form view -->
     <record id="hr_loan_view_form_ueipab" model="ir.ui.view">
         <field name="name">hr.loan.view.form.ueipab</field>
         <field name="model">hr.loan</field>
         <field name="inherit_id" ref="ohrms_loan.hr_loan_view_form"/>
         <field name="arch" type="xml">
+
+            <!-- Bs helper fields: inserted right after loan_amount (USD) -->
+            <xpath expr="//field[@name='loan_amount']" position="after">
+                <field name="advance_bs_amount"
+                       placeholder="Ej: 29,032.17"
+                       readonly="state == 'approve'"/>
+                <field name="advance_exchange_rate"
+                       placeholder="Ej: 484.8700"
+                       readonly="state == 'approve'"/>
+            </xpath>
+
+            <!-- Recovery type: after installment count -->
             <xpath expr="//field[@name='installment']" position="after">
                 <field name="recovery_type" widget="radio"/>
             </xpath>
+
         </field>
     </record>
 
-    <!-- Extend hr.loan tree view to show recovery_type column -->
+    <!-- Extend hr.loan tree view -->
     <record id="hr_loan_view_tree_ueipab" model="ir.ui.view">
         <field name="name">hr.loan.view.tree.ueipab</field>
         <field name="model">hr.loan</field>

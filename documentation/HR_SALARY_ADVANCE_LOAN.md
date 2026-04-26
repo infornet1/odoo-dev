@@ -175,6 +175,31 @@ The `post_migrate.py` script creates:
 
 ---
 
+## Bs Helper Fields (v1.63.1)
+
+| Field | Editable | Behaviour |
+|---|---|---|
+| `advance_bs_amount` | Until approved | HR enters the Bs amount actually paid. Auto-calculates `loan_amount` USD when changed. |
+| `advance_exchange_rate` | Until approved | Auto-populated from latest `res.currency.rate.company_rate` (VEB). HR can override if the actual disbursement rate differs. |
+| `loan_amount` (existing) | Always | The USD obligation. Set automatically from Bs ÷ rate; can be overridden manually for USD-first workflows. |
+
+Onchange chain: `advance_bs_amount` or `advance_exchange_rate` → `loan_amount = round(bs / rate, 2)`.
+`loan_amount` is **not** forced — editing it directly works without disturbing the Bs fields.
+
+### Approval Journal Entry (v1.63.1)
+
+If `treasury_account_id` + `journal_id` are filled before approval, `action_approve()` automatically posts:
+```
+DR 1.1.06.01.001  Cuentas por cobrar empleados   loan_amount USD
+   CR treasury_account_id                         loan_amount USD
+```
+
+If those fields are blank (Phase 1 retroactive), the loan is approved without a journal entry and HR records the advance manually.
+
+`employee_account_id` auto-defaults to `1.1.06.01.001` when an employee is selected on a new loan form.
+
+---
+
 ## HR Usage Guide
 
 ### Creating a Loan Record (Phase 1)
@@ -237,3 +262,4 @@ When the business requires employee-facing requests:
 |---|---|---|
 | 17.0.1.63.0 | 2026-04-26 | Initial implementation — Phase 1 recovery flow. Deployed to testing. |
 | 17.0.1.63.0 | 2026-04-26 | Path B accounting: VE_LOAN_DED_V2 → DR 1.1.06.01.001 / CR 1.1.01.02.001; LIQUID_LOAN_DED_V2 → DR 1.1.06.01.001 / CR 5.1.01.10.010. Migration script updated. |
+| 17.0.1.63.1 | 2026-04-26 | Bs helper fields: `advance_bs_amount` + `advance_exchange_rate` (auto from VEB rate, editable pre-approval). Onchange auto-calculates `loan_amount`. Journal entry posted at approval when treasury_account_id + journal_id are set. `employee_account_id` defaults to 1.1.06.01.001. |

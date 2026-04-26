@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import fields, models
+from datetime import date as dt
+from odoo import api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -18,18 +19,113 @@ class HrLoan(models.Model):
             'For Quincena: set installment date inside the target quincena window.\n'
             'For Liquidación: set installment date inside the employee\'s final period.')
 
+    advance_bs_amount = fields.Float(
+        string='Monto Adelanto (Bs.)',
+        digits=(16, 2),
+        help='Monto entregado al empleado en bolívares. '
+             'Al ingresarlo junto con la tasa se calcula automáticamente el monto USD.')
+
+    advance_exchange_rate = fields.Float(
+        string='Tasa de Cambio (Bs./USD)',
+        digits=(16, 4),
+        default=lambda self: self._get_veb_rate(),
+        help='Tasa BCV vigente al momento del adelanto. '
+             'Auto-poblada desde res.currency.rate — editable hasta la aprobación.')
+
+    # ── helpers ────────────────────────────────────────────────────────────
+
+    def _get_veb_rate(self):
+        veb = self.env['res.currency'].search(
+            [('name', 'in', ['VEB', 'VES']), ('active', '=', True)], limit=1)
+        if not veb:
+            return 0.0
+        rate = self.env['res.currency.rate'].search(
+            [('currency_id', '=', veb.id)], order='name desc', limit=1)
+        return rate.company_rate if rate else 0.0
+
+    # ── onchanges ──────────────────────────────────────────────────────────
+
+    @api.onchange('advance_bs_amount', 'advance_exchange_rate')
+    def _onchange_bs_fields(self):
+        """Auto-calculate USD loan_amount from Bs amount ÷ rate (helper, not enforced)."""
+        if self.advance_bs_amount and self.advance_exchange_rate:
+            self.loan_amount = round(self.advance_bs_amount / self.advance_exchange_rate, 2)
+
+    @api.onchange('employee_id')
+    def _onchange_employee_default_account(self):
+        """Default employee_account_id to the employee receivable account."""
+        if not self.employee_id:
+            return
+        if 'employee_account_id' not in self._fields:
+            return
+        if self.employee_account_id:
+            return
+        acc = self.env['account.account'].search(
+            [('code', '=', '1.1.06.01.001')], limit=1)
+        if acc:
+            self.employee_account_id = acc
+
+    # ── approval ───────────────────────────────────────────────────────────
+
     def action_approve(self):
-        # Phase 1: advance was already paid outside Odoo.
-        # ohrms_loan_accounting requires accounting fields that would double-count
-        # the disbursement. Bypass its journal entry — just validate and approve.
+        """Approve loan and optionally post the advance disbursement journal entry.
+
+        Journal entry is created when treasury_account_id + journal_id are set
+        (ohrms_loan_accounting fields). Skipped for retroactive Phase-1 loans where
+        those fields are left blank.
+        """
         if not self.loan_lines:
             raise UserError('Debe calcular las cuotas antes de aprobar.')
         contract = self.env['hr.contract'].search(
             [('employee_id', '=', self.employee_id.id)], limit=1)
         if not contract:
             raise UserError('El empleado no tiene un contrato definido.')
+        treasury_acc = getattr(self, 'treasury_account_id', False)
+        journal = getattr(self, 'journal_id', False)
+        if treasury_acc and journal:
+            self._create_advance_journal_entry()
         self.write({'state': 'approve'})
         return True
+
+    def _create_advance_journal_entry(self):
+        """Post DR Employee Receivable / CR Bank journal entry for the advance."""
+        emp_receivable = self.env['account.account'].search(
+            [('code', '=', '1.1.06.01.001')], limit=1)
+        if not emp_receivable:
+            return
+
+        partner_id = False
+        if self.employee_id.address_id:
+            partner_id = self.employee_id.address_id.id
+        elif getattr(self.employee_id, 'work_contact_id', False):
+            partner_id = self.employee_id.work_contact_id.id
+
+        amount = self.loan_amount
+        today = dt.today()
+        label = 'Anticipo Salarial – %s' % self.employee_id.name
+
+        def _line(account_id, debit, credit):
+            return (0, 0, {
+                'name': label,
+                'partner_id': partner_id,
+                'account_id': account_id,
+                'journal_id': self.journal_id.id,
+                'date': today,
+                'debit': debit,
+                'credit': credit,
+            })
+
+        move = self.env['account.move'].create({
+            'narration': label,
+            'ref': self.name,
+            'journal_id': self.journal_id.id,
+            'date': today,
+            'line_ids': [
+                _line(emp_receivable.id, amount, 0.0),
+                _line(self.treasury_account_id.id, 0.0, amount),
+            ],
+        })
+        move.action_post()
 
 
 class HrPayslip(models.Model):
