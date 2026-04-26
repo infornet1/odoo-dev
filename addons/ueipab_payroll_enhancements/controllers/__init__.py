@@ -2,3 +2,4 @@
 
 from . import liquidacion_breakdown_xlsx
 from . import payslip_acknowledgment
+from . import loan_acknowledgment

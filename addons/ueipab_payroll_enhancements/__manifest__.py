@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.63.2',
+    'version': '17.0.1.63.3',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -112,6 +112,7 @@ Advance Payment System (Pago Adelanto):
         'reports/payroll_requisition_report.xml',
         'reports/report_actions.xml',
         'data/mail_template_payslip.xml',  # After reports (depends on action_report_payslip_compact)
+        'data/mail_template_loan.xml',
         'data/email_template_ack_reminder.xml',  # Acknowledgment reminder email template
         'data/email_template_ack_confirmation.xml',  # Acknowledgment confirmation email
         'data/arc_email_template.xml',  # ARC annual withholding certificate email
@@ -124,7 +125,7 @@ Advance Payment System (Pago Adelanto):
         'views/hr_payslip_view.xml',
         'views/payslip_acknowledge_templates.xml',
         'views/arc_certificate_views.xml',
-        'views/hr_loan_views.xml',
+        'views/hr_loan_views.xml',         # Loan form: smart buttons, send button, ack section
 
         # 5. Menus (last, as they depend on everything else)
         'views/payroll_reports_menu.xml',

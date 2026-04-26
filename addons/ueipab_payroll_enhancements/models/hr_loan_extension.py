@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import uuid
 from datetime import date as dt
 from odoo import api, fields, models
 from odoo.exceptions import UserError
@@ -6,6 +7,8 @@ from odoo.exceptions import UserError
 
 class HrLoan(models.Model):
     _inherit = 'hr.loan'
+
+    # ── recovery type ──────────────────────────────────────────────────────
 
     recovery_type = fields.Selection([
         ('quincena', 'Quincena (NOMINA_VE_V2)'),
@@ -18,6 +21,8 @@ class HrLoan(models.Model):
             '• Liquidación: deducted only from LIQUID_VE_V2 termination payslip\n\n'
             'For Quincena: set installment date inside the target quincena window.\n'
             'For Liquidación: set installment date inside the employee\'s final period.')
+
+    # ── Bs helper fields ───────────────────────────────────────────────────
 
     advance_bs_amount = fields.Float(
         string='Monto Adelanto (Bs.)',
@@ -32,6 +37,53 @@ class HrLoan(models.Model):
         help='Tasa BCV vigente al momento del adelanto. '
              'Auto-poblada desde res.currency.rate — editable hasta la aprobación.')
 
+    # ── journal entry link ─────────────────────────────────────────────────
+
+    move_id = fields.Many2one(
+        'account.move',
+        string='Asiento Contable',
+        readonly=True,
+        copy=False,
+        help='Journal entry created at loan approval.')
+
+    # ── acknowledgment fields ──────────────────────────────────────────────
+
+    loan_ack_token = fields.Char(
+        string='Token de Confirmación',
+        readonly=True,
+        copy=False)
+
+    loan_ack_url = fields.Char(
+        string='URL de Confirmación',
+        compute='_compute_loan_ack_url')
+
+    loan_is_acknowledged = fields.Boolean(
+        string='Confirmado por Empleado',
+        default=False,
+        copy=False)
+
+    loan_acknowledged_date = fields.Datetime(
+        string='Fecha de Confirmación',
+        readonly=True,
+        copy=False)
+
+    loan_acknowledged_ip = fields.Char(
+        string='IP de Confirmación',
+        readonly=True,
+        copy=False)
+
+    # ── computes ───────────────────────────────────────────────────────────
+
+    @api.depends('loan_ack_token')
+    def _compute_loan_ack_url(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        for loan in self:
+            if loan.loan_ack_token and loan.id:
+                loan.loan_ack_url = (
+                    f'{base_url}/loan/acknowledge/{loan.id}/{loan.loan_ack_token}')
+            else:
+                loan.loan_ack_url = ''
+
     # ── default lookups ────────────────────────────────────────────────────
 
     def _get_veb_rate(self):
@@ -44,22 +96,18 @@ class HrLoan(models.Model):
         return rate.company_rate if rate else 0.0
 
     def _default_loan_account(self):
-        """1.1.06.01.001 — Cuentas por cobrar empleados (salary advance receivable)."""
         return self.env['account.account'].search(
             [('code', '=', '1.1.06.01.001')], limit=1)
 
     def _default_treasury_account(self):
-        """1.1.01.02.001 — Banco Venezuela (default disbursement bank)."""
         return self.env['account.account'].search(
             [('code', '=', '1.1.01.02.001')], limit=1)
 
     def _default_payroll_journal(self):
-        """Nómina y Salarios, Bonos y Prestaciones Sociales journal."""
         return self.env['account.journal'].search(
             [('type', '=', 'general'), ('name', 'ilike', 'Nomina')], limit=1)
 
     def _accounting_defaults_vals(self):
-        """Return dict of accounting field defaults that are currently empty."""
         vals = {}
         if 'employee_account_id' in self._fields and not self.employee_account_id:
             acc = self._default_loan_account()
@@ -79,32 +127,66 @@ class HrLoan(models.Model):
 
     @api.model
     def create(self, vals):
-        """Auto-fill accounting defaults on new loans."""
         record = super().create(vals)
         defaults = record._accounting_defaults_vals()
         if defaults:
             record.write(defaults)
         return record
 
-    # ── button action ──────────────────────────────────────────────────────
+    # ── button actions ─────────────────────────────────────────────────────
 
     def action_fill_accounting_defaults(self):
-        """Button: fill any empty accounting fields with company defaults."""
         defaults = self._accounting_defaults_vals()
         if defaults:
             self.write(defaults)
+
+    def action_view_journal_entry(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Asiento Contable',
+            'res_model': 'account.move',
+            'res_id': self.move_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_send_advance_notification(self):
+        """Generate ack token and open mail compose wizard with the loan template."""
+        self.ensure_one()
+        if not self.loan_ack_token:
+            self.loan_ack_token = str(uuid.uuid4())
+        template = self.env.ref(
+            'ueipab_payroll_enhancements.email_template_loan_advance',
+            raise_if_not_found=False)
+        if not template:
+            raise UserError(
+                'Plantilla "Adelanto de Salario" no encontrada. '
+                'Verifique que el módulo esté actualizado.')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Enviar Notificación de Adelanto',
+            'res_model': 'mail.compose.message',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_model': 'hr.loan',
+                'default_res_ids': [self.id],
+                'default_template_id': template.id,
+                'default_composition_mode': 'comment',
+                'force_email': True,
+            },
+        }
 
     # ── onchanges ──────────────────────────────────────────────────────────
 
     @api.onchange('advance_bs_amount', 'advance_exchange_rate')
     def _onchange_bs_fields(self):
-        """Auto-calculate USD loan_amount from Bs amount ÷ rate (helper, not enforced)."""
         if self.advance_bs_amount and self.advance_exchange_rate:
-            self.loan_amount = round(self.advance_bs_amount / self.advance_exchange_rate, 2)
+            self.loan_amount = round(
+                self.advance_bs_amount / self.advance_exchange_rate, 2)
 
     @api.onchange('employee_id')
     def _onchange_employee_accounting_defaults(self):
-        """Auto-fill accounting fields when employee is selected."""
         if not self.employee_id:
             return
         defaults = self._accounting_defaults_vals()
@@ -114,7 +196,6 @@ class HrLoan(models.Model):
     # ── approval ───────────────────────────────────────────────────────────
 
     def action_approve(self):
-        """Approve loan and optionally post the advance disbursement journal entry."""
         if not self.loan_lines:
             raise UserError('Debe calcular las cuotas antes de aprobar.')
         contract = self.env['hr.contract'].search(
@@ -129,7 +210,6 @@ class HrLoan(models.Model):
         return True
 
     def _create_advance_journal_entry(self):
-        """Post DR Employee Receivable / CR Bank journal entry for the advance."""
         emp_receivable = self.env['account.account'].search(
             [('code', '=', '1.1.06.01.001')], limit=1)
         if not emp_receivable:
@@ -167,6 +247,7 @@ class HrLoan(models.Model):
             ],
         })
         move.action_post()
+        self.move_id = move
 
 
 class HrPayslip(models.Model):

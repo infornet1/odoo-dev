@@ -7,16 +7,65 @@
         <field name="inherit_id" ref="ohrms_loan.hr_loan_view_form"/>
         <field name="arch" type="xml">
 
-            <!-- "Fill Defaults" button in header — only shown when any accounting
-                 field is missing and loan is not yet approved -->
+            <!-- Smart buttons in button_box -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+
+                <!-- Journal entry link -->
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_view_journal_entry"
+                        icon="fa-book"
+                        invisible="not move_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="move_id" string="" widget="many2one"/>
+                        </span>
+                        <span class="o_stat_text">Asiento</span>
+                    </div>
+                </button>
+
+                <!-- Ack status: pending -->
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_send_advance_notification"
+                        icon="fa-clock-o"
+                        invisible="loan_is_acknowledged or state != 'approve'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value" style="color:#e67e22">Pendiente</span>
+                        <span class="o_stat_text">conformidad</span>
+                    </div>
+                </button>
+
+                <!-- Ack status: confirmed -->
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_send_advance_notification"
+                        icon="fa-check-circle"
+                        invisible="not loan_is_acknowledged">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value" style="color:#27ae60">Confirmado</span>
+                        <span class="o_stat_text">conformidad</span>
+                    </div>
+                </button>
+
+            </xpath>
+
+            <!-- Header buttons -->
             <xpath expr="//header" position="inside">
+                <!-- Fill defaults button -->
                 <button name="action_fill_accounting_defaults"
                         type="object"
                         string="Completar Datos Contables"
                         invisible="state == 'approve' or (employee_account_id and treasury_account_id and journal_id)"/>
+                <!-- Send notification button -->
+                <button name="action_send_advance_notification"
+                        type="object"
+                        string="📧 Enviar Notificación al Empleado"
+                        class="btn-primary"
+                        invisible="state != 'approve'"/>
             </xpath>
 
-            <!-- Bs helper fields: inserted right after loan_amount (USD) -->
+            <!-- Bs helper fields after loan_amount -->
             <xpath expr="//field[@name='loan_amount']" position="after">
                 <field name="advance_bs_amount"
                        placeholder="Ej: 29,032.17"
@@ -26,9 +75,32 @@
                        readonly="state == 'approve'"/>
             </xpath>
 
-            <!-- Recovery type: after installment count -->
+            <!-- Recovery type after installment count -->
             <xpath expr="//field[@name='installment']" position="after">
                 <field name="recovery_type" widget="radio"/>
+            </xpath>
+
+            <!-- Invisible fields required by modifiers -->
+            <xpath expr="//sheet" position="inside">
+                <field name="move_id" invisible="1"/>
+                <field name="loan_ack_token" invisible="1"/>
+                <field name="loan_is_acknowledged" invisible="1"/>
+            </xpath>
+
+            <!-- Ack info at bottom of form (only when sent) -->
+            <xpath expr="//sheet" position="inside">
+                <group string="Conformidad del Empleado"
+                       invisible="not loan_ack_token">
+                    <field name="loan_is_acknowledged" widget="boolean_toggle"
+                           readonly="1"/>
+                    <field name="loan_acknowledged_date"
+                           invisible="not loan_is_acknowledged"/>
+                    <field name="loan_acknowledged_ip"
+                           invisible="not loan_is_acknowledged"/>
+                    <field name="loan_ack_url" widget="url"
+                           invisible="loan_is_acknowledged"
+                           string="Enlace de Confirmación"/>
+                </group>
             </xpath>
 
         </field>
@@ -42,6 +114,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='state']" position="before">
                 <field name="recovery_type"/>
+                <field name="loan_is_acknowledged" optional="show"/>
             </xpath>
         </field>
     </record>
