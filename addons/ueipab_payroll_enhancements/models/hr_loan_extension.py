@@ -151,8 +151,16 @@ class HrLoan(models.Model):
         }
 
     def action_send_advance_notification(self):
-        """Generate ack token and open mail compose wizard with the loan template."""
+        """Generate ack token and send the loan advance notification email directly.
+
+        Follows the same pattern as payslip batch: template.send_mail(id, force_send=True).
+        This ensures QWeb renders correctly against the loan record.
+        """
         self.ensure_one()
+        if not self.employee_id.work_email:
+            raise UserError(
+                'El empleado %s no tiene correo electrónico de trabajo configurado.'
+                % self.employee_id.name)
         if not self.loan_ack_token:
             self.loan_ack_token = str(uuid.uuid4())
         template = self.env.ref(
@@ -162,18 +170,20 @@ class HrLoan(models.Model):
             raise UserError(
                 'Plantilla "Adelanto de Salario" no encontrada. '
                 'Verifique que el módulo esté actualizado.')
+        template.send_mail(
+            self.id,
+            force_send=True,
+            email_values={'email_to': self.employee_id.work_email},
+        )
         return {
-            'type': 'ir.actions.act_window',
-            'name': 'Enviar Notificación de Adelanto',
-            'res_model': 'mail.compose.message',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_model': 'hr.loan',
-                'default_res_ids': [self.id],
-                'default_template_id': template.id,
-                'default_composition_mode': 'comment',
-                'force_email': True,
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Notificación enviada',
+                'message': 'Correo enviado a %s (%s).' % (
+                    self.employee_id.name, self.employee_id.work_email),
+                'type': 'success',
+                'sticky': False,
             },
         }
 
@@ -181,9 +191,17 @@ class HrLoan(models.Model):
 
     @api.onchange('advance_bs_amount', 'advance_exchange_rate')
     def _onchange_bs_fields(self):
+        """Bs amount or rate changed → recalculate USD loan_amount."""
         if self.advance_bs_amount and self.advance_exchange_rate:
             self.loan_amount = round(
                 self.advance_bs_amount / self.advance_exchange_rate, 2)
+
+    @api.onchange('loan_amount')
+    def _onchange_loan_amount(self):
+        """USD loan_amount entered directly → compute Bs equivalent."""
+        if self.loan_amount and self.advance_exchange_rate:
+            self.advance_bs_amount = round(
+                self.loan_amount * self.advance_exchange_rate, 2)
 
     @api.onchange('employee_id')
     def _onchange_employee_accounting_defaults(self):
