@@ -40,16 +40,59 @@ HR sets the installment date when creating the loan. For quincena recovery the d
 
 ## Salary Rules
 
-| Code | Structure | Sequence | Formula |
-|---|---|---|---|
-| `VE_LOAN_DED_V2` | `VE_PAYROLL_V2` | 106 | `result = -(inputs.LO.amount) if inputs.LO else 0` |
-| `LIQUID_LOAN_DED_V2` | `LIQUID_VE_V2` | 196 | `result = -(inputs.LO.amount) if inputs.LO else 0` |
+| Code | Structure | Seq | Debit | Credit | Formula |
+|---|---|---|---|---|---|
+| `VE_LOAN_DED_V2` | `VE_PAYROLL_V2` | 106 | `1.1.06.01.001` | `1.1.01.02.001` | `result = -(inputs.LO.amount) if inputs.LO else 0` |
+| `LIQUID_LOAN_DED_V2` | `LIQUID_VE_V2` | 196 | `1.1.06.01.001` | `5.1.01.10.010` | `result = -(inputs.LO.amount) if inputs.LO else 0` |
 
 Both rules reference input code `LO` (hr.rule.input). The `LO` amount (USD) is injected by the `get_inputs()` override from the approved loan installment.
 
 **NET formulas updated:**
 - `VE_TOTAL_DED_V2` — now includes `VE_LOAN_DED_V2` (try/except block)
 - `LIQUID_NET_V2` — now includes `LIQUID_LOAN_DED_V2` (try/except block)
+
+---
+
+## Accounting Configuration
+
+### Account Roles
+
+| Account | Name | Role |
+|---|---|---|
+| `1.1.06.01.001` | Cuentas por cobrar empleados m.nac.corri | Tracks the outstanding advance (asset) |
+| `1.1.01.02.001` | Banco Venezuela | Bank — net cash paid to employee |
+| `5.1.01.10.010` | Prestaciones sociales (PD) | Liquidation expense |
+
+### Step 0 — Record advance manually when paid outside Odoo
+
+```
+DR 1.1.06.01.001  Cuentas por cobrar empleados   $500
+   CR 1.1.01.02.001 Banco Venezuela               $500
+```
+
+> Phase 2: `ohrms_loan_accounting` can automate this on loan approval.
+
+### Quincena payslip journal (NOMINA_VE_V2)
+
+Example: Gross $1,000 | SSO $40 | FAOV $10 | Loan recovery $50 | NET $900
+
+```
+DR 5.1.01.10.001  Nómina (Docentes)    $850
+   CR 1.1.01.02.001 Banco Venezuela     $800   ← actual cash to employee
+   CR 1.1.06.01.001 Emp. Receivable      $50   ← advance partially cleared
+```
+
+### Liquidation payslip journal (LIQUID_VE_V2)
+
+Example: Total liquidation $5,000 | Loan recovery $500 | NET $4,500
+
+```
+DR 5.1.01.10.010  Prestaciones Sociales  $5,000   ← FULL expense
+   CR 2.1.01.10.005 Provisión Prestaciones $4,500  ← net to employee
+   CR 1.1.06.01.001 Emp. Receivable         $500   ← advance fully cleared
+```
+
+Balance proof: The loan rule's debit account (`1.1.06.01.001`) produces a **credit** (reduces asset) and its credit account (`5.1.01.10.010`) produces a **debit** (increases expense) for negative rule amounts — this is Odoo payroll's sign convention for deductions.
 
 ---
 
@@ -193,3 +236,4 @@ When the business requires employee-facing requests:
 | Version | Date | Change |
 |---|---|---|
 | 17.0.1.63.0 | 2026-04-26 | Initial implementation — Phase 1 recovery flow. Deployed to testing. |
+| 17.0.1.63.0 | 2026-04-26 | Path B accounting: VE_LOAN_DED_V2 → DR 1.1.06.01.001 / CR 1.1.01.02.001; LIQUID_LOAN_DED_V2 → DR 1.1.06.01.001 / CR 5.1.01.10.010. Migration script updated. |

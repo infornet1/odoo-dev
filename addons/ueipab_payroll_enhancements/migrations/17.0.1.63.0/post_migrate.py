@@ -25,6 +25,11 @@ def migrate(cr, version):
         return
 
     # --- VE_LOAN_DED_V2 ---
+    # Accounting accounts for loan rules
+    acc_emp_receivable = env['account.account'].search([('code', '=', '1.1.06.01.001')], limit=1)
+    acc_banco = env['account.account'].search([('code', '=', '1.1.01.02.001')], limit=1)
+    acc_prestaciones_exp = env['account.account'].search([('code', '=', '5.1.01.10.010')], limit=1)
+
     if nomina_v2 and not env['hr.salary.rule'].search([('code', '=', 'VE_LOAN_DED_V2')], limit=1):
         rule = env['hr.salary.rule'].create({
             'name': 'VE_LOAN_DED_V2 - Loan Recovery',
@@ -35,6 +40,8 @@ def migrate(cr, version):
             'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
             'appears_on_payslip': True,
             'active': True,
+            'account_debit_id': acc_emp_receivable.id if acc_emp_receivable else False,
+            'account_credit_id': acc_banco.id if acc_banco else False,
         })
         nomina_v2.write({'rule_ids': [(4, rule.id)]})
         env['hr.rule.input'].create({
@@ -57,6 +64,8 @@ def migrate(cr, version):
             'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
             'appears_on_payslip': True,
             'active': True,
+            'account_debit_id': acc_emp_receivable.id if acc_emp_receivable else False,
+            'account_credit_id': acc_prestaciones_exp.id if acc_prestaciones_exp else False,
         })
         liquid_v2.write({'rule_ids': [(4, rule2.id)]})
         env['hr.rule.input'].create({
