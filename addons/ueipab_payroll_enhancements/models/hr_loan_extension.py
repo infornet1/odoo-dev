@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import fields, models
+from odoo.exceptions import UserError
 
 
 class HrLoan(models.Model):
@@ -16,6 +17,19 @@ class HrLoan(models.Model):
             '• Liquidación: deducted only from LIQUID_VE_V2 termination payslip\n\n'
             'For Quincena: set installment date inside the target quincena window.\n'
             'For Liquidación: set installment date inside the employee\'s final period.')
+
+    def action_approve(self):
+        # Phase 1: advance was already paid outside Odoo.
+        # ohrms_loan_accounting requires accounting fields that would double-count
+        # the disbursement. Bypass its journal entry — just validate and approve.
+        if not self.loan_lines:
+            raise UserError('Debe calcular las cuotas antes de aprobar.')
+        contract = self.env['hr.contract'].search(
+            [('employee_id', '=', self.employee_id.id)], limit=1)
+        if not contract:
+            raise UserError('El empleado no tiene un contrato definido.')
+        self.write({'state': 'approve'})
+        return True
 
 
 class HrPayslip(models.Model):
