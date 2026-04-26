@@ -7,6 +7,15 @@
         <field name="inherit_id" ref="ohrms_loan.hr_loan_view_form"/>
         <field name="arch" type="xml">
 
+            <!-- "Fill Defaults" button in header — only shown when any accounting
+                 field is missing and loan is not yet approved -->
+            <xpath expr="//header" position="inside">
+                <button name="action_fill_accounting_defaults"
+                        type="object"
+                        string="Completar Datos Contables"
+                        invisible="state == 'approve' or (employee_account_id and treasury_account_id and journal_id)"/>
+            </xpath>
+
             <!-- Bs helper fields: inserted right after loan_amount (USD) -->
             <xpath expr="//field[@name='loan_amount']" position="after">
                 <field name="advance_bs_amount"

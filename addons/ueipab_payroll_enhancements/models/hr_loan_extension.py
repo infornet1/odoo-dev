@@ -32,7 +32,7 @@ class HrLoan(models.Model):
         help='Tasa BCV vigente al momento del adelanto. '
              'Auto-poblada desde res.currency.rate — editable hasta la aprobación.')
 
-    # ── helpers ────────────────────────────────────────────────────────────
+    # ── default lookups ────────────────────────────────────────────────────
 
     def _get_veb_rate(self):
         veb = self.env['res.currency'].search(
@@ -43,6 +43,57 @@ class HrLoan(models.Model):
             [('currency_id', '=', veb.id)], order='name desc', limit=1)
         return rate.company_rate if rate else 0.0
 
+    def _default_loan_account(self):
+        """1.1.06.01.001 — Cuentas por cobrar empleados (salary advance receivable)."""
+        return self.env['account.account'].search(
+            [('code', '=', '1.1.06.01.001')], limit=1)
+
+    def _default_treasury_account(self):
+        """1.1.01.02.001 — Banco Venezuela (default disbursement bank)."""
+        return self.env['account.account'].search(
+            [('code', '=', '1.1.01.02.001')], limit=1)
+
+    def _default_payroll_journal(self):
+        """Nómina y Salarios, Bonos y Prestaciones Sociales journal."""
+        return self.env['account.journal'].search(
+            [('type', '=', 'general'), ('name', 'ilike', 'Nomina')], limit=1)
+
+    def _accounting_defaults_vals(self):
+        """Return dict of accounting field defaults that are currently empty."""
+        vals = {}
+        if 'employee_account_id' in self._fields and not self.employee_account_id:
+            acc = self._default_loan_account()
+            if acc:
+                vals['employee_account_id'] = acc.id
+        if 'treasury_account_id' in self._fields and not self.treasury_account_id:
+            acc = self._default_treasury_account()
+            if acc:
+                vals['treasury_account_id'] = acc.id
+        if 'journal_id' in self._fields and not self.journal_id:
+            journal = self._default_payroll_journal()
+            if journal:
+                vals['journal_id'] = journal.id
+        return vals
+
+    # ── creation ───────────────────────────────────────────────────────────
+
+    @api.model
+    def create(self, vals):
+        """Auto-fill accounting defaults on new loans."""
+        record = super().create(vals)
+        defaults = record._accounting_defaults_vals()
+        if defaults:
+            record.write(defaults)
+        return record
+
+    # ── button action ──────────────────────────────────────────────────────
+
+    def action_fill_accounting_defaults(self):
+        """Button: fill any empty accounting fields with company defaults."""
+        defaults = self._accounting_defaults_vals()
+        if defaults:
+            self.write(defaults)
+
     # ── onchanges ──────────────────────────────────────────────────────────
 
     @api.onchange('advance_bs_amount', 'advance_exchange_rate')
@@ -52,28 +103,18 @@ class HrLoan(models.Model):
             self.loan_amount = round(self.advance_bs_amount / self.advance_exchange_rate, 2)
 
     @api.onchange('employee_id')
-    def _onchange_employee_default_account(self):
-        """Default employee_account_id to the employee receivable account."""
+    def _onchange_employee_accounting_defaults(self):
+        """Auto-fill accounting fields when employee is selected."""
         if not self.employee_id:
             return
-        if 'employee_account_id' not in self._fields:
-            return
-        if self.employee_account_id:
-            return
-        acc = self.env['account.account'].search(
-            [('code', '=', '1.1.06.01.001')], limit=1)
-        if acc:
-            self.employee_account_id = acc
+        defaults = self._accounting_defaults_vals()
+        for fname, val in defaults.items():
+            setattr(self, fname, val)
 
     # ── approval ───────────────────────────────────────────────────────────
 
     def action_approve(self):
-        """Approve loan and optionally post the advance disbursement journal entry.
-
-        Journal entry is created when treasury_account_id + journal_id are set
-        (ohrms_loan_accounting fields). Skipped for retroactive Phase-1 loans where
-        those fields are left blank.
-        """
+        """Approve loan and optionally post the advance disbursement journal entry."""
         if not self.loan_lines:
             raise UserError('Debe calcular las cuotas antes de aprobar.')
         contract = self.env['hr.contract'].search(
@@ -133,9 +174,6 @@ class HrPayslip(models.Model):
 
     def get_inputs(self, contracts, date_from, date_to):
         res = super().get_inputs(contracts, date_from, date_to)
-        # ohrms_loan already injected LO inputs based on installment date range.
-        # Guard: zero out any LO input whose loan.recovery_type doesn't match
-        # the current payslip structure, preventing cross-structure deductions.
         struct_code = self.struct_id.code if self.struct_id else ''
         for r in res:
             if r.get('code') == 'LO' and r.get('amount', 0) != 0:
