@@ -292,6 +292,14 @@
                         </div>
 
 
+                        <!-- VEB EXCHANGE RATE REFERENCE -->
+                        <div style="background:#fff9e6;border:2px dashed #ffc107;border-radius:8px;padding:15px;margin:20px 0;text-align:center">
+                            <div style="font-size:13px;color:#856404;margin-bottom:5px">Tasa de Cambio Aplicada (Referencia)</div>
+                            <div style="font-size:22px;font-weight:bold;color:#d39e00">
+                                Bs. <t t-esc="'{:,.4f}'.format(object.exchange_rate_used or 1.0)"/> / USD
+                            </div>
+                        </div>
+
                         <!-- PDF NOTE -->
                         <div style="background:#e8f4f8;border-left:4px solid #2980b9;padding:15px 20px;margin:25px 0;border-radius:4px">
                             <p style="font-size:14px;color:#1a5276;margin:0 0 6px"><strong>ℹ️ Relación de Liquidación adjunta</strong></p>
