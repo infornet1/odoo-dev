@@ -270,10 +270,11 @@ class PayrollDisbursementWizard(models.TransientModel):
         worksheet.set_column('H:H', 12)  # SSO 4%
         worksheet.set_column('I:I', 12)  # FAOV 1%
         worksheet.set_column('J:J', 12)  # PARO 0.5%
-        worksheet.set_column('K:K', 12)  # Total Deductions
-        worksheet.set_column('L:L', 12)  # Net Payable
+        worksheet.set_column('K:K', 12)  # Loan Rec.
+        worksheet.set_column('L:L', 12)  # Total Deductions
+        worksheet.set_column('M:M', 12)  # Net Payable
         if is_advance:
-            worksheet.set_column('M:M', 14)  # Advance Amount
+            worksheet.set_column('N:N', 14)  # Advance Amount
 
         # Get currency info
         currency_symbol = self.currency_id.symbol
@@ -290,7 +291,7 @@ class PayrollDisbursementWizard(models.TransientModel):
         title += f' ({currency_name})'
 
         # Merge range depends on whether advance column is included
-        merge_end = 'M1' if is_advance else 'L1'
+        merge_end = 'N1' if is_advance else 'M1'
         worksheet.merge_range(f'A1:{merge_end}', title, workbook.add_format({
             'bold': True,
             'font_size': 14,
@@ -310,6 +311,7 @@ class PayrollDisbursementWizard(models.TransientModel):
             f'SSO 4% ({currency_symbol})',
             f'FAOV 1% ({currency_symbol})',
             f'PARO 0.5% ({currency_symbol})',
+            f'Loan Rec. ({currency_symbol})',
             f'Total Deductions ({currency_symbol})',
             f'Net Payable ({currency_symbol})',
         ]
@@ -327,6 +329,7 @@ class PayrollDisbursementWizard(models.TransientModel):
         total_sso = 0.0
         total_faov = 0.0
         total_paro = 0.0
+        total_loan = 0.0
         total_deductions = 0.0
         total_net = 0.0
         total_advance = 0.0
@@ -394,6 +397,9 @@ class PayrollDisbursementWizard(models.TransientModel):
             if not paro_line:
                 paro_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_PARO_DED')
 
+            loan_line = payslip.line_ids.filtered(
+                lambda l: l.salary_rule_id.code in ('VE_LOAN_DED_V2', 'LIQUID_LOAN_DED_V2'))
+
             net_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')
             if not net_line:
                 net_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')
@@ -403,10 +409,11 @@ class PayrollDisbursementWizard(models.TransientModel):
             sso = abs(sso_line[0].total) if sso_line else 0.0
             faov = abs(faov_line[0].total) if faov_line else 0.0
             paro = abs(paro_line[0].total) if paro_line else 0.0
+            loan = abs(loan_line[0].total) if loan_line else 0.0
             net = net_line[0].total if net_line else 0.0
 
             gross = salary_prorated + bonus_prorated
-            deductions = ari + sso + faov + paro
+            deductions = ari + sso + faov + paro + loan
 
             # Convert to selected currency if needed
             if exchange_rate != 1.0:
@@ -417,6 +424,7 @@ class PayrollDisbursementWizard(models.TransientModel):
                 sso *= exchange_rate
                 faov *= exchange_rate
                 paro *= exchange_rate
+                loan *= exchange_rate
                 deductions *= exchange_rate
                 net *= exchange_rate
 
@@ -434,10 +442,11 @@ class PayrollDisbursementWizard(models.TransientModel):
             worksheet.write(row, 7, sso, currency_format)
             worksheet.write(row, 8, faov, currency_format)
             worksheet.write(row, 9, paro, currency_format)
-            worksheet.write(row, 10, deductions, currency_format)
-            worksheet.write(row, 11, net, currency_format)
+            worksheet.write(row, 10, loan, currency_format)
+            worksheet.write(row, 11, deductions, currency_format)
+            worksheet.write(row, 12, net, currency_format)
             if is_advance:
-                worksheet.write(row, 12, advance_amt, currency_format)
+                worksheet.write(row, 13, advance_amt, currency_format)
 
             # Add to totals
             total_salary += salary_prorated
@@ -447,6 +456,7 @@ class PayrollDisbursementWizard(models.TransientModel):
             total_sso += sso
             total_faov += faov
             total_paro += paro
+            total_loan += loan
             total_deductions += deductions
             total_net += net
             total_advance += advance_amt
@@ -464,10 +474,10 @@ class PayrollDisbursementWizard(models.TransientModel):
         worksheet.write(row, 7, total_sso, total_format)
         worksheet.write(row, 8, total_faov, total_format)
         worksheet.write(row, 9, total_paro, total_format)
-        worksheet.write(row, 10, total_deductions, total_format)
-        worksheet.write(row, 11, total_net, total_format)
+        worksheet.write(row, 10, total_loan, total_format)
+        worksheet.write(row, 11, total_deductions, total_format)
+        worksheet.write(row, 12, total_net, total_format)
         if is_advance:
-            # Highlight advance total with special format
             advance_total_format = workbook.add_format({
                 'bold': True,
                 'num_format': '#,##0.00',
@@ -476,7 +486,7 @@ class PayrollDisbursementWizard(models.TransientModel):
                 'bg_color': '#FFF3E0',
                 'font_color': '#E65100',
             })
-            worksheet.write(row, 12, total_advance, advance_total_format)
+            worksheet.write(row, 13, total_advance, advance_total_format)
 
         # Close workbook
         workbook.close()
