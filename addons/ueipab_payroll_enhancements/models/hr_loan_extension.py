@@ -215,11 +215,10 @@ class HrLoan(models.Model):
         if not emp_receivable:
             return
 
-        partner_id = False
-        if self.employee_id.address_id:
-            partner_id = self.employee_id.address_id.id
-        elif getattr(self.employee_id, 'work_contact_id', False):
-            partner_id = self.employee_id.work_contact_id.id
+        # work_contact_id is the employee's own partner (Odoo 17).
+        # address_id is typically the company address — do NOT use it for employee entries.
+        work_contact = getattr(self.employee_id, 'work_contact_id', False)
+        partner_id = work_contact.id if work_contact else False
 
         amount = self.loan_amount
         today = dt.today()
