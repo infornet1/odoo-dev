@@ -57,12 +57,22 @@
 
       <!-- AMOUNT BOX -->
       <t t-set="bs_total" t-value="object.advance_bs_amount or (object.loan_amount * (object.advance_exchange_rate or 1.0))"/>
-      <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);border-radius:8px;padding:22px;margin-bottom:24px;text-align:center;color:white">
+      <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);border-radius:8px;padding:22px;margin-bottom:16px;text-align:center;color:white">
         <p style="margin:0 0 6px;font-size:13px;opacity:0.85;text-transform:uppercase;letter-spacing:.5px">Monto Adelantado</p>
         <p style="margin:0;font-size:32px;font-weight:700">
           Bs. <t t-out="'{:,.2f}'.format(bs_total)"/>
         </p>
       </div>
+
+      <!-- EXCHANGE RATE REFERENCE -->
+      <t t-if="object.advance_exchange_rate">
+        <div style="background:#fff9e6;border:2px dashed #ffc107;border-radius:8px;padding:12px;margin-bottom:24px;text-align:center">
+          <div style="font-size:12px;color:#856404;margin-bottom:4px">Tasa de Cambio Aplicada (Referencia)</div>
+          <div style="font-size:18px;font-weight:bold;color:#d39e00">
+            Bs. <t t-esc="'{:,.4f}'.format(object.advance_exchange_rate)"/>
+          </div>
+        </div>
+      </t>
 
       <!-- REPAYMENT SCHEDULE -->
       <div style="background:#1a2c5b;color:white;padding:10px 16px;border-radius:6px 6px 0 0;font-size:14px;font-weight:600">

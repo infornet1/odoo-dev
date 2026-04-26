@@ -81,14 +81,14 @@ class LoanAcknowledgmentController(http.Controller):
                     'loan_acknowledged_ip': request.httprequest.remote_addr,
                 })
             ack_date = loan.loan_acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
+            bs_total = loan.advance_bs_amount or (loan.loan_amount * (loan.advance_exchange_rate or 1.0))
             body = f'''
               <div class="icon">✅</div>
               <h1>¡Confirmación Registrada!</h1>
               <div class="info">
                 <p><strong>Empleado:</strong> {loan.employee_id.name}</p>
                 <p><strong>Nro. Adelanto:</strong> {loan.name}</p>
-                <p><strong>Monto:</strong> ${loan.loan_amount:,.2f} USD
-                   (Bs. {loan.advance_bs_amount:,.2f})</p>
+                <p><strong>Monto:</strong> Bs. {bs_total:,.2f}</p>
                 <p><strong>Fecha confirmación:</strong> {ack_date}</p>
               </div>
               <p style="color:#555;font-size:14px">
@@ -114,18 +114,26 @@ class LoanAcknowledgmentController(http.Controller):
                 self._page('Ya Confirmado', body, 'success'),
                 [('Content-Type', 'text/html')])
 
-        # Build repayment schedule rows
+        # Compute Bs amount (primary) and rate reference
+        bs_total = loan.advance_bs_amount or (loan.loan_amount * (loan.advance_exchange_rate or 1.0))
+        rate = loan.advance_exchange_rate or 0.0
+
+        # Build repayment schedule rows (amounts in Bs)
         schedule_rows = ''.join(
             f'<tr><td>{i+1}</td>'
             f'<td>{line.date.strftime("%d/%m/%Y") if line.date else ""}</td>'
-            f'<td>${line.amount:,.2f}</td>'
+            f'<td>Bs. {line.amount * rate:,.2f}</td>'
             f'<td>{"✅" if line.paid else "⏳"}</td></tr>'
             for i, line in enumerate(loan.loan_lines)
         )
 
-        bs_str = f'Bs. {loan.advance_bs_amount:,.2f}' if loan.advance_bs_amount else ''
-        rate_str = (f'Tasa: Bs. {loan.advance_exchange_rate:,.4f} / USD'
-                    if loan.advance_exchange_rate else '')
+        rate_display = (
+            f'<div style="background:#fff9e6;border:2px dashed #ffc107;border-radius:6px;'
+            f'padding:10px;margin:10px 0;text-align:center;font-size:13px;color:#856404">'
+            f'Tasa de Cambio Aplicada (Referencia): '
+            f'<strong>Bs. {rate:,.4f}</strong>'
+            f'</div>'
+        ) if rate else ''
 
         body = f'''
           <div class="icon">💰</div>
@@ -134,9 +142,9 @@ class LoanAcknowledgmentController(http.Controller):
             <p><strong>Empleado:</strong> {loan.employee_id.name}</p>
             <p><strong>Cédula:</strong> {loan.employee_id.identification_id or "N/A"}</p>
             <p><strong>Nro. Adelanto:</strong> {loan.name}</p>
-            <p><strong>Monto:</strong> ${loan.loan_amount:,.2f} USD {bs_str and "/ " + bs_str}</p>
-            {f"<p><strong>{rate_str}</strong></p>" if rate_str else ""}
+            <p><strong>Monto:</strong> Bs. {bs_total:,.2f}</p>
           </div>
+          {rate_display}
           <table class="table">
             <thead><tr><th>#</th><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
             <tbody>{schedule_rows}</tbody>
@@ -144,8 +152,7 @@ class LoanAcknowledgmentController(http.Controller):
           <div class="legal">
             El suscrito trabajador declara haber recibido de la
             <strong>UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO, CA</strong>
-            la cantidad de <strong>${loan.loan_amount:,.2f} USD</strong>
-            {bs_str and f"(<strong>{bs_str}</strong>)"}
+            la cantidad de <strong>Bs. {bs_total:,.2f}</strong>
             por concepto de <strong>ADELANTO DE SALARIO</strong>, el cual será
             descontado de su nómina según el plan de recuperación indicado.
           </div>
