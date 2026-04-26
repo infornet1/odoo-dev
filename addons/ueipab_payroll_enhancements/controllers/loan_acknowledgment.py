@@ -50,6 +50,103 @@ class LoanAcknowledgmentController(http.Controller):
 </body>
 </html>"""
 
+    # ── confirmation email ─────────────────────────────────────────────────
+
+    def _send_ack_confirmation_email(self, loan):
+        """Send confirmation email to employee + CC to HR after ack is registered."""
+        emp_email = loan.employee_id.work_email
+        if not emp_email:
+            return
+
+        bs_total = loan.advance_bs_amount or (
+            loan.loan_amount * (loan.advance_exchange_rate or 1.0))
+        rate = loan.advance_exchange_rate or 0.0
+        ack_date = loan.loan_acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
+        ack_ip = loan.loan_acknowledged_ip or 'N/A'
+
+        subject = '✅ Conformidad Registrada – Adelanto de Salario │ %s' % loan.name
+
+        body_html = f'''
+<div style="font-family:'Segoe UI',sans-serif;background:#f4f4f4;padding:20px">
+  <div style="max-width:600px;margin:0 auto;background:white;border-radius:10px;
+              box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden">
+
+    <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;
+                padding:24px;text-align:center">
+      <h1 style="margin:0;font-size:22px">✅ Conformidad Registrada</h1>
+      <p style="margin:6px 0 0;font-size:14px;opacity:.9">Adelanto de Salario</p>
+    </div>
+
+    <div style="padding:28px">
+      <p style="font-size:15px;color:#333;margin-bottom:20px">
+        Estimado/a <strong>{loan.employee_id.name}</strong>,
+      </p>
+      <p style="font-size:14px;color:#555;line-height:1.6;margin-bottom:22px">
+        Hemos registrado su conformidad digital con el adelanto de salario
+        indicado a continuación.
+      </p>
+
+      <div style="background:#f0f4fa;border-radius:8px;padding:18px;margin-bottom:22px">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;
+                    border-bottom:1px solid #d0dce8">
+          <span style="font-weight:600;color:#1a2c5b;font-size:13px">📋 Nro. Adelanto:</span>
+          <span style="color:#333;font-size:13px">{loan.name}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;
+                    border-bottom:1px solid #d0dce8">
+          <span style="font-weight:600;color:#1a2c5b;font-size:13px">💰 Monto:</span>
+          <span style="color:#333;font-size:13px">Bs. {bs_total:,.2f}</span>
+        </div>
+        {'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #d0dce8"><span style="font-weight:600;color:#1a2c5b;font-size:13px">Tasa de Cambio:</span><span style="color:#333;font-size:13px">Bs. ' + f'{rate:,.4f}' + '</span></div>' if rate else ''}
+        <div style="display:flex;justify-content:space-between;padding:6px 0;
+                    border-bottom:1px solid #d0dce8">
+          <span style="font-weight:600;color:#1a2c5b;font-size:13px">📅 Fecha confirmación:</span>
+          <span style="color:#333;font-size:13px">{ack_date}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0">
+          <span style="font-weight:600;color:#1a2c5b;font-size:13px">🌐 IP registrada:</span>
+          <span style="color:#333;font-size:13px">{ack_ip}</span>
+        </div>
+      </div>
+
+      <div style="background:#d4edda;border-left:4px solid #28a745;padding:14px 18px;
+                  border-radius:4px;margin-bottom:22px">
+        <p style="font-size:13px;color:#155724;margin:0">
+          Su conformidad digital ha quedado registrada con fecha, hora e IP.
+          El descuento será aplicado a su nómina según el plan de recuperación acordado.
+        </p>
+      </div>
+
+      <div style="background:#e8f4f8;border-left:4px solid #2471a3;padding:14px 18px;
+                  border-radius:4px">
+        <p style="font-size:13px;color:#1a2c5b;margin:0 0 4px">
+          <strong>¿Dudas o consultas?</strong>
+        </p>
+        <p style="font-size:13px;color:#555;margin:0">
+          Escriba a
+          <a href="mailto:recursoshumanos@ueipab.edu.ve"
+             style="color:#2471a3">recursoshumanos@ueipab.edu.ve</a>
+        </p>
+      </div>
+    </div>
+
+    <div style="background:#f8f9fa;padding:14px 28px;border-top:1px solid #e0e0e0;
+                text-align:center;font-size:12px;color:#888">
+      Instituto Privado Andrés Bello &#8226;
+      <strong style="color:#1a2c5b">recursoshumanos@ueipab.edu.ve</strong>
+    </div>
+  </div>
+</div>'''
+
+        request.env['mail.mail'].sudo().create({
+            'subject': subject,
+            'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+            'email_to': emp_email,
+            'email_cc': 'recursoshumanos@ueipab.edu.ve',
+            'body_html': body_html,
+            'auto_delete': True,
+        }).send()
+
     # ── GET: landing page ──────────────────────────────────────────────────
 
     @http.route(
@@ -74,12 +171,15 @@ class LoanAcknowledgmentController(http.Controller):
 
         # ── POST: process confirmation ─────────────────────────────────────
         if request.httprequest.method == 'POST':
-            if not loan.loan_is_acknowledged:
+            first_ack = not loan.loan_is_acknowledged
+            if first_ack:
                 loan.write({
                     'loan_is_acknowledged': True,
                     'loan_acknowledged_date': fields.Datetime.now(),
                     'loan_acknowledged_ip': request.httprequest.remote_addr,
                 })
+                self._send_ack_confirmation_email(loan)
+
             ack_date = loan.loan_acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
             bs_total = loan.advance_bs_amount or (loan.loan_amount * (loan.advance_exchange_rate or 1.0))
             body = f'''
