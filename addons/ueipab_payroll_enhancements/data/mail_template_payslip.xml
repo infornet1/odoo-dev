@@ -292,7 +292,7 @@
                         </div>
 
 
-                        <!-- VEB EXCHANGE RATE REFERENCE -->
+                        <!-- VEB EXCHANGE RATE REFERENCE (informational context for employee) -->
                         <div style="background:#fff9e6;border:2px dashed #ffc107;border-radius:8px;padding:15px;margin:20px 0;text-align:center">
                             <div style="font-size:13px;color:#856404;margin-bottom:5px">Tasa de Cambio Aplicada (Referencia)</div>
                             <div style="font-size:22px;font-weight:bold;color:#d39e00">
