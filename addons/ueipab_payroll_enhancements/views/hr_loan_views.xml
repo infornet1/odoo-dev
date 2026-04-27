@@ -107,6 +107,11 @@
                         invisible="state != 'approve'"/>
             </xpath>
 
+            <!-- date: override ohrms_loan's unconditional readonly=True -->
+            <xpath expr="//field[@name='date']" position="attributes">
+                <attribute name="readonly">state == 'approve'</attribute>
+            </xpath>
+
             <!-- Bs helper fields after loan_amount -->
             <xpath expr="//field[@name='loan_amount']" position="after">
                 <field name="advance_bs_amount"

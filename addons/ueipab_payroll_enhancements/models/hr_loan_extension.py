@@ -294,7 +294,7 @@ class HrLoan(models.Model):
         partner_id = work_contact.id if work_contact else False
 
         amount = self.loan_amount
-        today = dt.today()
+        entry_date = self.date or dt.today()
         label = 'Anticipo Salarial – %s' % self.employee_id.name
 
         def _line(account_id, debit, credit):
@@ -303,7 +303,7 @@ class HrLoan(models.Model):
                 'partner_id': partner_id,
                 'account_id': account_id,
                 'journal_id': self.journal_id.id,
-                'date': today,
+                'date': entry_date,
                 'debit': debit,
                 'credit': credit,
             })
@@ -312,7 +312,7 @@ class HrLoan(models.Model):
             'narration': label,
             'ref': self.name,
             'journal_id': self.journal_id.id,
-            'date': today,
+            'date': entry_date,
             'line_ids': [
                 _line(emp_receivable.id, amount, 0.0),
                 _line(self.treasury_account_id.id, 0.0, amount),

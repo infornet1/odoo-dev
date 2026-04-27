@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.63.9 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Testing | **Version:** 17.0.1.64.7 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -108,6 +108,7 @@ DR 5.1.01.10.010  Prestaciones Sociales  $5,000
 
 | Field | Editable | Behaviour |
 |---|---|---|
+| `date` | Until approved | Actual disbursement date. Defaults to today. Override to backdate historical advances. Used as the journal entry date on approval. |
 | `advance_bs_amount` | Until approved | Bs amount paid to employee. Onchange → recalculates `loan_amount` = bs ÷ rate. |
 | `advance_exchange_rate` | Until approved | Auto-populated from latest VEB `company_rate`. Editable to match actual disbursement rate. |
 | `loan_amount` | Always | USD obligation. Onchange → recalculates `advance_bs_amount` = usd × rate. Both directions work. |
@@ -346,3 +347,4 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.5 | 2026-04-27 | Loan form UI enhancements: `loan_recovery_status` badge (Pendiente/En Recuperación/Saldado), "Comprobante(s)" smart button, installment lines table: `payslip_id` column + row colour, `action_payslip_done()` hook writes `payslip_id` back onto cleared loan lines. |
 | 17.0.1.64.6 | 2026-04-27 | Override `hr.loan.line.action_paid_amount()` to no-op: eliminates "Another entry with the same name" conflict when same employee has two loans cleared in the same month, and removes double-accounting (salary rules already handle DR/CR in PAY1 payroll entry). |
 | DB-only fix | 2026-04-27 | PAY1 journal sequence restored: renamed contaminated entries 2435, 2437, 2438, 2442 from `LOAN/ EMPLOYEE/April-NNNN` to proper `PAY1/2026/04/000N` names + updated `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ entry = 0007. |
+| 17.0.1.64.7 | 2026-04-27 | `hr.loan.date` editable until approved (override ohrms_loan's unconditional `readonly=True`). `_create_advance_journal_entry()` now uses `self.date or today` so the journal entry date matches the actual disbursement date. Enables correct backdating for historical advances. |
