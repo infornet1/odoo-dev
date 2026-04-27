@@ -322,6 +322,18 @@ class HrLoan(models.Model):
         self.move_id = move
 
 
+class HrLoanLine(models.Model):
+    _inherit = 'hr.loan.line'
+
+    def action_paid_amount(self, month):
+        # ohrms_loan_accounting would create a LOAN/ journal entry here with name
+        # 'LOAN/ {employee}/{month-year}' — non-unique when same employee has two loans
+        # cleared in the same calendar month.  VE_LOAN_DED_V2 / LIQUID_LOAN_DED_V2
+        # salary rules already post DR/CR via the standard PAY1 payroll entry,
+        # so this duplicate entry is both redundant and a naming-conflict blocker.
+        return True
+
+
 class HrPayslip(models.Model):
     _inherit = 'hr.payslip'
 

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-27
 
 ## Core Instructions
 
@@ -374,6 +374,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 - **AI Agent Poll Cron Rollback Bug (2026-03-02) — RESOLVED (v1.19.0):** Fixed in 3 parts: (1) savepoint per conversation in poll cron for error isolation, (2) global WA message dedup (not per-conversation), (3) phone-based duplicate conversation guard in wizard. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
 - **HR Loan one-loan-per-employee constraint (ohrms_loan):** `ohrms_loan.create()` blocks creating a new loan when the employee already has any approved loan with `balance_amount > 0`. The check is global (not per `recovery_type`), preventing an employee from having both a quincena + liquidacion loan simultaneously. **Workaround:** use a different employee, or clear existing loan balances first. **Option C fix** (per-recovery_type constraint override via Python MRO) designed but not yet implemented. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
+- **HR Loan `action_paid_amount` conflict — FIXED (v1.64.6):** `ohrms_loan_accounting.action_paid_amount(month)` generates entry name `LOAN/ {employee}/April-YYYY`. When same employee has two loans cleared in the same calendar month, the second payslip confirmation fails with "Another entry with the same name already exists". Also causes double-accounting (salary rules already post the same DR/CR). Fixed by overriding `action_paid_amount()` to no-op on `hr.loan.line`. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
 
 ### Legal

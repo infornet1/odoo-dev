@@ -200,6 +200,15 @@ Runs after `ohrms_loan`'s override (MRO chain). Guards `LO` injection:
 - `recovery_type='quincena'` + struct = `LIQUID_VE_V2` → zero out LO
 - No double-deduction risk: `date_from ≤ installment_date ≤ date_to` check per quincena window
 
+### `action_paid_amount()` override on `hr.loan.line`
+`ohrms_loan_accounting.action_paid_amount(month)` is called during payslip confirmation for each loan input. It creates an `account.move` in the loan journal with name `'LOAN/ {employee}/{month-year}'`.
+
+**Two problems with the original behaviour:**
+1. **Naming conflict** — when the same employee has two loans cleared in the same calendar month (e.g., LO/0002 cleared by ABRIL30 and LO/0003 cleared by ABRIL30-1, both April 2026), `action_paid_amount('April-2026')` generates the same entry name twice → `Validation Error: Another entry with the same name already exists`.
+2. **Double accounting** — `VE_LOAN_DED_V2` / `LIQUID_LOAN_DED_V2` salary rules already post DR `1.1.06.01.001` / CR `1.1.01.02.001` inside the main PAY1 payroll entry. The `action_paid_amount()` entry posts the exact same DR/CR a second time.
+
+**Fix (v1.64.6):** Override `action_paid_amount()` to return `True` immediately. The salary rule accounting in the PAY1 payroll entry is sufficient and correct.
+
 ### Email templates — SQL management
 All `mail.template.body_html` fields containing QWeb `<t>` tags **must be managed via direct SQL**. Odoo's `Html` field ORM sanitizer strips `<t t-esc>`, `<t t-if>`, etc. on every ORM write. Use `json.dumps` + `UPDATE mail_template SET body_html = %s::jsonb`.
 
@@ -311,3 +320,4 @@ docker restart odoo-dev-web
 | 17.0.1.64.3 | 2026-04-27 | Payslip Email: loan row moved into ❌ Deducciones table. Removed standalone yellow box. |
 | 17.0.1.64.4 | 2026-04-27 | Payslip Email: fixed `es_VE` key sync (ORM uses es_VE; old yellow box was still in that key). Switched from `<tr t-if>` to `<t t-set>/<t t-if><tr>` pattern — `<tr t-if>` not processed by Odoo mail renderer. |
 | 17.0.1.64.5 | 2026-04-27 | Loan form UI enhancements: `loan_recovery_status` badge (Pendiente/En Recuperación/Saldado), "Comprobante(s)" smart button, installment lines table: `payslip_id` column + row colour, `action_payslip_done()` hook writes `payslip_id` back onto cleared loan lines. |
+| 17.0.1.64.6 | 2026-04-27 | Override `hr.loan.line.action_paid_amount()` to no-op: eliminates "Another entry with the same name" conflict when same employee has two loans cleared in the same month, and removes double-accounting (salary rules already handle DR/CR in PAY1 payroll entry). |
