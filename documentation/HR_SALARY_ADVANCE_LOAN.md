@@ -288,6 +288,30 @@ docker restart odoo-dev-web
 - Apply SQL template patch for Payslip Email (id=43 in testing; verify id in prod) — both `en_US` and `es_VE` keys must be updated
 - Migration script is idempotent — safe to re-run
 - After upgrade, backfill `hr.loan.line.payslip_id` for any existing paid loans via direct SQL (`backfill_sql.py` pattern)
+- Apply PAY1 sequence fix SQL (see Known Issues below) if `ohrms_loan_accounting` was ever active in the environment before the v1.64.6 no-op override
+
+---
+
+## Known Issues / Post-Install Cleanup
+
+### PAY1 Sequence Contamination (testing env — fixed 2026-04-27)
+
+`ohrms_loan_accounting.action_paid_amount()` created entries in the PAY1 journal with **explicit custom names** in format `LOAN/ {employee}/April-YYYY`. In Odoo 17, `account.move` naming works by prefix-continuation: the next unnamed entry in a journal inherits the prefix of the most recent posted entry. Once a `LOAN/ EMPLOYEE/April-` entry was the latest in PAY1, every subsequent unnamed PAY1 move (payroll accounting entries AND advance disbursements) got a `LOAN/` name with an incrementing counter instead of the correct `PAY1/YYYY/MM/NNNN` format.
+
+**Affected entries in testing (IDs 2435, 2437, 2438, 2442)** — corrected via direct SQL on 2026-04-27:
+
+```sql
+-- Run only if LOAN/ entries exist in PAY1 journal for the affected period
+-- Adjust IDs and sequence numbers to match your environment
+UPDATE account_move SET name='PAY1/2026/04/0003', sequence_prefix='PAY1/2026/04/', sequence_number=3  WHERE id=2435;
+UPDATE account_move SET name='PAY1/2026/04/0004', sequence_prefix='PAY1/2026/04/', sequence_number=4  WHERE id=2437;
+UPDATE account_move SET name='PAY1/2026/04/0005', sequence_prefix='PAY1/2026/04/', sequence_number=5  WHERE id=2438;
+UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/', sequence_number=6  WHERE id=2442;
+```
+
+**Note:** Entries 2434 (`LOAN/ GLADYS.../April-2026`, ref=LO/0001) and 2436 (`LOAN/ GUSTAVO.../April-2026`, ref=LO/0002) were created intentionally by `action_paid_amount()` and represent **double-accounting** of the loan recovery deduction (same DR/CR as `VE_LOAN_DED_V2` salary rule in the payroll entry). These should be reversed/cancelled in a future cleanup, but do not affect PAY1 sequence going forward since their prefix is distinct from `PAY1/YYYY/MM/`.
+
+**Production:** If `ohrms_loan_accounting` is installed in production and any payslips with loan deductions have been confirmed, run the equivalent query to find and fix contaminated entries before or shortly after deploying v1.64.6.
 
 ---
 
@@ -321,3 +345,4 @@ docker restart odoo-dev-web
 | 17.0.1.64.4 | 2026-04-27 | Payslip Email: fixed `es_VE` key sync (ORM uses es_VE; old yellow box was still in that key). Switched from `<tr t-if>` to `<t t-set>/<t t-if><tr>` pattern — `<tr t-if>` not processed by Odoo mail renderer. |
 | 17.0.1.64.5 | 2026-04-27 | Loan form UI enhancements: `loan_recovery_status` badge (Pendiente/En Recuperación/Saldado), "Comprobante(s)" smart button, installment lines table: `payslip_id` column + row colour, `action_payslip_done()` hook writes `payslip_id` back onto cleared loan lines. |
 | 17.0.1.64.6 | 2026-04-27 | Override `hr.loan.line.action_paid_amount()` to no-op: eliminates "Another entry with the same name" conflict when same employee has two loans cleared in the same month, and removes double-accounting (salary rules already handle DR/CR in PAY1 payroll entry). |
+| DB-only fix | 2026-04-27 | PAY1 journal sequence restored: renamed contaminated entries 2435, 2437, 2438, 2442 from `LOAN/ EMPLOYEE/April-NNNN` to proper `PAY1/2026/04/000N` names + updated `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ entry = 0007. |
