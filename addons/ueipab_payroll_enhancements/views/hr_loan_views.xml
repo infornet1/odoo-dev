@@ -10,7 +10,7 @@
             <!-- Smart buttons in button_box -->
             <xpath expr="//div[@name='button_box']" position="inside">
 
-                <!-- Journal entry link -->
+                <!-- Journal entry link (disbursement) -->
                 <button class="oe_stat_button"
                         type="object"
                         name="action_view_journal_entry"
@@ -21,6 +21,48 @@
                             <field name="move_id" string="" widget="many2one"/>
                         </span>
                         <span class="o_stat_text">Asiento</span>
+                    </div>
+                </button>
+
+                <!-- Comprobante(s) de descuento (payslips that cleared this loan) -->
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_view_clearing_payslips"
+                        icon="fa-file-text-o"
+                        invisible="clearing_payslip_count == 0">
+                    <div class="o_stat_info">
+                        <field name="clearing_payslip_count" class="o_stat_value"/>
+                        <span class="o_stat_text">Comprobante(s)</span>
+                    </div>
+                </button>
+
+                <!-- Recovery status: pending (approved, no payment yet) -->
+                <button class="oe_stat_button"
+                        icon="fa-hourglass-start"
+                        invisible="loan_recovery_status != 'pending' or state != 'approve'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value" style="color:#e67e22">Pendiente</span>
+                        <span class="o_stat_text">Recuperación</span>
+                    </div>
+                </button>
+
+                <!-- Recovery status: in progress -->
+                <button class="oe_stat_button"
+                        icon="fa-spinner"
+                        invisible="loan_recovery_status != 'recovering'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value" style="color:#2471a3">En Recuperación</span>
+                        <span class="o_stat_text">Recuperación</span>
+                    </div>
+                </button>
+
+                <!-- Recovery status: fully cleared -->
+                <button class="oe_stat_button"
+                        icon="fa-check-circle"
+                        invisible="loan_recovery_status != 'cleared'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value" style="color:#27ae60">Saldado</span>
+                        <span class="o_stat_text">Recuperación</span>
                     </div>
                 </button>
 
@@ -80,11 +122,25 @@
                 <field name="recovery_type" widget="radio"/>
             </xpath>
 
+            <!-- Loan lines: row colour + payslip column -->
+            <xpath expr="//field[@name='loan_lines']//tree" position="attributes">
+                <attribute name="decoration-success">paid</attribute>
+                <attribute name="decoration-muted">not paid</attribute>
+            </xpath>
+            <xpath expr="//field[@name='loan_lines']//field[@name='paid']" position="after">
+                <field name="payslip_id"
+                       string="Comprobante de Descuento"
+                       optional="show"
+                       readonly="1"/>
+            </xpath>
+
             <!-- Invisible fields required by modifiers -->
             <xpath expr="//sheet" position="inside">
                 <field name="move_id" invisible="1"/>
                 <field name="loan_ack_token" invisible="1"/>
                 <field name="loan_is_acknowledged" invisible="1"/>
+                <field name="loan_recovery_status" invisible="1"/>
+                <field name="clearing_payslip_count" invisible="1"/>
             </xpath>
 
             <!-- Ack info at bottom of form (only when sent) -->

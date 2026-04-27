@@ -116,9 +116,23 @@ DR 5.1.01.10.010  Prestaciones Sociales  $5,000
 
 | Button | Visible when | Action |
 |---|---|---|
-| **Asiento** (fa-book) | `move_id` is set | Opens journal entry |
-| **Pendiente** (orange, fa-clock-o) | Approved + not acknowledged | Opens send wizard |
-| **Confirmado** (green, fa-check-circle) | `loan_is_acknowledged` | Opens send wizard |
+| **Asiento** (fa-book) | `move_id` is set | Opens disbursement journal entry |
+| **Comprobante(s)** (fa-file-text-o) | `clearing_payslip_count > 0` | Opens payslip(s) that cleared the loan |
+| **Pendiente** (orange, fa-hourglass-start) | Approved + `recovery_status='pending'` | Non-navigable status indicator |
+| **En Recuperación** (blue, fa-spinner) | `recovery_status='recovering'` | Non-navigable status indicator |
+| **Saldado** (green, fa-check-circle) | `recovery_status='cleared'` | Non-navigable status indicator |
+| **Pendiente conformidad** (orange, fa-clock-o) | Approved + not acknowledged | Opens send wizard |
+| **Confirmado conformidad** (green, fa-check-circle) | `loan_is_acknowledged` | Opens send wizard |
+
+### Recovery status field
+
+`loan_recovery_status` (computed, not stored) on `hr.loan`:
+
+| Value | Condition | Badge colour |
+|---|---|---|
+| `pending` | state ≠ approve OR balance = loan_amount (no payment yet) | Orange |
+| `recovering` | 0 < balance < loan_amount (partial recovery) | Blue |
+| `cleared` | balance ≤ 0 (fully recovered) | Green |
 
 ### Acknowledgment section
 
@@ -160,12 +174,25 @@ Appears on form after first email send (`loan_ack_token` is set):
 7. Payslip confirmed
      → installment.paid = True
      → hr.loan.balance_amount decrements
-     → When balance = 0 → loan fully recovered
+     → action_payslip_done() hook writes payslip_id back onto the loan line
+     → "Comprobante(s)" smart button appears on loan form
+     → "Saldado" recovery status button shows when balance = 0
+     → When balance = 0 → ohrms_loan constraint lifted → new loan can be created
 ```
 
 ---
 
 ## Key Technical Notes
+
+### `action_payslip_done()` override
+Runs after `ohrms_loan`'s override (MRO chain). After `super()` marks installments `paid=True`, searches for `hr.loan.line` records that:
+- Belong to the payslip's employee
+- Are `paid=True` and `payslip_id` is unset (just cleared)
+- Have `date` within `date_from ≤ date ≤ date_to`
+
+Then writes `payslip_id = payslip.id` on those lines. This powers the "Comprobante(s)" smart button and the installment lines table link.
+
+**Backfill note:** For loans paid before this code existed, run `backfill_sql.py` (or equivalent) to set `payslip_id` retroactively.
 
 ### `get_inputs()` override
 Runs after `ohrms_loan`'s override (MRO chain). Guards `LO` injection:
@@ -237,7 +264,7 @@ docker restart odoo-dev-web
 |---|---|---|
 | Payroll Disbursement Detail | Dedicated "Loan Rec." column, excluded from "Other Ded" | Shows 0.00 when no loan |
 | Relación de Liquidación | Deduction line with loan name + amount | Only if `LIQUID_LOAN_DED_V2` ≠ 0 |
-| Payslip Email - Employee Delivery | Yellow loan recovery notice (Bs) | Only if `VE_LOAN_DED_V2` ≠ 0 |
+| Payslip Email - Employee Delivery | Loan recovery row in ❌ Deducciones table (Bs) | Only if `VE_LOAN_DED_V2` ≠ 0 |
 | Pago Adelanto | Amount in Bs (× exchange_rate_used) | Standard |
 | Adelanto de Prestaciones Sociales | Loan deduction row; exchange rate box retained | Only if `LIQUID_LOAN_DED_V2` ≠ 0 |
 | **Adelanto de Salario** (new) | Full loan details, Bs amounts, rate box, ack button | Per loan |
@@ -249,7 +276,9 @@ docker restart odoo-dev-web
 - Install `ohrms_loan` + `ohrms_loan_accounting` in production **before** upgrading `ueipab_payroll_enhancements`
 - Run salary rules setup script manually (migration already ran in testing at 63.0)
 - Apply SQL body patches for templates 71 (id=50 in prod) and 75 (new)
+- Apply SQL template patch for Payslip Email (id=43 in testing; verify id in prod) — both `en_US` and `es_VE` keys must be updated
 - Migration script is idempotent — safe to re-run
+- After upgrade, backfill `hr.loan.line.payslip_id` for any existing paid loans via direct SQL (`backfill_sql.py` pattern)
 
 ---
 
@@ -276,3 +305,9 @@ docker restart odoo-dev-web
 | 17.0.1.63.7 | 2026-04-26 | Ack landing page: USD removed, Bs + rate reference box added. Loan advance email: rate box added. |
 | 17.0.1.63.8 | 2026-04-26 | Rate box in template 75 injected via direct SQL (ORM sanitizer strips `<t>` tags); `noupdate=1` restored. |
 | 17.0.1.63.9 | 2026-04-26 | Confirmation email on ack: `_send_ack_confirmation_email()` sends to employee + CC `recursoshumanos@ueipab.edu.ve` on first confirmation only. |
+| 17.0.1.64.0 | 2026-04-27 | Payroll Disbursement Detail Excel: added "Loan Rec." column (K), shifted Total Ded→L, Net→M. |
+| 17.0.1.64.1 | 2026-04-27 | Payslip Email (id=43): loan deduction block added. Initial patch to template. |
+| 17.0.1.64.2 | 2026-04-27 | Payslip Email: loan notice also patched on template id=43 (id=59 was wrong target). |
+| 17.0.1.64.3 | 2026-04-27 | Payslip Email: loan row moved into ❌ Deducciones table. Removed standalone yellow box. |
+| 17.0.1.64.4 | 2026-04-27 | Payslip Email: fixed `es_VE` key sync (ORM uses es_VE; old yellow box was still in that key). Switched from `<tr t-if>` to `<t t-set>/<t t-if><tr>` pattern — `<tr t-if>` not processed by Odoo mail renderer. |
+| 17.0.1.64.5 | 2026-04-27 | Loan form UI enhancements: `loan_recovery_status` badge (Pendiente/En Recuperación/Saldado), "Comprobante(s)" smart button, installment lines table: `payslip_id` column + row colour, `action_payslip_done()` hook writes `payslip_id` back onto cleared loan lines. |

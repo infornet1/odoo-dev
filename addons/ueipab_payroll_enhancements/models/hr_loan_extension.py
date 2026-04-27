@@ -72,7 +72,62 @@ class HrLoan(models.Model):
         readonly=True,
         copy=False)
 
+    # ── recovery status ────────────────────────────────────────────────────
+
+    loan_recovery_status = fields.Selection([
+        ('pending', 'Pendiente de Descuento'),
+        ('recovering', 'En Recuperación'),
+        ('cleared', 'Saldado'),
+    ], string='Estado de Recuperación',
+       compute='_compute_loan_recovery_status',
+       store=False)
+
+    clearing_payslip_count = fields.Integer(
+        string='Comprobantes de Descuento',
+        compute='_compute_clearing_payslip_count',
+        store=False)
+
     # ── computes ───────────────────────────────────────────────────────────
+
+    @api.depends('balance_amount', 'loan_amount', 'state', 'loan_lines.paid')
+    def _compute_loan_recovery_status(self):
+        for loan in self:
+            if loan.state != 'approve':
+                loan.loan_recovery_status = 'pending'
+            elif loan.balance_amount <= 0:
+                loan.loan_recovery_status = 'cleared'
+            elif loan.balance_amount < loan.loan_amount:
+                loan.loan_recovery_status = 'recovering'
+            else:
+                loan.loan_recovery_status = 'pending'
+
+    @api.depends('loan_lines.payslip_id')
+    def _compute_clearing_payslip_count(self):
+        for loan in self:
+            loan.clearing_payslip_count = len(
+                loan.loan_lines.filtered(lambda l: l.payslip_id))
+
+    def action_view_clearing_payslips(self):
+        self.ensure_one()
+        payslip_ids = self.loan_lines.filtered(
+            lambda l: l.payslip_id).mapped('payslip_id').ids
+        if not payslip_ids:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin comprobantes',
+                    'message': 'No hay comprobantes de descuento registrados.',
+                    'type': 'warning',
+                },
+            }
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Comprobantes de Descuento – %s' % self.name,
+            'res_model': 'hr.payslip',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', payslip_ids)],
+        }
 
     @api.depends('loan_ack_token')
     def _compute_loan_ack_url(self):
@@ -269,6 +324,21 @@ class HrLoan(models.Model):
 
 class HrPayslip(models.Model):
     _inherit = 'hr.payslip'
+
+    def action_payslip_done(self):
+        """After ohrms_loan marks installments paid, write payslip_id back onto the line."""
+        res = super().action_payslip_done()
+        for payslip in self:
+            loan_lines = self.env['hr.loan.line'].search([
+                ('employee_id', '=', payslip.employee_id.id),
+                ('paid', '=', True),
+                ('payslip_id', '=', False),
+                ('date', '>=', payslip.date_from),
+                ('date', '<=', payslip.date_to),
+            ])
+            if loan_lines:
+                loan_lines.write({'payslip_id': payslip.id})
+        return res
 
     def get_inputs(self, contracts, date_from, date_to):
         res = super().get_inputs(contracts, date_from, date_to)
