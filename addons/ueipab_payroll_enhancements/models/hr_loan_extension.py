@@ -141,13 +141,15 @@ class HrLoan(models.Model):
 
     # ── default lookups ────────────────────────────────────────────────────
 
-    def _get_veb_rate(self):
+    def _get_veb_rate(self, for_date=None):
         veb = self.env['res.currency'].search(
             [('name', 'in', ['VEB', 'VES']), ('active', '=', True)], limit=1)
         if not veb:
             return 0.0
-        rate = self.env['res.currency.rate'].search(
-            [('currency_id', '=', veb.id)], order='name desc', limit=1)
+        domain = [('currency_id', '=', veb.id)]
+        if for_date:
+            domain.append(('name', '<=', for_date))
+        rate = self.env['res.currency.rate'].search(domain, order='name desc', limit=1)
         return rate.company_rate if rate else 0.0
 
     def _default_loan_account(self):
@@ -265,6 +267,13 @@ class HrLoan(models.Model):
         defaults = self._accounting_defaults_vals()
         for fname, val in defaults.items():
             setattr(self, fname, val)
+
+    @api.onchange('date')
+    def _onchange_date_rate(self):
+        """Date changed → fetch the BCV rate on or before that date."""
+        rate = self._get_veb_rate(for_date=self.date)
+        if rate:
+            self.advance_exchange_rate = rate
 
     # ── approval ───────────────────────────────────────────────────────────
 
