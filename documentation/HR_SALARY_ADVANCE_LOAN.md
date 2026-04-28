@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.64.7 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Testing | **Version:** 17.0.1.64.9 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -110,7 +110,7 @@ DR 5.1.01.10.010  Prestaciones Sociales  $5,000
 |---|---|---|
 | `date` | Until approved | Actual disbursement date. Defaults to today. Override to backdate historical advances. Used as the journal entry date on approval. |
 | `advance_bs_amount` | Until approved | Bs amount paid to employee. Onchange → recalculates `loan_amount` = bs ÷ rate. |
-| `advance_exchange_rate` | Until approved | Auto-populated from latest VEB `company_rate`. Editable to match actual disbursement rate. |
+| `advance_exchange_rate` | Until approved | Auto-populated from latest VEB `company_rate`. When `date` is changed, the field is automatically updated to the BCV rate on or before that date (`_onchange_date_rate`). Editable to override manually. |
 | `loan_amount` | Always | USD obligation. Onchange → recalculates `advance_bs_amount` = usd × rate. Both directions work. |
 
 ### Smart buttons
@@ -209,6 +209,25 @@ Runs after `ohrms_loan`'s override (MRO chain). Guards `LO` injection:
 2. **Double accounting** — `VE_LOAN_DED_V2` / `LIQUID_LOAN_DED_V2` salary rules already post DR `1.1.06.01.001` / CR `1.1.01.02.001` inside the main PAY1 payroll entry. The `action_paid_amount()` entry posts the exact same DR/CR a second time.
 
 **Fix (v1.64.6):** Override `action_paid_amount()` to return `True` immediately. The salary rule accounting in the PAY1 payroll entry is sufficient and correct.
+
+### Recovery type messaging (v1.64.9)
+
+All three employee-facing surfaces adapt their language based on `recovery_type`:
+
+| Surface | `quincena` | `liquidacion` |
+|---|---|---|
+| Notification email — badge | Blue: *🗓️ Recuperación por Nómina Quincenal* | Amber: *📋 Recuperación por Liquidación Laboral* + warning note |
+| Notification email — table header | *📅 Plan de Cuotas Quincenales* | *📋 Descuento en Liquidación Laboral* |
+| Notification email — legal declaration | "…descontado de su nómina quincenal…" | "…descontado íntegramente de su liquidación laboral…, sin afectar su nómina regular." |
+| Ack landing page | Modalidad row + blue badge + quincenal legal text | Modalidad row + amber badge + liquidación legal text |
+| POST confirm page | Modalidad + quincenal recovery note | Modalidad + liquidación recovery note |
+| Ack confirmation email | 🔄 Modalidad row + quincenal green note | 🔄 Modalidad row + "Su nómina regular no será afectada." |
+
+Helper methods on `LoanAcknowledgmentController`:
+- `_recovery_label(loan)` → human-readable label string
+- `_recovery_note(loan)` → context-appropriate recovery sentence
+
+This is especially important for `liquidacion` loans: the employee must understand that **no deductions will appear on their regular payslips** — the balance is cleared only via the termination liquidation payment.
 
 ### Email templates — SQL management
 All `mail.template.body_html` fields containing QWeb `<t>` tags **must be managed via direct SQL**. Odoo's `Html` field ORM sanitizer strips `<t t-esc>`, `<t t-if>`, etc. on every ORM write. Use `json.dumps` + `UPDATE mail_template SET body_html = %s::jsonb`.
@@ -348,3 +367,5 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.6 | 2026-04-27 | Override `hr.loan.line.action_paid_amount()` to no-op: eliminates "Another entry with the same name" conflict when same employee has two loans cleared in the same month, and removes double-accounting (salary rules already handle DR/CR in PAY1 payroll entry). |
 | DB-only fix | 2026-04-27 | PAY1 journal sequence restored: renamed contaminated entries 2435, 2437, 2438, 2442 from `LOAN/ EMPLOYEE/April-NNNN` to proper `PAY1/2026/04/000N` names + updated `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ entry = 0007. |
 | 17.0.1.64.7 | 2026-04-27 | `hr.loan.date` editable until approved (override ohrms_loan's unconditional `readonly=True`). `_create_advance_journal_entry()` now uses `self.date or today` so the journal entry date matches the actual disbursement date. Enables correct backdating for historical advances. |
+| 17.0.1.64.8 | 2026-04-28 | `_get_veb_rate(for_date)` now accepts a date parameter: fetches last BCV rate on or before that date. New `@api.onchange('date')` auto-populates `advance_exchange_rate` when the loan date is changed — required for historical advances to get the correct period rate. |
+| 17.0.1.64.9 | 2026-04-28 | Recovery type messaging across all 3 surfaces: notification email, ack landing page, and ack confirmation email all display recovery-type-specific badge, table title, legal declaration, and confirmation note for `quincena` (blue) vs `liquidacion` (amber). Prevents confusion for liquidacion employees who see no quincena deductions. |

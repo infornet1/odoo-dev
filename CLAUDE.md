@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-04-27
+**Last Updated:** 2026-04-28
 
 ## Core Instructions
 
@@ -376,6 +376,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **HR Loan one-loan-per-employee constraint (ohrms_loan):** `ohrms_loan.create()` blocks creating a new loan when the employee already has any approved loan with `balance_amount > 0`. The check is global (not per `recovery_type`), preventing an employee from having both a quincena + liquidacion loan simultaneously. **Workaround:** use a different employee, or clear existing loan balances first. **Option C fix** (per-recovery_type constraint override via Python MRO) designed but not yet implemented. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **HR Loan `action_paid_amount` conflict — FIXED (v1.64.6):** `ohrms_loan_accounting.action_paid_amount(month)` generates entry name `LOAN/ {employee}/April-YYYY`. When same employee has two loans cleared in the same calendar month, the second payslip confirmation fails with "Another entry with the same name already exists". Also causes double-accounting (salary rules already post the same DR/CR). Fixed by overriding `action_paid_amount()` to no-op on `hr.loan.line`. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **PAY1 journal sequence contamination — FIXED (DB-only 2026-04-27):** `action_paid_amount()` entries with explicit `LOAN/ EMPLOYEE/April-NNNN` names in PAY1 caused Odoo's prefix-continuation sequence to assign `LOAN/ EMPLOYEE/April-NNNN` names to ALL subsequent unnamed PAY1 entries (payroll accounting + disbursements). Fixed by renaming entries 2435, 2437, 2438, 2442 to `PAY1/2026/04/0003–0006` + correcting `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ = 0007. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
+- **HR Loan exchange rate not updating on date change — FIXED (v1.64.8):** `_get_veb_rate()` always returned the latest BCV rate; no `@api.onchange('date')` existed. Fixed by adding a `for_date` parameter with `name <= date` filter, plus a new `_onchange_date_rate` that fires when the user changes the loan date. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
 
 ### Legal
