@@ -52,6 +52,17 @@ class LoanAcknowledgmentController(http.Controller):
 
     # ── confirmation email ─────────────────────────────────────────────────
 
+    def _recovery_label(self, loan):
+        if loan.recovery_type == 'liquidacion':
+            return 'Liquidación Laboral'
+        return 'Nómina Quincenal'
+
+    def _recovery_note(self, loan):
+        if loan.recovery_type == 'liquidacion':
+            return ('El monto será descontado íntegramente de su liquidación laboral. '
+                    'Su nómina regular no será afectada.')
+        return 'El descuento será aplicado a su nómina quincenal según el plan de cuotas acordado.'
+
     def _send_ack_confirmation_email(self, loan):
         """Send confirmation email to employee + CC to HR after ack is registered."""
         emp_email = loan.employee_id.work_email
@@ -63,6 +74,8 @@ class LoanAcknowledgmentController(http.Controller):
         rate = loan.advance_exchange_rate or 0.0
         ack_date = loan.loan_acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
         ack_ip = loan.loan_acknowledged_ip or 'N/A'
+        recovery_label = self._recovery_label(loan)
+        recovery_note = self._recovery_note(loan)
 
         subject = '✅ Conformidad Registrada – Adelanto de Salario │ %s' % loan.name
 
@@ -100,6 +113,11 @@ class LoanAcknowledgmentController(http.Controller):
         {'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #d0dce8"><span style="font-weight:600;color:#1a2c5b;font-size:13px">Tasa de Cambio:</span><span style="color:#333;font-size:13px">Bs. ' + f'{rate:,.4f}' + '</span></div>' if rate else ''}
         <div style="display:flex;justify-content:space-between;padding:6px 0;
                     border-bottom:1px solid #d0dce8">
+          <span style="font-weight:600;color:#1a2c5b;font-size:13px">🔄 Modalidad:</span>
+          <span style="color:#333;font-size:13px">{recovery_label}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;
+                    border-bottom:1px solid #d0dce8">
           <span style="font-weight:600;color:#1a2c5b;font-size:13px">📅 Fecha confirmación:</span>
           <span style="color:#333;font-size:13px">{ack_date}</span>
         </div>
@@ -113,7 +131,7 @@ class LoanAcknowledgmentController(http.Controller):
                   border-radius:4px;margin-bottom:22px">
         <p style="font-size:13px;color:#155724;margin:0">
           Su conformidad digital ha quedado registrada con fecha, hora e IP.
-          El descuento será aplicado a su nómina según el plan de recuperación acordado.
+          {recovery_note}
         </p>
       </div>
 
@@ -182,6 +200,8 @@ class LoanAcknowledgmentController(http.Controller):
 
             ack_date = loan.loan_acknowledged_date.strftime('%d/%m/%Y a las %H:%M')
             bs_total = loan.advance_bs_amount or (loan.loan_amount * (loan.advance_exchange_rate or 1.0))
+            recovery_label = self._recovery_label(loan)
+            recovery_note = self._recovery_note(loan)
             body = f'''
               <div class="icon">✅</div>
               <h1>¡Confirmación Registrada!</h1>
@@ -189,11 +209,12 @@ class LoanAcknowledgmentController(http.Controller):
                 <p><strong>Empleado:</strong> {loan.employee_id.name}</p>
                 <p><strong>Nro. Adelanto:</strong> {loan.name}</p>
                 <p><strong>Monto:</strong> Bs. {bs_total:,.2f}</p>
+                <p><strong>Modalidad:</strong> {recovery_label}</p>
                 <p><strong>Fecha confirmación:</strong> {ack_date}</p>
               </div>
               <p style="color:#555;font-size:14px">
                 Su confirmación ha sido registrada correctamente.<br>
-                El descuento será aplicado según el plan de recuperación acordado.
+                {recovery_note}
               </p>'''
             return request.make_response(
                 self._page('Confirmación Registrada', body, 'success'),
@@ -217,6 +238,8 @@ class LoanAcknowledgmentController(http.Controller):
         # Compute Bs amount (primary) and rate reference
         bs_total = loan.advance_bs_amount or (loan.loan_amount * (loan.advance_exchange_rate or 1.0))
         rate = loan.advance_exchange_rate or 0.0
+        recovery_label = self._recovery_label(loan)
+        is_liquidacion = loan.recovery_type == 'liquidacion'
 
         # Build repayment schedule rows (amounts in Bs)
         schedule_rows = ''.join(
@@ -235,6 +258,32 @@ class LoanAcknowledgmentController(http.Controller):
             f'</div>'
         ) if rate else ''
 
+        if is_liquidacion:
+            recovery_badge = (
+                '<div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;'
+                'padding:10px 14px;margin:10px 0;text-align:center;font-size:13px;color:#856404">'
+                '<strong>📋 Recuperación por Liquidación Laboral</strong><br>'
+                '<span style="font-size:12px">Este adelanto se descontará íntegramente de su '
+                'liquidación laboral. Su nómina regular no será afectada.</span>'
+                '</div>'
+            )
+            table_title = '📋 Descuento en Liquidación Laboral'
+            legal_recovery = (
+                'el cual será descontado íntegramente de su liquidación laboral '
+                'al término de la relación de trabajo, sin afectar su nómina regular.'
+            )
+        else:
+            recovery_badge = (
+                '<div style="background:#e8f4f8;border:2px solid #2471a3;border-radius:8px;'
+                'padding:10px 14px;margin:10px 0;text-align:center;font-size:13px;color:#1a2c5b">'
+                '<strong>🗓️ Recuperación por Nómina Quincenal</strong>'
+                '</div>'
+            )
+            table_title = '📅 Plan de Cuotas Quincenales'
+            legal_recovery = (
+                'el cual será descontado de su nómina quincenal según el plan de cuotas indicado.'
+            )
+
         body = f'''
           <div class="icon">💰</div>
           <h1>Confirmación de Adelanto de Salario</h1>
@@ -243,18 +292,23 @@ class LoanAcknowledgmentController(http.Controller):
             <p><strong>Cédula:</strong> {loan.employee_id.identification_id or "N/A"}</p>
             <p><strong>Nro. Adelanto:</strong> {loan.name}</p>
             <p><strong>Monto:</strong> Bs. {bs_total:,.2f}</p>
+            <p><strong>Modalidad:</strong> {recovery_label}</p>
           </div>
+          {recovery_badge}
           {rate_display}
           <table class="table">
-            <thead><tr><th>#</th><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
+            <thead>
+              <tr><th colspan="4" style="background:#1a2c5b;color:white;padding:8px;
+                  text-align:left;font-size:13px">{table_title}</th></tr>
+              <tr><th>#</th><th>Fecha</th><th>Monto</th><th>Estado</th></tr>
+            </thead>
             <tbody>{schedule_rows}</tbody>
           </table>
           <div class="legal">
             El suscrito trabajador declara haber recibido de la
             <strong>UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO, CA</strong>
             la cantidad de <strong>Bs. {bs_total:,.2f}</strong>
-            por concepto de <strong>ADELANTO DE SALARIO</strong>, el cual será
-            descontado de su nómina según el plan de recuperación indicado.
+            por concepto de <strong>ADELANTO DE SALARIO</strong>, {legal_recovery}
           </div>
           <form method="POST"
                 action="/loan/acknowledge/{loan_id}/{token}">

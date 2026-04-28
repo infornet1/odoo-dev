@@ -74,10 +74,36 @@
         </div>
       </t>
 
+      <!-- RECOVERY TYPE BADGE -->
+      <t t-if="object.recovery_type == 'liquidacion'">
+        <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;font-weight:700;color:#856404">
+            📋 Recuperación por Liquidación Laboral
+          </span>
+          <p style="font-size:12px;color:#856404;margin:4px 0 0">
+            Este adelanto será descontado íntegramente de su liquidación laboral al término de la relación de trabajo. <strong>Su nómina regular no será afectada.</strong>
+          </p>
+        </div>
+      </t>
+      <t t-else="">
+        <div style="background:#e8f4f8;border:2px solid #2471a3;border-radius:8px;padding:10px 16px;margin-bottom:16px;text-align:center">
+          <span style="font-size:13px;font-weight:700;color:#1a2c5b">
+            🗓️ Recuperación por Nómina Quincenal
+          </span>
+        </div>
+      </t>
+
       <!-- REPAYMENT SCHEDULE -->
-      <div style="background:#1a2c5b;color:white;padding:10px 16px;border-radius:6px 6px 0 0;font-size:14px;font-weight:600">
-        📅 Plan de Recuperación
-      </div>
+      <t t-if="object.recovery_type == 'liquidacion'">
+        <div style="background:#856404;color:white;padding:10px 16px;border-radius:6px 6px 0 0;font-size:14px;font-weight:600">
+          📋 Descuento en Liquidación Laboral
+        </div>
+      </t>
+      <t t-else="">
+        <div style="background:#1a2c5b;color:white;padding:10px 16px;border-radius:6px 6px 0 0;font-size:14px;font-weight:600">
+          📅 Plan de Cuotas Quincenales
+        </div>
+      </t>
       <table style="width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px">
         <thead>
           <tr style="background:#2471a3;color:white">
@@ -104,16 +130,23 @@
       </table>
 
       <!-- LEGAL DECLARATION -->
+      <t t-set="bs_declared" t-value="object.advance_bs_amount or (object.loan_amount * (object.advance_exchange_rate or 1.0))"/>
       <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:16px;margin-bottom:24px;font-size:12px;color:#555;line-height:1.7">
         <strong style="color:#1a2c5b">DECLARACIÓN DEL TRABAJADOR</strong><br/>
         El suscrito trabajador declara haber recibido de la
         <strong>UNIDAD EDUCATIVA INSTITUTO PRIVADO ANDRES BELLO, CA</strong>
         la cantidad de
-        <strong>Bs. <t t-out="'{:,.2f}'.format(object.advance_bs_amount or (object.loan_amount * (object.advance_exchange_rate or 1.0)))"/></strong>
-        por concepto de <strong>ADELANTO DE SALARIO</strong>, el cual será descontado
-        de su nómina según el plan de recuperación indicado. Al confirmar la recepción
-        digital, el trabajador acusa recibo del monto recibido y acepta las condiciones
-        de recuperación establecidas.
+        <strong>Bs. <t t-out="'{:,.2f}'.format(bs_declared)"/></strong>
+        por concepto de <strong>ADELANTO DE SALARIO</strong>,
+        <t t-if="object.recovery_type == 'liquidacion'">
+          el cual será descontado íntegramente de su liquidación laboral al término de la
+          relación de trabajo, sin afectar su nómina regular.
+        </t>
+        <t t-else="">
+          el cual será descontado de su nómina quincenal según el plan de cuotas indicado.
+        </t>
+        Al confirmar la recepción digital, el trabajador acusa recibo del monto recibido
+        y acepta las condiciones de recuperación establecidas.
       </div>
 
       <!-- INFO NOTE -->
