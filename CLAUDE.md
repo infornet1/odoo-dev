@@ -336,6 +336,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Ad-hoc Queries
 - [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag, with quantity and amount due
+- [Decreto Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) — Impact analysis vs $240 decree: LUIS RODRIGUEZ & NIDYA LIRA below threshold, cestaticket $40 unchanged, monthly adjustment $59.96
 
 ### Planned / Testing Reports
 - [Payroll Requisition Estimation Report](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) — Preliminary payroll cost estimate from active contracts (no payslips needed), single currency per run, auto-populated BCV rate
@@ -378,6 +379,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **PAY1 journal sequence contamination — FIXED (DB-only 2026-04-27):** `action_paid_amount()` entries with explicit `LOAN/ EMPLOYEE/April-NNNN` names in PAY1 caused Odoo's prefix-continuation sequence to assign `LOAN/ EMPLOYEE/April-NNNN` names to ALL subsequent unnamed PAY1 entries (payroll accounting + disbursements). Fixed by renaming entries 2435, 2437, 2438, 2442 to `PAY1/2026/04/0003–0006` + correcting `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ = 0007. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **HR Loan exchange rate not updating on date change — FIXED (v1.64.8):** `_get_veb_rate()` always returned the latest BCV rate; no `@api.onchange('date')` existed. Fixed by adding a `for_date` parameter with `name <= date` filter, plus a new `_onchange_date_rate` that fires when the user changes the loan date. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
+- **Decreto Ingreso Mínimo $240 (2026-04-30) — AJUSTE PENDIENTE:** 2 empleados por debajo del umbral mínimo: LUIS RODRIGUEZ ($191.37, gap +$48.63) y NIDYA LIRA ($228.67, gap +$11.33). Acción: incrementar `ueipab_bonus_v2` en ambos contratos. Cestaticket $40 sin cambio. 9 empleados en banda de riesgo $240–$300. Ver [Análisis Completo](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)

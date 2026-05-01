@@ -4,6 +4,28 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## HR Analyses
+
+### 2026-05-01 - Decreto Ingreso Mínimo Integral $240 — Análisis de Impacto Salarial
+
+**Ad-hoc analysis — no module change. PDF ejecutivo generado para equipo de Finanzas.**
+
+| Item | Detalle |
+|---|---|
+| **Decreto** | Ingreso Mínimo Integral sube a $240 USD efectivo 30/04/2026 (retroactivo) |
+| **Composición** | Bono de Guerra Económica $199.73 + Cestaticket $40.00 + Salario base $0.27 |
+| **Anterior** | ~$190 USD (+26.3% de incremento) |
+| **Empleados analizados** | 44 (excluyendo Alberto Perdomo, María Jiménez, Gustavo Perdomo) |
+| **No conformes** | LUIS RODRIGUEZ ($191.37, gap +$48.63) · NIDYA LIRA ($228.67, gap +$11.33) |
+| **Ajuste mensual requerido** | $59.96 (anualizado: $719.52) |
+| **Banda de riesgo $240–$300** | 9 empleados — MARIELA PRADO y ZARETH FARIAS con solo $10.03 de margen |
+| **Cestaticket** | Valor actual $40.00 coincide exactamente con el decreto — sin cambio requerido |
+| **Acción** | Incrementar `ueipab_bonus_v2`: LUIS RODRIGUEZ $55.69→$104.32 · NIDYA LIRA $83.44→$94.77 |
+| **PDF** | `/home/ftpuser/odoo-dev/Analisis_Impacto_Salarial_Mayo2026.pdf` (2 páginas) |
+| **Docs** | [SALARIO_MINIMO_DECRETO_MAYO2026.md](SALARIO_MINIMO_DECRETO_MAYO2026.md) |
+
+---
+
 ## Production Deployments
 
 ### 2026-04-22 - Relación de Liquidación PDF Title Selector (ueipab_payroll_enhancements v1.62.7)
