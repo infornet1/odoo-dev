@@ -360,6 +360,55 @@ class HrLoanLine(models.Model):
 class HrPayslip(models.Model):
     _inherit = 'hr.payslip'
 
+    def action_compute_sheet(self):
+        # Before recomputing salary lines, add LO inputs for any active loan not
+        # yet represented on the payslip.  Only adds — never modifies or removes
+        # existing inputs, so HR's manual zero-outs (skip this period) are preserved.
+        for payslip in self:
+            struct_code = payslip.struct_id.code if payslip.struct_id else ''
+            if struct_code == 'VE_PAYROLL_V2':
+                target_type = 'quincena'
+            elif struct_code == 'LIQUID_VE_V2':
+                target_type = 'liquidacion'
+            else:
+                continue
+
+            # loan_line_ids already tracked by existing LO inputs on this payslip
+            tracked_ids = set(
+                payslip.input_line_ids.filtered(
+                    lambda l: l.code == 'LO' and l.loan_line_id
+                ).mapped('loan_line_id').ids
+            )
+
+            active_loans = self.env['hr.loan'].search([
+                ('employee_id', '=', payslip.employee_id.id),
+                ('state', '=', 'approve'),
+                ('balance_amount', '>', 0),
+                ('recovery_type', '=', target_type),
+            ])
+
+            new_inputs = []
+            for loan in active_loans:
+                installment = loan.loan_lines.filtered(
+                    lambda l: not l.paid and l.date <= payslip.date_to
+                ).sorted('date')
+                if not installment:
+                    continue
+                installment = installment[0]
+                if installment.id not in tracked_ids:
+                    new_inputs.append((0, 0, {
+                        'name': 'Loan Recovery',
+                        'code': 'LO',
+                        'contract_id': payslip.contract_id.id,
+                        'amount': installment.amount,
+                        'loan_line_id': installment.id,
+                    }))
+
+            if new_inputs:
+                payslip.write({'input_line_ids': new_inputs})
+
+        return super().action_compute_sheet()
+
     def action_payslip_done(self):
         # super() → ohrms_loan marks all input lines that have loan_line_id as paid=True.
         # We then revert lines where HR set amount=0 (skip this loan this period)
