@@ -262,3 +262,88 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 
 **Files to Create:**
 - `data/ir_cron_ack_reminder.xml` - Cron job definition
+
+---
+
+## Bulk Reminder via Odoo Shell (Cross-Batch)
+
+**When to use:** When you need to send reminders to ALL pending employees across ALL batches at once — bypassing the per-batch wizard UI.
+
+**Last run:** 2026-05-04 — 26 reminders sent across 12 batches (0 failed, 0 no-email).
+
+### Script
+
+Copy the script to the production server and run it through the Odoo shell:
+
+```bash
+# 1. Write the script locally
+cat > /tmp/send_ack_reminders_prod.py << 'PYEOF'
+import logging
+from odoo import fields
+
+template = env.ref(
+    'ueipab_payroll_enhancements.email_template_payslip_ack_reminder',
+    raise_if_not_found=False
+)
+if not template:
+    print("ERROR: Reminder email template not found!")
+    exit()
+
+print(f"Template found: id={template.id} | {template.name}")
+
+pending_slips = env['hr.payslip'].search([
+    ('is_acknowledged', '=', False),
+    ('state', '=', 'done'),
+    ('payslip_run_id', '!=', False),
+])
+
+print(f"\nTotal pending payslips: {len(pending_slips)}")
+print("=" * 70)
+
+sent = 0
+failed = 0
+no_email = 0
+
+for slip in pending_slips.sorted(key=lambda s: (s.payslip_run_id.name, s.employee_id.name)):
+    emp = slip.employee_id
+    batch = slip.payslip_run_id.name
+    email = emp.work_email
+
+    if not email:
+        print(f"  [NO EMAIL]  {batch} | {emp.name} | {slip.number}")
+        no_email += 1
+        continue
+
+    try:
+        template.send_mail(slip.id, force_send=True)
+        slip.write({
+            'ack_reminder_count': slip.ack_reminder_count + 1,
+            'ack_reminder_last_date': fields.Datetime.now(),
+        })
+        env.cr.commit()
+        print(f"  [SENT #{slip.ack_reminder_count}]  {batch} | {emp.name} | {slip.number} → {email}")
+        sent += 1
+    except Exception as e:
+        print(f"  [FAILED]    {batch} | {emp.name} | {slip.number} | ERROR: {e}")
+        env.cr.rollback()
+        failed += 1
+
+print("=" * 70)
+print(f"DONE: {sent} sent | {no_email} no-email | {failed} failed")
+PYEOF
+
+# 2. Copy to production server and into the container
+sshpass -p 'PASSWORD' scp /tmp/send_ack_reminders_prod.py root@10.124.0.3:/tmp/
+sshpass -p 'PASSWORD' ssh root@10.124.0.3 \
+  "docker cp /tmp/send_ack_reminders_prod.py 0ef7d03db702_ueipab17:/tmp/ && \
+   docker exec -i 0ef7d03db702_ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http \
+   < /tmp/send_ack_reminders_prod.py 2>&1"
+```
+
+### Notes
+
+- Each payslip's `ack_reminder_count` is incremented and `ack_reminder_last_date` updated on every run.
+- Commits per-payslip (`env.cr.commit()`) so a single failure doesn't roll back the entire batch.
+- The email template (`email_template_payslip_ack_reminder`) is the same orange-themed one used by the wizard — shows the running reminder count inside the body.
+- Production container name: `0ef7d03db702_ueipab17` (verify with `docker ps` if it changes after a restart).
+- SSH credentials are in `/opt/odoo-dev/config/production.json` (gitignored).
