@@ -66,6 +66,17 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-05-04 - HR Loan Bug Fixes (ueipab_payroll_enhancements v1.65.0)
+
+| Item | Details |
+|---|---|
+| **`total_net_amount` fix** | `_compute_total_net_amount` on `hr.payslip.run` now includes `LIQUID_NET_V2` — liquidation-only batches were showing Bs. 0 as total net |
+| **Relación de Liquidación sign fix** | Loan deduction `amount_formatted` was using `abs()` causing the deduction to display as positive, inconsistent with other deductions in the report |
+| **Known issue documented** | Creating `LIQUID_VE_V2` payslips via batch does not auto-populate LO input (struct_id is taken from contract, not payslip). Workaround: create liquidation payslips individually |
+| **Version** | `17.0.1.65.0` |
+
+---
+
 ### 2026-04-19 - Payslip Ack Reminder via Glenda (ueipab_ai_agent v1.31.0)
 
 **New `payslip_ack_reminder` skill + Tab 2 in "Recolección de Datos" wizard.**

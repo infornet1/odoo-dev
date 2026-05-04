@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.64.9 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Testing | **Version:** 17.0.1.65.0 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -314,6 +314,14 @@ docker restart odoo-dev-web
 
 ## Known Issues / Post-Install Cleanup
 
+### Liquidation payslip created via batch does not pick up LO input
+
+When a `LIQUID_VE_V2` payslip is created through a payslip batch (not individually), the batch assigns `struct_id` from the contract's default structure (`VE_PAYROLL_V2`). `get_inputs()` uses `contracts.get_all_structures()` which returns the **contract's** struct, not the payslip's selected struct. Since `VE_LOAN_DED_V2` lives in `VE_PAYROLL_V2`, ohrms_loan finds the LO input type but sets amount=0 because the rule belongs to quincena, not liquidacion.
+
+**Workaround:** Create liquidation payslips **individually** via Payroll → Employee → Create Payslip, selecting `Liquidación Venezolana V2` explicitly. The struct is set before `onchange_employee` fires, so LO is correctly populated.
+
+**Future fix:** Override `get_inputs()` in our extension to use `self.struct_id` (payslip's selected structure) when set, falling back to contract struct only when unset.
+
 ### PAY1 Sequence Contamination (testing env — fixed 2026-04-27)
 
 `ohrms_loan_accounting.action_paid_amount()` created entries in the PAY1 journal with **explicit custom names** in format `LOAN/ {employee}/April-YYYY`. In Odoo 17, `account.move` naming works by prefix-continuation: the next unnamed entry in a journal inherits the prefix of the most recent posted entry. Once a `LOAN/ EMPLOYEE/April-` entry was the latest in PAY1, every subsequent unnamed PAY1 move (payroll accounting entries AND advance disbursements) got a `LOAN/` name with an incrementing counter instead of the correct `PAY1/YYYY/MM/NNNN` format.
@@ -369,3 +377,4 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.7 | 2026-04-27 | `hr.loan.date` editable until approved (override ohrms_loan's unconditional `readonly=True`). `_create_advance_journal_entry()` now uses `self.date or today` so the journal entry date matches the actual disbursement date. Enables correct backdating for historical advances. |
 | 17.0.1.64.8 | 2026-04-28 | `_get_veb_rate(for_date)` now accepts a date parameter: fetches last BCV rate on or before that date. New `@api.onchange('date')` auto-populates `advance_exchange_rate` when the loan date is changed — required for historical advances to get the correct period rate. |
 | 17.0.1.64.9 | 2026-04-28 | Recovery type messaging across all 3 surfaces: notification email, ack landing page, and ack confirmation email all display recovery-type-specific badge, table title, legal declaration, and confirmation note for `quincena` (blue) vs `liquidacion` (amber). Prevents confusion for liquidacion employees who see no quincena deductions. |
+| 17.0.1.65.0 | 2026-05-04 | `total_net_amount` on `hr.payslip.run` now includes `LIQUID_NET_V2` code — batch totals were showing 0 for liquidation-only batches. Relación de Liquidación: loan deduction `amount_formatted` sign fix — was using `abs()` causing positive display inconsistent with other deductions. |

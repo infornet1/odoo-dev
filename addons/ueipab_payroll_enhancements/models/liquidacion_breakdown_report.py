@@ -303,7 +303,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 if employee_loans:
                     loan_calculation = (
                         f'Préstamo {employee_loans.name} — '
-                        f'Total: {curr_symbol}{self._format_amount(abs(self._convert_currency(employee_loans.loan_amount, usd, currency, date_ref, exchange_rate)))} — '
+                        f'Total: {curr_symbol}{self._format_amount(self._convert_currency(employee_loans.loan_amount, usd, currency, date_ref, exchange_rate))} — '
                         f'Recuperado: {curr_symbol}{self._format_amount(abs(loan_amt))}'
                     )
             except Exception:
@@ -314,7 +314,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'formula': loan_formula,
                 'calculation': loan_calculation,
                 'amount': loan_amt,
-                'amount_formatted': self._format_amount(abs(loan_amt)),
+                'amount_formatted': self._format_amount(loan_amt),
             })
 
         total_deductions = sum(d['amount'] for d in deductions)
