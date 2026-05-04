@@ -292,6 +292,21 @@ class HrPayslip(models.Model):
     # BUSINESS METHODS
     # ========================================
 
+    def action_payslip_cancel(self):
+        """Cancel payslip and its journal entry when confirmed.
+
+        Handles three states:
+          - draft / verify: no journal entry — just set state to cancel
+          - done: reset posted JE to draft then cancel it, then cancel payslip
+        """
+        for payslip in self:
+            if payslip.state == 'done' and payslip.move_id:
+                if payslip.move_id.state == 'posted':
+                    payslip.move_id.button_draft()
+                if payslip.move_id.state == 'draft':
+                    payslip.move_id.button_cancel()
+        return self.write({'state': 'cancel'})
+
     def action_payslip_draft(self):
         """Override to prevent setting to draft if batch is cancelled.
 

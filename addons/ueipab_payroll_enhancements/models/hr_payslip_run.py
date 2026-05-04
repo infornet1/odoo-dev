@@ -653,11 +653,10 @@ class HrPayslipRun(models.Model):
                     _('This batch is already cancelled.')
                 )
 
-            # Cancel all associated payslips
-            # Note: action_payslip_cancel() automatically handles posted journal entries
-            # via button_cancel(), which resets them to draft then cancels them.
+            # Cancel all associated payslips regardless of state.
+            # action_payslip_cancel() handles JE reversal for done payslips.
             payslips_to_cancel = batch.slip_ids.filtered(
-                lambda s: s.state not in ('cancel', 'draft')
+                lambda s: s.state != 'cancel'
             )
             if payslips_to_cancel:
                 payslips_to_cancel.action_payslip_cancel()
