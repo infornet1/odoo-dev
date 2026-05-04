@@ -88,6 +88,11 @@ print(f"Structures: nomina={struct_nomina.id}, liquidacion={struct_liquid.id}")
 # Rule: VE_LOAN_DED_V2  (quincena — structure VE_PAYROLL_V2, seq 106)
 # ---------------------------------------------------------------------------
 
+LO_FORMULA = (
+    "slip = payslip.dict\n"
+    "result = -sum(l.amount for l in slip.input_line_ids if l.code == 'LO')"
+)
+
 rule_nomina = env['hr.salary.rule'].search([('code', '=', 'VE_LOAN_DED_V2')], limit=1)
 if not rule_nomina:
     rule_nomina = env['hr.salary.rule'].create({
@@ -97,7 +102,7 @@ if not rule_nomina:
         'category_id': cat_ded.id,
         'condition_select': 'none',
         'amount_select': 'code',
-        'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
+        'amount_python_compute': LO_FORMULA,
         'account_debit_id': acc_receivable.id,
         'account_credit_id': acc_banco.id,
         'active': True,
@@ -106,11 +111,12 @@ if not rule_nomina:
 else:
     rule_nomina.write({
         'sequence': 106,
+        'amount_python_compute': LO_FORMULA,
         'account_debit_id': acc_receivable.id,
         'account_credit_id': acc_banco.id,
         'active': True,
     })
-    print(f"VE_LOAN_DED_V2 already exists (id={rule_nomina.id}) — accounts verified")
+    print(f"VE_LOAN_DED_V2 already exists (id={rule_nomina.id}) — formula + accounts updated")
 
 ensure_lo_input(rule_nomina)
 ensure_rule_in_struct(rule_nomina, struct_nomina)
@@ -128,7 +134,7 @@ if not rule_liquid:
         'category_id': cat_ded.id,
         'condition_select': 'none',
         'amount_select': 'code',
-        'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
+        'amount_python_compute': LO_FORMULA,
         'account_debit_id': acc_receivable.id,
         'account_credit_id': acc_prestaciones.id,
         'active': True,
@@ -137,11 +143,12 @@ if not rule_liquid:
 else:
     rule_liquid.write({
         'sequence': 196,
+        'amount_python_compute': LO_FORMULA,
         'account_debit_id': acc_receivable.id,
         'account_credit_id': acc_prestaciones.id,
         'active': True,
     })
-    print(f"LIQUID_LOAN_DED_V2 already exists (id={rule_liquid.id}) — accounts verified")
+    print(f"LIQUID_LOAN_DED_V2 already exists (id={rule_liquid.id}) — formula + accounts updated")
 
 ensure_lo_input(rule_liquid)
 ensure_rule_in_struct(rule_liquid, struct_liquid)

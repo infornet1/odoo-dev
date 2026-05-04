@@ -184,7 +184,21 @@ class HrLoan(models.Model):
 
     @api.model
     def create(self, vals):
-        record = super().create(vals)
+        # Multiple loans per employee allowed (Option A, v1.66.0).
+        # ohrms_loan.create() raises if employee already has an approved loan
+        # with balance_amount > 0. We assign the sequence ourselves and skip
+        # past ohrms_loan in the MRO so that constraint never runs.
+        if not vals.get('name') or vals['name'] == 'New':
+            vals['name'] = self.env['ir.sequence'].get('hr.loan.seq') or ' '
+        ohrms_cls = next(
+            (cls for cls in type(self).__mro__
+             if cls.__name__ == 'HrLoan' and 'ohrms_loan' in (cls.__module__ or '')),
+            None
+        )
+        if ohrms_cls:
+            record = super(ohrms_cls, self).create(vals)
+        else:
+            record = super().create(vals)
         defaults = record._accounting_defaults_vals()
         if defaults:
             record.write(defaults)
@@ -347,34 +361,58 @@ class HrPayslip(models.Model):
     _inherit = 'hr.payslip'
 
     def action_payslip_done(self):
-        """After ohrms_loan marks installments paid, write payslip_id back onto the line."""
+        # super() → ohrms_loan marks all input lines that have loan_line_id as paid=True.
+        # We then revert lines where HR set amount=0 (skip this loan this period)
+        # and write the payslip reference back for lines that were genuinely paid.
         res = super().action_payslip_done()
         for payslip in self:
-            loan_lines = self.env['hr.loan.line'].search([
-                ('employee_id', '=', payslip.employee_id.id),
-                ('paid', '=', True),
-                ('payslip_id', '=', False),
-                ('date', '>=', payslip.date_from),
-                ('date', '<=', payslip.date_to),
-            ])
-            if loan_lines:
-                loan_lines.write({'payslip_id': payslip.id})
+            for line in payslip.input_line_ids:
+                if not line.loan_line_id:
+                    continue
+                if line.amount <= 0:
+                    # HR opted to skip this loan — undo ohrms_loan's paid=True
+                    line.loan_line_id.write({'paid': False})
+                    line.loan_line_id.loan_id._compute_total_amount()
+                else:
+                    line.loan_line_id.write({'payslip_id': payslip.id})
         return res
 
     def get_inputs(self, contracts, date_from, date_to):
+        # Get all non-LO inputs from the parent chain
         res = super().get_inputs(contracts, date_from, date_to)
+        # Remove LO entries — ohrms_loan last-wins is replaced by one entry per loan
+        res = [r for r in res if r.get('code') != 'LO']
+
         struct_code = self.struct_id.code if self.struct_id else ''
-        for r in res:
-            if r.get('code') == 'LO' and r.get('amount', 0) != 0:
-                loan_line_id = r.get('loan_line_id')
-                if not loan_line_id:
-                    continue
-                loan = self.env['hr.loan.line'].browse(loan_line_id).loan_id
-                recovery_type = loan.recovery_type or 'quincena'
-                if recovery_type == 'liquidacion' and struct_code != 'LIQUID_VE_V2':
-                    r['amount'] = 0
-                    r.pop('loan_line_id', None)
-                elif recovery_type == 'quincena' and struct_code == 'LIQUID_VE_V2':
-                    r['amount'] = 0
-                    r.pop('loan_line_id', None)
+        if struct_code == 'LIQUID_VE_V2':
+            target_type = 'liquidacion'
+        elif struct_code == 'VE_PAYROLL_V2':
+            target_type = 'quincena'
+        else:
+            return res
+
+        employee = contracts[0].employee_id if contracts else self.employee_id
+        active_loans = self.env['hr.loan'].search([
+            ('employee_id', '=', employee.id),
+            ('state', '=', 'approve'),
+            ('balance_amount', '>', 0),
+            ('recovery_type', '=', target_type),
+        ])
+
+        for loan in active_loans:
+            # Earliest unpaid installment with date <= payslip end (handles skipped periods)
+            installment = loan.loan_lines.filtered(
+                lambda l: not l.paid and l.date <= date_to
+            ).sorted('date')
+            if not installment:
+                continue
+            installment = installment[0]
+            res.append({
+                'name': 'Loan Recovery',
+                'code': 'LO',
+                'contract_id': contracts[0].id if contracts else False,
+                'amount': installment.amount,
+                'loan_line_id': installment.id,
+            })
+
         return res

@@ -1,51 +1,63 @@
 # Multiple Loans per Employee
 
-**Status:** Planned | **Target version:** 17.0.1.66.0
-**Created:** 2026-05-04 | **Discussion:** 2026-05-05 morning
+**Status:** Implemented | **Version:** 17.0.1.66.0
+**Created:** 2026-05-04 | **Implemented:** 2026-05-05
 
 ---
 
-## Problem Statement
+## Problem Statement (resolved)
 
-`ohrms_loan` enforces a global one-loan-per-employee constraint: `create()` / `action_approve()` rejects a new loan if the employee already has any approved loan with `balance_amount > 0`, regardless of `recovery_type`. This prevents valid business scenarios such as an employee having both a quincena advance and a liquidación advance simultaneously.
-
----
-
-## Proposed Changes (3 files)
-
-### 1. `hr_loan_extension.py` — Override approval constraint
-
-Replace global block with per-`recovery_type` constraint (Option C):
-- Allow: employee has quincena loan + liquidacion loan simultaneously
-- Block: employee has two quincena loans, or two liquidacion loans
-
-### 2. `hr_loan_extension.py` — Fix `get_inputs()` to SUM multiple loans
-
-**Critical.** Current `ohrms_loan` logic overwrites LO amount on each loan iteration — only last loan wins. Must accumulate total across all matching installment lines for the payslip window.
-
-### 3. `liquidacion_breakdown_report.py` — Handle multiple liquidación loans
-
-Currently uses `limit=1` for loan description. Update to show all loan names and correct total when employee has more than one liquidación loan.
+`ohrms_loan` enforced a global one-loan-per-employee constraint: `create()` rejected a new loan if the employee already had any approved loan with `balance_amount > 0`. Also, `get_inputs()` had a last-wins bug (only last loan's installment amount used) and `action_payslip_done()` used date-range search instead of per-input tracking.
 
 ---
 
-## Design Questions for Discussion
+## Implemented Changes (v1.66.0)
 
-1. **Constraint scope:** Per-`recovery_type` (Option B) vs. no constraint at all (Option A)?
-   - Option B is safer — prevents accidental duplicates of the same type
-   - Option A is simpler but allows unlimited stacking
+### 1. `hr_loan_extension.py` — Remove approval constraint (Option A)
 
-2. **`loan_line_id` on payslip input:** With multiple loans, only one `loan_line_id` can be stored on `hr.payslip.input`. The `action_payslip_done()` hook searches by employee + date range so it handles multiple lines correctly. But is there a case where this ambiguity causes issues?
+`HrLoan.create()` bypasses ohrms_loan's `create()` via MRO: assigns the sequence itself then calls `super(ohrms_cls, self).create()` skipping the constraint. No limit on concurrent loans.
 
-3. **Report display for multiple quincena loans:** The Payslip Email currently shows one "Recuperación Anticipo Salarial" row. With two quincena loans deducting in the same payslip, should they appear as:
-   - One combined row (sum)
-   - Two separate rows (one per loan)
+### 2. `hr_loan_extension.py` — `get_inputs()` fully rewritten
 
-4. **UI / UX for HR:** Should the loan form show a warning when the employee already has an active loan of the same type (soft warning vs. hard block)?
+- Removes all LO entries from super() result (replaces ohrms_loan last-wins)
+- Searches active loans by `recovery_type` matching `self.struct_id.code`
+- Creates one LO input per loan: earliest unpaid installment with `date <= payslip.date_to`
+  - Handles skipped periods — past-due installments resurface in next payslip
+- HR can zero any LO input in "Other Inputs" tab to skip that loan this period
+
+### 3. `hr_loan_extension.py` — `action_payslip_done()` rewritten
+
+- Iterates `payslip.input_line_ids` with `loan_line_id` set
+- For `amount <= 0`: reverts ohrms_loan's `paid=True` (HR chose to skip)
+- For `amount > 0`: writes `payslip_id` back onto the installment
+
+### 4. Salary rules — updated formula (both envs, v1.66.0)
+
+Old: `result = -(inputs.LO.amount) if inputs.LO else 0` (only reads last LO input — broken for multiple)
+
+New:
+```python
+slip = payslip.dict
+result = -sum(l.amount for l in slip.input_line_ids if l.code == 'LO')
+```
+
+`inputs_dict` in `_get_payslip_lines()` builds a last-wins dict so `inputs.LO` can't sum multiple. The new formula reads `payslip.dict.input_line_ids` directly (all saved inputs, no extra DB query).
+
+### 5. `liquidacion_breakdown_report.py` — multiple loans display
+
+Removed `limit=1`. Shows all active liquidación loan names joined by comma, sums `loan_amount` across all, shows actual recovered amount from the salary rule line.
+
+---
+
+## Design Decisions
+
+- **Option A** (no constraint) chosen — simpler, covers Venezuelan hardship scenarios
+- **Full installment or skip** — no partial amounts; HR sets LO to 0 to skip, otherwise full installment deducted
+- **One combined row** in payslip email — `VE_LOAN_DED_V2` already sums all LO inputs into one salary rule line
+- **No UI warning** for now — HR sees all active loans in "Other Inputs" tab naturally
 
 ---
 
 ## Related
 
-- [HR Salary Advance / Loan System](HR_SALARY_ADVANCE_LOAN.md) — full architecture, Option C reference
-- Current known issue in CLAUDE.md: "HR Loan one-loan-per-employee constraint (ohrms_loan)"
+- [HR Salary Advance / Loan System](HR_SALARY_ADVANCE_LOAN.md) — full architecture and changelog

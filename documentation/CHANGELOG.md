@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## v1.66.0 — 2026-05-05 — Multiple Loans per Employee
+
+**Files:** `hr_loan_extension.py`, `liquidacion_breakdown_report.py`, `setup_loan_rules.py`, `__manifest__.py`
+
+| Change | Detail |
+|---|---|
+| No loan constraint | `HrLoan.create()` bypasses ohrms_loan one-loan-per-employee check via MRO (`super(ohrms_cls, self)`). Unlimited concurrent loans allowed (Option A). |
+| `get_inputs()` rewrite | One LO input per active matching loan. Finds earliest unpaid installment with `date ≤ payslip.date_to` — handles skipped periods. Removes ohrms_loan last-wins bug. HR can zero any LO input to skip that loan this period. |
+| `action_payslip_done()` rewrite | Uses `loan_line_id` on each input directly. Reverts `paid=True` for zero-amount LO inputs (HR skip). Writes `payslip_id` back for paid ones. |
+| Salary rule formula | `VE_LOAN_DED_V2` and `LIQUID_LOAN_DED_V2` now: `slip = payslip.dict; result = -sum(l.amount for l in slip.input_line_ids if l.code == 'LO')`. Sums all LO inputs; avoids `inputs.LO` last-wins limitation. Updated in testing DB and in `setup_loan_rules.py` (idempotent). |
+| Report multiple loans | `liquidacion_breakdown_report.py`: removed `limit=1`, shows all active liquidación loan names, sums total loan amount. |
+
+---
+
 ## HR Analyses
 
 ### 2026-05-01 - Decreto Ingreso Mínimo Integral $240 — Análisis de Impacto Salarial

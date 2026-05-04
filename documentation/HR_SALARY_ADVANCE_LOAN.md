@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.65.0 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Testing | **Version:** 17.0.1.66.0 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -21,7 +21,7 @@ Tracks employee salary advances granted outside of Odoo and recovers them automa
 | Data model | `hr.loan` (Cybrosys `ohrms_loan`) | Loan record, installment schedule, approval workflow |
 | Extension | `hr_loan_extension.py` | `recovery_type`, Bs fields, journal link, ack fields, defaults |
 | Salary rules | `VE_LOAN_DED_V2`, `LIQUID_LOAN_DED_V2` | Deduction rules in each V2 structure |
-| Payslip hook | `get_inputs()` override | Guards `LO` injection by `recovery_type` vs structure code |
+| Payslip hook | `get_inputs()` override | One LO input per active loan; date ≤ payslip end; HR can zero to skip |
 | Journal entry | `_create_advance_journal_entry()` | DR 1.1.06.01.001 / CR bank — posted at approval |
 | Reports | Disbursement Detail, Relación de Liquidación | Dedicated loan column / deduction line |
 | Email notify | `action_send_advance_notification()` | Sends "Adelanto de Salario" template via `send_mail()` |
@@ -46,8 +46,8 @@ For **liquidacion**: set installment date inside the employee's final payslip pe
 
 | Code | Structure | Seq | Debit | Credit | Formula |
 |---|---|---|---|---|---|
-| `VE_LOAN_DED_V2` | `VE_PAYROLL_V2` | 106 | `1.1.06.01.001` | `1.1.01.02.001` | `result = -(inputs.LO.amount) if inputs.LO else 0` |
-| `LIQUID_LOAN_DED_V2` | `LIQUID_VE_V2` | 196 | `1.1.06.01.001` | `5.1.01.10.010` | `result = -(inputs.LO.amount) if inputs.LO else 0` |
+| `VE_LOAN_DED_V2` | `VE_PAYROLL_V2` | 106 | `1.1.06.01.001` | `1.1.01.02.001` | `slip = payslip.dict; result = -sum(l.amount for l in slip.input_line_ids if l.code == 'LO')` |
+| `LIQUID_LOAN_DED_V2` | `LIQUID_VE_V2` | 196 | `1.1.06.01.001` | `5.1.01.10.010` | `slip = payslip.dict; result = -sum(l.amount for l in slip.input_line_ids if l.code == 'LO')` |
 
 **NET formulas updated:**
 - `VE_TOTAL_DED_V2` — includes `VE_LOAN_DED_V2` (try/except block)
@@ -333,13 +333,9 @@ docker restart odoo-dev-web
 
 ## Known Issues / Post-Install Cleanup
 
-### Liquidation payslip created via batch does not pick up LO input
+### ~~Liquidation payslip created via batch does not pick up LO input~~ — FIXED v1.66.0
 
-When a `LIQUID_VE_V2` payslip is created through a payslip batch (not individually), the batch assigns `struct_id` from the contract's default structure (`VE_PAYROLL_V2`). `get_inputs()` uses `contracts.get_all_structures()` which returns the **contract's** struct, not the payslip's selected struct. Since `VE_LOAN_DED_V2` lives in `VE_PAYROLL_V2`, ohrms_loan finds the LO input type but sets amount=0 because the rule belongs to quincena, not liquidacion.
-
-**Workaround:** Create liquidation payslips **individually** via Payroll → Employee → Create Payslip, selecting `Liquidación Venezolana V2` explicitly. The struct is set before `onchange_employee` fires, so LO is correctly populated.
-
-**Future fix:** Override `get_inputs()` in our extension to use `self.struct_id` (payslip's selected structure) when set, falling back to contract struct only when unset.
+`get_inputs()` was fully rewritten in v1.66.0. It now checks `self.struct_id.code` directly on the payslip and searches active loans by `recovery_type`, bypassing `contracts.get_all_structures()` entirely. Batch-created payslips with struct_id set will correctly auto-populate LO inputs.
 
 ### PAY1 Sequence Contamination (testing env — fixed 2026-04-27)
 
@@ -366,7 +362,7 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 
 1. Configure portal access for `hr.loan` (employee self-service requests)
 2. Re-enable `ohrms_loan_accounting` journal entry OR use our `_create_advance_journal_entry()` for the actual disbursement
-3. Override `create()` with per-`recovery_type` constraint (Option C) to allow quincena + liquidacion loans simultaneously
+3. ~~Override `create()` with per-`recovery_type` constraint (Option C)~~ — resolved in v1.66.0 (Option A: no constraint)
 4. No changes needed to deduction logic, reports, or email/ack flow
 
 ---
@@ -397,3 +393,4 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.8 | 2026-04-28 | `_get_veb_rate(for_date)` now accepts a date parameter: fetches last BCV rate on or before that date. New `@api.onchange('date')` auto-populates `advance_exchange_rate` when the loan date is changed — required for historical advances to get the correct period rate. |
 | 17.0.1.64.9 | 2026-04-28 | Recovery type messaging across all 3 surfaces: notification email, ack landing page, and ack confirmation email all display recovery-type-specific badge, table title, legal declaration, and confirmation note for `quincena` (blue) vs `liquidacion` (amber). Prevents confusion for liquidacion employees who see no quincena deductions. |
 | 17.0.1.65.0 | 2026-05-04 | `total_net_amount` on `hr.payslip.run` now includes `LIQUID_NET_V2` code — batch totals were showing 0 for liquidation-only batches. Relación de Liquidación: loan deduction `amount_formatted` sign fix — was using `abs()` causing positive display inconsistent with other deductions. |
+| 17.0.1.66.0 | 2026-05-04 | **Multiple loans per employee (Option A).** `HrLoan.create()` bypasses ohrms_loan one-loan constraint via MRO. `get_inputs()` rewritten: one LO input per active loan (date ≤ payslip end — handles skipped periods), removes last-wins bug. `action_payslip_done()` rewritten: uses `loan_line_id` directly, reverts paid=True for LO inputs HR zeroed out (skip). Salary rules `VE_LOAN_DED_V2`/`LIQUID_LOAN_DED_V2` updated to `sum all LO inputs` via `payslip.dict.input_line_ids`. Relación de Liquidación: removed `limit=1`, shows all active liquidación loans. |

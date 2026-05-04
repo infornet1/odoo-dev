@@ -288,7 +288,7 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                 'amount_formatted': self._format_amount(prepaid_amt),
             })
 
-        # Loan recovery deduction (only present if employee has an approved loan with recovery_type='liquidacion')
+        # Loan recovery deduction (only present if employee has approved liquidacion loans)
         loan_recovery = self._get_line_value(payslip, 'LIQUID_LOAN_DED_V2')
         if loan_recovery != 0:
             loan_amt = self._convert_currency(loan_recovery, usd, currency, date_ref, exchange_rate)
@@ -299,11 +299,13 @@ class LiquidacionBreakdownReport(models.AbstractModel):
                     ('employee_id', '=', payslip.employee_id.id),
                     ('state', '=', 'approve'),
                     ('recovery_type', '=', 'liquidacion'),
-                ], limit=1)
+                ])
                 if employee_loans:
+                    loan_names = ', '.join(employee_loans.mapped('name'))
+                    total_loan_usd = sum(employee_loans.mapped('loan_amount'))
                     loan_calculation = (
-                        f'Préstamo {employee_loans.name} — '
-                        f'Total: {curr_symbol}{self._format_amount(self._convert_currency(employee_loans.loan_amount, usd, currency, date_ref, exchange_rate))} — '
+                        f'Préstamo(s): {loan_names} — '
+                        f'Total: {curr_symbol}{self._format_amount(self._convert_currency(total_loan_usd, usd, currency, date_ref, exchange_rate))} — '
                         f'Recuperado: {curr_symbol}{self._format_amount(abs(loan_amt))}'
                     )
             except Exception:
