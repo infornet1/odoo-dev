@@ -31,6 +31,12 @@ def get_struct(code):
         raise ValueError(f"Payroll structure '{code}' not found")
     return s
 
+def get_ded_category():
+    cat = env['hr.salary.rule.category'].search([('code', '=', 'DED')], limit=1)
+    if not cat:
+        raise ValueError("Salary rule category 'DED' not found")
+    return cat
+
 def ensure_lo_input(rule):
     """Add LO input type to rule if not already present."""
     existing = rule.input_ids.filtered(lambda i: i.code == 'LO')
@@ -61,11 +67,13 @@ def patch_formula_if_missing(rule, marker, patch):
 # Accounts (looked up by code — same IDs in testing and production)
 # ---------------------------------------------------------------------------
 
-acc_receivable  = get_account('1.1.06.01.001')   # Cuentas por cobrar empleados
-acc_banco       = get_account('1.1.01.02.001')   # Banco Venezuela
-acc_prestaciones = get_account('5.1.01.10.010')  # Prestaciones sociales (PD)
+acc_receivable   = get_account('1.1.06.01.001')   # Cuentas por cobrar empleados
+acc_banco        = get_account('1.1.01.02.001')   # Banco Venezuela
+acc_prestaciones = get_account('5.1.01.10.010')   # Prestaciones sociales (PD)
+cat_ded          = get_ded_category()              # Deduction category (required)
 
 print(f"Accounts: receivable={acc_receivable.id}, banco={acc_banco.id}, prestaciones={acc_prestaciones.id}")
+print(f"Category DED: id={cat_ded.id}")
 
 # ---------------------------------------------------------------------------
 # Structures
@@ -86,6 +94,7 @@ if not rule_nomina:
         'name': 'VE_LOAN_DED_V2 - Loan Recovery',
         'code': 'VE_LOAN_DED_V2',
         'sequence': 106,
+        'category_id': cat_ded.id,
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
@@ -116,6 +125,7 @@ if not rule_liquid:
         'name': 'LIQUID_LOAN_DED_V2 - Loan Recovery',
         'code': 'LIQUID_LOAN_DED_V2',
         'sequence': 196,
+        'category_id': cat_ded.id,
         'condition_select': 'none',
         'amount_select': 'code',
         'amount_python_compute': 'result = -(inputs.LO.amount) if inputs.LO else 0',
