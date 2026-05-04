@@ -300,6 +300,23 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 See [Full Checklist](documentation/AI_AGENT_MODULE.md). **BLOCKERs:** bounce_log module in prod, hardcoded API creds in bridge scripts, webhook callback URL, Freescout MySQL access from dev server.
 
+### HR Loan Module Production Migration Checklist
+
+**Status:** Ready for deployment | **Scripts:** `setup_loan_rules.py` + `deploy_loan_templates_prod.py`
+
+| Step | Action | Script/Method |
+|---|---|---|
+| A | Backup DB_UEIPAB | `pg_dump` |
+| B | Copy `ohrms_loan` + `ohrms_loan_accounting` to prod addons | `scp` |
+| C | Copy `ueipab_payroll_enhancements` v1.65.0 to prod | `scp` |
+| D | Install ohrms_loan + ohrms_loan_accounting | Odoo `-i` |
+| E | Upgrade ueipab_payroll_enhancements | Odoo `-u` |
+| F | Create loan salary rules + patch NET formulas | `setup_loan_rules.py` via Odoo shell |
+| G | Deploy email templates (create id=75 equiv, patch id=37+50) | `deploy_loan_templates_prod.py` |
+| H | Restart + smoke test | `docker restart ueipab17` |
+
+**Production template IDs:** Payslip Email=37, Adelanto Prestaciones=50, Adelanto Salario=TBD(new)
+
 ---
 
 ## Akdemia Data Pipeline

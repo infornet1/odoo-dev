@@ -302,13 +302,32 @@ docker restart odoo-dev-web
 
 ## Production Deployment Notes
 
-- Install `ohrms_loan` + `ohrms_loan_accounting` in production **before** upgrading `ueipab_payroll_enhancements`
-- Run salary rules setup script manually (migration already ran in testing at 63.0)
-- Apply SQL body patches for templates 71 (id=50 in prod) and 75 (new)
-- Apply SQL template patch for Payslip Email (id=43 in testing; verify id in prod) — both `en_US` and `es_VE` keys must be updated
-- Migration script is idempotent — safe to re-run
-- After upgrade, backfill `hr.loan.line.payslip_id` for any existing paid loans via direct SQL (`backfill_sql.py` pattern)
-- Apply PAY1 sequence fix SQL (see Known Issues below) if `ohrms_loan_accounting` was ever active in the environment before the v1.64.6 no-op override
+**Scripts prepared (2026-05-04):**
+- `scripts/setup_loan_rules.py` — idempotent, creates both rules + patches NET formulas. Run via Odoo shell.
+- `scripts/deploy_loan_templates_prod.py` — standalone Python script (psycopg2). Creates template 75 + patches templates 37 and 50.
+
+**Production template IDs (confirmed):**
+| Template | Testing id | Production id |
+|---|---|---|
+| Payslip Email - Employee Delivery | 43 | **37** |
+| Adelanto de Prestaciones Sociales | 71 | **50** |
+| Adelanto de Salario – Notificación | 75 | **TBD** (created by script) |
+
+**Deployment sequence:**
+1. Backup `DB_UEIPAB`
+2. Copy `ohrms_loan` + `ohrms_loan_accounting` to `/home/vision/ueipab17/addons/`
+3. Copy `ueipab_payroll_enhancements` v1.65.0 to production (backup old first)
+4. Install modules: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ohrms_loan,ohrms_loan_accounting --stop-after-init --http-port=18069`
+5. Upgrade: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_payroll_enhancements --stop-after-init --http-port=18069`
+6. Run salary rules: `docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http < setup_loan_rules.py`
+7. Run template script: `python3 deploy_loan_templates_prod.py`
+8. Restart: `docker restart ueipab17`
+9. Verify: PAY1 clean, rules exist, loan form accessible, existing payslips unaffected
+
+**Other notes:**
+- PAY1 sequence check: already confirmed clean (no `LOAN/` entries) as of 2026-05-04
+- `ohrms_loan` one-loan constraint is global — document for HR team
+- LIQUID_VE_V2 payslips for loan employees must be created individually (not via batch)
 
 ---
 

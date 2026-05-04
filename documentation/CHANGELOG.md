@@ -66,6 +66,17 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Testing Deployments
 
+### 2026-05-04 - HR Loan Production Deployment Scripts Prepared
+
+| Item | Details |
+|---|---|
+| **`setup_loan_rules.py`** | Idempotent Odoo shell script — creates `VE_LOAN_DED_V2` + `LIQUID_LOAN_DED_V2`, links to structures, creates LO input types, patches `VE_TOTAL_DED_V2` and `LIQUID_NET_V2` formulas |
+| **`deploy_loan_templates_prod.py`** | Standalone psycopg2 script — creates "Adelanto de Salario – Notificación" template (new), patches Payslip Email id=37 and Adelanto Prestaciones id=50 with loan blocks |
+| **Production IDs confirmed** | PAY1 journal=170, acc_receivable=890, acc_banco=876, acc_prestaciones=1017, Payslip Email tpl=37, Adelanto Prestaciones tpl=50 |
+| **PAY1 clean** | No `LOAN/` contamination entries confirmed in production |
+
+---
+
 ### 2026-05-04 - HR Loan Bug Fixes (ueipab_payroll_enhancements v1.65.0)
 
 | Item | Details |
