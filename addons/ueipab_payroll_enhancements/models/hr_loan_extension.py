@@ -361,9 +361,11 @@ class HrPayslip(models.Model):
     _inherit = 'hr.payslip'
 
     def action_compute_sheet(self):
-        # Before recomputing salary lines, add LO inputs for any active loan not
-        # yet represented on the payslip.  Only adds — never modifies or removes
-        # existing inputs, so HR's manual zero-outs (skip this period) are preserved.
+        # Option B: if payslip has NO LO inputs at all, add them for every active
+        # loan matching the structure type.  This handles the case where a loan is
+        # approved after the batch wizard already generated the payslip.
+        # Conservative guard: if ANY LO input already exists we leave inputs as-is,
+        # respecting any manual edits (zero-out to skip, deletions, etc.) HR made.
         for payslip in self:
             struct_code = payslip.struct_id.code if payslip.struct_id else ''
             if struct_code == 'VE_PAYROLL_V2':
@@ -373,12 +375,8 @@ class HrPayslip(models.Model):
             else:
                 continue
 
-            # loan_line_ids already tracked by existing LO inputs on this payslip
-            tracked_ids = set(
-                payslip.input_line_ids.filtered(
-                    lambda l: l.code == 'LO' and l.loan_line_id
-                ).mapped('loan_line_id').ids
-            )
+            if payslip.input_line_ids.filtered(lambda l: l.code == 'LO'):
+                continue  # HR is managing LO inputs — do not interfere
 
             active_loans = self.env['hr.loan'].search([
                 ('employee_id', '=', payslip.employee_id.id),
@@ -394,38 +392,18 @@ class HrPayslip(models.Model):
                 ).sorted('date')
                 if not installment:
                     continue
-                installment = installment[0]
-                if installment.id not in tracked_ids:
-                    new_inputs.append((0, 0, {
-                        'name': 'Loan Recovery',
-                        'code': 'LO',
-                        'contract_id': payslip.contract_id.id,
-                        'amount': installment.amount,
-                        'loan_line_id': installment.id,
-                    }))
+                new_inputs.append((0, 0, {
+                    'name': 'Loan Recovery',
+                    'code': 'LO',
+                    'contract_id': payslip.contract_id.id,
+                    'amount': installment[0].amount,
+                    'loan_line_id': installment[0].id,
+                }))
 
             if new_inputs:
                 payslip.write({'input_line_ids': new_inputs})
 
-        res = super().action_compute_sheet()
-
-        # Odoo 17 Owl O2M dirty-state bug: when the user deletes an O2M row and then
-        # clicks Compute Sheet, the widget merges the server response with its local
-        # dirty state instead of doing a clean replace — so server-added records
-        # (Option B LO inputs) are dropped from the display even though they're in DB.
-        # Returning an act_window for the same record forces a clean navigation with
-        # no dirty state, so the form opens fresh with correct data.
-        # Only for single-record calls (UI button); batch wizard calls ignore return value.
-        if len(self) == 1:
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'hr.payslip',
-                'res_id': self.id,
-                'view_mode': 'form',
-                'views': [(False, 'form')],
-                'target': 'current',
-            }
-        return res
+        return super().action_compute_sheet()
 
     def action_payslip_done(self):
         # super() → ohrms_loan marks all input lines that have loan_line_id as paid=True.
