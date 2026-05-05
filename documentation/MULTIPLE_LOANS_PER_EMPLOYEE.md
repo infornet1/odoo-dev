@@ -1,6 +1,6 @@
 # Multiple Loans per Employee
 
-**Status:** Implemented | **Version:** 17.0.1.66.0
+**Status:** Implemented | **Version:** 17.0.1.66.4
 **Created:** 2026-05-04 | **Implemented:** 2026-05-05
 
 ---
@@ -55,6 +55,17 @@ Removed `limit=1`. Shows all active liquidación loan names joined by comma, sum
 - **Full installment or skip** — no partial amounts; HR sets LO to 0 to skip, otherwise full installment deducted
 - **One combined row** in payslip email — `VE_LOAN_DED_V2` already sums all LO inputs into one salary rule line
 - **No UI warning** for now — HR sees all active loans in "Other Inputs" tab naturally
+
+### 6. Batch cancel — draft payslips now cancelled (v1.66.1)
+
+`action_cancel()` on `hr.payslip.run` was silently skipping draft payslips. Fixed: all non-cancelled payslips (including draft) are now cancelled when the batch is cancelled. `action_payslip_cancel()` override handles journal entry reversal for confirmed payslips.
+
+### 7. Option B — compute adds missing LO inputs (v1.66.4)
+
+`action_compute_sheet()` on `hr.payslip` checks for missing loan inputs before computing:
+- **Guard:** if the payslip already has **any** LO input, skip — HR is managing inputs manually.
+- **Otherwise:** add one LO input per active loan matching the payslip's `recovery_type`. Handles the case where a loan is approved after the batch wizard already generated the payslip.
+- **Convention:** to skip a loan for a given period, HR sets the LO input amount to **0** (not delete). Zero = skip this period, loan resurfaces next period. Deleting is respected — Option B won't re-add it if any LO input exists.
 
 ---
 

@@ -4,6 +4,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## v1.66.4 — 2026-05-05 — Option B conservative + batch cancel + payslip cancel fix
+
+**Files:** `hr_loan_extension.py`, `hr_payslip.py`, `hr_payslip_run.py`, `__manifest__.py`
+
+| Change | Detail |
+|---|---|
+| Option B — conservative | `action_compute_sheet()` only adds LO inputs when the payslip has **zero** LO inputs. If any LO input already exists HR is managing them manually — no interference. Handles "loan approved after batch generation" without re-adding deliberately deleted inputs. |
+| Batch cancel → cancels draft payslips | `action_cancel()` filter changed from `state not in ('cancel','draft')` to `state != 'cancel'`. Draft payslips now correctly cancelled with their batch. |
+| `action_payslip_cancel()` override | For `done` payslips: resets posted JE to draft via `button_draft()`, cancels via `button_cancel()`, then sets `state='cancel'`. Draft/verify payslips bypass JE handling. |
+
+> **v1.66.2–v1.66.3** were intermediate steps: v1.66.2 added additive-only Option B; v1.66.3 attempted an `act_window` display workaround. Both superseded by v1.66.4.
+
+---
+
+## v1.66.1 — 2026-05-05 — Batch cancel includes draft payslips
+
+**Files:** `hr_payslip.py`, `hr_payslip_run.py`, `__manifest__.py`
+
+| Change | Detail |
+|---|---|
+| Filter fix | `action_cancel()` was filtering `state not in ('cancel','draft')` — draft payslips silently survived batch cancellation. Fixed to `state != 'cancel'`. |
+| JE cancel on done payslips | `action_payslip_cancel()` override: posted journal entry reset to draft + cancelled before setting payslip state. |
+
+---
+
 ## v1.66.0 — 2026-05-05 — Multiple Loans per Employee
 
 **Files:** `hr_loan_extension.py`, `liquidacion_breakdown_report.py`, `setup_loan_rules.py`, `__manifest__.py`

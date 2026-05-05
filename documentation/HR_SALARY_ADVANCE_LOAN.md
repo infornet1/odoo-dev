@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.66.0 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Testing | **Version:** 17.0.1.66.4 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -243,12 +243,8 @@ All `mail.template.body_html` fields containing QWeb `<t>` tags **must be manage
 All employee-facing email templates show amounts in **Bs only** (no USD).
 Exchange rate shown as informational reference box (`Tasa de Cambio Aplicada: Bs. X.XXXX`).
 
-### `ohrms_loan` one-loan constraint
-`ohrms_loan` blocks creating a new loan when the employee already has an approved loan with `balance_amount > 0`. This is a global constraint (not per `recovery_type`).
-
-**Current behaviour:** HR must use a different employee OR wait until the existing loan balance reaches 0 before creating a new loan of any type.
-
-**Future Option C:** Override `create()` to apply a per-`recovery_type` constraint — allows an employee to have both a `quincena` AND a `liquidacion` loan simultaneously. Not yet implemented; use a different employee for testing.
+### `ohrms_loan` one-loan constraint — REMOVED (v1.66.0)
+`ohrms_loan` originally blocked creating a new loan when the employee already had an approved loan with `balance_amount > 0`. **This constraint is bypassed** in v1.66.0 via MRO in `HrLoan.create()` — unlimited concurrent loans per employee (Option A). See [Multiple Loans](MULTIPLE_LOANS_PER_EMPLOYEE.md).
 
 ---
 
@@ -316,7 +312,7 @@ docker restart odoo-dev-web
 **Deployment sequence:**
 1. Backup `DB_UEIPAB`
 2. Copy `ohrms_loan` + `ohrms_loan_accounting` to `/home/vision/ueipab17/addons/`
-3. Copy `ueipab_payroll_enhancements` v1.65.0 to production (backup old first)
+3. Copy `ueipab_payroll_enhancements` **v1.66.4** to production (backup old first)
 4. Install modules: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ohrms_loan,ohrms_loan_accounting --stop-after-init --http-port=18069`
 5. Upgrade: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_payroll_enhancements --stop-after-init --http-port=18069`
 6. Run salary rules: `docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http < setup_loan_rules.py`

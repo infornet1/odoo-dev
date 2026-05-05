@@ -129,7 +129,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.66.0 | 2026-05-05 |
+| ueipab_payroll_enhancements | 17.0.1.66.4 | 2026-05-05 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -392,6 +392,8 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
 - **AI Agent Poll Cron Rollback Bug (2026-03-02) — RESOLVED (v1.19.0):** Fixed in 3 parts: (1) savepoint per conversation in poll cron for error isolation, (2) global WA message dedup (not per-conversation), (3) phone-based duplicate conversation guard in wizard. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
 - **HR Loan one-loan-per-employee constraint — FIXED (v1.66.0):** `ohrms_loan.create()` constraint bypassed via MRO in `HrLoan.create()`. Multiple concurrent loans per employee now allowed (Option A, no limit). See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
+- **Batch cancel not cancelling draft payslips — FIXED (v1.66.1):** `action_cancel()` filter excluded draft payslips. Fixed to cancel all non-cancelled payslips. `action_payslip_cancel()` override added to handle journal entry reversal for confirmed payslips.
+- **Option B — LO inputs added on compute when none exist (v1.66.4):** `action_compute_sheet()` override adds LO inputs for all active matching loans when a payslip has zero LO inputs. Conservative guard: if any LO input exists, HR is managing manually — no interference. Use amount=0 to skip a loan for a period (not delete).
 - **HR Loan batch total_net_amount missing LIQUID_NET_V2 — FIXED (v1.65.0):** `_compute_total_net_amount` only summed `VE_NET`, `VE_NET_V2`, `AGUINALDOS` — liquidation batches showed 0. Fixed by adding `LIQUID_NET_V2` to the set.
 - **HR Loan `action_paid_amount` conflict — FIXED (v1.64.6):** `ohrms_loan_accounting.action_paid_amount(month)` generates entry name `LOAN/ {employee}/April-YYYY`. When same employee has two loans cleared in the same calendar month, the second payslip confirmation fails with "Another entry with the same name already exists". Also causes double-accounting (salary rules already post the same DR/CR). Fixed by overriding `action_paid_amount()` to no-op on `hr.loan.line`. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **PAY1 journal sequence contamination — FIXED (DB-only 2026-04-27):** `action_paid_amount()` entries with explicit `LOAN/ EMPLOYEE/April-NNNN` names in PAY1 caused Odoo's prefix-continuation sequence to assign `LOAN/ EMPLOYEE/April-NNNN` names to ALL subsequent unnamed PAY1 entries (payroll accounting + disbursements). Fixed by renaming entries 2435, 2437, 2438, 2442 to `PAY1/2026/04/0003–0006` + correcting `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ = 0007. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
