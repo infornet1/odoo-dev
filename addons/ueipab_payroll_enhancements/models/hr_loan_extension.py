@@ -317,7 +317,16 @@ class HrLoan(models.Model):
         partner_id = work_contact.id if work_contact else False
 
         amount = self.loan_amount
-        entry_date = self.date or dt.today()
+        today = dt.today()
+        loan_date = self.date or today
+        # If the loan date is in a past month, PAY1's sequence is already ahead and
+        # Odoo will reject a backdated entry (date/sequence prefix mismatch).
+        # Use today so the JE lands in the current period.  loan.date stays as the
+        # disbursement date on the loan record itself.
+        if (loan_date.year, loan_date.month) < (today.year, today.month):
+            entry_date = today
+        else:
+            entry_date = loan_date
         label = 'Anticipo Salarial – %s' % self.employee_id.name
 
         def _line(account_id, debit, credit):

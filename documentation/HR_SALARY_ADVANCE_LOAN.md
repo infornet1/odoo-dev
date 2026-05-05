@@ -1,6 +1,6 @@
 # HR Salary Advance / Loan System
 
-**Status:** Testing | **Version:** 17.0.1.66.4 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
+**Status:** Production | **Version:** 17.0.1.66.5 | **Module:** `ueipab_payroll_enhancements` (+ `ohrms_loan` + `ohrms_loan_accounting`)
 
 Tracks employee salary advances granted outside of Odoo and recovers them automatically via payslip deductions — either via regular bi-weekly batches (`NOMINA_VE_V2`) or at termination via liquidation (`LIQUID_VE_V2`). Includes employee notification email, digital acknowledgment portal, and confirmation email to HR.
 
@@ -312,7 +312,7 @@ docker restart odoo-dev-web
 **Deployment sequence:**
 1. Backup `DB_UEIPAB`
 2. Copy `ohrms_loan` + `ohrms_loan_accounting` to `/home/vision/ueipab17/addons/`
-3. Copy `ueipab_payroll_enhancements` **v1.66.4** to production (backup old first)
+3. Copy `ueipab_payroll_enhancements` **v1.66.5** to production (backup old first)
 4. Install modules: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ohrms_loan,ohrms_loan_accounting --stop-after-init --http-port=18069`
 5. Upgrade: `docker exec -i ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_payroll_enhancements --stop-after-init --http-port=18069`
 6. Run salary rules: `docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http < setup_loan_rules.py`

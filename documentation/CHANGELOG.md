@@ -4,6 +4,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## v1.66.5 — 2026-05-05 — Backdated loan approval JE date fix
+
+**Files:** `hr_loan_extension.py`, `__manifest__.py`
+
+| Change | Detail |
+|---|---|
+| `_create_advance_journal_entry()` date fix | When `loan.date` is in a past calendar month, use `today` as the JE date instead. Prevents PAY1 sequence/date mismatch error when approving historical advances. `loan.date` stays unchanged as the disbursement record. |
+
+**Root cause:** PAY1 enforces chronological sequence continuity. If loan date is February 2026 but PAY1 is already at `PAY1/2026/04/xxxx`, Odoo rejects the entry with "Date doesn't match sequence number". HR workaround was to change loan date before approving — now automatic.
+
+---
+
 ## v1.66.4 — 2026-05-05 — Option B conservative + batch cancel + payslip cancel fix
 
 **Files:** `hr_loan_extension.py`, `hr_payslip.py`, `hr_payslip_run.py`, `__manifest__.py`
@@ -66,6 +78,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 ---
 
 ## Production Deployments
+
+### 2026-05-05 — Backdated loan JE date fix (ueipab_payroll_enhancements v1.66.5)
+
+**Deployed to production DB_UEIPAB.**
+
+| Item | Details |
+|------|---------|
+| **Module version** | 17.0.1.66.5 (upgraded from 17.0.1.66.4) |
+| **Fix** | `_create_advance_journal_entry()` now uses `today` when loan date is in a past month |
+| **Trigger** | HEYDI RON's second loan (LO/0004) — date 2026-03-02 rejected by PAY1 sequence at 2026/04 |
+| **Workaround applied** | HR changed loan date to 2026-05-01 before approving (manual fix, still valid) |
+
+---
 
 ### 2026-05-05 — HR Loan System (ueipab_payroll_enhancements v1.66.4)
 
