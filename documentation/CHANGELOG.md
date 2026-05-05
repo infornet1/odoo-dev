@@ -67,6 +67,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## Production Deployments
 
+### 2026-05-05 — HR Loan System (ueipab_payroll_enhancements v1.66.4)
+
+**Deployed to production DB_UEIPAB.**
+
+| Item | Details |
+|------|---------|
+| **Module version** | 17.0.1.66.4 (upgraded from 17.0.1.65.0) |
+| **ohrms_loan** | Already installed (17.0.1.0.0) — no change |
+| **ohrms_loan_accounting** | Already installed (17.0.1.0.0) — no change |
+| **Salary rules updated** | `VE_LOAN_DED_V2` id=38, `LIQUID_LOAN_DED_V2` id=39 — formula updated to multi-loan sum via `setup_loan_rules.py` |
+| **Templates patched** | id=37 (Payslip Email), id=50 (Adelanto Prestaciones) — loan block inserted; id=52 (Adelanto Salario) already existed |
+| **PAY1 pre-check** | 0 `LOAN/` contamination entries — clean |
+| **DB backup** | `/home/vision/backups/DB_UEIPAB_before_v1.66.4_20260504_2236.sql.gz` (18MB) |
+| **Features deployed** | Multiple loans per employee, batch cancel fix, Option B, `action_payslip_cancel()` with JE handling |
+
+---
+
 ### 2026-04-22 - Relación de Liquidación PDF Title Selector (ueipab_payroll_enhancements v1.62.7)
 
 **Deployed to production DB_UEIPAB. Files: `__manifest__.py`, `models/liquidacion_breakdown_wizard.py`, `models/liquidacion_breakdown_report.py`, `wizard/liquidacion_breakdown_wizard_view.xml`, `reports/liquidacion_breakdown_report.xml`, `reports/report_actions.xml`, `controllers/liquidacion_breakdown_xlsx.py`.**
