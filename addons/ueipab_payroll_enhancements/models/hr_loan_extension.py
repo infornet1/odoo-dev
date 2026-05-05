@@ -407,7 +407,25 @@ class HrPayslip(models.Model):
             if new_inputs:
                 payslip.write({'input_line_ids': new_inputs})
 
-        return super().action_compute_sheet()
+        res = super().action_compute_sheet()
+
+        # Odoo 17 Owl O2M dirty-state bug: when the user deletes an O2M row and then
+        # clicks Compute Sheet, the widget merges the server response with its local
+        # dirty state instead of doing a clean replace — so server-added records
+        # (Option B LO inputs) are dropped from the display even though they're in DB.
+        # Returning an act_window for the same record forces a clean navigation with
+        # no dirty state, so the form opens fresh with correct data.
+        # Only for single-record calls (UI button); batch wizard calls ignore return value.
+        if len(self) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'hr.payslip',
+                'res_id': self.id,
+                'view_mode': 'form',
+                'views': [(False, 'form')],
+                'target': 'current',
+            }
+        return res
 
     def action_payslip_done(self):
         # super() → ohrms_loan marks all input lines that have loan_line_id as paid=True.
