@@ -229,6 +229,10 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 - Subject: `Recordatorio: Confirmar recepcion de comprobante - {{object.number}}`
 - Body: Orange-themed reminder with payslip details and acknowledgment button
 - Shows reminder count (e.g., "Este es el recordatorio #2")
+- **From:** `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>`
+- **CC:** `recursoshumanos@ueipab.edu.ve`
+
+> **Known production gap (fixed 2026-05-06):** The `email_cc` field was empty in production (template id=39) because the field was added to the XML after the initial install and `noupdate="0"` did not force a re-sync. Fixed via direct SQL: `UPDATE mail_template SET email_cc = 'recursoshumanos@ueipab.edu.ve' WHERE id = 39;`. Testing template (id=63) was already correct. If the module is ever reinstalled from scratch, this will be applied automatically from the XML.
 
 ### Tracking Fields (hr.payslip)
 - `ack_reminder_count` - Number of reminders sent for this payslip
@@ -269,7 +273,9 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 
 **When to use:** When you need to send reminders to ALL pending employees across ALL batches at once — bypassing the per-batch wizard UI.
 
-**Last run:** 2026-05-04 — 26 reminders sent across 12 batches (0 failed, 0 no-email).
+**Run history:**
+- 2026-05-04 — 26 reminders sent across 12 batches (0 failed, 0 no-email) ⚠️ no CC (template bug)
+- 2026-05-06 — 14 reminders sent across 10 batches (0 failed, 0 no-email) ✓ CC fixed before this run
 
 ### Script
 
