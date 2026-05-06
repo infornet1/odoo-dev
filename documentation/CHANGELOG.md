@@ -4,6 +4,36 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-06 — New module: ueipab_attendance_report v17.0.1.0.0
+
+**New standalone module** — zero changes to `ueipab_payroll_enhancements`.
+
+### Features delivered
+| # | Feature | Detail |
+|---|---------|--------|
+| 1 | `hr.attendance.report` model | Per-employee quincenal attendance snapshot with ack_token, state (draft/sent/acknowledged), summary stats, VET UTC-4 timezone handling |
+| 2 | Wizard — single quincena | Year/month/quincena picker, dates auto-computed, employee 3-mode filter (all/department/manual), live counter |
+| 3 | Wizard — bulk range mode | Select month range → generates Q1+Q2 for every month up to today; designed for production backfill Oct 2025 onward |
+| 4 | HTML table preview | Day-by-day attendance table rendered in Odoo form view (`_build_html_table`) |
+| 5 | QWeb email template | No attachment, inline body: week tables, status banner (ok/warning/danger), legend, ACK button |
+| 6 | ACK controller | `/attendance-ack/<token>` public route — records ack_date + IP, three confirmation pages |
+| 7 | `is_historical` auto-ack | Periods before current month: auto-acknowledged on `create()`, email shows informational footer instead of ACK button — prevents HR headaches on backfill sends |
+| 8 | Menu | Payroll → Reports → Reporte de Asistencia Quincenal + Reportes Generados (Asistencia) |
+
+### Key design decisions
+- `is_historical` cutoff = first day of current month (self-updating, no magic number)
+- `_send_emails()` does not downgrade `acknowledged → sent` for historical records
+- `noupdate` removed from template XML — body reloads on every upgrade (dev phase)
+- Year fields as `Char` to prevent locale "2,026" formatting
+- Radio button groups use `col="1"` for proper left-aligned layout
+
+### Test data
+- NIDYA LIRA: 108 attendance records synced from production via `scripts/sync_nidya_attendance.py`
+- Work email set to `gustavo.perdomo@ueipab.edu.ve` for testing
+- Discount policy effective date in danger banner: **1 de junio de 2026**
+
+---
+
 ## 2026-05-06 — LO module sync: testing → production (no version bump)
 
 **Production-only DB fix. No code change.**

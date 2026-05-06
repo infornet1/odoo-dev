@@ -1,8 +1,8 @@
 # Attendance Biweekly Email Report — Implementation Plan
 
-**Status:** Planning
-**Target Environment:** Testing first → Production
-**Module candidate:** `ueipab_payroll_enhancements` (new sub-feature) or new `ueipab_attendance_report`
+**Status:** Testing (Phases 1–2 complete, Phase 3 pending)
+**Target Environment:** Testing ✅ → Production (pending validation)
+**Module:** `ueipab_attendance_report` v17.0.1.0.0
 **Last Updated:** 2026-05-06
 
 ---
@@ -294,13 +294,24 @@ A new tab or section in the existing HRMS Dashboard widget can show attendance A
 - [x] Wizard `send_email` toggle — optional bulk send on generate
 - [x] Upgraded and smoke-tested in `testing` DB
 
-### Phase 4 — Cron Automation
+### Phase 2 Enhancements ✅ COMPLETE 2026-05-06
+- [x] Bulk range mode wizard: select month range → generates Q1+Q2 per month (Oct 2025 → today)
+- [x] Employee filter UX: 3-mode radio (all / department / manual) + live counter
+- [x] `is_historical` flag: periods before current month auto-acknowledged on `create()`
+- [x] Historical email footer: informational banner replaces ACK button for closed periods
+- [x] State guard: `_send_emails()` does not downgrade `acknowledged → sent` for historical
+- [x] `noupdate` removed from template so body reloads on every upgrade (dev phase)
+- [x] Year fields changed `Integer → Char` (prevents "2,026" locale formatting)
+- [x] Radio button groups use `col="1"` for proper left-aligned layout
+- [x] Danger banner message updated with June 1 2026 policy statement
+
+### Phase 3 — Cron Automation
 - [ ] `ir.cron` record for quincena 1 (day 16)
 - [ ] `ir.cron` record for quincena 2 (day 1 next month)
 - [ ] Guard: don't create duplicate reports for same employee + period
 - [ ] Config param: `attendance_report.auto_send` (True/False kill switch)
 
-### Phase 5 — Dashboard Integration
+### Phase 4 — Dashboard Integration
 - [ ] Extend `ueipab_hrms_dashboard_ack` widget to show attendance ACK stats
 - [ ] "Pendiente" / "Confirmado" count for current quincena
 
