@@ -34,7 +34,26 @@ class HrAttendanceCorrection(models.Model):
     created_attendance_id = fields.Many2one('hr.attendance', string='Registro creado', readonly=True)
     reviewed_by   = fields.Many2one('res.users', string='Revisado por', readonly=True)
     reviewed_date = fields.Datetime(string='Fecha de revisión', readonly=True)
-    submitted_ip  = fields.Char(string='IP de envío', readonly=True)
+    submitted_ip      = fields.Char(string='IP de envío', readonly=True)
+    attachment_count  = fields.Integer(string='Adjuntos', compute='_compute_attachment_count')
+
+    def _compute_attachment_count(self):
+        Att = self.env['ir.attachment']
+        for rec in self:
+            rec.attachment_count = Att.search_count([
+                ('res_model', '=', self._name), ('res_id', '=', rec.id),
+            ])
+
+    def action_view_attachments(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Documentos adjuntos'),
+            'res_model': 'ir.attachment',
+            'view_mode': 'list,form',
+            'domain': [('res_model', '=', self._name), ('res_id', '=', self.id)],
+            'context': {'default_res_model': self._name, 'default_res_id': self.id},
+        }
 
     def name_get(self):
         result = []

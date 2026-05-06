@@ -31,6 +31,14 @@
         <field name="model">hr.attendance.correction</field>
         <field name="arch" type="xml">
             <form string="Solicitud de Corrección">
+                <div class="oe_button_box" name="button_box">
+                    <button name="action_view_attachments" type="object"
+                            class="oe_stat_button" icon="fa-paperclip"
+                            invisible="attachment_count == 0">
+                        <field name="attachment_count" widget="statinfo"
+                               string="Adjuntos"/>
+                    </button>
+                </div>
                 <header>
                     <button string="✅  Aprobar"
                             name="action_approve" type="object"
