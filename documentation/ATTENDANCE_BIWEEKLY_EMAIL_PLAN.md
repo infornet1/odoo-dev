@@ -1,7 +1,7 @@
 # Attendance Biweekly Email Report — Implementation Plan
 
-**Status:** Testing (Phases 1–2 complete, Phase 3 pending)
-**Target Environment:** Testing ✅ → Production (pending validation)
+**Status:** Ready for Production — awaiting maintenance window
+**Testing:** Validated with NIDYA LIRA (108 real production records, bulk range Oct 2025 → May 2026)
 **Module:** `ueipab_attendance_report` v17.0.1.0.0
 **Last Updated:** 2026-05-06
 
@@ -303,15 +303,45 @@ A new tab or section in the existing HRMS Dashboard widget can show attendance A
 - [x] `noupdate` removed from template so body reloads on every upgrade (dev phase)
 - [x] Year fields changed `Integer → Char` (prevents "2,026" locale formatting)
 - [x] Radio button groups use `col="1"` for proper left-aligned layout
-- [x] Danger banner message updated with June 1 2026 policy statement
+- [x] Danger banner message updated — Opción 1 professional tone (June 1 2026 policy)
+- [x] Full end-to-end test: NIDYA LIRA 108 records, 15 quincenas, historical auto-ack confirmed
 
-### Phase 3 — Cron Automation
+---
+
+## Production Deployment
+
+### Prerequisites
+- `ueipab_attendance_report/` copied to `/home/vision/ueipab17/addons/` on production server
+- Module installed via `docker exec ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ueipab_attendance_report --stop-after-init`
+- Container restarted
+
+### First-run bulk send procedure
+1. Open **Payroll → Reports → Reporte de Asistencia Quincenal**
+2. Mode: **Rango de meses**
+3. Desde: Octubre 2025 / Hasta: current month
+4. Filter: **Todos los empleados activos**
+5. ✅ Enviar correo inmediatamente
+6. Click **Generar Reportes**
+
+**Expected outcome:**
+- Oct 2025 → Apr 2026 (historical): `state=acknowledged`, email arrives with informational footer — no employee action required
+- Current quincena: `state=sent`, email arrives with green **Confirmar Recepción** button
+
+### Key facts for HR
+- Discount policy message effective: **1 de junio de 2026**
+- Historical periods are auto-confirmed — employees should NOT be asked to re-confirm
+- ACK link per employee: `/attendance-ack/<unique-token>` (public, no login needed)
+- Contact for discrepancies: `recursoshumanos@ueipab.edu.ve`
+
+---
+
+### Phase 3 — Cron Automation (post-production)
 - [ ] `ir.cron` record for quincena 1 (day 16)
 - [ ] `ir.cron` record for quincena 2 (day 1 next month)
 - [ ] Guard: don't create duplicate reports for same employee + period
 - [ ] Config param: `attendance_report.auto_send` (True/False kill switch)
 
-### Phase 4 — Dashboard Integration
+### Phase 4 — Dashboard Integration (post-production)
 - [ ] Extend `ueipab_hrms_dashboard_ack` widget to show attendance ACK stats
 - [ ] "Pendiente" / "Confirmado" count for current quincena
 

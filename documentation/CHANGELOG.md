@@ -4,9 +4,26 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
-## 2026-05-06 — New module: ueipab_attendance_report v17.0.1.0.0
+## 2026-05-06 — ueipab_attendance_report v17.0.1.0.0 — READY FOR PRODUCTION
 
 **New standalone module** — zero changes to `ueipab_payroll_enhancements`.
+**Status:** Validated in testing with NIDYA LIRA (108 real production attendance records). Awaiting production maintenance window.
+
+### Post-validation fix (same date)
+- **Danger banner message** — Updated to Opción 1 professional tone: "Su registro actual presenta un total de N incidencias (...). Le recordamos que las inasistencias no justificadas o que presenten inconsistencias sin informar podrían generar descuentos automáticos. Este nuevo mecanismo de control entrará en vigor de manera efectiva a partir del 1 de junio de 2026."
+
+### Production deployment checklist
+| Step | Action |
+|------|--------|
+| A | `scp -r addons/ueipab_attendance_report root@10.124.0.3:/home/vision/ueipab17/addons/` |
+| B | `docker exec ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ueipab_attendance_report --stop-after-init` |
+| C | `docker restart ueipab17` |
+| D | Open Payroll → Reports → Reporte de Asistencia Quincenal |
+| E | Mode: Rango de meses · Oct 2025 → current month · Todos los empleados · ✓ Enviar correo |
+| F | Verify: Oct 2025–Apr 2026 → state=Confirmado (auto-ack, informational email) |
+| G | Verify: current quincena → state=Enviado (ACK button in email) |
+
+**Note:** No DB_UEIPAB schema risk — new module, no changes to existing tables.
 
 ### Features delivered
 | # | Feature | Detail |
