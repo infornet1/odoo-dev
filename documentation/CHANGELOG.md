@@ -4,6 +4,42 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-06 — ueipab_attendance_report v17.0.1.3.4 — Self-Service Attendance Correction
+
+**New feature:** Employees can self-report attendance incidencias via a public form; HR approves in one click.
+
+### Full correction flow
+1. Employee clicks **"Solicitar Corrección de Asistencia"** button in their report email (visible when `absent_days > 0`)
+2. Public form at `/attendance-fix/<token>` — no login: date dropdown (past only), AM/PM time pickers, 8 LOTTT/LOPCYMAT motivos, optional file attachment (PDF/JPG/PNG, max 5MB)
+3. HR receives notification email with direct **"Revisar Solicitud en Odoo"** button → `/attendance-correction/<id>` (login-safe redirect)
+4. HR opens `Nómina → Reportes → Solicitudes de Corrección` → pending queue highlighted in yellow
+5. HR clicks **✅ Aprobar** → attendance record created via SQL (bypasses overlap constraint), employee notified by email, form reloads to show Aprobado state
+6. HR clicks **📧 Reenviar Reporte al Empleado** → employee gets updated report (corrected ✅) with ACK button
+7. Employee clicks **Confirmar Recepción** → ACK registered
+
+### Technical details
+- New model `hr.attendance.correction` (pending/approved/rejected, attachment_ids M2M, token)
+- New controller `/attendance-fix/<token>` (public) + `/attendance-correction/<id>` (auth='user', login-safe redirect)
+- 3 email templates: HR notification, employee approval, employee rejection
+- `action_approve()`: SQL INSERT to `hr_attendance` (bypasses overlap), sends approval email, reloads form via `next` action
+- Mail server `from_filter` widened to `ueipab.edu.ve` domain — HR emails send from `recursoshumanos@ueipab.edu.ve`
+- UX fixes: AM/PM dropdowns, LOTTT motivo select + JS dynamic label, file upload widget, attachments inline below motivo in Odoo form
+
+### LOTTT/LOPCYMAT predefined motivos
+Corte de energía eléctrica · Consulta/emergencia médica (Art. 49) · Reposo médico · Duelo familiar (Art. 49) · Citación judicial · Matrimonio (Art. 49) · Calamidad doméstica · Otro motivo (free text)
+
+### Production note — after upgrade set mail server from_filter
+```bash
+docker exec ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http <<'EOF'
+server = env['ir.mail_server'].search([], limit=1)
+server.from_filter = 'ueipab.edu.ve'
+env.cr.commit()
+print("Done:", server.from_filter)
+EOF
+```
+
+---
+
 ## 2026-05-06 — ueipab_attendance_report v17.0.1.2.0 — Special Schedule Support
 
 **Enhancement:** Maintenance/security staff with non-standard rotating schedules handled correctly.
