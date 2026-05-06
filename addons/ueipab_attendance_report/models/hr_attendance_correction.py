@@ -141,6 +141,13 @@ class HrAttendanceCorrection(models.Model):
             'warning',
         )
 
+    def action_resend_report(self):
+        """Resend the original attendance report email with corrected data."""
+        self.ensure_one()
+        if not self.attendance_report_id:
+            raise UserError(_("No hay reporte de asistencia vinculado a esta solicitud."))
+        return self.attendance_report_id.action_send_email()
+
     def _notify_and_reload(self, title, message, msg_type):
         """Show a toast notification and reload the current form view."""
         return {

@@ -40,6 +40,10 @@
                             name="action_reject" type="object"
                             class="btn-danger"
                             invisible="state != 'pending'"/>
+                    <button string="📧  Reenviar Reporte al Empleado"
+                            name="action_resend_report" type="object"
+                            class="btn-secondary"
+                            invisible="state != 'approved' or not attendance_report_id"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="pending,approved,rejected"/>
                 </header>
