@@ -394,8 +394,9 @@ class HrAttendanceReport(models.Model):
                 'color': '#721c24',
                 'message': (
                     f'Su registro presenta: {" y ".join(parts)}. '
-                    'Comuníquese con RRHH a la brevedad. '
-                    'Las inconsistencias no corregidas pueden generar descuentos efectivo al 1 de junio de 2026.'
+                    'Tenga en cuenta que todas las ausencias no justificadas y/o con inconsistencias no informadas '
+                    'podrían generar descuentos automáticos como nuevo mecanismo de control '
+                    'que entrará de forma efectiva a partir del 1 de junio de 2026.'
                 ),
             }
 
