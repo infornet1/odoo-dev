@@ -7,12 +7,17 @@
         <field name="arch" type="xml">
             <form string="Generar Reportes de Asistencia Quincenal">
 
-                <!-- ===== PERIOD ===== -->
-                <group string="Período">
+                <!-- ===== MODE SELECTOR ===== -->
+                <group string="Modo de generaci&#243;n">
+                    <field name="generation_mode" widget="radio" nolabel="1"/>
+                </group>
+
+                <!-- ===== SINGLE QUINCENA (visible when mode = single) ===== -->
+                <group string="Per&#237;odo" invisible="generation_mode == 'range'">
                     <group>
-                        <field name="year"/>
-                        <field name="month"/>
-                        <field name="quincena"/>
+                        <field name="year"     required="generation_mode == 'single'"/>
+                        <field name="month"    required="generation_mode == 'single'"/>
+                        <field name="quincena" required="generation_mode == 'single'"/>
                     </group>
                     <group>
                         <field name="date_from" readonly="1" string="Fecha Inicio"/>
@@ -20,22 +25,37 @@
                     </group>
                 </group>
 
+                <!-- ===== RANGE / BULK (visible when mode = range) ===== -->
+                <group string="Rango de meses" invisible="generation_mode == 'single'">
+                    <group string="Desde">
+                        <field name="range_from_month" required="generation_mode == 'range'"/>
+                        <field name="range_from_year"  required="generation_mode == 'range'"/>
+                    </group>
+                    <group string="Hasta">
+                        <field name="range_to_month" required="generation_mode == 'range'"/>
+                        <field name="range_to_year"  required="generation_mode == 'range'"/>
+                    </group>
+                </group>
+
+                <!-- Range preview info line -->
+                <div invisible="generation_mode == 'single'"
+                     style="background:#e8f4f8;border-left:4px solid #2471a3;padding:10px 14px;margin:0 0 8px;border-radius:4px;">
+                    <span style="font-size:13px;color:#1a2c5b;">
+                        &#128197;&#160;
+                        <field name="range_preview" readonly="1" nolabel="1"
+                               style="display:inline;font-weight:600;color:#1a2c5b;"/>
+                    </span>
+                </div>
+
                 <!-- ===== EMPLOYEE SELECTION ===== -->
                 <group string="Empleados a incluir">
-
-                    <!-- Mode selector as radio buttons -->
                     <field name="filter_mode" widget="radio" nolabel="1"/>
 
-                    <!-- Department picker — visible only in department mode -->
                     <field name="department_id"
                            invisible="filter_mode != 'department'"
                            required="filter_mode == 'department'"
                            placeholder="Seleccione un departamento..."/>
 
-                    <!-- Employee list:
-                         · all mode      → hidden (auto-selected, no clutter)
-                         · department    → readonly preview (who's included)
-                         · manual        → editable tag picker               -->
                     <field name="employee_ids"
                            nolabel="1"
                            widget="many2many_tags"
@@ -44,7 +64,6 @@
                            domain="[('active','=',True)]"
                            options="{'no_create': True}"
                            placeholder="Escriba un nombre para buscar empleados..."/>
-
                 </group>
 
                 <!-- Live employee counter -->
