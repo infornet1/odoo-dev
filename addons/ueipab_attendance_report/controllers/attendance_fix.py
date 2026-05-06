@@ -288,18 +288,19 @@ class AttendanceCorrectionController(http.Controller):
             'submitted_ip':         ip or False,
         })
 
-        # Save attachment if provided
+        # Save attachment if provided — linked via Many2many for inline display
         if att_ok:
             att_file.seek(0)
             file_bytes = att_file.read()
             if file_bytes:
-                request.env['ir.attachment'].sudo().create({
+                att = request.env['ir.attachment'].sudo().create({
                     'name':      att_file.filename,
                     'datas':     base64.b64encode(file_bytes).decode(),
                     'res_model': 'hr.attendance.correction',
                     'res_id':    correction.id,
                     'mimetype':  att_file.content_type or 'application/octet-stream',
                 })
+                correction.sudo().write({'attachment_ids': [(4, att.id)]})
 
         # Notify HR
         tmpl_id = request.env['ir.model.data'].sudo()._xmlid_to_res_id(

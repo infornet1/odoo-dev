@@ -35,6 +35,7 @@ class HrAttendanceCorrection(models.Model):
     reviewed_by   = fields.Many2one('res.users', string='Revisado por', readonly=True)
     reviewed_date = fields.Datetime(string='Fecha de revisión', readonly=True)
     submitted_ip      = fields.Char(string='IP de envío', readonly=True)
+    attachment_ids    = fields.Many2many('ir.attachment', string='Documentos adjuntos')
     attachment_count  = fields.Integer(string='Adjuntos', compute='_compute_attachment_count')
 
     def _compute_attachment_count(self):
