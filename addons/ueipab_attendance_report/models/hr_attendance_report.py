@@ -21,6 +21,7 @@ STATUS_CFG = {
     'absent':       ('❌', '#fde8e8', '#721c24'),
     'weekend':      ('─',  '#f8f9fa', '#6c757d'),
     'holiday':      ('📅', '#e8f4f8', '#1a2c5b'),
+    'dayoff':       ('─',  '#f0f4fa', '#8a9dc0'),  # special schedule — scheduled rest day
 }
 
 
@@ -77,6 +78,11 @@ class HrAttendanceReport(models.Model):
         string='Horas Trabajadas', compute='_compute_summary', digits=(6, 2),
     )
 
+    # Special schedule flag (maintenance/security staff with non-standard hours)
+    is_special_schedule = fields.Boolean(
+        string='Horario especial', compute='_compute_is_special_schedule',
+    )
+
     # HTML preview rendered in form view
     attendance_table_html = fields.Html(
         string='Detalle de Asistencia',
@@ -96,6 +102,29 @@ class HrAttendanceReport(models.Model):
         from datetime import date
         today = date.today()
         return today.replace(day=1)
+
+    def _get_special_schedule_employees(self):
+        """Return set of employee IDs with special/rotating schedules.
+
+        Key: attendance_report.special_schedule_employees
+        Format: comma-separated employee IDs, e.g. "571,606,610"
+        Admin manages via Settings > Technical > Parameters.
+        """
+        param = self.env['ir.config_parameter'].sudo().get_param(
+            'attendance_report.special_schedule_employees', ''
+        )
+        result = set()
+        for part in param.split(','):
+            part = part.strip()
+            if part.isdigit():
+                result.add(int(part))
+        return result
+
+    @api.depends('employee_id')
+    def _compute_is_special_schedule(self):
+        special = self._get_special_schedule_employees()
+        for rec in self:
+            rec.is_special_schedule = rec.employee_id.id in special
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -127,14 +156,27 @@ class HrAttendanceReport(models.Model):
 
     @api.depends('employee_id', 'date_from', 'date_to')
     def _compute_summary(self):
+        special = self._get_special_schedule_employees()
         for rec in self:
             days = rec.get_attendance_days()
-            # holidays are not counted as expected working days
-            workdays = [d for d in days if not d['is_weekend'] and d['status'] != 'holiday']
-            rec.workday_count = len(workdays)
-            rec.complete_days = sum(1 for d in workdays if d['status'] == 'ok')
-            rec.absent_days = sum(1 for d in workdays if d['status'] == 'absent')
-            rec.missing_exit_days = sum(1 for d in workdays if d['status'] == 'missing_exit')
+            is_special = rec.employee_id.id in special
+
+            if is_special:
+                # Mon-Fri non-holiday count as reference (includes dayoff days)
+                rec.workday_count = sum(
+                    1 for d in days if not d['is_weekend'] and d['status'] != 'holiday'
+                )
+                # Count ALL days (incl. weekends) they actually worked
+                rec.complete_days = sum(1 for d in days if d['status'] == 'ok')
+                rec.missing_exit_days = sum(1 for d in days if d['status'] == 'missing_exit')
+                rec.absent_days = 0  # no absence penalty for special schedules
+            else:
+                workdays = [d for d in days if not d['is_weekend'] and d['status'] != 'holiday']
+                rec.workday_count = len(workdays)
+                rec.complete_days = sum(1 for d in workdays if d['status'] == 'ok')
+                rec.absent_days = sum(1 for d in workdays if d['status'] == 'absent')
+                rec.missing_exit_days = sum(1 for d in workdays if d['status'] == 'missing_exit')
+
             rec.holiday_days = sum(1 for d in days if d['status'] == 'holiday')
             rec.total_worked_hours = sum(d['worked_hours'] for d in days)
 
@@ -211,6 +253,7 @@ class HrAttendanceReport(models.Model):
             by_date[local_date].append(att)
 
         holiday_map = self._get_holiday_dates()
+        is_special = self.employee_id.id in self._get_special_schedule_employees()
 
         result = []
         current = self.date_from
@@ -232,28 +275,34 @@ class HrAttendanceReport(models.Model):
                 'status': 'weekend' if is_weekend else 'absent',
             }
 
-            if not is_weekend:
-                if current in by_date:
-                    # Attendance data present — show actual times (overrides holiday)
-                    recs = by_date[current]
-                    first_in_local = recs[0].check_in + VET_OFFSET
-                    last_rec = recs[-1]
-                    total_hours = sum(r.worked_hours for r in recs)
-                    entry['check_in_str'] = first_in_local.strftime('%H:%M')
-                    entry['worked_hours'] = total_hours
-                    if last_rec.check_out:
-                        last_out_local = last_rec.check_out + VET_OFFSET
-                        entry['check_out_str'] = last_out_local.strftime('%H:%M')
-                        entry['worked_hours_str'] = f'{total_hours:.2f}h'
-                        entry['status'] = 'ok'
-                    else:
-                        entry['status'] = 'missing_exit'
-                elif current in holiday_map:
-                    # No attendance and it's an official holiday
-                    entry['status'] = 'holiday'
-                    entry['is_holiday'] = True
-                    entry['holiday_name'] = holiday_map[current]
-                # else: stays 'absent'
+            # Show actual attendance if present.
+            # Special employees: weekends also shown (they work non-standard days).
+            # Regular employees: weekends always stay '─ No hábil'.
+            if current in by_date and (not is_weekend or is_special):
+                recs = by_date[current]
+                first_in_local = recs[0].check_in + VET_OFFSET
+                last_rec = recs[-1]
+                total_hours = sum(r.worked_hours for r in recs)
+                entry['check_in_str'] = first_in_local.strftime('%H:%M')
+                entry['worked_hours'] = total_hours
+                if last_rec.check_out:
+                    last_out_local = last_rec.check_out + VET_OFFSET
+                    entry['check_out_str'] = last_out_local.strftime('%H:%M')
+                    entry['worked_hours_str'] = f'{total_hours:.2f}h'
+                    entry['status'] = 'ok'
+                else:
+                    entry['status'] = 'missing_exit'
+            elif is_weekend:
+                pass  # stays 'weekend'
+            elif current in holiday_map:
+                entry['status'] = 'holiday'
+                entry['is_holiday'] = True
+                entry['holiday_name'] = holiday_map[current]
+            elif is_special:
+                # Weekday with no attendance for special employee → neutral day off,
+                # not an absence (rotating schedule may account for it)
+                entry['status'] = 'dayoff'
+            # else: stays 'absent'
 
             result.append(entry)
             current += timedelta(days=1)
@@ -320,6 +369,15 @@ class HrAttendanceReport(models.Model):
                         f'<td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;text-align:center;font-size:15px;">{icon}</td>'
                         '</tr>'
                     )
+                elif day['status'] == 'dayoff':
+                    parts.append(
+                        f'<tr style="background:{bg};">'
+                        f'<td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;color:{color};white-space:nowrap;font-size:13px;">{day["date_str"]}</td>'
+                        f'<td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;color:{color};font-size:13px;">{day["weekday_name"]}</td>'
+                        f'<td colspan="3" style="padding:6px 10px;border-bottom:1px solid #e0e8f4;text-align:center;color:{color};font-size:12px;font-style:italic;">Día libre</td>'
+                        f'<td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;text-align:center;color:{color};font-size:13px;">{icon}</td>'
+                        '</tr>'
+                    )
                 else:
                     parts.append(
                         f'<tr style="background:{bg};">'
@@ -351,7 +409,8 @@ class HrAttendanceReport(models.Model):
             '✅ Registro completo &nbsp;|&nbsp; '
             '⚠️ Sin salida registrada &nbsp;|&nbsp; '
             '❌ Sin registro (ausencia) &nbsp;|&nbsp; '
-            '📅 Feriado oficial'
+            '📅 Feriado oficial &nbsp;|&nbsp; '
+            '─ Día libre (horario especial)'
             '</div>'
         )
         parts.append('</div>')
@@ -414,6 +473,19 @@ class HrAttendanceReport(models.Model):
     def get_status_info(self):
         """Return banner config dict for email template status section."""
         self.ensure_one()
+        if self.employee_id.id in self._get_special_schedule_employees():
+            return {
+                'status': 'special',
+                'icon': '⭐',
+                'bg': '#e8f4f8',
+                'border': '#2471a3',
+                'color': '#1a2c5b',
+                'message': (
+                    'Este empleado tiene un horario especial (mantenimiento/seguridad). '
+                    'Los fines de semana trabajados están incluidos en el resumen. '
+                    'La asistencia es revisada directamente por Recursos Humanos.'
+                ),
+            }
         if self.absent_days == 0 and self.missing_exit_days == 0:
             return {
                 'status': 'ok',

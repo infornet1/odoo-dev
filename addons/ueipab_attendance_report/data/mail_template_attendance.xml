@@ -103,6 +103,16 @@
               </tr>
             </t>
 
+            <!-- Day-off row (special schedule — rotating rest day) -->
+            <t t-elif="day['status'] == 'dayoff'">
+              <tr style="background:#f0f4fa;">
+                <td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;color:#8a9dc0;font-size:13px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;color:#8a9dc0;font-size:13px;"><t t-esc="day['weekday_name']"/></td>
+                <td colspan="3" style="padding:6px 10px;border-bottom:1px solid #e0e8f4;text-align:center;color:#8a9dc0;font-size:12px;font-style:italic;">D&#237;a libre</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e0e8f4;text-align:center;color:#bbb;font-size:12px;">&#8212;</td>
+              </tr>
+            </t>
+
             <!-- Weekend row -->
             <t t-else="">
               <tr style="background:#f8f9fa;">
@@ -145,6 +155,18 @@
           <td style="padding:4px 0;text-align:right;font-weight:600;color:#2471a3;">&#128197; <t t-esc="object.holiday_days"/></td>
         </tr>
         </t>
+        <!-- Special schedule: different labels, no absent row -->
+        <t t-if="object.is_special_schedule">
+        <tr>
+          <td style="padding:4px 0;color:#555;">Registros completos (incl. fines de semana):</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#155724;">&#9989; <t t-esc="object.complete_days"/></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:#555;">Sin salida registrada:</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#856404;">&#9888;&#65039; <t t-esc="object.missing_exit_days"/></td>
+        </tr>
+        </t>
+        <t t-else="">
         <tr>
           <td style="padding:4px 0;color:#555;">Registros completos (entrada y salida):</td>
           <td style="padding:4px 0;text-align:right;font-weight:600;color:#155724;">&#9989; <t t-esc="object.complete_days"/></td>
@@ -157,6 +179,7 @@
           <td style="padding:4px 0;color:#555;">Sin registro (ausencias):</td>
           <td style="padding:4px 0;text-align:right;font-weight:600;color:#721c24;">&#10060; <t t-esc="object.absent_days"/></td>
         </tr>
+        </t>
         <tr style="border-top:2px solid #1a2c5b;margin-top:8px;">
           <td style="padding:8px 0 0;color:#1a2c5b;font-weight:700;font-size:14px;">Total horas trabajadas:</td>
           <td style="padding:8px 0 0;text-align:right;font-weight:700;color:#1a2c5b;font-size:16px;">
@@ -180,7 +203,8 @@
       &#9989; Registro completo&#160;&#160;|&#160;&#160;
       &#9888;&#65039; Sin salida registrada&#160;&#160;|&#160;&#160;
       &#10060; Sin registro (ausencia)&#160;&#160;|&#160;&#160;
-      &#128197; Feriado oficial
+      &#128197; Feriado oficial&#160;&#160;|&#160;&#160;
+      &#8212; D&#237;a libre (horario especial)
     </div>
 
     <!-- ======== CONTACT BOX ======== -->
