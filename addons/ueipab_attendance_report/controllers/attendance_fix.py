@@ -1,4 +1,3 @@
-import re
 from datetime import date as date_cls
 
 from odoo import http
@@ -8,6 +7,57 @@ _DAYS_ES = {
     0: 'Lunes', 1: 'Martes', 2: 'Miércoles',
     3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo',
 }
+
+
+def _hour_select(name, selected_h='', required=False):
+    """Render an hour <select> (00–23)."""
+    req = 'required' if required else ''
+    opts = f'<option value="">─ hora</option>'
+    for h in range(0, 24):
+        val = f"{h:02d}"
+        sel = 'selected' if val == selected_h else ''
+        opts += f'<option value="{val}" {sel}>{val}</option>'
+    return (
+        f'<select name="{name}" {req} '
+        f'style="padding:8px 10px;border:1.5px solid #cdd5e0;border-radius:6px;'
+        f'font-size:15px;color:#333;width:90px;">{opts}</select>'
+    )
+
+
+def _min_select(name, selected_m='00'):
+    """Render a minutes <select> in 5-minute steps."""
+    opts = ''
+    for m in range(0, 60, 5):
+        val = f"{m:02d}"
+        sel = 'selected' if val == selected_m else ''
+        opts += f'<option value="{val}" {sel}>{val}</option>'
+    return (
+        f'<select name="{name}" '
+        f'style="padding:8px 10px;border:1.5px solid #cdd5e0;border-radius:6px;'
+        f'font-size:15px;color:#333;width:90px;">{opts}</select>'
+    )
+
+
+def _time_picker(name, label, hint='', selected='', required=False, optional_label=''):
+    """Render a labeled hour:minute picker pair."""
+    sel_h = selected[:2] if len(selected) >= 5 else ''
+    sel_m = selected[3:5] if len(selected) >= 5 else '00'
+    opt_badge = (
+        f'<span style="font-weight:400;color:#888;font-size:12px;"> ({optional_label})</span>'
+        if optional_label else ''
+    )
+    colon = '<span style="font-size:20px;font-weight:700;color:#555;padding:0 4px;">:</span>'
+    hint_html = f'<p style="font-size:12px;color:#888;margin:3px 0 0;">{hint}</p>' if hint else ''
+    return f"""
+      <label style="display:block;font-size:13px;font-weight:700;color:#333;margin:16px 0 6px;">
+        {label}{opt_badge}
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;">
+        {_hour_select(name + '_h', sel_h, required=required)}
+        {colon}
+        {_min_select(name + '_m', sel_m)}
+      </div>
+      {hint_html}"""
 
 _CSS = """
 body{margin:0;font-family:Arial,sans-serif;background:#f0f4fa;}
@@ -76,21 +126,24 @@ class AttendanceCorrectionController(http.Controller):
     # ── POST handler ──────────────────────────────────────────────────────────
 
     def _handle_post(self, report, employee, absent_days, post):
-        date_str  = post.get('correction_date', '').strip()
-        check_in  = post.get('check_in_time', '').strip()
-        check_out = post.get('check_out_time', '').strip()
-        reason    = post.get('reason', '').strip()
-        ip        = (request.httprequest.headers.get('X-Forwarded-For')
-                     or request.httprequest.remote_addr or '')[:50]
+        date_str = post.get('correction_date', '').strip()
+        ci_h     = post.get('ci_h', '').strip()
+        ci_m     = post.get('ci_m', '00').strip()
+        co_h     = post.get('co_h', '').strip()
+        co_m     = post.get('co_m', '00').strip()
+        reason   = post.get('reason', '').strip()
+        ip       = (request.httprequest.headers.get('X-Forwarded-For')
+                    or request.httprequest.remote_addr or '')[:50]
+
+        check_in  = f"{ci_h}:{ci_m}" if ci_h else ''
+        check_out = f"{co_h}:{co_m}" if co_h else ''
 
         errors = []
         valid_dates = {str(d['date']) for d in absent_days}
         if not date_str or date_str not in valid_dates:
             errors.append("Seleccione una fecha válida de la lista.")
-        if not check_in or not re.match(r'^\d{2}:\d{2}$', check_in):
-            errors.append("Ingrese la hora de entrada en formato HH:MM (ej: 07:30).")
-        if check_out and not re.match(r'^\d{2}:\d{2}$', check_out):
-            errors.append("La hora de salida debe estar en formato HH:MM o dejarse vacía.")
+        if not ci_h:
+            errors.append("Seleccione la hora de entrada.")
         if not reason:
             errors.append("Explique brevemente el motivo de la incidencia.")
 
@@ -123,13 +176,14 @@ class AttendanceCorrectionController(http.Controller):
             'submitted_ip':         ip or False,
         })
 
-        # Notify HR
-        tmpl = request.env.ref(
-            'ueipab_attendance_report.email_template_correction_request',
-            raise_if_not_found=False,
+        # Notify HR — use sudo() for ref lookup (public user has no ir.model.data access)
+        tmpl = request.env['ir.model.data'].sudo()._xmlid_to_res_id(
+            'ueipab_attendance_report.email_template_correction_request'
         )
         if tmpl:
-            tmpl.sudo().send_mail(correction.id, force_send=True)
+            request.env['mail.template'].sudo().browse(tmpl).send_mail(
+                correction.id, force_send=True
+            )
 
         day_label = correction_date.strftime('%d/%m/%Y')
         times = f"{check_in}" + (f" — {check_out}" if check_out else " (salida no registrada)")
@@ -156,21 +210,40 @@ class AttendanceCorrectionController(http.Controller):
     def _render_form(self, report, employee, absent_days, errors=None, post=None):
         post = post or {}
 
+        # Date dropdown
         opts = '<option value="">— Seleccione una fecha —</option>'
         for d in absent_days:
             label = f"{_DAYS_ES.get(d['date'].weekday(), '')} {d['date_str']} — Sin registro"
             sel = 'selected' if post.get('correction_date') == str(d['date']) else ''
-            opts += f'<option value="{d["date"]}" {sel}>{label}</option>'
+            opts += f'<option value="{d[\"date\"]}" {sel}>{label}</option>'
+
+        # Restore previous selections on validation error
+        prev_ci_h = post.get('ci_h', '')
+        prev_ci_m = post.get('ci_m', '00')
+        prev_co_h = post.get('co_h', '')
+        prev_co_m = post.get('co_m', '00')
+        prev_reason = post.get('reason', '')
 
         err_html = ''
         if errors:
             items = ''.join(f'<li>{e}</li>' for e in errors)
             err_html = f'<div class="err"><ul style="margin:0;padding-left:18px;">{items}</ul></div>'
 
-        prev_ci     = post.get('check_in_time', '')
-        prev_co     = post.get('check_out_time', '')
-        prev_reason = post.get('reason', '')
-        period      = report.get_period_label()
+        # Build time pickers using helper functions
+        ci_picker = _time_picker(
+            'ci', 'Hora de entrada *',
+            hint='Hora aproximada en que llegó al trabajo',
+            selected=f"{prev_ci_h}:{prev_ci_m}" if prev_ci_h else '',
+            required=True,
+        )
+        co_picker = _time_picker(
+            'co', 'Hora de salida',
+            hint='Deje el selector en "─ hora" si no recuerda la salida',
+            selected=f"{prev_co_h}:{prev_co_m}" if prev_co_h else '',
+            optional_label='opcional',
+        )
+
+        period = report.get_period_label()
 
         body = f"""
           <div class="hdr">
@@ -179,26 +252,28 @@ class AttendanceCorrectionController(http.Controller):
           </div>
           <div class="body">
             <div class="info">
-              <strong>{employee.name}</strong> &nbsp;|&nbsp; {period}
+              <strong>{employee.name}</strong> &#160;|&#160; {period}
             </div>
             {err_html}
             <form method="POST">
-              <label>Fecha con incidencia *</label>
-              <select name="correction_date" required>{opts}</select>
-
-              <label>Hora de entrada (HH:MM) *</label>
-              <input type="text" name="check_in_time" placeholder="07:30"
-                     value="{prev_ci}" maxlength="5" required/>
-              <p class="hint">Hora aproximada en que llegó al trabajo</p>
-
-              <label>Hora de salida (HH:MM)
-                <span style="font-weight:400;color:#888;">(opcional — si la recuerda)</span>
+              <label style="display:block;font-size:13px;font-weight:700;color:#333;margin:0 0 6px;">
+                Fecha con incidencia *
               </label>
-              <input type="text" name="check_out_time" placeholder="15:00"
-                     value="{prev_co}" maxlength="5"/>
+              <select name="correction_date" required
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #cdd5e0;
+                       border-radius:6px;font-size:14px;color:#333;">
+                {opts}
+              </select>
 
-              <label>Motivo de la incidencia *</label>
+              {ci_picker}
+              {co_picker}
+
+              <label style="display:block;font-size:13px;font-weight:700;color:#333;margin:16px 0 4px;">
+                Motivo de la incidencia *
+              </label>
               <textarea name="reason" required
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #cdd5e0;
+                       border-radius:6px;font-size:14px;color:#333;min-height:80px;resize:vertical;"
                 placeholder="Ej: Corte de energía eléctrica — el marcador biométrico no funcionó">{prev_reason}</textarea>
 
               <button class="btn" type="submit">&#128228; Enviar Solicitud</button>
