@@ -28,10 +28,6 @@
                        decoration-warning="missing_exit_days > 0"
                        decoration-muted="missing_exit_days == 0"/>
                 <field name="total_worked_hours" string="Horas Trabajadas"/>
-                <field name="is_historical" string="Histórico" optional="show"
-                       widget="badge"
-                       decoration-info="is_historical == True"
-                       decoration-muted="is_historical == False"/>
                 <field name="state" widget="badge"
                        decoration-info="state == 'draft'"
                        decoration-warning="state == 'sent'"
