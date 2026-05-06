@@ -240,6 +240,7 @@ Once Phase 1 is complete, Year 2 liquidation (2024-08-01 → 2025-07-31) will be
 | 2026-04-08 | Resolution plan (Option 1) documented, pending execution | Developer |
 | 2026-04-08 | Confirmed: UI Confirm button unsafe (recomputes) — must use direct DB path | Developer |
 | 2026-04-08 | Confirmed: JE date = date_to → must set date_to = 2026-02-24 (actual payment date) | Developer |
+| 2026-04-24 | Acuerdo de Regularización redactado — pendiente firma de ambas partes | Developer |
 
 ---
 
@@ -249,3 +250,4 @@ Once Phase 1 is complete, Year 2 liquidation (2024-08-01 → 2025-07-31) will be
 - Production rule: `hr_salary_rule` id=29, code=`LIQUID_ANTIGUEDAD_V2`
 - Testing rule: `hr_salary_rule` id=59, code=`LIQUID_ANTIGUEDAD_V2`
 - Only confirmed V2 liquidation audited: SLIP/313 (STEFANY ROMERO) — not affected
+- **Acuerdo para firma:** [JOSEFINA_RODRIGUEZ_ACUERDO_REGULARIZACION.md](JOSEFINA_RODRIGUEZ_ACUERDO_REGULARIZACION.md)
