@@ -1,3 +1,4 @@
+import json
 import uuid
 from collections import defaultdict
 from datetime import timedelta
@@ -19,6 +20,7 @@ STATUS_CFG = {
     'missing_exit': ('⚠️',  '#fff3cd', '#856404'),
     'absent':       ('❌', '#fde8e8', '#721c24'),
     'weekend':      ('─',  '#f8f9fa', '#6c757d'),
+    'holiday':      ('📅', '#e8f4f8', '#1a2c5b'),
 }
 
 
@@ -70,6 +72,7 @@ class HrAttendanceReport(models.Model):
     complete_days = fields.Integer(string='Días Completos', compute='_compute_summary')
     absent_days = fields.Integer(string='Ausencias', compute='_compute_summary')
     missing_exit_days = fields.Integer(string='Sin Salida', compute='_compute_summary')
+    holiday_days = fields.Integer(string='Feriados', compute='_compute_summary')
     total_worked_hours = fields.Float(
         string='Horas Trabajadas', compute='_compute_summary', digits=(6, 2),
     )
@@ -126,11 +129,13 @@ class HrAttendanceReport(models.Model):
     def _compute_summary(self):
         for rec in self:
             days = rec.get_attendance_days()
-            workdays = [d for d in days if not d['is_weekend']]
+            # holidays are not counted as expected working days
+            workdays = [d for d in days if not d['is_weekend'] and d['status'] != 'holiday']
             rec.workday_count = len(workdays)
             rec.complete_days = sum(1 for d in workdays if d['status'] == 'ok')
             rec.absent_days = sum(1 for d in workdays if d['status'] == 'absent')
             rec.missing_exit_days = sum(1 for d in workdays if d['status'] == 'missing_exit')
+            rec.holiday_days = sum(1 for d in days if d['status'] == 'holiday')
             rec.total_worked_hours = sum(d['worked_hours'] for d in days)
 
     @api.depends('employee_id', 'date_from', 'date_to')
@@ -142,14 +147,47 @@ class HrAttendanceReport(models.Model):
     # Core data method (used by both form view and email template Phase 2)
     # -------------------------------------------------------------------------
 
+    def _get_holiday_dates(self):
+        """Return {date: name} for public holidays from ir.config_parameter.
+
+        Parameter key: attendance_report.holidays
+        Format: JSON array of {"date": "YYYY-MM-DD", "name": "..."} objects.
+        Admin can edit via Settings > Technical > Parameters > System Parameters.
+        """
+        param = self.env['ir.config_parameter'].sudo().get_param(
+            'attendance_report.holidays', '[]'
+        )
+        try:
+            entries = json.loads(param)
+        except (ValueError, TypeError):
+            return {}
+        from datetime import date as date_cls
+        result = {}
+        for entry in entries:
+            try:
+                if isinstance(entry, dict):
+                    d = date_cls.fromisoformat(entry['date'])
+                    result[d] = entry.get('name', 'Feriado')
+                else:
+                    d = date_cls.fromisoformat(str(entry))
+                    result[d] = 'Feriado'
+            except (ValueError, KeyError):
+                continue
+        return result
+
     def get_attendance_days(self):
         """Return list of dicts — one per calendar day in the period.
 
         Each dict keys:
             date, date_str, weekday_name, is_weekend,
+            is_holiday, holiday_name,
             check_in_str, check_out_str,
             worked_hours (float), worked_hours_str,
-            status: 'ok' | 'missing_exit' | 'absent' | 'weekend'
+            status: 'ok' | 'missing_exit' | 'absent' | 'weekend' | 'holiday'
+
+        Holiday logic: if a weekday has no attendance and falls in the
+        attendance_report.holidays config param, it's marked 'holiday' (not 'absent').
+        If attendance IS recorded on a holiday, actual data takes precedence.
         """
         self.ensure_one()
         if not self.employee_id or not self.date_from or not self.date_to:
@@ -172,6 +210,8 @@ class HrAttendanceReport(models.Model):
             local_date = (att.check_in + VET_OFFSET).date()
             by_date[local_date].append(att)
 
+        holiday_map = self._get_holiday_dates()
+
         result = []
         current = self.date_from
         while current <= self.date_to:
@@ -183,6 +223,8 @@ class HrAttendanceReport(models.Model):
                 'date_str': current.strftime('%d/%m'),
                 'weekday_name': DAYS_ES.get(weekday, ''),
                 'is_weekend': is_weekend,
+                'is_holiday': False,
+                'holiday_name': '',
                 'check_in_str': '─',
                 'check_out_str': '─',
                 'worked_hours': 0.0,
@@ -190,22 +232,28 @@ class HrAttendanceReport(models.Model):
                 'status': 'weekend' if is_weekend else 'absent',
             }
 
-            if not is_weekend and current in by_date:
-                recs = by_date[current]
-                first_in_local = recs[0].check_in + VET_OFFSET
-                last_rec = recs[-1]
-                total_hours = sum(r.worked_hours for r in recs)
-
-                entry['check_in_str'] = first_in_local.strftime('%H:%M')
-                entry['worked_hours'] = total_hours
-
-                if last_rec.check_out:
-                    last_out_local = last_rec.check_out + VET_OFFSET
-                    entry['check_out_str'] = last_out_local.strftime('%H:%M')
-                    entry['worked_hours_str'] = f'{total_hours:.2f}h'
-                    entry['status'] = 'ok'
-                else:
-                    entry['status'] = 'missing_exit'
+            if not is_weekend:
+                if current in by_date:
+                    # Attendance data present — show actual times (overrides holiday)
+                    recs = by_date[current]
+                    first_in_local = recs[0].check_in + VET_OFFSET
+                    last_rec = recs[-1]
+                    total_hours = sum(r.worked_hours for r in recs)
+                    entry['check_in_str'] = first_in_local.strftime('%H:%M')
+                    entry['worked_hours'] = total_hours
+                    if last_rec.check_out:
+                        last_out_local = last_rec.check_out + VET_OFFSET
+                        entry['check_out_str'] = last_out_local.strftime('%H:%M')
+                        entry['worked_hours_str'] = f'{total_hours:.2f}h'
+                        entry['status'] = 'ok'
+                    else:
+                        entry['status'] = 'missing_exit'
+                elif current in holiday_map:
+                    # No attendance and it's an official holiday
+                    entry['status'] = 'holiday'
+                    entry['is_holiday'] = True
+                    entry['holiday_name'] = holiday_map[current]
+                # else: stays 'absent'
 
             result.append(entry)
             current += timedelta(days=1)
@@ -263,16 +311,26 @@ class HrAttendanceReport(models.Model):
 
             for day in wk_days:
                 icon, bg, color = STATUS_CFG.get(day['status'], ('─', '#fff', '#333'))
-                parts.append(
-                    f'<tr style="background:{bg};">'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:{color};white-space:nowrap;">{day["date_str"]}</td>'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:{color};">{day["weekday_name"]}</td>'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["check_in_str"]}</td>'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["check_out_str"]}</td>'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["worked_hours_str"]}</td>'
-                    f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;font-size:15px;">{icon}</td>'
-                    '</tr>'
-                )
+                if day.get('is_holiday'):
+                    parts.append(
+                        f'<tr style="background:{bg};">'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;color:{color};white-space:nowrap;font-size:13px;">{day["date_str"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;color:{color};font-size:13px;">{day["weekday_name"]}</td>'
+                        f'<td colspan="3" style="padding:7px 10px;border-bottom:1px solid #c8ddf0;text-align:center;color:#2471a3;font-size:13px;font-style:italic;">📅 {day["holiday_name"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;text-align:center;font-size:15px;">{icon}</td>'
+                        '</tr>'
+                    )
+                else:
+                    parts.append(
+                        f'<tr style="background:{bg};">'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:{color};white-space:nowrap;">{day["date_str"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:{color};">{day["weekday_name"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["check_in_str"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["check_out_str"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:{color};">{day["worked_hours_str"]}</td>'
+                        f'<td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;font-size:15px;">{icon}</td>'
+                        '</tr>'
+                    )
 
             parts.append(
                 f'<tr style="background:#e8f0fe;">'
@@ -292,7 +350,8 @@ class HrAttendanceReport(models.Model):
             '<strong>Leyenda:</strong>&nbsp;&nbsp;'
             '✅ Registro completo &nbsp;|&nbsp; '
             '⚠️ Sin salida registrada &nbsp;|&nbsp; '
-            '❌ Sin registro (ausencia)'
+            '❌ Sin registro (ausencia) &nbsp;|&nbsp; '
+            '📅 Feriado oficial'
             '</div>'
         )
         parts.append('</div>')

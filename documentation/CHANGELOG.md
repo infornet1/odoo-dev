@@ -4,6 +4,48 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-06 — ueipab_attendance_report v17.0.1.1.0 — Holiday Support
+
+**Enhancement:** Official Venezuelan national holidays are now excluded from absent-day counts.
+
+### What changed
+- New `STATUS_CFG` entry `'holiday'` — light-blue row (📅), shown when a weekday has no attendance AND is a configured public holiday
+- `_get_holiday_dates()` reads `attendance_report.holidays` system parameter (JSON array `[{"date":"YYYY-MM-DD","name":"..."}]`)
+- `get_attendance_days()` marks unworked holidays as `'holiday'` instead of `'absent'`; if attendance IS recorded on a holiday, actual data takes precedence
+- `workday_count` now excludes holidays (employees are no longer penalized for official days off)
+- New `holiday_days` computed field — appears in summary box only when `> 0`
+- Email template: holiday row spans the three time columns and shows the holiday name in italics; legend updated; summary box shows "Feriados oficiales: 📅 N"
+- Form view HTML table: holiday row uses colspan=3 with holiday name; legend updated
+- New `data/holidays_config.xml` — 12 holidays loaded as `noupdate="1"` system parameter
+
+### Holidays configured (2025-2026 academic year)
+| Date | Holiday |
+|------|---------|
+| Oct 12, 2025 | Día de la Resistencia Indígena |
+| Dec 25, 2025 | Navidad |
+| Jan 1, 2026 | Año Nuevo |
+| Feb 16-17, 2026 | Carnaval |
+| Apr 2-3, 2026 | Jueves y Viernes Santos |
+| Apr 19, 2026 | Declaración de Independencia |
+| May 1, 2026 | Día del Trabajador |
+| Jun 24, 2026 | Batalla de Carabobo |
+| Jul 5, 2026 | Día de la Independencia |
+| Jul 24, 2026 | Natalicio de Simón Bolívar |
+
+**Note:** HR can add MPPE-specific pedagogical days via Settings > Technical > Parameters > `attendance_report.holidays` without losing them on upgrades (`noupdate="1"`).
+
+### Verified in testing
+- Dec 2025 Q2 (NIDYA LIRA): Dec 25 detected as Navidad → `holiday_days=1`, `workday_count=11`
+- Jan 2026 Q1: Jan 1 detected as Año Nuevo → `holiday_days=1`, `workday_count=10`
+- Apr 2026 Q1: Apr 2+3 detected as Semana Santa → `holiday_days=2`, `workday_count=9`
+- Oct 12 (Sunday) correctly handled as weekend (not double-counted)
+
+### Production deployment note
+Must also load holidays into production DB after module install:
+`Settings > Technical > Parameters > System Parameters` — search key `attendance_report.holidays` — it's auto-created by the module install.
+
+---
+
 ## 2026-05-06 — ueipab_attendance_report v17.0.1.0.0 — READY FOR PRODUCTION
 
 **New standalone module** — zero changes to `ueipab_payroll_enhancements`.

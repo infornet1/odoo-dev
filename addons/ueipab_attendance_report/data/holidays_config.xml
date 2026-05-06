@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- noupdate="1": created once on install, never overwritten on upgrade.
+         Admin can add MPPE-specific / presidential decree dates via
+         Settings > Technical > Parameters > System Parameters
+         (key: attendance_report.holidays) without losing them on upgrades. -->
+    <data noupdate="1">
+        <record id="attendance_report_holidays_param" model="ir.config_parameter">
+            <field name="key">attendance_report.holidays</field>
+            <field name="value">[
+  {"date": "2025-10-12", "name": "Día de la Resistencia Indígena"},
+  {"date": "2025-12-25", "name": "Navidad"},
+  {"date": "2026-01-01", "name": "Año Nuevo"},
+  {"date": "2026-02-16", "name": "Carnaval"},
+  {"date": "2026-02-17", "name": "Carnaval"},
+  {"date": "2026-04-02", "name": "Jueves Santo"},
+  {"date": "2026-04-03", "name": "Viernes Santo"},
+  {"date": "2026-04-19", "name": "Declaración de Independencia"},
+  {"date": "2026-05-01", "name": "Día del Trabajador"},
+  {"date": "2026-06-24", "name": "Batalla de Carabobo"},
+  {"date": "2026-07-05", "name": "Día de la Independencia"},
+  {"date": "2026-07-24", "name": "Natalicio de Simón Bolívar"}
+]</field>
+        </record>
+    </data>
+</odoo>

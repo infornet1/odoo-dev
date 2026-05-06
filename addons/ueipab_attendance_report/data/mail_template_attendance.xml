@@ -93,6 +93,16 @@
               </tr>
             </t>
 
+            <!-- Holiday row -->
+            <t t-elif="day['status'] == 'holiday'">
+              <tr style="background:#e8f4f8;">
+                <td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;color:#1a2c5b;font-size:13px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;color:#1a2c5b;font-size:13px;"><t t-esc="day['weekday_name']"/></td>
+                <td colspan="3" style="padding:7px 10px;border-bottom:1px solid #c8ddf0;text-align:center;color:#2471a3;font-size:13px;font-style:italic;">&#128197; <t t-esc="day['holiday_name']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #c8ddf0;text-align:center;font-size:13px;">&#128197;</td>
+              </tr>
+            </t>
+
             <!-- Weekend row -->
             <t t-else="">
               <tr style="background:#f8f9fa;">
@@ -129,6 +139,12 @@
           <td style="padding:4px 0;color:#555;">D&#237;as h&#225;biles en el per&#237;odo:</td>
           <td style="padding:4px 0;text-align:right;font-weight:600;color:#1a2c5b;"><t t-esc="object.workday_count"/> d&#237;as</td>
         </tr>
+        <t t-if="object.holiday_days > 0">
+        <tr>
+          <td style="padding:4px 0;color:#555;">Feriados oficiales:</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#2471a3;">&#128197; <t t-esc="object.holiday_days"/></td>
+        </tr>
+        </t>
         <tr>
           <td style="padding:4px 0;color:#555;">Registros completos (entrada y salida):</td>
           <td style="padding:4px 0;text-align:right;font-weight:600;color:#155724;">&#9989; <t t-esc="object.complete_days"/></td>
@@ -163,7 +179,8 @@
       <strong>Leyenda:</strong>&#160;&#160;
       &#9989; Registro completo&#160;&#160;|&#160;&#160;
       &#9888;&#65039; Sin salida registrada&#160;&#160;|&#160;&#160;
-      &#10060; Sin registro (ausencia)
+      &#10060; Sin registro (ausencia)&#160;&#160;|&#160;&#160;
+      &#128197; Feriado oficial
     </div>
 
     <!-- ======== CONTACT BOX ======== -->
