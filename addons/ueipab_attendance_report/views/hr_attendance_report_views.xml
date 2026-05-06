@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =====================================================================
+         List View
+         ===================================================================== -->
+    <record id="view_hr_attendance_report_list" model="ir.ui.view">
+        <field name="name">hr.attendance.report.list</field>
+        <field name="model">hr.attendance.report</field>
+        <field name="arch" type="xml">
+            <tree string="Reportes de Asistencia"
+                  decoration-success="state == 'acknowledged'"
+                  decoration-warning="absent_days == 0 and missing_exit_days > 0"
+                  decoration-danger="absent_days > 0 and state != 'acknowledged'">
+
+                <field name="employee_id"/>
+                <field name="date_from" string="Desde"/>
+                <field name="date_to" string="Hasta"/>
+                <field name="quincena"/>
+                <field name="workday_count" string="Días Hábiles" optional="show"/>
+                <field name="complete_days" string="Completos"
+                       decoration-success="complete_days == workday_count"
+                       decoration-warning="complete_days &lt; workday_count"/>
+                <field name="absent_days" string="Ausencias"
+                       decoration-danger="absent_days > 0"
+                       decoration-muted="absent_days == 0"/>
+                <field name="missing_exit_days" string="Sin Salida"
+                       decoration-warning="missing_exit_days > 0"
+                       decoration-muted="missing_exit_days == 0"/>
+                <field name="total_worked_hours" string="Horas Trabajadas"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'sent'"
+                       decoration-success="state == 'acknowledged'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         Form View
+         ===================================================================== -->
+    <record id="view_hr_attendance_report_form" model="ir.ui.view">
+        <field name="name">hr.attendance.report.form</field>
+        <field name="model">hr.attendance.report</field>
+        <field name="arch" type="xml">
+            <form string="Reporte de Asistencia Quincenal">
+                <header>
+                    <button string="Enviar Correo"
+                            name="action_send_email"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state == 'acknowledged'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,sent,acknowledged"/>
+                </header>
+                <sheet>
+                    <!-- Banner -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="employee_id" readonly="state != 'draft'"/>
+                        </h1>
+                        <h3 style="color:#2471a3;">
+                            Quincena <field name="quincena" readonly="1" class="o_field_char"/>
+                            &#160;—&#160;
+                            <field name="date_from" readonly="1"/>
+                            al
+                            <field name="date_to" readonly="1"/>
+                        </h3>
+                    </div>
+
+                    <!-- Summary stats row -->
+                    <div class="o_field_widget" style="margin:15px 0;">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+
+                            <div style="background:#f0f4fa;border:1px solid #2471a3;border-radius:6px;padding:12px 20px;text-align:center;min-width:100px;">
+                                <div style="font-size:24px;font-weight:700;color:#1a2c5b;">
+                                    <field name="workday_count" readonly="1"/>
+                                </div>
+                                <div style="font-size:11px;color:#555;margin-top:4px;">Días Hábiles</div>
+                            </div>
+
+                            <div style="background:#d4edda;border:1px solid #28a745;border-radius:6px;padding:12px 20px;text-align:center;min-width:100px;">
+                                <div style="font-size:24px;font-weight:700;color:#155724;">
+                                    <field name="complete_days" readonly="1"/>
+                                </div>
+                                <div style="font-size:11px;color:#155724;margin-top:4px;">✅ Completos</div>
+                            </div>
+
+                            <div style="background:#fde8e8;border:1px solid #dc3545;border-radius:6px;padding:12px 20px;text-align:center;min-width:100px;">
+                                <div style="font-size:24px;font-weight:700;color:#721c24;">
+                                    <field name="absent_days" readonly="1"/>
+                                </div>
+                                <div style="font-size:11px;color:#721c24;margin-top:4px;">❌ Ausencias</div>
+                            </div>
+
+                            <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px 20px;text-align:center;min-width:100px;">
+                                <div style="font-size:24px;font-weight:700;color:#856404;">
+                                    <field name="missing_exit_days" readonly="1"/>
+                                </div>
+                                <div style="font-size:11px;color:#856404;margin-top:4px;">⚠️ Sin Salida</div>
+                            </div>
+
+                            <div style="background:#e8f0fe;border:1px solid #1a2c5b;border-radius:6px;padding:12px 20px;text-align:center;min-width:120px;">
+                                <div style="font-size:24px;font-weight:700;color:#1a2c5b;">
+                                    <field name="total_worked_hours" readonly="1"/>h
+                                </div>
+                                <div style="font-size:11px;color:#1a2c5b;margin-top:4px;">Horas Totales</div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Attendance day table -->
+                    <separator string="Registro Día a Día"/>
+                    <field name="attendance_table_html" widget="html" readonly="1" nolabel="1"/>
+
+                    <!-- ACK / Sending info -->
+                    <group string="Registro de Envío y Confirmación" col="2">
+                        <field name="sent_date" readonly="1"/>
+                        <field name="ack_date" readonly="1"/>
+                        <field name="ack_ip" readonly="1"/>
+                        <field name="ack_token" readonly="1" groups="base.group_no_one"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         Search View
+         ===================================================================== -->
+    <record id="view_hr_attendance_report_search" model="ir.ui.view">
+        <field name="name">hr.attendance.report.search</field>
+        <field name="model">hr.attendance.report</field>
+        <field name="arch" type="xml">
+            <search string="Reportes de Asistencia">
+                <field name="employee_id"/>
+                <field name="year"/>
+                <separator/>
+                <filter string="Borrador" name="draft" domain="[('state','=','draft')]"/>
+                <filter string="Enviado" name="sent" domain="[('state','=','sent')]"/>
+                <filter string="Confirmado" name="acknowledged" domain="[('state','=','acknowledged')]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Empleado" name="group_employee" context="{'group_by':'employee_id'}"/>
+                    <filter string="Quincena" name="group_quincena" context="{'group_by':'quincena'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         Window Action
+         ===================================================================== -->
+    <record id="action_hr_attendance_report" model="ir.actions.act_window">
+        <field name="name">Reportes de Asistencia</field>
+        <field name="res_model">hr.attendance.report</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_hr_attendance_report_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay reportes de asistencia generados aún.
+            </p>
+            <p>
+                Use el asistente <strong>Reporte de Asistencia Quincenal</strong>
+                en el menú Reports para generar reportes por quincena.
+            </p>
+        </field>
+    </record>
+
+</odoo>

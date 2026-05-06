@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_hr_attendance_report_wizard_form" model="ir.ui.view">
+        <field name="name">hr.attendance.report.wizard.form</field>
+        <field name="model">hr.attendance.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generar Reportes de Asistencia Quincenal">
+
+                <!-- ===== PERIOD ===== -->
+                <group string="Período">
+                    <group>
+                        <field name="year"/>
+                        <field name="month"/>
+                        <field name="quincena"/>
+                    </group>
+                    <group>
+                        <field name="date_from" readonly="1" string="Fecha Inicio"/>
+                        <field name="date_to"   readonly="1" string="Fecha Fin"/>
+                    </group>
+                </group>
+
+                <!-- ===== EMPLOYEE SELECTION ===== -->
+                <group string="Empleados a incluir">
+
+                    <!-- Mode selector as radio buttons -->
+                    <field name="filter_mode" widget="radio" nolabel="1"/>
+
+                    <!-- Department picker — visible only in department mode -->
+                    <field name="department_id"
+                           invisible="filter_mode != 'department'"
+                           required="filter_mode == 'department'"
+                           placeholder="Seleccione un departamento..."/>
+
+                    <!-- Employee list:
+                         · all mode      → hidden (auto-selected, no clutter)
+                         · department    → readonly preview (who's included)
+                         · manual        → editable tag picker               -->
+                    <field name="employee_ids"
+                           nolabel="1"
+                           widget="many2many_tags"
+                           invisible="filter_mode == 'all'"
+                           readonly="filter_mode == 'department'"
+                           domain="[('active','=',True)]"
+                           options="{'no_create': True}"
+                           placeholder="Escriba un nombre para buscar empleados..."/>
+
+                </group>
+
+                <!-- Live employee counter -->
+                <div style="background:#e8f4f8;border-left:4px solid #2471a3;padding:10px 14px;margin:4px 0 12px;border-radius:4px;">
+                    <span style="font-size:13px;color:#1a2c5b;">
+                        &#128101;&#160;
+                        <field name="employees_info" readonly="1" nolabel="1"
+                               style="display:inline;font-weight:600;color:#1a2c5b;"/>
+                    </span>
+                </div>
+
+                <!-- ===== SEND OPTION ===== -->
+                <group>
+                    <field name="send_email"/>
+                </group>
+
+                <footer>
+                    <button string="Generar Reportes"
+                            name="action_generate_reports"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancelar" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open wizard as dialog -->
+    <record id="action_hr_attendance_report_wizard" model="ir.actions.act_window">
+        <field name="name">Reporte de Asistencia Quincenal</field>
+        <field name="res_model">hr.attendance.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_hr_attendance_report_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

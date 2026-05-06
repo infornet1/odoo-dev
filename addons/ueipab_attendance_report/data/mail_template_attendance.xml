@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="email_template_attendance_report" model="mail.template">
+        <field name="name">Attendance Report - Quincenal</field>
+        <field name="model_id" ref="model_hr_attendance_report"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">&#128202; Reporte de Asistencia | Q{{object.quincena}} | {{object.date_from.strftime('%d')}}-{{object.date_to.strftime('%d/%m/%Y')}} | {{object.employee_id.name}}</field>
+
+        <field name="body_html" type="html">
+<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;">
+
+  <!-- ======== HEADER ======== -->
+  <div style="background:linear-gradient(135deg,#1a2c5b 0%,#2471a3 100%);color:white;padding:28px 30px;text-align:center;">
+    <h1 style="margin:0;font-size:22px;font-weight:700;">&#128202; Reporte de Asistencia Quincenal</h1>
+    <p style="margin:6px 0 0;font-size:14px;opacity:0.9;">Instituto Privado Andr&#233;s Bello, CA</p>
+    <p style="margin:4px 0 0;font-size:13px;opacity:0.8;">
+      <t t-esc="object.get_period_label()"/>
+    </p>
+  </div>
+
+  <div style="padding:28px 30px;">
+
+    <!-- ======== GREETING ======== -->
+    <p style="font-size:16px;color:#333;margin:0 0 6px;">
+      Estimado/a <strong><t t-esc="object.employee_id.name"/></strong>,
+    </p>
+    <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 24px;">
+      A continuaci&#243;n encontrar&#225; su registro de asistencia quincenal.
+      Por favor rev&#237;selo detenidamente y confirme su recepci&#243;n al final de este correo.
+    </p>
+
+    <!-- ======== ATTENDANCE TABLE ======== -->
+    <t t-set="weeks" t-value="object.get_attendance_weeks()"/>
+
+    <t t-foreach="weeks" t-as="wk">
+
+      <!-- Week sub-header -->
+      <div style="background:#2471a3;color:white;padding:7px 12px;border-radius:4px 4px 0 0;font-size:12px;font-weight:700;margin-top:16px;">
+        Semana <t t-esc="wk['week_num']"/> &#8212; <t t-esc="wk['week_start']"/> al <t t-esc="wk['week_end']"/>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:0;">
+        <thead>
+          <tr style="background:#1a2c5b;color:white;font-size:12px;">
+            <th style="padding:7px 10px;text-align:left;white-space:nowrap;">Fecha</th>
+            <th style="padding:7px 10px;text-align:left;">D&#237;a</th>
+            <th style="padding:7px 10px;text-align:center;white-space:nowrap;">Entrada</th>
+            <th style="padding:7px 10px;text-align:center;white-space:nowrap;">Salida</th>
+            <th style="padding:7px 10px;text-align:center;white-space:nowrap;">Horas</th>
+            <th style="padding:7px 10px;text-align:center;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="wk['days']" t-as="day">
+
+            <!-- OK row -->
+            <t t-if="day['status'] == 'ok'">
+              <tr style="background:#ffffff;">
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:#155724;font-size:13px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;color:#333;font-size:13px;"><t t-esc="day['weekday_name']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:#333;font-size:13px;"><t t-esc="day['check_in_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:#333;font-size:13px;"><t t-esc="day['check_out_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:#333;font-size:13px;"><t t-esc="day['worked_hours_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #e8e8e8;text-align:center;font-size:15px;">&#9989;</td>
+              </tr>
+            </t>
+
+            <!-- Missing exit row -->
+            <t t-elif="day['status'] == 'missing_exit'">
+              <tr style="background:#fff3cd;">
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;color:#856404;font-size:13px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;color:#856404;font-size:13px;"><t t-esc="day['weekday_name']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;text-align:center;color:#856404;font-size:13px;"><t t-esc="day['check_in_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;text-align:center;color:#856404;font-size:13px;">&#8212;</td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;text-align:center;color:#856404;font-size:13px;">&#8212;</td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0d070;text-align:center;font-size:13px;">&#9888;&#65039;</td>
+              </tr>
+            </t>
+
+            <!-- Absent row -->
+            <t t-elif="day['status'] == 'absent'">
+              <tr style="background:#fde8e8;">
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;color:#721c24;font-size:13px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;color:#721c24;font-size:13px;"><t t-esc="day['weekday_name']"/></td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;text-align:center;color:#721c24;font-size:13px;">&#8212;</td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;text-align:center;color:#721c24;font-size:13px;">&#8212;</td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;text-align:center;color:#721c24;font-size:13px;">&#8212;</td>
+                <td style="padding:7px 10px;border-bottom:1px solid #f0b0b0;text-align:center;font-size:13px;">&#10060;</td>
+              </tr>
+            </t>
+
+            <!-- Weekend row -->
+            <t t-else="">
+              <tr style="background:#f8f9fa;">
+                <td style="padding:6px 10px;border-bottom:1px solid #e8e8e8;color:#aaa;font-size:12px;white-space:nowrap;"><t t-esc="day['date_str']"/></td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e8e8e8;color:#aaa;font-size:12px;"><t t-esc="day['weekday_name']"/></td>
+                <td colspan="3" style="padding:6px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:#bbb;font-size:12px;font-style:italic;">No h&#225;bil</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e8e8e8;text-align:center;color:#ccc;font-size:12px;">&#8212;</td>
+              </tr>
+            </t>
+
+          </t><!-- /days loop -->
+
+          <!-- Week subtotal -->
+          <tr style="background:#e8f0fe;">
+            <td colspan="4" style="padding:7px 10px;text-align:right;font-weight:700;color:#1a2c5b;font-size:12px;">
+              Sub-total Semana <t t-esc="wk['week_num']"/>:
+            </td>
+            <td style="padding:7px 10px;text-align:center;font-weight:700;color:#1a2c5b;font-size:13px;">
+              <t t-esc="wk['week_hours_str']"/>h
+            </td>
+            <td></td>
+          </tr>
+
+        </tbody>
+      </table>
+
+    </t><!-- /weeks loop -->
+
+    <!-- ======== SUMMARY BOX ======== -->
+    <div style="background:#f0f4fa;border:2px solid #1a2c5b;border-radius:6px;padding:18px 20px;margin:24px 0 0;">
+      <p style="margin:0 0 12px;font-weight:700;color:#1a2c5b;font-size:14px;">&#128202; Resumen Quincenal</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr>
+          <td style="padding:4px 0;color:#555;">D&#237;as h&#225;biles en el per&#237;odo:</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#1a2c5b;"><t t-esc="object.workday_count"/> d&#237;as</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:#555;">Registros completos (entrada y salida):</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#155724;">&#9989; <t t-esc="object.complete_days"/></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:#555;">Sin salida registrada:</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#856404;">&#9888;&#65039; <t t-esc="object.missing_exit_days"/></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:#555;">Sin registro (ausencias):</td>
+          <td style="padding:4px 0;text-align:right;font-weight:600;color:#721c24;">&#10060; <t t-esc="object.absent_days"/></td>
+        </tr>
+        <tr style="border-top:2px solid #1a2c5b;margin-top:8px;">
+          <td style="padding:8px 0 0;color:#1a2c5b;font-weight:700;font-size:14px;">Total horas trabajadas:</td>
+          <td style="padding:8px 0 0;text-align:right;font-weight:700;color:#1a2c5b;font-size:16px;">
+            <t t-esc="'%.2f' % object.total_worked_hours"/>h
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ======== STATUS BANNER ======== -->
+    <t t-set="si" t-value="object.get_status_info()"/>
+    <div t-att-style="'background:' + si['bg'] + ';border-left:5px solid ' + si['border'] + ';padding:14px 18px;margin:20px 0;border-radius:4px;'">
+      <p t-att-style="'margin:0;font-size:14px;color:' + si['color'] + ';font-weight:600;'">
+        <t t-esc="si['icon']"/> <t t-esc="si['message']"/>
+      </p>
+    </div>
+
+    <!-- ======== LEGEND ======== -->
+    <div style="background:#f8f9fa;border-radius:4px;padding:10px 14px;margin:0 0 24px;font-size:12px;color:#666;">
+      <strong>Leyenda:</strong>&#160;&#160;
+      &#9989; Registro completo&#160;&#160;|&#160;&#160;
+      &#9888;&#65039; Sin salida registrada&#160;&#160;|&#160;&#160;
+      &#10060; Sin registro (ausencia)
+    </div>
+
+    <!-- ======== CONTACT BOX ======== -->
+    <div style="background:#e8f4f8;padding:14px 18px;border-left:4px solid #2471a3;margin:0 0 24px;border-radius:4px;">
+      <p style="font-size:14px;color:#1a2c5b;margin:0 0 6px;font-weight:600;">&#128172; &#191;Alguna discrepancia?</p>
+      <p style="font-size:13px;color:#555;line-height:1.5;margin:0;">
+        Si detecta un error en su registro, com&#250;niquese con Recursos Humanos antes del cierre de n&#243;mina:
+        <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#2471a3;text-decoration:none;font-weight:600;">recursoshumanos@ueipab.edu.ve</a>
+      </p>
+    </div>
+
+    <!-- ======== FOOTER SIGNATURE ======== -->
+    <div style="border-top:1px solid #e0e0e0;padding-top:18px;margin-top:8px;">
+      <p style="font-size:14px;color:#333;margin:4px 0;">Cordialmente,</p>
+      <p style="font-size:14px;color:#333;margin:4px 0;font-weight:700;">Recursos Humanos</p>
+      <p style="font-size:13px;color:#555;margin:4px 0;">Instituto Privado Andr&#233;s Bello, CA</p>
+      <p style="font-size:12px;color:#999;margin:12px 0 0;font-style:italic;">
+        Este es un documento generado autom&#225;ticamente.
+        Por favor no responda a este correo directamente.
+      </p>
+    </div>
+
+  </div><!-- /padding -->
+
+  <!-- ======== ACK BUTTON ======== -->
+  <div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);padding:28px 30px;text-align:center;">
+    <p style="margin:0 0 8px;color:white;font-size:16px;font-weight:700;">
+      &#9989; Confirmar recepci&#243;n del reporte
+    </p>
+    <p style="margin:0 0 20px;color:rgba(255,255,255,0.9);font-size:13px;">
+      Al hacer clic confirma que ha recibido y revisado su reporte de asistencia quincenal.
+    </p>
+    <a t-att-href="object._get_ack_url()"
+       style="display:inline-block;background:white;color:#28a745;padding:14px 40px;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+      Confirmar Recepci&#243;n
+    </a>
+    <p style="margin:14px 0 0;color:rgba(255,255,255,0.75);font-size:11px;">
+      Su confirmaci&#243;n quedar&#225; registrada con fecha, hora e IP de acceso.
+    </p>
+  </div>
+
+</div><!-- /white card -->
+</div><!-- /outer -->
+        </field>
+    </record>
+
+</odoo>

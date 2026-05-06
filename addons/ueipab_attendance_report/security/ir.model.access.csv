@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_attendance_report_manager,hr.attendance.report manager,model_hr_attendance_report,hr_payroll_community.group_hr_payroll_community_manager,1,1,1,1
+access_attendance_report_user,hr.attendance.report user,model_hr_attendance_report,hr_payroll_community.group_hr_payroll_community_user,1,1,1,0
+access_attendance_report_wizard_user,hr.attendance.report.wizard user,model_hr_attendance_report_wizard,hr_payroll_community.group_hr_payroll_community_user,1,1,1,1

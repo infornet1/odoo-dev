@@ -1,0 +1,17 @@
+{
+    'name': 'UEIPAB Attendance Biweekly Report',
+    'version': '17.0.1.0.0',
+    'category': 'Human Resources/Attendance',
+    'summary': 'Reporte quincenal de asistencia con confirmación digital del empleado',
+    'depends': ['hr_attendance', 'mail', 'ueipab_payroll_enhancements'],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/hr_attendance_report_views.xml',
+        'views/hr_attendance_report_wizard_views.xml',
+        'views/menu.xml',
+        'data/mail_template_attendance.xml',
+    ],
+    'installable': True,
+    'auto_install': False,
+    'license': 'LGPL-3',
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard entry under Payroll → Reports (injected without touching ueipab_payroll_enhancements) -->
+    <menuitem
+        id="menu_attendance_report_wizard"
+        name="Reporte de Asistencia Quincenal"
+        parent="ueipab_payroll_enhancements.menu_payroll_reports"
+        action="action_hr_attendance_report_wizard"
+        sequence="90"
+        groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+    <!-- List view of all generated reports (same parent, sequence after wizard) -->
+    <menuitem
+        id="menu_attendance_report_list"
+        name="Reportes Generados (Asistencia)"
+        parent="ueipab_payroll_enhancements.menu_payroll_reports"
+        action="action_hr_attendance_report"
+        sequence="91"
+        groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
+</odoo>
