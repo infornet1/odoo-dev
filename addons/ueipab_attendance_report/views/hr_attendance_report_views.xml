@@ -28,6 +28,10 @@
                        decoration-warning="missing_exit_days > 0"
                        decoration-muted="missing_exit_days == 0"/>
                 <field name="total_worked_hours" string="Horas Trabajadas"/>
+                <field name="is_historical" string="Histórico" optional="show"
+                       widget="badge"
+                       decoration-info="is_historical == True"
+                       decoration-muted="is_historical == False"/>
                 <field name="state" widget="badge"
                        decoration-info="state == 'draft'"
                        decoration-warning="state == 'sent'"
@@ -54,6 +58,14 @@
                            statusbar_visible="draft,sent,acknowledged"/>
                 </header>
                 <sheet>
+                <!-- is_historical must be declared for invisible modifier to work -->
+                <field name="is_historical" invisible="1"/>
+                <!-- Historical notice banner (inside sheet) -->
+                <div invisible="is_historical == False"
+                     style="background:#e8f4f8;border-left:4px solid #2471a3;padding:10px 16px;margin:0 0 12px;border-radius:4px;font-size:13px;color:#1a2c5b;">
+                    &#128203; <strong>Per&#237;odo hist&#243;rico</strong> &#8212;
+                    Confirmaci&#243;n autom&#225;tica aplicada. El correo enviado no incluye bot&#243;n de acuse.
+                </div>
                     <!-- Banner -->
                     <div class="oe_title">
                         <h1>
@@ -140,6 +152,9 @@
                 <filter string="Borrador" name="draft" domain="[('state','=','draft')]"/>
                 <filter string="Enviado" name="sent" domain="[('state','=','sent')]"/>
                 <filter string="Confirmado" name="acknowledged" domain="[('state','=','acknowledged')]"/>
+                <separator/>
+                <filter string="Período histórico" name="historical" domain="[('is_historical','=',True)]"/>
+                <filter string="Período actual" name="current" domain="[('is_historical','=',False)]"/>
                 <separator/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Empleado" name="group_employee" context="{'group_by':'employee_id'}"/>

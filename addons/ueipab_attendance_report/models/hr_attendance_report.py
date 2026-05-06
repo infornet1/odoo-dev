@@ -46,6 +46,16 @@ class HrAttendanceReport(models.Model):
         ('acknowledged', 'Confirmado'),
     ], default='draft', string='Estado')
 
+    # Historical flag: set on periods that closed before the current month.
+    # Historical reports are auto-acknowledged and the email shows an
+    # informational footer instead of the ACK button — no action required
+    # from the employee.
+    is_historical = fields.Boolean(
+        string='Período histórico', default=False,
+        help="Período cerrado antes del mes en curso. "
+             "Confirmación automática, sin botón de acuse en el correo.",
+    )
+
     sent_date = fields.Datetime(string='Fecha de Envío', readonly=True)
     ack_date = fields.Datetime(string='Fecha de Confirmación', readonly=True)
     ack_ip = fields.Char(string='IP de Confirmación', readonly=True)
@@ -76,6 +86,30 @@ class HrAttendanceReport(models.Model):
          'UNIQUE(employee_id, date_from, date_to)',
          'Ya existe un reporte para este empleado en este período.'),
     ]
+
+    @classmethod
+    def _historical_cutoff(cls):
+        """First day of current month — periods ending before this are historical."""
+        from datetime import date
+        today = date.today()
+        return today.replace(day=1)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        cutoff = self._historical_cutoff()
+        now = fields.Datetime.now()
+        for vals in vals_list:
+            date_to = vals.get('date_to')
+            if date_to:
+                if isinstance(date_to, str):
+                    from datetime import date as date_cls
+                    date_to = date_cls.fromisoformat(date_to)
+                if date_to < cutoff:
+                    vals['is_historical'] = True
+                    vals['state'] = 'acknowledged'
+                    vals['ack_date'] = now
+                    vals['ack_ip'] = 'auto-histórico'
+        return super().create(vals_list)
 
     def name_get(self):
         result = []
@@ -361,7 +395,7 @@ class HrAttendanceReport(models.Model):
                 'message': (
                     f'Su registro presenta: {" y ".join(parts)}. '
                     'Comuníquese con RRHH a la brevedad. '
-                    'Las inconsistencias no corregidas pueden generar descuentos en nómina.'
+                    'Las inconsistencias no corregidas pueden generar descuentos efectivo al 1 de junio de 2026.'
                 ),
             }
 

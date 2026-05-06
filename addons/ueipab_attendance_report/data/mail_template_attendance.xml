@@ -188,22 +188,41 @@
 
   </div><!-- /padding -->
 
-  <!-- ======== ACK BUTTON ======== -->
-  <div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);padding:28px 30px;text-align:center;">
-    <p style="margin:0 0 8px;color:white;font-size:16px;font-weight:700;">
-      &#9989; Confirmar recepci&#243;n del reporte
-    </p>
-    <p style="margin:0 0 20px;color:rgba(255,255,255,0.9);font-size:13px;">
-      Al hacer clic confirma que ha recibido y revisado su reporte de asistencia quincenal.
-    </p>
-    <a t-att-href="object._get_ack_url()"
-       style="display:inline-block;background:white;color:#28a745;padding:14px 40px;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
-      Confirmar Recepci&#243;n
-    </a>
-    <p style="margin:14px 0 0;color:rgba(255,255,255,0.75);font-size:11px;">
-      Su confirmaci&#243;n quedar&#225; registrada con fecha, hora e IP de acceso.
-    </p>
-  </div>
+  <!-- ======== FOOTER: ACK button (current) vs informational (historical) ======== -->
+
+  <!-- Historical period — no ACK required -->
+  <t t-if="object.is_historical">
+    <div style="background:#f0f4fa;border-top:3px solid #1a2c5b;padding:22px 30px;text-align:center;">
+      <p style="margin:0 0 6px;color:#1a2c5b;font-size:15px;font-weight:700;">
+        &#128203; Reporte informativo — per&#237;odo ya procesado
+      </p>
+      <p style="margin:0;color:#555;font-size:13px;line-height:1.6;">
+        Este reporte corresponde a un per&#237;odo anterior ya cerrado.<br/>
+        Se env&#237;a como registro informativo. No se requiere ninguna acci&#243;n de su parte.<br/>
+        Si detecta alguna discrepancia importante cont&#225;ctenos en
+        <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#2471a3;text-decoration:none;font-weight:600;">recursoshumanos@ueipab.edu.ve</a>.
+      </p>
+    </div>
+  </t>
+
+  <!-- Current period — ACK button -->
+  <t t-else="">
+    <div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);padding:28px 30px;text-align:center;">
+      <p style="margin:0 0 8px;color:white;font-size:16px;font-weight:700;">
+        &#9989; Confirmar recepci&#243;n del reporte
+      </p>
+      <p style="margin:0 0 20px;color:rgba(255,255,255,0.9);font-size:13px;">
+        Al hacer clic confirma que ha recibido y revisado su reporte de asistencia quincenal.
+      </p>
+      <a t-att-href="object._get_ack_url()"
+         style="display:inline-block;background:white;color:#28a745;padding:14px 40px;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+        Confirmar Recepci&#243;n
+      </a>
+      <p style="margin:14px 0 0;color:rgba(255,255,255,0.75);font-size:11px;">
+        Su confirmaci&#243;n quedar&#225; registrada con fecha, hora e IP de acceso.
+      </p>
+    </div>
+  </t>
 
 </div><!-- /white card -->
 </div><!-- /outer -->
