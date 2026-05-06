@@ -336,5 +336,124 @@
 
     </record>
 
+
+    <!-- ========================================
+         Template: Bono Día de las Madres
+         ======================================== -->
+    <record id="email_template_bono_madres" model="mail.template">
+        <field name="name">Bono Día de las Madres - Entrega Especial</field>
+        <field name="model_id" ref="hr_payroll_community.model_hr_payslip"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">🌸 Bono Día de las Madres │ Nro.: {{object.number}}{{ (" │ Lote: " + object.payslip_run_id.name) if object.payslip_run_id else "" }}</field>
+
+        <field name="body_html" type="html">
+            <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#fce4ec;margin:0;padding:20px">
+                <div style="max-width:800px;margin:0 auto;background-color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden">
+
+                    <!-- Header -->
+                    <div style="background:linear-gradient(135deg,#ad1457 0%,#e91e8c 100%);color:white;padding:30px;text-align:center">
+                        <h1 style="margin:0;font-size:28px;font-weight:600">🌸 Bono Día de las Madres</h1>
+                        <p style="margin:5px 0 0 0;font-size:16px;opacity:0.9">Instituto Privado Andrés Bello, CA</p>
+                    </div>
+
+                    <!-- Content -->
+                    <div style="padding:30px">
+                        <t t-set="exchange_rate" t-value="object.exchange_rate_used or 1.0"/>
+                        <t t-set="bonus_usd" t-value="object.get_line_amount('BONO_MADRES')"/>
+                        <t t-set="monthly_salary" t-value="object.contract_id.ueipab_salary_v2 or 0.0"/>
+                        <t t-set="batch_name" t-value="object.payslip_run_id.name if object.payslip_run_id else 'N/A'"/>
+
+                        <!-- Employee info rows -->
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">📋 Nro. Comprobante:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.number or 'N/A'"/> │ <t t-out="batch_name"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">📅 Período:</span>
+                            <span style="color:#333;font-size:14px">
+                                <t t-out="object.date_from" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/> →
+                                <t t-out="object.date_to" t-options='{"widget":"date","format":"dd/MM/yyyy"}'/>
+                            </span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">👤 Nombre y Apellido:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.employee_id.name or 'N/A'"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">🆔 Cédula:</span>
+                            <span style="color:#333;font-size:14px"><t t-out="object.employee_id.identification_id or 'N/A'"/></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding:8px 0;border-bottom:1px solid #e0e0e0">
+                            <span style="font-weight:600;color:#555;font-size:14px">💳 Cuenta:</span>
+                            <span style="color:#333;font-size:14px">
+                                <t t-if="object.employee_id.bank_account_id">
+                                    <t t-out="object.employee_id.bank_account_id.acc_number"/>
+                                </t>
+                                <t t-else="">N/A</t>
+                            </span>
+                        </div>
+
+                        <!-- Warm message box -->
+                        <div style="background:#fce4ec;border:2px solid #e91e8c;border-radius:8px;padding:20px;margin:25px 0">
+                            <p style="font-size:16px;color:#ad1457;margin:0 0 10px;font-weight:bold">🌸 Un reconocimiento con cariño</p>
+                            <p style="font-size:14px;color:#555;line-height:1.6;margin:0">
+                                En el <strong>Día de las Madres</strong>, el Instituto Privado Andrés Bello CA hace entrega de este
+                                bono especial como muestra de reconocimiento y gratitud hacia cada una de las madres que forman
+                                parte de nuestra familia institucional. ¡Feliz Día de las Madres!
+                            </p>
+                        </div>
+
+                        <!-- Amount section header -->
+                        <div style="background:linear-gradient(135deg,#ad1457 0%,#e91e8c 100%);color:white;padding:12px 20px;margin:25px -30px 15px -30px;font-size:18px;font-weight:600">🎁 Desglose del Bono</div>
+                        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                            <tr style="background:#fce4ec">
+                                <td style="padding:12px 10px;color:#ad1457;font-weight:bold;font-size:15px">Bono Día de las Madres</td>
+                                <td style="padding:12px 10px;text-align:right;color:#ad1457;font-weight:bold;font-size:16px">
+                                    Bs. <t t-esc="'{:,.2f}'.format(bonus_usd * exchange_rate)"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Total box -->
+                        <div style="background:#f8f9fa;padding:20px;margin:25px -30px;border-top:3px solid #ad1457;border-bottom:3px solid #e91e8c">
+                            <div style="display:flex;justify-content:space-between;font-size:20px;font-weight:bold;color:#ad1457">
+                                <span>🌸 Total a Recibir:</span>
+                                <span>Bs. <t t-esc="'{:,.2f}'.format(bonus_usd * exchange_rate)"/></span>
+                            </div>
+                            <div style="text-align:right;font-size:13px;color:#888;margin-top:6px">
+                                (USD <t t-esc="'{:,.2f}'.format(bonus_usd)"/> @ Bs. <t t-esc="'{:,.4f}'.format(exchange_rate)"/> / USD)
+                            </div>
+                        </div>
+
+                        <!-- Exchange rate reference -->
+                        <div style="background:#fce4ec;border:2px dashed #e91e8c;border-radius:8px;padding:15px;margin:20px 0;text-align:center">
+                            <div style="font-size:13px;color:#ad1457;margin-bottom:5px">Tasa de Cambio Aplicada (Referencia)</div>
+                            <div style="font-size:22px;font-weight:bold;color:#880e4f">
+                                Bs. <t t-esc="'{:,.4f}'.format(exchange_rate)"/> / USD
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ack button -->
+                    <div style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);padding:25px 30px;text-align:center">
+                        <p style="margin:0 0 15px 0;color:white;font-size:16px;font-weight:600">✅ Acuso conformidad y recepción digital de este comprobante</p>
+                        <p style="margin:0 0 20px 0;color:rgba(255,255,255,0.9);font-size:14px">Al hacer click, acusa conformidad digital de que ha recibido y revisado este comprobante.</p>
+                        <a t-att-href="object._get_acknowledgment_url()" style="display:inline-block;background:white;color:#28a745;padding:15px 40px;font-size:16px;font-weight:bold;text-decoration:none;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2)">Enviar conformidad digital</a>
+                        <p style="margin:15px 0 0 0;color:rgba(255,255,255,0.8);font-size:12px">Su confirmación quedará registrada con fecha, hora e IP</p>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background:#f8f9fa;padding:20px 30px;text-align:center;border-top:1px solid #e0e0e0">
+                        <p style="margin:0;font-size:13px;color:#666">📧 Este es un mensaje automático generado por el Sistema de Nómina</p>
+                        <p style="margin:5px 0 0 0;font-size:12px;color:#999">Instituto Privado Andrés Bello, CA - Recursos Humanos</p>
+                    </div>
+
+                </div>
+            </div>
+        </field>
+    </record>
+
 </odoo>
 
