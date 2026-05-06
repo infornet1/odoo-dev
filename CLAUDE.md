@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-04-28
+**Last Updated:** 2026-05-06
 
 ## Core Instructions
 
@@ -315,7 +315,7 @@ See [Full Checklist](documentation/AI_AGENT_MODULE.md). **BLOCKERs:** bounce_log
 | G | Deploy email templates (create id=75 equiv, patch id=37+50) | `deploy_loan_templates_prod.py` |
 | H | Restart + smoke test | `docker restart ueipab17` |
 
-**Production template IDs:** Payslip Email=37, Adelanto Prestaciones=50, Adelanto Salario=TBD(new)
+**Production template IDs:** Payslip Email=37, Adelanto Prestaciones=50, Adelanto Salario=52
 
 ---
 
@@ -394,6 +394,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **HR Loan one-loan-per-employee constraint — FIXED (v1.66.0):** `ohrms_loan.create()` constraint bypassed via MRO in `HrLoan.create()`. Multiple concurrent loans per employee now allowed (Option A, no limit). See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **Batch cancel not cancelling draft payslips — FIXED (v1.66.1):** `action_cancel()` filter excluded draft payslips. Fixed to cancel all non-cancelled payslips. `action_payslip_cancel()` override added to handle journal entry reversal for confirmed payslips.
 - **Option B — LO inputs added on compute when none exist (v1.66.4):** `action_compute_sheet()` override adds LO inputs for all active matching loans when a payslip has zero LO inputs. Conservative guard: if any LO input exists, HR is managing manually — no interference. Use amount=0 to skip a loan for a period (not delete).
+- **HR Loan email templates out of sync (prod) — FIXED (2026-05-06):** Initial deployment had the Payslip Email (id=37) loan block appended after the closing `</div>` — invisible in all payroll emails. Also: `{{:,.2f}}` format bug would output literal `{:,.2f}` text; only `VE_LOAN_DED_V2` covered (missing `LIQUID_LOAN_DED_V2`); duplicate `result =` lines in `VE_TOTAL_DED_V2` (id=19) and `LIQUID_NET_V2` (id=34); `es_VE` translation missing from both templates. All fixed via `scripts/sync_lo_to_production.py`.
 - **HR Loan backdated approval PAY1 mismatch — FIXED (v1.66.5):** Approving a loan with a date in a past calendar month caused "Date doesn't match sequence number" error because PAY1's sequence was already ahead. `_create_advance_journal_entry()` now uses `today` when `loan.date` is in a past month. `loan.date` (disbursement date) unchanged.
 - **HR Loan batch total_net_amount missing LIQUID_NET_V2 — FIXED (v1.65.0):** `_compute_total_net_amount` only summed `VE_NET`, `VE_NET_V2`, `AGUINALDOS` — liquidation batches showed 0. Fixed by adding `LIQUID_NET_V2` to the set.
 - **HR Loan `action_paid_amount` conflict — FIXED (v1.64.6):** `ohrms_loan_accounting.action_paid_amount(month)` generates entry name `LOAN/ {employee}/April-YYYY`. When same employee has two loans cleared in the same calendar month, the second payslip confirmation fails with "Another entry with the same name already exists". Also causes double-accounting (salary rules already post the same DR/CR). Fixed by overriding `action_paid_amount()` to no-op on `hr.loan.line`. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).

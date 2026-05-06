@@ -235,9 +235,11 @@ All `mail.template.body_html` fields containing QWeb `<t>` tags **must be manage
 | Template | DB id (testing) | DB id (production) | Managed via |
 |---|---|---|---|
 | Adelanto de Prestaciones Sociales | 71 | 50 | Direct SQL |
-| Adelanto de Salario – Notificación | 75 | TBD | Direct SQL |
-| Payslip Email - Employee Delivery | (noupdate=1) | — | ORM (no QWeb methods) |
+| Adelanto de Salario – Notificación | 75 | 52 | Direct SQL |
+| Payslip Email - Employee Delivery | 43 | 37 | Direct SQL (has QWeb `<t>` tags for loan block) |
 | Pago Adelanto | (noupdate=1) | — | ORM (no QWeb methods) |
+
+**Payslip Email loan block** (`VE_LOAN_DED_V2` / `LIQUID_LOAN_DED_V2`): rendered inside the Deducciones table using `object.get_line_amount('VE_LOAN_DED_V2') or object.get_line_amount('LIQUID_LOAN_DED_V2')`. Shown only when non-zero. Covers both quincena and liquidacion recovery types. Body managed via `sync_lo_to_production.py`.
 
 ### Email amounts — local currency only
 All employee-facing email templates show amounts in **Bs only** (no USD).

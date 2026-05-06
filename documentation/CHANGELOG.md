@@ -4,6 +4,21 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-06 — LO module sync: testing → production (no version bump)
+
+**Production-only DB fix. No code change.**
+
+| Item | Fix |
+|---|---|
+| Payslip Email (id=37) | Loan block was appended **after** closing `</div>` — invisible in emails. Replaced full body with testing version: block now inside deductions table, uses `object.get_line_amount()` for both `VE_LOAN_DED_V2` + `LIQUID_LOAN_DED_V2`, correct `'{:,.2f}'` format. `es_VE` translation added. |
+| Adelanto Prestaciones (id=50) | Body synced to match testing id=71 (was 224 bytes different). Missing `es_VE` translation added. |
+| `VE_TOTAL_DED_V2` (id=19) | Deploy script had appended the loan line leaving two `result =` assignments. Removed duplicate first line. |
+| `LIQUID_NET_V2` (id=34) | Same issue — removed duplicate first `result = (...)` block. |
+
+**Script:** `scripts/sync_lo_to_production.py`
+
+---
+
 ## v1.66.5 — 2026-05-05 — Backdated loan approval JE date fix
 
 **Files:** `hr_loan_extension.py`, `__manifest__.py`
@@ -102,7 +117,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 | **ohrms_loan** | Already installed (17.0.1.0.0) — no change |
 | **ohrms_loan_accounting** | Already installed (17.0.1.0.0) — no change |
 | **Salary rules updated** | `VE_LOAN_DED_V2` id=38, `LIQUID_LOAN_DED_V2` id=39 — formula updated to multi-loan sum via `setup_loan_rules.py` |
-| **Templates patched** | id=37 (Payslip Email), id=50 (Adelanto Prestaciones) — loan block inserted; id=52 (Adelanto Salario) already existed |
+| **Templates patched** | id=37 (Payslip Email), id=50 (Adelanto Prestaciones) — loan block inserted; id=52 (Adelanto Salario) already existed. Note: initial deploy had loan block outside HTML — corrected 2026-05-06 via `sync_lo_to_production.py`. |
 | **PAY1 pre-check** | 0 `LOAN/` contamination entries — clean |
 | **DB backup** | `/home/vision/backups/DB_UEIPAB_before_v1.66.4_20260504_2236.sql.gz` (18MB) |
 | **Features deployed** | Multiple loans per employee, batch cancel fix, Option B, `action_payslip_cancel()` with JE handling |
