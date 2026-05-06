@@ -11,11 +11,9 @@ _DAYS_ES = {
 
 # Venezuela Labor Law (LOTTT / LOPCYMAT) predefined absence reasons
 _MOTIVOS = [
-    ('biometrico', 'Falla del marcador biométrico'),
     ('energia',    'Corte de energía eléctrica'),
     ('medico',     'Consulta o emergencia médica  (Art. 49 LOTTT)'),
     ('reposo',     'Reposo médico prescrito'),
-    ('accidente',  'Accidente o enfermedad ocupacional  (LOPCYMAT)'),
     ('duelo',      'Duelo familiar  (Art. 49 LOTTT)'),
     ('judicial',   'Citación judicial u obligación legal'),
     ('matrimonio', 'Matrimonio del trabajador  (Art. 49 LOTTT)'),
