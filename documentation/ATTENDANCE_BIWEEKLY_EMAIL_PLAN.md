@@ -1,9 +1,15 @@
 # Attendance Biweekly Email Report — Implementation Plan
 
 **Status:** Ready for Production — awaiting maintenance window
-**Testing:** Validated with NIDYA LIRA (108 real production records, bulk range Oct 2025 → May 2026)
-**Module:** `ueipab_attendance_report` v17.0.1.0.0
+**Testing:** Validated with NIDYA LIRA + ANDRES MORALES + PABLO NAVARRO + SERGIO MANEIRO + ARCIDES ARZOLA + DAVID HERNANDEZ + NORKA LA ROSA
+**Module:** `ueipab_attendance_report` v17.0.1.2.0
 **Last Updated:** 2026-05-06
+
+### v17.0.1.2.0 additions (validated in testing)
+- **Holiday support** — 30 Venezuelan national/religious/school holidays excluded from absent count. Config: `attendance_report.holidays` (auto-created on install). HR can add MPPE pedagogical days without losing them on upgrades.
+- **Receso Navideño** — Dec 15–Jan 11 (MPPE official 2025-2026). Dec Q2 → `workdays=0 absent=0`. Jan Q1 → `holidays=7`.
+- **Special schedule support** — Maintenance/security staff (ANDRES MORALES 571, PABLO NAVARRO 606, SERGIO MANEIRO 610) get neutral `─ Día libre` instead of ❌, weekend attendance visible, `⭐ Horario especial` banner. Config: `attendance_report.special_schedule_employees` = `571,606,610` (manual step after install).
+- **Directors** (ARCIDES ARZOLA, DAVID HERNANDEZ, NORKA LA ROSA) — standard Mon-Fri, zero weekend work, handled correctly by regular report with no special config.
 
 ---
 

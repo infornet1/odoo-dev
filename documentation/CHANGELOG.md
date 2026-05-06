@@ -4,6 +4,45 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-06 — ueipab_attendance_report v17.0.1.2.0 — Special Schedule Support
+
+**Enhancement:** Maintenance/security staff with non-standard rotating schedules handled correctly.
+
+### Problem solved
+Without this feature: ANDRES MORALES (3 days/week rotation) would show **8 false ❌ absences per quincena**. SERGIO MANEIRO's **18 weekend shifts** were invisible (shown as `─ No hábil`).
+
+### What changed
+- New `STATUS_CFG` entry `'dayoff'` — light blue-gray, shown for special employees on weekdays with no attendance (not a penalty)
+- Weekend attendance **now visible** for special employees (`ok`/`missing_exit` with actual times)
+- `absent_days` always 0 for special employees — no false penalties
+- `complete_days` counts ALL days including weekends for special employees
+- `get_status_info()` returns `⭐ Horario especial` informational banner instead of ok/warning/danger
+- `is_special_schedule` computed field on `hr.attendance.report` — exposed to QWeb
+- Email template: `dayoff` row ("Día libre"), conditional summary box (no absent row), legend updated
+- New `_get_special_schedule_employees()` reads `attendance_report.special_schedule_employees` system param (comma-separated IDs)
+
+### Configuration (production)
+After module install, set via Settings > Technical > Parameters:
+```
+Key:   attendance_report.special_schedule_employees
+Value: 571,606,610
+```
+| ID | Employee | Role |
+|----|----------|------|
+| 571 | ANDRES MORALES | Mantenimiento |
+| 606 | PABLO NAVARRO | Mantenimiento |
+| 610 | SERGIO MANEIRO | Seguridad |
+
+### Director analysis (validated in testing)
+Synced ARCIDES ARZOLA (572), DAVID HERNANDEZ (576), NORKA LA ROSA (605).
+**Directors follow standard Mon-Fri, zero weekend work** → no special schedule needed, report handles them correctly. Feb 2026 Q1: DAVID 10/10 present, NORKA 9/10, ARCIDES 8/10 (2 absences flagged for HR review).
+
+### Sync scripts
+- `scripts/sync_maintenance_attendance.py` — ANDRES, PABLO, SERGIO (385 records)
+- Directors synced inline (340 records); work_email unchanged for all — no test emails
+
+---
+
 ## 2026-05-06 — ueipab_attendance_report v17.0.1.1.0 — Holiday Support
 
 **Enhancement:** Official Venezuelan national holidays are now excluded from absent-day counts.
@@ -40,9 +79,13 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 - Apr 2026 Q1: Apr 2+3 detected as Semana Santa → `holiday_days=2`, `workday_count=9`
 - Oct 12 (Sunday) correctly handled as weekend (not double-counted)
 
+### Receso Navideño added (same date, separate commit c3cd9ad)
+18 weekdays Dec 15–Jan 11 added as "Receso Navideño" (MPPE official: recess Dec 15, classes resume Jan 12).
+Dec 25 stays "Navidad", Jan 1 stays "Año Nuevo". Total holidays in config: **30 entries**.
+Result: Dec Q2 → `workdays=0 absent=0`; Jan Q1 → `holidays=7 workdays=4`.
+
 ### Production deployment note
-Must also load holidays into production DB after module install:
-`Settings > Technical > Parameters > System Parameters` — search key `attendance_report.holidays` — it's auto-created by the module install.
+`attendance_report.holidays` **auto-created** by module install (30 entries from `holidays_config.xml`, `noupdate="1"`).
 
 ---
 

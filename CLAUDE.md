@@ -52,7 +52,7 @@
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 | 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
-| 37 | Attendance Biweekly Email Report | Ready for Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) |
+| 37 | Attendance Biweekly Email Report | Ready for Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.2.0: holidays + special schedule |
 | 38 | Bono Día de las Madres 2026 | Testing | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 
 ---
@@ -136,7 +136,7 @@
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.31.0 | 2026-04-19 |
-| ueipab_attendance_report | 17.0.1.0.0 | 2026-05-06 |
+| ueipab_attendance_report | 17.0.1.2.0 | 2026-05-06 |
 
 ### Production Environment
 
@@ -145,7 +145,7 @@
 | ueipab_payroll_enhancements | 17.0.1.67.0 | Testing 2026-05-06 (Madres bonus pending prod) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.0.0 | **Pending deployment** |
+| ueipab_attendance_report | 17.0.1.2.0 | **Pending deployment** |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 
 ---
