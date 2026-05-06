@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List view ─────────────────────────────────────────────────── -->
+    <record id="view_hr_attendance_correction_tree" model="ir.ui.view">
+        <field name="name">hr.attendance.correction.tree</field>
+        <field name="model">hr.attendance.correction</field>
+        <field name="arch" type="xml">
+            <tree string="Solicitudes de Corrección"
+                  decoration-warning="state == 'pending'"
+                  decoration-success="state == 'approved'"
+                  decoration-danger="state == 'rejected'">
+                <field name="create_date" string="Enviada"/>
+                <field name="employee_id"/>
+                <field name="date" string="Fecha"/>
+                <field name="check_in_time" string="Entrada"/>
+                <field name="check_out_time" string="Salida"/>
+                <field name="reason" string="Motivo"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state == 'pending'"
+                       decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"/>
+                <field name="reviewed_by" string="Revisado por"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Form view ─────────────────────────────────────────────────── -->
+    <record id="view_hr_attendance_correction_form" model="ir.ui.view">
+        <field name="name">hr.attendance.correction.form</field>
+        <field name="model">hr.attendance.correction</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de Corrección">
+                <header>
+                    <button string="✅  Aprobar"
+                            name="action_approve" type="object"
+                            class="btn-success"
+                            invisible="state != 'pending'"/>
+                    <button string="❌  Rechazar"
+                            name="action_reject" type="object"
+                            class="btn-danger"
+                            invisible="state != 'pending'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,approved,rejected"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Empleado">
+                            <field name="employee_id" readonly="state != 'pending'"/>
+                            <field name="attendance_report_id"/>
+                            <field name="date" readonly="1"/>
+                        </group>
+                        <group string="Horario solicitado">
+                            <field name="check_in_time" readonly="state != 'pending'"/>
+                            <field name="check_out_time" readonly="state != 'pending'"/>
+                            <field name="created_attendance_id"
+                                   invisible="not created_attendance_id"/>
+                        </group>
+                    </group>
+                    <group string="Motivo del empleado">
+                        <field name="reason" nolabel="1" readonly="1"/>
+                    </group>
+                    <group string="Resultado de la revisión" invisible="state == 'pending'">
+                        <field name="reviewed_by" readonly="1"/>
+                        <field name="reviewed_date" readonly="1"/>
+                        <field name="rejection_reason"
+                               invisible="state != 'rejected'"
+                               placeholder="Ingrese el motivo de rechazo antes de hacer clic en Rechazar…"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search view ───────────────────────────────────────────────── -->
+    <record id="view_hr_attendance_correction_search" model="ir.ui.view">
+        <field name="name">hr.attendance.correction.search</field>
+        <field name="model">hr.attendance.correction</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <filter name="state_pending"  string="Pendientes"
+                        domain="[('state','=','pending')]"/>
+                <filter name="state_approved" string="Aprobadas"
+                        domain="[('state','=','approved')]"/>
+                <filter name="state_rejected" string="Rechazadas"
+                        domain="[('state','=','rejected')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_employee" string="Empleado"
+                            context="{'group_by':'employee_id'}"/>
+                    <filter name="group_date" string="Fecha"
+                            context="{'group_by':'date'}"/>
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Window action ─────────────────────────────────────────────── -->
+    <record id="action_hr_attendance_correction" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Corrección</field>
+        <field name="res_model">hr.attendance.correction</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_state_pending': 1}</field>
+    </record>
+
+</odoo>

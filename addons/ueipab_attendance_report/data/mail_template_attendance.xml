@@ -207,6 +207,23 @@
       &#8212; D&#237;a libre (horario especial)
     </div>
 
+    <!-- ======== CORRECTION REQUEST BUTTON (only when absent days exist) ======== -->
+    <t t-if="object.absent_days > 0 and not object.is_special_schedule">
+    <div style="background:#f8f9fa;border:1px solid #dde3ed;border-radius:8px;padding:16px 20px;margin:0 0 16px;text-align:center;">
+      <p style="margin:0 0 10px;font-size:14px;color:#1a2c5b;font-weight:600;">
+        &#128295; &#191;Alguna ausencia registrada no fue real?
+      </p>
+      <p style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.5;">
+        Puede solicitar la correcci&#243;n directamente — Recursos Humanos la revisar&#225; y aprobar&#225;.
+      </p>
+      <a t-att-href="object._get_fix_url()"
+         style="display:inline-block;background:#2471a3;color:white;padding:10px 28px;
+                font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+        Solicitar Correcci&#243;n de Asistencia
+      </a>
+    </div>
+    </t>
+
     <!-- ======== CONTACT BOX ======== -->
     <div style="background:#e8f4f8;padding:14px 18px;border-left:4px solid #2471a3;margin:0 0 24px;border-radius:4px;">
       <p style="font-size:14px;color:#1a2c5b;margin:0 0 6px;font-weight:600;">&#128172; &#191;Alguna discrepancia?</p>

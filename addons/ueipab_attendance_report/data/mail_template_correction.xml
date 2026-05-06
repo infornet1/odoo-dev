@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── 1. HR notification on employee submission ──────────────────── -->
+    <record id="email_template_correction_request" model="mail.template">
+        <field name="name">Corrección Asistencia — Notificación a RRHH</field>
+        <field name="model_id" ref="model_hr_attendance_correction"/>
+        <field name="email_from">"Sistema Odoo" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">&#128295; Solicitud de corrección — {{object.employee_id.name}} — {{object.date}}</field>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;padding:22px 28px;">
+    <h2 style="margin:0;font-size:18px;">&#128295; Nueva solicitud de corrección de asistencia</h2>
+    <p style="margin:4px 0 0;font-size:13px;opacity:.85;">Requiere revisión y aprobación</p>
+  </div>
+
+  <div style="padding:24px 28px;">
+
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px;">
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;width:40%;">Empleado</td>
+        <td style="padding:8px 12px;"><t t-esc="object.employee_id.name"/></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;">Fecha a corregir</td>
+        <td style="padding:8px 12px;"><t t-esc="object.date"/></td>
+      </tr>
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;">Hora entrada (VET)</td>
+        <td style="padding:8px 12px;"><t t-esc="object.check_in_time"/></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;">Hora salida (VET)</td>
+        <td style="padding:8px 12px;"><t t-esc="object.check_out_time or '— no indicada'"/></td>
+      </tr>
+      <tr style="background:#f0f4fa;">
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;">Motivo</td>
+        <td style="padding:8px 12px;"><t t-esc="object.reason"/></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:700;color:#1a2c5b;">Reporte</td>
+        <td style="padding:8px 12px;"><t t-esc="object.attendance_report_id.display_name if object.attendance_report_id else '—'"/></td>
+      </tr>
+    </table>
+
+    <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;border-radius:4px;font-size:13px;color:#856404;margin-bottom:20px;">
+      &#9888;&#65039; Ingrese a <strong>Odoo &#8594; Reportes &#8594; Solicitudes de Corrección</strong>
+      para revisar y aprobar o rechazar esta solicitud.
+    </div>
+
+    <p style="font-size:12px;color:#999;margin:0;">
+      IP de envío: <t t-esc="object.submitted_ip or '—'"/> &#160;|&#160;
+      Enviado: <t t-esc="object.create_date"/>
+    </p>
+  </div>
+</div>
+</div>
+        </field>
+    </record>
+
+    <!-- ── 2. Employee notification — Approved ────────────────────────── -->
+    <record id="email_template_correction_approved" model="mail.template">
+        <field name="name">Corrección Asistencia — Aprobada (empleado)</field>
+        <field name="model_id" ref="model_hr_attendance_correction"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="subject">&#9989; Corrección de asistencia aprobada — {{object.date}}</field>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;padding:22px 28px;">
+    <h2 style="margin:0;font-size:18px;">&#9989; Corrección de asistencia aprobada</h2>
+    <p style="margin:4px 0 0;font-size:13px;opacity:.85;">Instituto Privado Andrés Bello, CA</p>
+  </div>
+
+  <div style="padding:24px 28px;">
+    <p style="font-size:15px;color:#333;">
+      Estimado/a <strong><t t-esc="object.employee_id.name"/></strong>,
+    </p>
+    <p style="font-size:14px;color:#555;line-height:1.6;">
+      Su solicitud de corrección de asistencia fue <strong>aprobada</strong>.
+      El registro ha sido actualizado en el sistema.
+    </p>
+
+    <div style="background:#d4edda;border-left:4px solid #28a745;padding:14px 18px;border-radius:4px;margin:16px 0;font-size:14px;color:#155724;">
+      &#128197; <strong>Fecha:</strong> <t t-esc="object.date"/><br/>
+      &#8987; <strong>Entrada registrada:</strong> <t t-esc="object.check_in_time"/> VET<br/>
+      <t t-if="object.check_out_time">
+      &#8987; <strong>Salida registrada:</strong> <t t-esc="object.check_out_time"/> VET<br/>
+      </t>
+    </div>
+
+    <p style="font-size:13px;color:#555;line-height:1.6;">
+      Si tiene alguna pregunta adicional, comuníquese con Recursos Humanos:<br/>
+      <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#2471a3;font-weight:600;">
+        recursoshumanos@ueipab.edu.ve</a>
+    </p>
+
+    <p style="font-size:13px;color:#555;margin-top:20px;">Cordialmente,<br/>
+      <strong>Recursos Humanos</strong><br/>
+      Instituto Privado Andrés Bello, CA</p>
+  </div>
+</div>
+</div>
+        </field>
+    </record>
+
+    <!-- ── 3. Employee notification — Rejected ────────────────────────── -->
+    <record id="email_template_correction_rejected" model="mail.template">
+        <field name="name">Corrección Asistencia — Rechazada (empleado)</field>
+        <field name="model_id" ref="model_hr_attendance_correction"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="subject">Solicitud de corrección de asistencia — {{object.date}} — Revisión completada</field>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;padding:22px 28px;">
+    <h2 style="margin:0;font-size:18px;">Solicitud de corrección — revisión completada</h2>
+    <p style="margin:4px 0 0;font-size:13px;opacity:.85;">Instituto Privado Andrés Bello, CA</p>
+  </div>
+
+  <div style="padding:24px 28px;">
+    <p style="font-size:15px;color:#333;">
+      Estimado/a <strong><t t-esc="object.employee_id.name"/></strong>,
+    </p>
+    <p style="font-size:14px;color:#555;line-height:1.6;">
+      Su solicitud de corrección para el día <strong><t t-esc="object.date"/></strong>
+      fue revisada y en esta ocasión no pudo ser procesada.
+    </p>
+
+    <t t-if="object.rejection_reason">
+    <div style="background:#fde8e8;border-left:4px solid #dc3545;padding:14px 18px;border-radius:4px;margin:16px 0;font-size:14px;color:#721c24;">
+      <strong>Observación de RRHH:</strong><br/>
+      <t t-esc="object.rejection_reason"/>
+    </div>
+    </t>
+
+    <p style="font-size:14px;color:#555;line-height:1.6;">
+      Si considera que esto es un error o necesita mayor información,
+      comuníquese directamente con Recursos Humanos:<br/>
+      <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#2471a3;font-weight:600;">
+        recursoshumanos@ueipab.edu.ve</a>
+    </p>
+
+    <p style="font-size:13px;color:#555;margin-top:20px;">Cordialmente,<br/>
+      <strong>Recursos Humanos</strong><br/>
+      Instituto Privado Andrés Bello, CA</p>
+  </div>
+</div>
+</div>
+        </field>
+    </record>
+
+</odoo>

@@ -537,6 +537,12 @@ class HrAttendanceReport(models.Model):
         base = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
         return f"{base}/attendance-ack/{self.ack_token}"
 
+    def _get_fix_url(self):
+        """Correction request URL — same token, different route."""
+        self.ensure_one()
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        return f"{base}/attendance-fix/{self.ack_token}"
+
     def action_send_email(self):
         self.ensure_one()
         if not self.employee_id.work_email:

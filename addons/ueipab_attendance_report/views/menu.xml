@@ -19,4 +19,13 @@
         sequence="91"
         groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Correction requests queue -->
+    <menuitem
+        id="menu_attendance_correction_list"
+        name="Solicitudes de Corrección"
+        parent="ueipab_payroll_enhancements.menu_payroll_reports"
+        action="action_hr_attendance_correction"
+        sequence="92"
+        groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
 </odoo>
