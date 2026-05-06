@@ -414,10 +414,10 @@ class HrAttendanceReport(models.Model):
             raise_if_not_found=True,
         )
         template.send_mail(self.id, force_send=True)
-        self.write({
-            'state': 'sent',
-            'sent_date': fields.Datetime.now(),
-        })
+        vals = {'sent_date': fields.Datetime.now()}
+        if not self.is_historical:
+            vals['state'] = 'sent'
+        self.write(vals)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

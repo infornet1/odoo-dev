@@ -229,7 +229,11 @@ class HrAttendanceReportWizard(models.TransientModel):
             rec = Report.browse(rid)
             if rec.employee_id.work_email:
                 template.send_mail(rid, force_send=True)
-                rec.write({'state': 'sent', 'sent_date': OdooDatetime.now()})
+                # Historical records stay 'acknowledged' — don't downgrade to 'sent'
+                if not rec.is_historical:
+                    rec.write({'state': 'sent', 'sent_date': OdooDatetime.now()})
+                else:
+                    rec.write({'sent_date': OdooDatetime.now()})
 
     # ─────────────────────────────────────────────────────────────────────────
     # Actions
