@@ -53,6 +53,7 @@
 | 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Ready for Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) |
+| 38 | Bono Día de las Madres 2026 | Testing | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 
 ---
 
