@@ -97,7 +97,7 @@ def _page(title, body):
 
 class AttendanceCorrectionController(http.Controller):
 
-    @http.route('/attendance-fix/<string:token>', auth='public', methods=['GET', 'POST'], csrf=False)
+    @http.route('/attendance-fix/<string:token>', type='http', auth='public', website=False, csrf=False)
     def correction_form(self, token, **post):
         report = request.env['hr.attendance.report'].sudo().search(
             [('ack_token', '=', token)], limit=1,
@@ -213,9 +213,10 @@ class AttendanceCorrectionController(http.Controller):
         # Date dropdown
         opts = '<option value="">— Seleccione una fecha —</option>'
         for d in absent_days:
-            label = f"{_DAYS_ES.get(d['date'].weekday(), '')} {d['date_str']} — Sin registro"
-            sel = 'selected' if post.get('correction_date') == str(d['date']) else ''
-            opts += f'<option value="{d[\"date\"]}" {sel}>{label}</option>'
+            d_date = str(d['date'])
+            label  = f"{_DAYS_ES.get(d['date'].weekday(), '')} {d['date_str']} — Sin registro"
+            sel    = 'selected' if post.get('correction_date') == d_date else ''
+            opts  += f'<option value="{d_date}" {sel}>{label}</option>'
 
         # Restore previous selections on validation error
         prev_ci_h = post.get('ci_h', '')
