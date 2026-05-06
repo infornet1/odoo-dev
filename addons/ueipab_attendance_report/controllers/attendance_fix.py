@@ -161,6 +161,25 @@ def _page(title, body):
 
 class AttendanceCorrectionController(http.Controller):
 
+    @http.route('/attendance-correction/<int:correction_id>', type='http',
+                auth='user', website=False)
+    def correction_review(self, correction_id, **kw):
+        """Login-safe redirect to the specific correction record in Odoo backend.
+
+        auth='user' means Odoo handles the login redirect automatically,
+        preserving this URL as the redirect target. After login, this route
+        redirects to the hash URL — at that point the session exists so the
+        hash is processed correctly by the Odoo webclient.
+        """
+        base = request.env['ir.config_parameter'].sudo().get_param(
+            'web.base.url', ''
+        ).rstrip('/')
+        target = (
+            f"{base}/web#id={correction_id}"
+            f"&model=hr.attendance.correction&view_type=form"
+        )
+        return request.redirect(target)
+
     @http.route('/attendance-fix/<string:token>', type='http', auth='public',
                 website=False, csrf=False)
     def correction_form(self, token, **post):

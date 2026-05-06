@@ -65,7 +65,7 @@
                                    invisible="not created_attendance_id"/>
                         </group>
                     </group>
-                    <group string="Motivo del empleado">
+                    <group string="Motivo de la incidencia">
                         <field name="reason" nolabel="1" readonly="1"/>
                     </group>
                     <group string="Resultado de la revisión" invisible="state == 'pending'">

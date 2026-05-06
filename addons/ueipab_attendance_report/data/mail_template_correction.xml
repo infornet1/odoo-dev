@@ -47,7 +47,7 @@
     </table>
 
     <t t-set="base_url" t-value="object.get_base_url()"/>
-    <t t-set="record_url" t-value="base_url + '/web#id=' + str(object.id) + '&amp;model=hr.attendance.correction&amp;view_type=form'"/>
+    <t t-set="record_url" t-value="base_url + '/attendance-correction/' + str(object.id)"/>
 
     <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;border-radius:4px;font-size:13px;color:#856404;margin-bottom:16px;">
       &#9888;&#65039; Esta solicitud requiere revisión y aprobación en Odoo.
