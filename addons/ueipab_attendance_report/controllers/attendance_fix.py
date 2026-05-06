@@ -175,7 +175,9 @@ class AttendanceCorrectionController(http.Controller):
               recursoshumanos@ueipab.edu.ve</a>.</p></div>""")
 
         employee    = report.employee_id
-        absent_days = [d for d in report.get_attendance_days() if d['status'] == 'absent']
+        today       = date_cls.today()
+        absent_days = [d for d in report.get_attendance_days()
+                       if d['status'] == 'absent' and d['date'] <= today]
 
         if not absent_days:
             return _page('Sin ausencias', f"""
