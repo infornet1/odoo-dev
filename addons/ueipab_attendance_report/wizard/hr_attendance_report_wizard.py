@@ -23,9 +23,9 @@ class HrAttendanceReportWizard(models.TransientModel):
     ], string='Modo', default='single', required=True)
 
     # ─── Single-quincena fields ───────────────────────────────────────────────
-    year = fields.Integer(
-        string='Año',
-        default=lambda self: date.today().year,
+    year = fields.Char(
+        string='Año', size=4,
+        default=lambda self: str(date.today().year),
     )
     month = fields.Selection(
         MONTHS_ES, string='Mes',
@@ -44,16 +44,16 @@ class HrAttendanceReportWizard(models.TransientModel):
         MONTHS_ES, string='Desde mes',
         default='10',
     )
-    range_from_year = fields.Integer(
-        string='Desde año', default=2025,
+    range_from_year = fields.Char(
+        string='Desde año', size=4, default='2025',
     )
     range_to_month = fields.Selection(
         MONTHS_ES, string='Hasta mes',
         default=lambda self: str(date.today().month),
     )
-    range_to_year = fields.Integer(
-        string='Hasta año',
-        default=lambda self: date.today().year,
+    range_to_year = fields.Char(
+        string='Hasta año', size=4,
+        default=lambda self: str(date.today().year),
     )
     range_preview = fields.Char(
         string='Quincenas a generar', compute='_compute_range_preview',
@@ -94,7 +94,11 @@ class HrAttendanceReportWizard(models.TransientModel):
             if not rec.year or not rec.month or not rec.quincena:
                 rec.date_from = rec.date_to = False
                 continue
-            m, y = int(rec.month), rec.year
+            try:
+                m, y = int(rec.month), int(rec.year)
+            except (ValueError, TypeError):
+                rec.date_from = rec.date_to = False
+                continue
             if rec.quincena == '1':
                 rec.date_from = date(y, m, 1)
                 rec.date_to   = date(y, m, 15)
@@ -177,9 +181,11 @@ class HrAttendanceReportWizard(models.TransientModel):
         if not (self.range_from_month and self.range_from_year and
                 self.range_to_month and self.range_to_year):
             return []
-
-        fm, fy = int(self.range_from_month), self.range_from_year
-        tm, ty = int(self.range_to_month),   self.range_to_year
+        try:
+            fm, fy = int(self.range_from_month), int(self.range_from_year)
+            tm, ty = int(self.range_to_month),   int(self.range_to_year)
+        except (ValueError, TypeError):
+            return []
 
         if (fy, fm) > (ty, tm):
             return []
@@ -272,7 +278,7 @@ class HrAttendanceReportWizard(models.TransientModel):
                 'date_to':     self.date_to,
                 'quincena':    self.quincena,
                 'month':       int(self.month),
-                'year':        self.year,
+                'year':        int(self.year),
             })
             created_ids.append(rec.id)
 

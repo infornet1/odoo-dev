@@ -8,7 +8,7 @@
             <form string="Generar Reportes de Asistencia Quincenal">
 
                 <!-- ===== MODE SELECTOR ===== -->
-                <group string="Modo de generaci&#243;n">
+                <group string="Modo de generaci&#243;n" col="1">
                     <field name="generation_mode" widget="radio" nolabel="1"/>
                 </group>
 
@@ -48,7 +48,7 @@
                 </div>
 
                 <!-- ===== EMPLOYEE SELECTION ===== -->
-                <group string="Empleados a incluir">
+                <group string="Empleados a incluir" col="1">
                     <field name="filter_mode" widget="radio" nolabel="1"/>
 
                     <field name="department_id"
