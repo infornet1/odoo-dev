@@ -113,15 +113,11 @@ class HrAttendanceCorrection(models.Model):
         if tmpl and self.employee_id.work_email:
             tmpl.send_mail(self.id, force_send=True)
 
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Corrección aprobada'),
-                'message': _('Registro de asistencia creado para %s.') % self.employee_id.name,
-                'type': 'success',
-            },
-        }
+        return self._notify_and_reload(
+            _('Corrección aprobada'),
+            _('Registro de asistencia creado para %s.') % self.employee_id.name,
+            'success',
+        )
 
     def action_reject(self):
         self.ensure_one()
@@ -139,12 +135,29 @@ class HrAttendanceCorrection(models.Model):
         if tmpl and self.employee_id.work_email:
             tmpl.send_mail(self.id, force_send=True)
 
+        return self._notify_and_reload(
+            _('Solicitud rechazada'),
+            _('Se notificó al empleado.'),
+            'warning',
+        )
+
+    def _notify_and_reload(self, title, message, msg_type):
+        """Show a toast notification and reload the current form view."""
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Solicitud rechazada'),
-                'message': _('Se notificó al empleado.'),
-                'type': 'warning',
+                'title': title,
+                'message': message,
+                'type': msg_type,
+                'sticky': False,
+                'next': {
+                    'type': 'ir.actions.act_window',
+                    'res_model': 'hr.attendance.correction',
+                    'res_id': self.id,
+                    'view_mode': 'form',
+                    'views': [(False, 'form')],
+                    'target': 'current',
+                },
             },
         }
