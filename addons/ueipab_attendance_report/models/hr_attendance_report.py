@@ -381,11 +381,7 @@ class HrAttendanceReport(models.Model):
                 ),
             }
         else:
-            sa = 's' if self.absent_days > 1 else ''
-            parts = [f'{self.absent_days} ausencia{sa}']
-            if self.missing_exit_days:
-                sm = 's' if self.missing_exit_days > 1 else ''
-                parts.append(f'{self.missing_exit_days} salida{sm} sin registrar')
+            total = self.absent_days + self.missing_exit_days
             return {
                 'status': 'danger',
                 'icon': '❌',
@@ -393,10 +389,14 @@ class HrAttendanceReport(models.Model):
                 'border': '#dc3545',
                 'color': '#721c24',
                 'message': (
-                    f'Su registro presenta: {" y ".join(parts)}. '
-                    'Tenga en cuenta que todas las ausencias no justificadas y/o con inconsistencias no informadas '
-                    'podrían generar descuentos automáticos como nuevo mecanismo de control '
-                    'que entrará de forma efectiva a partir del 1 de junio de 2026.'
+                    f'Su registro actual presenta un total de {total} incidencia{"s" if total > 1 else ""} '
+                    f'({self.absent_days} ausencia{"s" if self.absent_days != 1 else ""}'
+                    + (f' y {self.missing_exit_days} salida{"s" if self.missing_exit_days != 1 else ""} sin registrar' if self.missing_exit_days else '')
+                    + '). '
+                    'Le recordamos que las inasistencias no justificadas o que presenten inconsistencias '
+                    'sin informar podrían generar descuentos automáticos. '
+                    'Este nuevo mecanismo de control entrará en vigor de manera efectiva '
+                    'a partir del 1 de junio de 2026.'
                 ),
             }
 
