@@ -4,6 +4,14 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-07 — Payslip Ack — Manual confirmation + reminder (production)
+
+- **5 payslips manually acknowledged** via Odoo shell: ANDRES MORALES (SLIP/580, SLIP/673, SLIP/700) and PABLO NAVARRO (SLIP/672, SLIP/693). `is_acknowledged=True`, `acknowledged_ip='Manual - HR'`, chatter note added per payslip.
+- **1 reminder sent** to RAMON BELLO (SLIP/655, ABRIL15) → `ramon.bello@ueipab.edu.ve` (reminder #4).
+- Production status: **584 / 585 acknowledged** (99.8%). Only SLIP/655 RAMON BELLO pending.
+
+---
+
 ## 2026-05-06 — ueipab_attendance_report v17.0.1.3.4 — Self-Service Attendance Correction
 
 **New feature:** Employees can self-report attendance incidencias via a public form; HR approves in one click.

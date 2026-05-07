@@ -276,6 +276,7 @@ Wrapped in try/except so email failures never block the acknowledgment success p
 **Run history:**
 - 2026-05-04 — 26 reminders sent across 12 batches (0 failed, 0 no-email) ⚠️ no CC (template bug)
 - 2026-05-06 — 14 reminders sent across 10 batches (0 failed, 0 no-email) ✓ CC fixed before this run
+- 2026-05-07 — 5 payslips manually acknowledged via shell (ANDRES MORALES ×3, PABLO NAVARRO ×2); 1 reminder sent to RAMON BELLO (SLIP/655, reminder #4). Production: 584/585 acknowledged.
 
 ### Script
 
