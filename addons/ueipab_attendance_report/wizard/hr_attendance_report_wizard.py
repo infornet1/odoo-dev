@@ -84,6 +84,13 @@ class HrAttendanceReportWizard(models.TransientModel):
         help="Envía el correo a cada empleado con email al generar los reportes.",
     )
 
+    # ─── Resend mode ──────────────────────────────────────────────────────────
+    resend_only = fields.Boolean(
+        string='Solo reenviar reportes existentes (sin generar nuevos)',
+        default=False,
+        help="Busca reportes ya generados para el período y empleados seleccionados y reenvía el correo.",
+    )
+
     # ─────────────────────────────────────────────────────────────────────────
     # Compute / onchange
     # ─────────────────────────────────────────────────────────────────────────
@@ -301,6 +308,62 @@ class HrAttendanceReportWizard(models.TransientModel):
                 ('date_to',   '=', fields.Date.to_string(self.date_to)),
             ],
             'context': {'created_count': len(created_ids), 'skipped_count': skipped},
+        }
+
+    # ── Resend existing reports ───────────────────────────────────────────────
+
+    def action_resend_reports(self):
+        self.ensure_one()
+        if not self.employee_ids:
+            raise UserError(_("Seleccione al menos un empleado."))
+
+        Report = self.env['hr.attendance.report']
+
+        if self.generation_mode == 'range':
+            quincenas = self._get_quincenas_in_range()
+            if not quincenas:
+                raise UserError(_(
+                    "No hay quincenas en el rango seleccionado. "
+                    "Verifique que el mes/año de inicio sea anterior al de fin."
+                ))
+            report_ids = []
+            for q in quincenas:
+                recs = Report.search([
+                    ('employee_id', 'in', self.employee_ids.ids),
+                    ('date_from',   '=', q['date_from']),
+                    ('date_to',     '=', q['date_to']),
+                ])
+                report_ids.extend(recs.ids)
+
+            name = (
+                f"Reenviados {quincenas[0]['label']} → {quincenas[-1]['label']}"
+            )
+        else:
+            if not self.date_from or not self.date_to:
+                raise UserError(_("Complete el período antes de continuar."))
+            recs = Report.search([
+                ('employee_id', 'in', self.employee_ids.ids),
+                ('date_from',   '=', self.date_from),
+                ('date_to',     '=', self.date_to),
+            ])
+            report_ids = recs.ids
+            month_name = dict(MONTHS_ES).get(self.month, self.month)
+            name = f"Reenviados Q{self.quincena} — {month_name} {self.year}"
+
+        if not report_ids:
+            raise UserError(_(
+                "No se encontraron reportes existentes para el período "
+                "y empleados seleccionados."
+            ))
+
+        self._send_emails(report_ids)
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': name,
+            'res_model': 'hr.attendance.report',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', report_ids)],
         }
 
     # ── Range (bulk) ──────────────────────────────────────────────────────────

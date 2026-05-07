@@ -49,7 +49,12 @@
                             name="action_send_email"
                             type="object"
                             class="btn-primary"
-                            invisible="state == 'acknowledged'"/>
+                            invisible="state != 'draft'"/>
+                    <button string="&#128231;  Reenviar Correo"
+                            name="action_send_email"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'draft'"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,sent,acknowledged"/>
                 </header>

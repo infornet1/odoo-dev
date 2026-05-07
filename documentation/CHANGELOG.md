@@ -4,6 +4,28 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-07 — ueipab_attendance_report v17.0.1.4.0 — Resend Report Button + Wizard Resend Mode
+
+**Enhancement:** HR can now resend attendance report emails from two places — the report form and the generation wizard.
+
+### Enhancement 1 — Report form view
+- **"Enviar Correo"** (primary, blue) shown only when `state == 'draft'`
+- **"📧 Reenviar Correo"** (secondary, grey) shown for `sent` and `acknowledged` states
+- Both call the same `action_send_email()` — resending resets state to `sent` for non-historical reports so HR can track re-acknowledgment
+
+### Enhancement 2 — Wizard resend mode
+- New **"Solo reenviar reportes existentes (sin generar nuevos)"** checkbox in the wizard
+- When checked: yellow info banner appears, `send_email` checkbox hides, "Generar Reportes" button becomes **"📧 Reenviar Reportes"**
+- `action_resend_reports()`: finds existing `hr.attendance.report` records for the selected period + employees and calls `_send_emails()` on them — no new records created
+- Works with both single-quincena and range modes
+- Returns filtered list view of resent reports
+
+### Deployed
+- Testing: 2026-05-07 — validated with LUISA ELENA ABREU (temp email swap)
+- Production: 2026-05-07 — synced + upgraded DB_UEIPAB + restarted
+
+---
+
 ## 2026-05-07 — Payslip Ack — Manual confirmation + reminder (production)
 
 - **5 payslips manually acknowledged** via Odoo shell: ANDRES MORALES (SLIP/580, SLIP/673, SLIP/700) and PABLO NAVARRO (SLIP/672, SLIP/693). `is_acknowledged=True`, `acknowledged_ip='Manual - HR'`, chatter note added per payslip.

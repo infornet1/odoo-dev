@@ -75,16 +75,33 @@
                     </span>
                 </div>
 
-                <!-- ===== SEND OPTION ===== -->
+                <!-- ===== SEND / RESEND OPTIONS ===== -->
                 <group>
-                    <field name="send_email"/>
+                    <field name="send_email" invisible="resend_only"/>
+                    <field name="resend_only"/>
                 </group>
+
+                <!-- Resend info banner -->
+                <div invisible="not resend_only"
+                     style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px 14px;margin:4px 0 12px;border-radius:4px;">
+                    <span style="font-size:13px;color:#856404;">
+                        &#128231;&#160;
+                        <strong>Modo reenv&#237;o:</strong>
+                        Solo se enviar&#225;n correos a empleados que ya tienen reporte para el per&#237;odo seleccionado. No se crear&#225;n nuevos registros.
+                    </span>
+                </div>
 
                 <footer>
                     <button string="Generar Reportes"
                             name="action_generate_reports"
                             type="object"
-                            class="btn-primary"/>
+                            class="btn-primary"
+                            invisible="resend_only"/>
+                    <button string="&#128231;  Reenviar Reportes"
+                            name="action_resend_reports"
+                            type="object"
+                            class="btn-primary"
+                            invisible="not resend_only"/>
                     <button string="Cancelar" special="cancel"/>
                 </footer>
             </form>
