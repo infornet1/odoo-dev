@@ -4,6 +4,35 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-07 — Mikrotik Hotspot → Odoo Attendance Bridge (Phase 1, Production)
+
+**New script:** `scripts/sync_mikrotik_attendance.py` — daily cron (18:35 VET) that reads active WiFi sessions from Mikrotik hAP ac³ hotspot and creates `hr.attendance` records for staff present on-site. Runs AFTER control_asistencias sync — only fills gaps.
+
+### Architecture
+- Source: `/ip hotspot active print detail` via SSH (paramiko, 172.28.10.10, odooapi)
+- Mapping: `wifi_hotspot_users` table (payroll_db) + dynamic generation via `username_helper.py` → 94 usernames for 47 employees
+- Two usernames per employee: laptop (`gperdomo`) + cellphone (`celgperdomo`)
+- Odoo write: XML-RPC (same credentials as control_asistencias sync)
+- Email: HTML summary to recursoshumanos@ueipab.edu.ve
+
+### Confidence criteria
+- `uptime >= 120 min` (device connected for significant portion of day)
+- `login_time = poll_time - uptime` must be before 14:00 VET
+- Excludes: `invitado`, `laptop*`, unregistered users
+
+### Priority
+control_asistencias record exists → Mikrotik skipped for that employee. Only fills gaps (admin, maintenance, directors).
+
+### Fixes applied
+- `jhernandez` / `celjhernandez` in wifi_hotspot_users had typo email (`ueaipab` → `ueipab`)
+- `aarcides` / `celaarcides` (ARCIDES ARZOLA) added with non-standard username
+- wifi_hotspot_users: 14 → 16 explicit registrations
+
+### Cron
+Phase 1 (22:30 UTC) → control_asistencias; Phase 2 (22:35 UTC) → Mikrotik hotspot. Both in `/etc/cron.d/sync_control_asistencia`.
+
+---
+
 ## 2026-05-07 — Control Asistencia → Odoo Attendance Bridge (Testing)
 
 **New script:** `scripts/sync_control_asistencia.py` — daily cron that reads teacher activity from the `control_asistencias` Flask/MySQL app and auto-creates `hr.attendance` records in Odoo for teachers who conducted class. No biometric system required.
