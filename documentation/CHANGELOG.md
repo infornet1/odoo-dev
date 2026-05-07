@@ -4,6 +4,12 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-07 — Mikrotik Hotspot digest always sent to HR
+
+Fixed `sync_mikrotik_attendance.py` to send the daily HTML summary email to `recursoshumanos@ueipab.edu.ve` on every live run — previously only sent when at least one record was created. HR now receives both digests (control_asistencias + Mikrotik) every weekday as cron confirmation.
+
+---
+
 ## 2026-05-07 — Mikrotik Hotspot → Odoo Attendance Bridge (Phase 1, Production)
 
 **New script:** `scripts/sync_mikrotik_attendance.py` — daily cron (18:35 VET) that reads active WiFi sessions from Mikrotik hAP ac³ hotspot and creates `hr.attendance` records for staff present on-site. Runs AFTER control_asistencias sync — only fills gaps.
