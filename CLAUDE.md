@@ -54,7 +54,7 @@
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.4.0: holidays + special schedule + self-service correction + resend buttons |
 | 38 | Bono Día de las Madres 2026 | Testing | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
-| 39 | Control Asistencia → Odoo Bridge | Testing | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
+| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 
 ---
 

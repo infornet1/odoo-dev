@@ -24,8 +24,13 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 ### Cron installed
 `/etc/cron.d/sync_control_asistencia` — weekdays 22:30 UTC (18:30 VET), currently `--env testing`
 
-### Production deployment: pending
-Requires XML-RPC mode for production target (psycopg2 direct to prod postgres is firewalled). See deployment plan.
+### Production deployment: LIVE 2026-05-07
+- XML-RPC backend implemented for production (psycopg2 only for testing)
+- API key created for admin uid=2 in DB_UEIPAB (`res_users_apikeys` id=3)
+- Backfill May 4–7 school days completed (6 new records created, rest skipped/overlapped)
+- Overlap handling: ORM constraint caught gracefully → counted as skip, existing record kept
+- Cron updated to `--env production`, runs weekdays 22:30 UTC (18:30 VET)
+- Summary email queued as `state=outgoing` → delivered by Odoo mail cron within 1 min
 
 ---
 

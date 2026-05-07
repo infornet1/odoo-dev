@@ -6,9 +6,12 @@ Daily bridge: control_asistencias → Odoo hr.attendance
 
 For each teacher who submitted student attendance records in control_asistencias
 on the target date, creates an hr.attendance record in Odoo (if one doesn't
-already exist for that day).
+already exist for that day). No biometric system required — class submission
+proves teacher presence.
 
-Since there is no biometric system, this IS the attendance source for teachers.
+Backends:
+  testing    → psycopg2 direct to local postgres (port 5433)
+  production → XML-RPC to https://odoo.ueipab.edu.ve
 
 Usage:
     python3 scripts/sync_control_asistencia.py              # dry run, testing, today VET
@@ -16,16 +19,17 @@ Usage:
     python3 scripts/sync_control_asistencia.py --date 2026-05-06
     python3 scripts/sync_control_asistencia.py --env production --live
 
-CRON (add to /etc/cron.d/):
+CRON (/etc/cron.d/sync_control_asistencia):
     30 22 * * 1-5  root  /usr/bin/python3 /opt/odoo-dev/scripts/sync_control_asistencia.py --live --env production
-    # 22:30 UTC = 18:30 VET — after school day ends, weekdays only
 """
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import textwrap
+import xmlrpc.client
 from datetime import date, datetime, timedelta
 
 import pymysql
@@ -33,13 +37,12 @@ import psycopg2
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-VET_TO_UTC = timedelta(hours=4)  # VET = UTC-4 → add 4h to get UTC
+VET_TO_UTC = timedelta(hours=4)   # VET = UTC-4
 
-# Default school hours in VET used when auto-creating attendance records.
-# No biometric → we use standard morning schedule as proxy.
-CHECK_IN_VET  = (7, 0)    # 07:00 VET → 11:00 UTC
-CHECK_OUT_VET = (13, 30)  # 13:30 VET → 17:30 UTC
-WORKED_HOURS  = 6.5       # 13:30 - 07:00
+# School hours in VET used when auto-creating attendance records
+CHECK_IN_VET  = (7,  0)    # 07:00 VET → 11:00 UTC
+CHECK_OUT_VET = (13, 30)   # 13:30 VET → 17:30 UTC
+WORKED_HOURS  = 6.5        # 13:30 - 07:00
 
 MYSQL_CFG = {
     'host':     'localhost',
@@ -50,36 +53,26 @@ MYSQL_CFG = {
     'charset':  'utf8mb4',
 }
 
-ODOO_ENVS = {
-    'testing': {
-        'pg_host':   'localhost',
-        'pg_port':   5433,          # exposed from odoo-dev-postgres container
-        'pg_db':     'testing',
-        'pg_user':   'odoo',
-        'pg_pass':   'odoo8069',
-        'container': 'odoo-dev-web',
-        'odoo_db':   'testing',
-    },
-    'production': {
-        # Requires SSH tunnel before running:
-        # ssh -L 5434:localhost:5432 root@10.124.0.3 -N -f
-        'pg_host':   'localhost',
-        'pg_port':   5434,
-        'pg_db':     'DB_UEIPAB',
-        'pg_user':   'odoo',
-        'pg_pass':   'odoo8069',
-        'container': '0ef7d03db702_ueipab17',
-        'odoo_db':   'DB_UEIPAB',
-    },
+# Testing uses direct psycopg2; production uses XML-RPC loaded from config
+PG_TESTING = {
+    'host': 'localhost', 'port': 5433,
+    'dbname': 'testing', 'user': 'odoo', 'password': 'odoo8069',
+    'container': 'odoo-dev-web', 'odoo_db': 'testing',
 }
+
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'production.json')
 
 ALERT_TO = 'recursoshumanos@ueipab.edu.ve'
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
+def load_prod_config():
+    with open(os.path.abspath(CONFIG_PATH)) as f:
+        return json.load(f)['production']['xmlrpc']
+
+
 def vet_times(d: date):
-    """Return (check_in_utc, check_out_utc) datetimes for a VET school day."""
     ci = datetime(d.year, d.month, d.day, CHECK_IN_VET[0],  CHECK_IN_VET[1])  + VET_TO_UTC
     co = datetime(d.year, d.month, d.day, CHECK_OUT_VET[0], CHECK_OUT_VET[1]) + VET_TO_UTC
     return ci, co
@@ -89,13 +82,14 @@ def today_vet() -> date:
     return (datetime.utcnow() - timedelta(hours=4)).date()
 
 
-# ─── Step 1 — Query control_asistencias ───────────────────────────────────────
+def fmt_dt(dt: datetime) -> str:
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+
+# ─── MySQL: teachers who submitted today ──────────────────────────────────────
 
 def get_teachers_who_submitted(target_date: date) -> dict:
-    """
-    Returns {email: (ctrl_id, full_name)} for every teacher who submitted
-    student attendance records for target_date.
-    """
+    """Returns {email: (ctrl_id, full_name)} for teachers who submitted on target_date."""
     conn = pymysql.connect(**MYSQL_CFG)
     try:
         with conn.cursor() as cur:
@@ -106,8 +100,7 @@ def get_teachers_who_submitted(target_date: date) -> dict:
                 FROM asistencia_estudiante ae
                 JOIN usuario u ON ae.id_usuario = u.id_usuario
                 WHERE ae.fecha = %s
-                  AND u.email IS NOT NULL
-                  AND u.email != ''
+                  AND u.email IS NOT NULL AND u.email != ''
                   AND u.activo = 1
             """, (target_date,))
             return {row[2]: (row[0], row[1]) for row in cur.fetchall()}
@@ -115,54 +108,139 @@ def get_teachers_who_submitted(target_date: date) -> dict:
         conn.close()
 
 
-# ─── Step 2 — Odoo operations via psycopg2 ────────────────────────────────────
+# ─── Backend: psycopg2 (testing) ─────────────────────────────────────────────
 
-def connect_odoo_pg(env_cfg: dict):
-    return psycopg2.connect(
-        host=env_cfg['pg_host'], port=env_cfg['pg_port'],
-        dbname=env_cfg['pg_db'], user=env_cfg['pg_user'],
-        password=env_cfg['pg_pass'],
-    )
+class PsycopgBackend:
+    def __init__(self):
+        self.pg = psycopg2.connect(
+            host=PG_TESTING['host'], port=PG_TESTING['port'],
+            dbname=PG_TESTING['dbname'], user=PG_TESTING['user'],
+            password=PG_TESTING['password'],
+        )
+        self.cur = self.pg.cursor()
+
+    def get_employee_map(self, emails):
+        self.cur.execute(
+            "SELECT id, name, work_email FROM hr_employee WHERE work_email = ANY(%s) AND active = TRUE",
+            (emails,)
+        )
+        return {row[2]: (row[0], row[1]) for row in self.cur.fetchall()}
+
+    def has_attendance(self, emp_id, target_date):
+        self.cur.execute(
+            "SELECT id FROM hr_attendance WHERE employee_id = %s AND check_in::date = %s LIMIT 1",
+            (emp_id, target_date)
+        )
+        return self.cur.fetchone() is not None
+
+    def create_attendance(self, emp_id, ci_utc, co_utc):
+        self.cur.execute("""
+            INSERT INTO hr_attendance (employee_id, check_in, check_out, worked_hours)
+            VALUES (%s, %s, %s, %s) RETURNING id
+        """, (emp_id, ci_utc, co_utc, WORKED_HOURS))
+        return self.cur.fetchone()[0]
+
+    def commit(self):
+        self.pg.commit()
+
+    def close(self):
+        self.pg.close()
+
+    def send_email(self, target_date, created, skipped, no_match):
+        """Send via Odoo shell (docker exec) — reuses local mail server config."""
+        body = _build_email_body(target_date, created, skipped, no_match)
+        script = textwrap.dedent(f"""
+mail = env['mail.mail'].sudo().create({{
+    'subject': 'Asistencia Docente {target_date.strftime("%d/%m/%Y")} — Sync Control Asistencias',
+    'email_from': 'recursoshumanos@ueipab.edu.ve',
+    'email_to': '{ALERT_TO}',
+    'body_html': {json.dumps(body)},
+    'auto_delete': True,
+}})
+mail.send()
+env.cr.commit()
+print('email_sent')
+""")
+        result = subprocess.run(
+            ['docker', 'exec', '-i', PG_TESTING['container'],
+             '/usr/bin/odoo', 'shell', '-d', PG_TESTING['odoo_db'], '--no-http'],
+            input=script.encode(), capture_output=True, timeout=90,
+        )
+        return b'email_sent' in result.stdout
 
 
-def get_employee_map(cur, emails: list) -> dict:
-    """Returns {email: (employee_id, name)} for active Odoo employees."""
-    if not emails:
-        return {}
-    cur.execute("""
-        SELECT id, name, work_email
-        FROM hr_employee
-        WHERE work_email = ANY(%s) AND active = TRUE
-    """, (emails,))
-    return {row[2]: (row[0], row[1]) for row in cur.fetchall()}
+# ─── Backend: XML-RPC (production) ───────────────────────────────────────────
+
+class XmlRpcBackend:
+    def __init__(self):
+        cfg = load_prod_config()
+        self.db      = cfg['db']
+        self.api_key = cfg['api_key']
+        common = xmlrpc.client.ServerProxy(f"{cfg['url']}/xmlrpc/2/common")
+        self.uid = common.authenticate(self.db, cfg['user'], self.api_key, {})
+        if not self.uid:
+            raise RuntimeError("XML-RPC authentication failed for production")
+        self.models = xmlrpc.client.ServerProxy(f"{cfg['url']}/xmlrpc/2/object")
+
+    def _call(self, model, method, args, kwargs=None):
+        return self.models.execute_kw(
+            self.db, self.uid, self.api_key,
+            model, method, args, kwargs or {}
+        )
+
+    def get_employee_map(self, emails):
+        recs = self._call('hr.employee', 'search_read',
+                          [[['work_email', 'in', emails], ['active', '=', True]]],
+                          {'fields': ['id', 'name', 'work_email']})
+        return {r['work_email']: (r['id'], r['name']) for r in recs}
+
+    def has_attendance(self, emp_id, target_date):
+        count = self._call('hr.attendance', 'search_count', [[
+            ['employee_id', '=', emp_id],
+            ['check_in', '>=', fmt_dt(datetime.combine(target_date, datetime.min.time()))],
+            ['check_in', '<',  fmt_dt(datetime.combine(target_date + timedelta(days=1), datetime.min.time()))],
+        ]])
+        return count > 0
+
+    def create_attendance(self, emp_id, ci_utc, co_utc):
+        try:
+            return self._call('hr.attendance', 'create', [{
+                'employee_id':  emp_id,
+                'check_in':     fmt_dt(ci_utc),
+                'check_out':    fmt_dt(co_utc),
+                'worked_hours': WORKED_HOURS,
+            }])
+        except xmlrpc.client.Fault as e:
+            if 'ya registr' in str(e) or 'overlap' in str(e).lower():
+                return None  # existing record detected via ORM constraint — skip
+            raise
+
+    def commit(self):
+        pass  # XML-RPC auto-commits
+
+    def close(self):
+        pass
+
+    def send_email(self, target_date, created, skipped, no_match):
+        body = _build_email_body(target_date, created, skipped, no_match)
+        self._call('mail.mail', 'create', [{
+            'subject':    f"Asistencia Docente {target_date.strftime('%d/%m/%Y')} — Sync Control Asistencias",
+            'email_from': 'recursoshumanos@ueipab.edu.ve',
+            'email_to':   ALERT_TO,
+            'body_html':  body,
+            'auto_delete': True,
+            'state':      'outgoing',   # queued — Odoo cron delivers within 1 min
+        }])
+        return True
 
 
-def has_attendance_today(cur, employee_id: int, target_date: date) -> bool:
-    cur.execute("""
-        SELECT id FROM hr_attendance
-        WHERE employee_id = %s
-          AND check_in::date = %s
-        LIMIT 1
-    """, (employee_id, target_date))
-    return cur.fetchone() is not None
+# ─── Email body builder ───────────────────────────────────────────────────────
 
-
-def create_attendance(cur, employee_id: int, ci_utc: datetime, co_utc: datetime) -> int:
-    cur.execute("""
-        INSERT INTO hr_attendance (employee_id, check_in, check_out, worked_hours)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id
-    """, (employee_id, ci_utc, co_utc, WORKED_HOURS))
-    return cur.fetchone()[0]
-
-
-# ─── Step 3 — Summary email via Odoo mail system ──────────────────────────────
-
-def send_summary_email(env_cfg: dict, target_date: date, created, skipped, no_match):
+def _build_email_body(target_date, created, skipped, no_match):
     def rows(items, fmt):
         return ''.join(f'<tr>{fmt(i)}</tr>' for i in items) or '<tr><td colspan="2">(ninguno)</td></tr>'
 
-    body = f"""
+    return f"""
 <p>Estimados Recursos Humanos,</p>
 <p>Resumen de sincronizaci&#243;n autom&#225;tica de asistencia docente
 para el <strong>{target_date.strftime('%d/%m/%Y')}</strong>
@@ -192,30 +270,6 @@ Generado autom&#225;ticamente por sync_control_asistencia.py &#8212;
 </p>
 """
 
-    script = textwrap.dedent(f"""
-mail = env['mail.mail'].sudo().create({{
-    'subject': 'Asistencia Docente {target_date.strftime("%d/%m/%Y")} — Sync Control Asistencias',
-    'email_from': 'recursoshumanos@ueipab.edu.ve',
-    'email_to': '{ALERT_TO}',
-    'body_html': {json.dumps(body)},
-    'auto_delete': True,
-}})
-mail.send()
-env.cr.commit()
-print('email_sent')
-""")
-
-    result = subprocess.run(
-        ['docker', 'exec', '-i', env_cfg['container'],
-         '/usr/bin/odoo', 'shell', '-d', env_cfg['odoo_db'], '--no-http'],
-        input=script.encode(),
-        capture_output=True, timeout=90,
-    )
-    if b'email_sent' in result.stdout:
-        print(f"Summary email sent to {ALERT_TO}")
-    else:
-        print(f"Email may have failed. Stderr snippet: {result.stderr[-300:].decode(errors='replace')}")
-
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -223,84 +277,77 @@ def main():
     parser = argparse.ArgumentParser(
         description='Sync control_asistencias teacher activity → Odoo hr.attendance'
     )
-    parser.add_argument('--live', action='store_true',
-                        help='Apply changes (default: dry run)')
-    parser.add_argument('--date', default=None,
-                        help='Date to process YYYY-MM-DD (default: today VET)')
-    parser.add_argument('--env', default='testing',
-                        choices=['testing', 'production'])
+    parser.add_argument('--live', action='store_true', help='Apply changes (default: dry run)')
+    parser.add_argument('--date', default=None,        help='Date YYYY-MM-DD (default: today VET)')
+    parser.add_argument('--env',  default='testing',   choices=['testing', 'production'])
     args = parser.parse_args()
 
     dry_run     = not args.live
     target_env  = args.env
     target_date = date.fromisoformat(args.date) if args.date else today_vet()
-    env_cfg     = ODOO_ENVS[target_env]
+    banner      = 'DRY RUN' if dry_run else 'LIVE'
 
-    banner = 'DRY RUN' if dry_run else 'LIVE'
     print(f"[{banner}] sync_control_asistencia | date={target_date} | env={target_env}")
     print('─' * 60)
 
-    # ── 1. Get teachers who submitted today ───────────────────────────────────
+    # ── 1. Get teachers who submitted ─────────────────────────────────────────
     teachers = get_teachers_who_submitted(target_date)
     print(f"Submitted in control_asistencias on {target_date}: {len(teachers)}")
     for email, (_, name) in teachers.items():
         print(f"  • {name} <{email}>")
 
     if not teachers:
-        print("No teacher submissions found for this date.")
-        if not dry_run:
-            send_summary_email(env_cfg, target_date, [], [], [])
+        print("No submissions found — nothing to do.")
         return
 
-    # ── 2. Connect to Odoo postgres ───────────────────────────────────────────
+    # ── 2. Connect to Odoo backend ────────────────────────────────────────────
     try:
-        pg = connect_odoo_pg(env_cfg)
+        backend = PsycopgBackend() if target_env == 'testing' else XmlRpcBackend()
     except Exception as e:
-        print(f"ERROR: Cannot connect to Odoo postgres ({target_env}): {e}")
-        if target_env == 'production':
-            print("Tip: Set up SSH tunnel first:")
-            print("  ssh -L 5434:localhost:5432 root@10.124.0.3 -N -f")
+        print(f"ERROR: Cannot connect to Odoo ({target_env}): {e}")
         sys.exit(1)
 
-    cur = pg.cursor()
-
-    # ── 3. Map emails → Odoo employees ───────────────────────────────────────
-    emp_map  = get_employee_map(cur, list(teachers.keys()))
+    # ── 3. Match emails → Odoo employees ─────────────────────────────────────
+    emp_map  = backend.get_employee_map(list(teachers.keys()))
     no_match = [e for e in teachers if e not in emp_map]
 
     if no_match:
-        print(f"\nWARNING — {len(no_match)} teacher(s) have no Odoo employee match:")
+        print(f"\nWARNING — {len(no_match)} teacher(s) with no Odoo match:")
         for e in no_match:
             print(f"  ⚠  {e}")
 
     # ── 4. Create attendance records ──────────────────────────────────────────
     ci_utc, co_utc = vet_times(target_date)
-    created = []
-    skipped = []
+    created, skipped = [], []
 
     print(f"\nProcessing {len(emp_map)} matched employees:")
-    for email, (ctrl_id, ctrl_name) in teachers.items():
+    for email, (_, ctrl_name) in teachers.items():
         if email not in emp_map:
             continue
         emp_id, emp_name = emp_map[email]
 
-        if has_attendance_today(cur, emp_id, target_date):
+        if backend.has_attendance(emp_id, target_date):
             print(f"  SKIP  {emp_name} — record exists for {target_date}")
             skipped.append((emp_name, email))
             continue
 
         if dry_run:
-            print(f"  [DRY] {emp_name} — would create 07:00→13:30 VET ({ci_utc}→{co_utc} UTC)")
+            print(f"  [DRY] {emp_name} — would create 07:00→13:30 VET")
         else:
-            att_id = create_attendance(cur, emp_id, ci_utc, co_utc)
-            print(f"  ✅   {emp_name} — attendance id={att_id}")
-            created.append((emp_name, email, att_id))
+            att_id = backend.create_attendance(emp_id, ci_utc, co_utc)
+            if att_id is None:
+                print(f"  SKIP  {emp_name} — overlap detected, existing record kept")
+                skipped.append((emp_name, email))
+            else:
+                print(f"  ✅   {emp_name} — attendance id={att_id}")
+                created.append((emp_name, email, att_id))
 
     if not dry_run:
-        pg.commit()
-    pg.close()
+        backend.commit()
 
-    # ── 5. Print summary ──────────────────────────────────────────────────────
+    backend.close()
+
+    # ── 5. Summary ────────────────────────────────────────────────────────────
     print(f"\n{'─'*60}")
     print(f"Summary | {target_date} | [{banner}] | env={target_env}")
     print(f"  Submitted in control_asistencias : {len(teachers)}")
@@ -310,7 +357,8 @@ def main():
     print(f"  No Odoo match (warning)          : {len(no_match)}")
 
     if not dry_run:
-        send_summary_email(env_cfg, target_date, created, skipped, no_match)
+        ok = backend.send_email(target_date, created, skipped, no_match)
+        print(f"  Summary email                    : {'sent ✓' if ok else 'FAILED'}")
     else:
         print("\n  → Run with --live to apply changes.")
 
