@@ -4,6 +4,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-07 — Control Asistencia → Odoo Attendance Bridge (Testing)
+
+**New script:** `scripts/sync_control_asistencia.py` — daily cron that reads teacher activity from the `control_asistencias` Flask/MySQL app and auto-creates `hr.attendance` records in Odoo for teachers who conducted class. No biometric system required.
+
+### How it works
+1. Queries `asistencia_estudiante` grouped by `(id_usuario, fecha)` — any teacher who submitted student attendance records = was physically present at school
+2. Matches teachers to Odoo employees by `email` (control_asistencias `usuario.email` = Odoo `hr.employee.work_email`)
+3. For each matched teacher with no existing Odoo attendance for that day → inserts clean record: `07:00–13:30 VET` (11:00–17:30 UTC), 6.5h
+4. Skips if record already exists (idempotent)
+5. Sends HTML summary email to `recursoshumanos@ueipab.edu.ve`
+
+### Key facts
+- control_asistencias DB: `mysql://control_asist@localhost/control_asistencias`
+- Tested 2026-05-07: 19 teachers detected, 18 matched to Odoo, 18 records created
+- FLORMAR HERNANDEZ was the only ⚠ no-match in testing (temp email swap for testing purposes — matches correctly in production)
+- Idempotency confirmed: re-run skips all existing records
+
+### Cron installed
+`/etc/cron.d/sync_control_asistencia` — weekdays 22:30 UTC (18:30 VET), currently `--env testing`
+
+### Production deployment: pending
+Requires XML-RPC mode for production target (psycopg2 direct to prod postgres is firewalled). See deployment plan.
+
+---
+
 ## 2026-05-07 — ueipab_attendance_report v17.0.1.4.0 — Resend Report Button + Wizard Resend Mode
 
 **Enhancement:** HR can now resend attendance report emails from two places — the report form and the generation wizard.
