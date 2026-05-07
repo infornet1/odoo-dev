@@ -399,7 +399,7 @@ def main():
         for name, uname, reason in skipped_confidence:
             print(f"    {name} [{uname}]: {reason}")
 
-    if not dry_run and created:
+    if not dry_run:
         _send_summary_email(models, db, uid, api_key,
                             target_date, created, skipped_existing, skipped_confidence)
     elif dry_run:
