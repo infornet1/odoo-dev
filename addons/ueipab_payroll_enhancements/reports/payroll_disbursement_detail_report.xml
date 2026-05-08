@@ -105,16 +105,14 @@
                                     <t t-set="loan_recovery_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Detect structure: presence of VE_BASIC_V2 line = V2 regular payroll -->
-                                    <t t-set="has_v2_basic" t-value="bool(payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_BASIC_V2'))"/>
+                                    <!-- Detect structure: VE_NET_V2 present = regular V2 payroll -->
+                                    <t t-set="has_v2_net" t-value="bool(payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2'))"/>
 
                                     <!-- Calculate SALARY and BONUS -->
-                                    <t t-if="has_v2_basic">
-                                        <!-- V2 regular payroll: contract fields prorated by period -->
-                                        <t t-set="period_days" t-value="(payslip.date_to - payslip.date_from).days + 1"/>
-                                        <t t-set="proration" t-value="period_days / 30.0"/>
-                                        <t t-set="salary_amount" t-value="(payslip.contract_id.ueipab_salary_v2 or 0.0) * proration"/>
-                                        <t t-set="bonus_amount" t-value="((payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + (payslip.contract_id.ueipab_bonus_v2 or 0.0) + (payslip.contract_id.cesta_ticket_usd or 0.0)) * proration"/>
+                                    <t t-if="has_v2_net">
+                                        <!-- V2 regular payroll: contract fields (no proration — full period amounts) -->
+                                        <t t-set="salary_amount" t-value="payslip.contract_id.ueipab_salary_v2 or 0.0"/>
+                                        <t t-set="bonus_amount" t-value="(payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + (payslip.contract_id.ueipab_bonus_v2 or 0.0) + (payslip.contract_id.cesta_ticket_usd or 0.0)"/>
                                     </t>
                                     <t t-elif="payslip.contract_id.wage and not payslip.contract_id.ueipab_salary_v2">
                                         <!-- V1 fallback -->

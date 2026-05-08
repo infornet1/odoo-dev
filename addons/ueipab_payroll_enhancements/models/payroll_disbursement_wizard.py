@@ -360,11 +360,11 @@ class PayrollDisbursementWizard(models.TransientModel):
         # Write data rows
         row = 3
         for payslip in payslips.sorted(lambda p: p.employee_id.name):
-            # Detect structure type by presence of VE_BASIC_V2 line
-            has_v2_basic = bool(payslip.line_ids.filtered(
-                lambda l: l.salary_rule_id.code == 'VE_BASIC_V2'))
+            # Detect structure type: VE_NET_V2 present = regular V2 payroll
+            has_v2_net = bool(payslip.line_ids.filtered(
+                lambda l: l.salary_rule_id.code == 'VE_NET_V2'))
 
-            if has_v2_basic:
+            if has_v2_net:
                 # V2 regular payroll: read salary/bonus from contract fields and prorate
                 salary = payslip.contract_id.ueipab_salary_v2 or 0.0
                 bonus = (payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + \
