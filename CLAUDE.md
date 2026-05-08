@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-08
+**Last Updated:** 2026-05-08 (v2)
 
 ## Core Instructions
 
@@ -52,7 +52,7 @@
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 | 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
-| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.4.0: holidays + special schedule + self-service correction + resend buttons |
+| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.5.0: holidays + special schedule + self-service correction + resend buttons + **Notice ACK system** |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 | 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
@@ -139,7 +139,7 @@
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.31.0 | 2026-04-19 |
-| ueipab_attendance_report | 17.0.1.4.0 | 2026-05-07 |
+| ueipab_attendance_report | 17.0.1.5.0 | 2026-05-08 |
 
 ### Production Environment
 
@@ -148,7 +148,7 @@
 | ueipab_payroll_enhancements | 17.0.1.67.6 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report fixes + bank account column + 4 employee date columns in disbursement report) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.4.0 | **Deployed 2026-05-07** |
+| ueipab_attendance_report | 17.0.1.5.0 | **Testing 2026-05-08** — hr.notice.acknowledgment + /notice-ack controller + email ACK button (deploy to prod pending) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 
 ---
@@ -171,6 +171,31 @@
 - Use `web.basic_layout` for UTF-8 support
 - Model naming: `report.<module>.<template_id>` (exact match)
 - TransientModel wizards need security access rules
+
+### Notice Acknowledgment System (hr.notice.acknowledgment)
+
+- **Module:** `ueipab_attendance_report` v17.0.1.5.0 | **Testing id=84**, **Production id=58**
+- **Model:** `hr.notice.acknowledgment` — one record per employee per `notice_key`
+- **Token:** UUID auto-generated on `create()`, used in public URL
+- **Public route:** `/notice-ack/<token>` — `auth='public'`, sets `state=acknowledged`, `ack_date`, `ack_ip`
+- **Email template model:** `hr.notice.acknowledgment` (not `hr.employee`) — `object.employee_id.name` for name, `object._get_ack_url()` for button URL
+- **ACK button in body:** `<a t-att-href="object._get_ack_url()">` — stored via SQL to bypass ORM sanitizer
+- **Send flow:** create ack record → `send_mail(ack.id, force_send=True)` → email goes to `object.employee_id.work_email`, CC `recursoshumanos@ueipab.edu.ve`
+- **Menu:** Payroll → Reports → Notice Acknowledgments
+- **Future campaigns:** just change `notice_key` (e.g. `reglamento_v1`) — no new code needed
+- **Infrastructure:** `/notice-ack/` added to nginx Odoo proxy regex; `dbfilter=^testing$` so Odoo auto-selects DB for cookieless public requests; `web.base.url=https://dev.ueipab.edu.ve`
+
+### mail.template body_html — multilingual JSONB (critical pattern)
+
+`body_html` uses `render_engine='qweb'` and stores as JSONB with per-language keys.
+
+**Rules:**
+- Always write via **direct SQL** updating **both** `en_US` and `es_VE` keys — ORM write only updates the current lang key; if `es_VE` is stale, the ORM reads the wrong version
+- SQL pattern: `UPDATE mail_template SET body_html = %s::jsonb WHERE id = %s` with `json.dumps({'en_US': body, 'es_VE': body})`
+- Subject field is also JSONB — same pattern required
+- Use `<t t-out="object.field"/>` or `<t t-att-href="object.method()"/>` (QWeb syntax, stored via SQL)
+- `{{ object.field }}` Jinja2 syntax does NOT work — `render_engine='qweb'` ignores it
+- For multilingual fix via XML-RPC (no direct DB access): call `write({'body_html': body}, context={'lang': 'es_VE'})` then again with `'en_US'`
 
 ### Adelanto de Prestaciones Sociales Email Template
 - **Testing:** `mail_template` id=71 | **Production:** id=50

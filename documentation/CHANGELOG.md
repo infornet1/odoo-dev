@@ -4,6 +4,67 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-08 — Notice Acknowledgment system + email template fixes
+
+**Module:** `ueipab_attendance_report` v17.0.1.5.0 | **Status:** Testing validated
+
+### hr.notice.acknowledgment — new model
+
+Generic acknowledgment tracking for any institutional communication:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `notice_key` | Char | Machine key e.g. `attendance_guide_v1` |
+| `notice_label` | Char | Human-readable title |
+| `employee_id` | Many2one | `hr.employee` |
+| `token` | Char | UUID auto-generated on create |
+| `state` | Selection | `pending` / `acknowledged` |
+| `sent_date` | Datetime | Auto-set on create |
+| `ack_date` | Datetime | Set by controller on click |
+| `ack_ip` | Char | IP at time of click |
+| `days_pending` | Integer | Computed, non-stored |
+
+**Public controller:** `/notice-ack/<token>` — `auth='public'`, no login required. Records `state=acknowledged`, `ack_date`, `ack_ip`. Returns styled HTML pages: success / already-done / invalid token.
+
+**Views:** tree (badge status, decoration), form (Manual Acknowledge + Reset buttons), search (Pending / Acknowledged filters, Group by Notice / Status / Employee).
+
+**Menu:** Payroll → Reports → Notice Acknowledgments (sequence 95).
+
+**Security:** `hr_payroll_community_manager` = CRUD, `hr_payroll_user` = read-only.
+
+### Email template (id=84 testing) — updated to hr.notice.acknowledgment model
+
+- Model changed from `hr.employee` to `hr.notice.acknowledgment`
+- Employee name: `<t t-out="object.employee_id.name"/>` via QWeb
+- Green ACK button: `<a t-att-href="object._get_ack_url()">` — unique URL per send
+- CC: `recursoshumanos@ueipab.edu.ve` on every send
+- `email_to`: `{{ object.employee_id.work_email }}`
+- Send flow: create `hr.notice.acknowledgment` record → `send_mail(ack.id)` → email to employee
+
+### Infrastructure fixes
+
+- **nginx** (`/etc/nginx/sites-available/dev.ueipab.edu.ve`): added `attendance-ack`, `attendance-fix`, `attendance-correction`, `notice-ack` to the Odoo proxy location regex so public routes reach Odoo on port 8019
+- **odoo.conf** `dbfilter`: changed from `^(DB_UEIPAB|testing|openeducat_demo)$` to `^testing$` — Odoo now auto-selects the `testing` DB for public (cookieless) requests, enabling `/notice-ack/` and `/attendance-ack/` routes to function
+- **`web.base.url`**: updated from `http://dev.ueipab.edu.ve:8019` to `https://dev.ueipab.edu.ve` — all generated links (ACK buttons, attendance report links) now use the correct HTTPS URL
+
+### asistencia_story_s2.png — card overflow fix
+
+Three contingency card heights were too small, causing text and note bars to overflow outside their boundaries:
+
+| Card | Old height | New height | Root cause |
+|------|-----------|-----------|------------|
+| Odoo Dashboard | 195px | 250px | Note bar ended at y+230, outside 195px |
+| Docentes | 210px | 278px | Note bar ended at y+262, outside 210px |
+| Admin & Mant. | 210px | 278px | Note bar ended at y+262, outside 210px |
+
+Added `?v=2` cache-buster to `asistencia_story_s2.png` URL in both testing (id=84) and production (id=58) templates to force email clients to re-fetch the corrected image.
+
+### Production template (id=58) — CC and s2 fix applied live
+
+Both the CC (`recursoshumanos@ueipab.edu.ve`) and the `?v=2` cache-buster were applied to production template id=58 via XML-RPC write with explicit `lang` context for both `en_US` and `es_VE` JSONB keys.
+
+---
+
 ## 2026-05-08 — Gestión de Control de Asistencia — Guía Visual para Empleados
 
 **Tipo:** Asset operacional + actualización conocimiento Glenda | **Estado:** Testing validado, listo para producción
