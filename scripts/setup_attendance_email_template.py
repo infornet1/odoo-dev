@@ -1,11 +1,7 @@
 """
-Updates the "Guía Visual de Asistencia" mail.template (id=83) in testing DB.
-Fixes:
-  - Employee name now uses QWeb  <t t-out="object.name"/>  (not Jinja2)
-  - School logo added to header
-  - Title updated to "REGISTRO DE CONTROL DE ASISTENCIA"
-  - body_html set via direct SQL to bypass ORM Html sanitizer
-  - Test recipient: gustavo.perdomo@ueipab.edu.ve
+Creates / updates the "Gestión de Control de Asistencia — Guía Visual" mail.template
+in the testing DB, now on model hr.notice.acknowledgment so each send is personalised
+with employee name + unique ACK button URL.
 
 Run with:
   docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
@@ -15,19 +11,22 @@ import json
 
 BASE_URL  = "https://dev.ueipab.edu.ve/flyers"
 LOGO_URL  = f"{BASE_URL}/ueipab_logo.png"
-TMPL_ID   = 83
+TMPL_NAME = "Gestión de Control de Asistencia — Guía Visual para Empleados"
+NOTICE_KEY   = "attendance_guide_v1"
+NOTICE_LABEL = "Gestión de Control de Asistencia — Guía Visual"
+SUBJECT_STR  = "Gestión de Control de Asistencia - Guía Visual | Andrés Bello"
+
+# Model: hr.notice.acknowledgment
+# object.employee_id.name  → employee name
+# object._get_ack_url()    → unique acknowledgment URL (QWeb method call, set via SQL)
 
 BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:Arial,Helvetica,sans-serif;">
-
-  <!-- WRAPPER -->
-  <table width="100%" cellpadding="0" cellspacing="0"
-         style="background:#f0f4fa;padding:24px 10px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4fa;padding:24px 10px;">
     <tr>
       <td align="center">
         <table width="620" cellpadding="0" cellspacing="0"
-               style="max-width:620px;width:100%;background:#ffffff;
-                      border-radius:14px;overflow:hidden;
-                      box-shadow:0 4px 18px rgba(0,0,0,0.10);">
+               style="max-width:620px;width:100%;background:#ffffff;border-radius:14px;
+                      overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.10);">
 
           <!-- HEADER -->
           <tr>
@@ -48,17 +47,17 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
             </td>
           </tr>
 
-          <!-- GREETING — uses QWeb t-out for employee name -->
+          <!-- GREETING — QWeb renders employee name and reads ack model -->
           <tr>
             <td style="padding:28px 40px 16px;">
               <p style="margin:0 0 12px;color:#1a2c5b;font-size:16px;font-weight:bold;">
                 Estimado/a
-                <span style="color:#2471a3;"><t t-out="object.name"/></span>,
+                <span style="color:#2471a3;"><t t-out="object.employee_id.name"/></span>,
               </p>
               <p style="margin:0;color:#444;font-size:15px;line-height:1.65;">
-                Le compartimos una <strong>guía visual en 4 partes</strong> sobre el sistema de
-                gestión de control de asistencia. Por favor revise cada sección deslizando
-                las tarjetas hacia la derecha.
+                Le compartimos una <strong>guía visual en 4 partes</strong> sobre el sistema
+                de gestión de control de asistencia. Por favor revise cada sección deslizando
+                las tarjetas hacia la derecha, y confirme su lectura con el botón al final.
               </p>
             </td>
           </tr>
@@ -75,55 +74,50 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
                 <table cellpadding="0" cellspacing="0"
                        style="border-collapse:separate;border-spacing:0;">
                   <tr>
-
                     <td style="padding:0 10px 0 0;vertical-align:top;white-space:normal;width:216px;">
-                      <div style="border-radius:12px;overflow:hidden;border:3px solid #1a2c5b;display:inline-block;">
+                      <div style="border-radius:12px;overflow:hidden;border:3px solid #1a2c5b;
+                                  display:inline-block;">
                         <img src="{BASE_URL}/asistencia_story_s1.png"
-                             width="210" height="373" alt="Parte 1"
-                             style="display:block;">
+                             width="210" height="373" alt="Parte 1" style="display:block;">
                       </div>
                       <p style="margin:6px 0 0;text-align:center;font-size:11px;
                                 color:#2471a3;font-weight:bold;width:216px;">
                         1 &middot; EL SISTEMA
                       </p>
                     </td>
-
                     <td style="padding:0 10px 0 0;vertical-align:top;white-space:normal;width:216px;">
-                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;display:inline-block;">
+                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;
+                                  display:inline-block;">
                         <img src="{BASE_URL}/asistencia_story_s2.png"
-                             width="210" height="373" alt="Parte 2"
-                             style="display:block;">
+                             width="210" height="373" alt="Parte 2" style="display:block;">
                       </div>
                       <p style="margin:6px 0 0;text-align:center;font-size:11px;
                                 color:#2471a3;font-weight:bold;width:216px;">
                         2 &middot; C&Oacute;MO REGISTRAR
                       </p>
                     </td>
-
                     <td style="padding:0 10px 0 0;vertical-align:top;white-space:normal;width:216px;">
-                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;display:inline-block;">
+                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;
+                                  display:inline-block;">
                         <img src="{BASE_URL}/asistencia_story_s3.png"
-                             width="210" height="373" alt="Parte 3"
-                             style="display:block;">
+                             width="210" height="373" alt="Parte 3" style="display:block;">
                       </div>
                       <p style="margin:6px 0 0;text-align:center;font-size:11px;
                                 color:#2471a3;font-weight:bold;width:216px;">
                         3 &middot; TU REPORTE QUINCENAL
                       </p>
                     </td>
-
                     <td style="padding:0;vertical-align:top;white-space:normal;width:216px;">
-                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;display:inline-block;">
+                      <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;
+                                  display:inline-block;">
                         <img src="{BASE_URL}/asistencia_story_s4.png"
-                             width="210" height="373" alt="Parte 4"
-                             style="display:block;">
+                             width="210" height="373" alt="Parte 4" style="display:block;">
                       </div>
                       <p style="margin:6px 0 0;text-align:center;font-size:11px;
                                 color:#2471a3;font-weight:bold;width:216px;">
                         4 &middot; QU&Eacute; DEBES HACER
                       </p>
                     </td>
-
                   </tr>
                 </table>
               </div>
@@ -137,29 +131,28 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
                      style="background:#f0f4fa;border-radius:10px;border-left:5px solid #1a2c5b;">
                 <tr>
                   <td style="padding:20px 24px;">
-                    <p style="margin:0 0 14px;color:#1a2c5b;font-size:15px;
-                               font-weight:bold;letter-spacing:0.3px;">
+                    <p style="margin:0 0 14px;color:#1a2c5b;font-size:15px;font-weight:bold;">
                       RESUMEN R&Aacute;PIDO
                     </p>
                     <p style="margin:0 0 9px;color:#333;font-size:14px;line-height:1.5;">
-                      &#10004; &nbsp;<strong>Kiosko</strong> (Oficina de Administraci&oacute;n) &mdash;
-                      m&eacute;todo obligatorio para todos
+                      &#10004; &nbsp;<strong>Kiosko</strong> (Oficina de Administraci&oacute;n)
+                      &mdash; m&eacute;todo obligatorio para todos
                     </p>
                     <p style="margin:0 0 9px;color:#333;font-size:14px;line-height:1.5;">
-                      &#10004; &nbsp;<strong>Dashboard Odoo &rarr; Check In/Out</strong> &mdash;
-                      contingencia digital (usuarios con cuenta Odoo)
+                      &#10004; &nbsp;<strong>Dashboard Odoo &rarr; Check In/Out</strong>
+                      &mdash; contingencia digital (usuarios con cuenta Odoo)
                     </p>
                     <p style="margin:0 0 9px;color:#333;font-size:14px;line-height:1.5;">
-                      &#10004; &nbsp;<strong>Control de Asistencias / WiFi</strong> &mdash;
-                      contingencia autom&aacute;tica seg&uacute;n rol
+                      &#10004; &nbsp;<strong>Control de Asistencias / WiFi</strong>
+                      &mdash; contingencia autom&aacute;tica seg&uacute;n rol
                     </p>
                     <p style="margin:0 0 9px;color:#333;font-size:14px;line-height:1.5;">
-                      &#10004; &nbsp;Recibir&aacute; un <strong>reporte quincenal</strong> por correo
+                      &#10004; &nbsp;Recibir&aacute; un <strong>reporte quincenal</strong>
                       los d&iacute;as 1 y 16 de cada mes
                     </p>
                     <p style="margin:0;color:#333;font-size:14px;line-height:1.5;">
-                      &#10004; &nbsp;Confirme la recepci&oacute;n con el
-                      <strong style="color:#28a745;">bot&oacute;n verde</strong> en el reporte
+                      &#10004; &nbsp;Confirme la recepci&oacute;n del reporte con el
+                      <strong style="color:#28a745;">bot&oacute;n verde</strong>
                     </p>
                   </td>
                 </tr>
@@ -179,10 +172,8 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
                     </p>
                     <p style="margin:0;color:#721c24;font-size:13px;line-height:1.55;">
                       Las ausencias injustificadas podr&aacute;n generar
-                      <strong>descuentos en n&oacute;mina</strong>.
-                      Reporte cualquier error de registro
-                      <strong>antes del cierre de cada quincena</strong>
-                      usando el enlace en el correo del reporte.
+                      <strong>descuentos en n&oacute;mina</strong>. Reporte cualquier error
+                      <strong>antes del cierre de cada quincena</strong>.
                     </p>
                   </td>
                 </tr>
@@ -190,9 +181,30 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
             </td>
           </tr>
 
-          <!-- CONTACT -->
+          <!-- ACK BUTTON — unique URL per employee via QWeb -->
           <tr>
             <td style="padding:0 40px 28px;text-align:center;">
+              <p style="margin:0 0 14px;color:#444;font-size:14px;line-height:1.5;">
+                Una vez que haya revisado la guía, confirme su lectura haciendo clic
+                en el botón a continuación. Su confirmación quedará registrada con
+                fecha, hora e IP de acceso.
+              </p>
+              <a t-att-href="object._get_ack_url()"
+                 style="display:inline-block;background:linear-gradient(135deg,#28a745,#20c997);
+                        color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;
+                        padding:16px 36px;border-radius:30px;
+                        box-shadow:0 4px 12px rgba(40,167,69,0.35);">
+                &#10003; &nbsp; He le&iacute;do y entendido esta gu&iacute;a
+              </a>
+              <p style="margin:14px 0 0;color:#999;font-size:12px;">
+                Este enlace es personal e intransferible.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CONTACT -->
+          <tr>
+            <td style="padding:0 40px 20px;text-align:center;">
               <p style="margin:0 0 4px;color:#888;font-size:13px;">
                 &iquest;Preguntas o correcciones de registro?
               </p>
@@ -210,7 +222,8 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
                 Recursos Humanos
               </p>
               <p style="margin:0;color:#adc8e6;font-size:13px;">
-                Instituto Privado Andr&eacute;s Bello, C.A. &nbsp;|&nbsp; El Tigre, Anzo&aacute;tegui
+                Instituto Privado Andr&eacute;s Bello, C.A.
+                &nbsp;|&nbsp; El Tigre, Anzo&aacute;tegui
               </p>
             </td>
           </tr>
@@ -221,33 +234,61 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
   </table>
 </div>"""
 
-# ── Update template via direct SQL — write ALL language keys ────────────────────
-# System lang is es_VE; ORM reads that key. Must update en_US AND es_VE together.
-SUBJECT = "Gestion de Control de Asistencia - Guia Visual | Andres Bello"
-body_jsonb    = json.dumps({'en_US': BODY,    'es_VE': BODY})
-subject_jsonb = json.dumps({'en_US': SUBJECT, 'es_VE': SUBJECT})
+# ── Find or create template on hr.notice.acknowledgment ──────────────────────
+model_id = env['ir.model'].search([('model', '=', 'hr.notice.acknowledgment')], limit=1).id
+assert model_id, "hr.notice.acknowledgment model not found — upgrade ueipab_attendance_report first"
 
+existing = env['mail.template'].search([('name', '=', TMPL_NAME)], limit=1)
+vals = {
+    'name':       TMPL_NAME,
+    'model_id':   model_id,
+    'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+    'email_to':   '{{ object.employee_id.work_email }}',
+    'auto_delete': False,
+}
+if existing:
+    existing.write(vals)
+    tmpl = existing
+    print(f"Template UPDATED  — id={tmpl.id}")
+else:
+    tmpl = env['mail.template'].create(vals)
+    print(f"Template CREATED  — id={tmpl.id}")
+
+TMPL_ID = tmpl.id
+
+# Write body + subject for both language keys via SQL (preserves QWeb t-att-href)
+body_jsonb    = json.dumps({'en_US': BODY,       'es_VE': BODY})
+subject_jsonb = json.dumps({'en_US': SUBJECT_STR, 'es_VE': SUBJECT_STR})
 env.cr.execute(
-    "UPDATE mail_template SET body_html = %s::jsonb, subject = %s::jsonb, email_to = %s WHERE id = %s",
-    [body_jsonb, subject_jsonb, "gustavo.perdomo@ueipab.edu.ve", TMPL_ID]
+    "UPDATE mail_template SET body_html=%s::jsonb, subject=%s::jsonb WHERE id=%s",
+    [body_jsonb, subject_jsonb, TMPL_ID]
 )
 env.cr.commit()
-print(f"Template {TMPL_ID} — body_html (en_US + es_VE) updated via SQL — OK")
+print(f"Body/subject written (en_US + es_VE) — template id={TMPL_ID}")
 
-# ── Send test emails ─────────────────────────────────────────────────────────────
-tmpl = env['mail.template'].browse(TMPL_ID)
+# ── Create ACK record and send test email ─────────────────────────────────────
+TEST_EMAIL = 'gustavo.perdomo@ueipab.edu.ve'
+emp = env['hr.employee'].search([('work_email', 'ilike', 'gustavo.perdomo')], limit=1)
+assert emp, f"Employee not found for {TEST_EMAIL}"
 
-test_recipients = [
-    'gustavo.perdomo@ueipab.edu.ve',
-    'alberto.perdomo@ueipab.edu.ve',
-]
+# Remove any previous test ack for this notice_key + employee
+env['hr.notice.acknowledgment'].search([
+    ('notice_key', '=', NOTICE_KEY), ('employee_id', '=', emp.id)
+]).unlink()
 
-for email in test_recipients:
-    emp = env['hr.employee'].search([('work_email', 'ilike', email.split('@')[0])], limit=1)
-    if not emp:
-        emp = env['hr.employee'].search([], limit=1)
-    # Override email_to for this send
-    msg_id = tmpl.send_mail(emp.id, force_send=True,
-                             email_values={'email_to': email})
-    env.cr.commit()
-    print(f"Sent to {email}  (record: {emp.name})  mail.mail id={msg_id}")
+ack = env['hr.notice.acknowledgment'].create({
+    'notice_key':   NOTICE_KEY,
+    'notice_label': NOTICE_LABEL,
+    'employee_id':  emp.id,
+})
+env.cr.commit()
+print(f"ACK record created — id={ack.id}  token={ack.token[:12]}...")
+print(f"ACK URL: {ack._get_ack_url()}")
+
+msg_id = tmpl.send_mail(ack.id, force_send=True)
+env.cr.commit()
+print(f"Test email sent to {TEST_EMAIL}  mail.mail id={msg_id}")
+print()
+print(f"Template id : {TMPL_ID}")
+print(f"ACK record  : {ack.id}")
+print(f"Notice key  : {NOTICE_KEY}")

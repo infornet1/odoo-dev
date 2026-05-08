@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── Tree / List view ───────────────────────────────────────────────── -->
+    <record id="hr_notice_acknowledgment_view_tree" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.tree</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="arch" type="xml">
+            <tree string="Notice Acknowledgments"
+                  decoration-success="state == 'acknowledged'"
+                  decoration-warning="state == 'pending'">
+                <field name="employee_id"/>
+                <field name="notice_label" optional="show"/>
+                <field name="notice_key"   optional="hide"/>
+                <field name="state"        widget="badge"
+                       decoration-success="state == 'acknowledged'"
+                       decoration-warning="state == 'pending'"/>
+                <field name="sent_date"    optional="show"/>
+                <field name="ack_date"     optional="show"/>
+                <field name="days_pending" optional="show" string="Days Pending"/>
+                <field name="ack_ip"       optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Form view ─────────────────────────────────────────────────────── -->
+    <record id="hr_notice_acknowledgment_view_form" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.form</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="arch" type="xml">
+            <form string="Notice Acknowledgment">
+                <header>
+                    <button name="action_mark_acknowledged"
+                            string="Mark Acknowledged (Manual)"
+                            type="object"
+                            class="btn-success"
+                            invisible="state == 'acknowledged'"/>
+                    <button name="action_reset_pending"
+                            string="Reset to Pending"
+                            type="object"
+                            class="btn-warning"
+                            invisible="state == 'pending'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,acknowledged"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="notice_label" placeholder="Notice title..."/></h1>
+                    </div>
+                    <group>
+                        <group string="Notice">
+                            <field name="notice_key"/>
+                            <field name="employee_id"/>
+                            <field name="sent_date"/>
+                        </group>
+                        <group string="Acknowledgment">
+                            <field name="ack_date"/>
+                            <field name="ack_ip"/>
+                            <field name="days_pending"
+                                   invisible="state == 'acknowledged'"/>
+                        </group>
+                    </group>
+                    <group string="Technical">
+                        <field name="token" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search view ───────────────────────────────────────────────────── -->
+    <record id="hr_notice_acknowledgment_view_search" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.search</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="arch" type="xml">
+            <search string="Search Acknowledgments">
+                <field name="employee_id"/>
+                <field name="notice_key"/>
+                <field name="notice_label"/>
+                <filter string="Pending"            name="pending"
+                        domain="[('state','=','pending')]"/>
+                <filter string="Acknowledged"       name="acknowledged"
+                        domain="[('state','=','acknowledged')]"/>
+                <separator/>
+                <group expand="1" string="Group By">
+                    <filter string="Notice"   name="group_notice"
+                            context="{'group_by':'notice_key'}"/>
+                    <filter string="Status"   name="group_status"
+                            context="{'group_by':'state'}"/>
+                    <filter string="Employee" name="group_employee"
+                            context="{'group_by':'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Window action ─────────────────────────────────────────────────── -->
+    <record id="action_hr_notice_acknowledgment" model="ir.actions.act_window">
+        <field name="name">Notice Acknowledgments</field>
+        <field name="res_model">hr.notice.acknowledgment</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="hr_notice_acknowledgment_view_search"/>
+        <field name="context">{'search_default_group_notice': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No acknowledgment records yet.
+            </p>
+            <p>
+                Records are created automatically when a notice guide email is sent.
+                Employees confirm by clicking the green button in the email.
+            </p>
+        </field>
+    </record>
+
+</odoo>
