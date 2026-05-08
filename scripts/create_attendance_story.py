@@ -255,8 +255,9 @@ def make_s2():
     y += 58
 
     # ── Contingency 1: Odoo Dashboard ─────────────────────────
+    # Header 58px + gap 12px + 3 steps×40=120px + gap 8px + note 38px + pad 14px = 250px
     BLU2 = (30, 80, 140)
-    card(d, 50, y, W - 100, 195, LIGHT, r=20, outline=BLU2, ow=4)
+    card(d, 50, y, W - 100, 250, LIGHT, r=20, outline=BLU2, ow=4)
     d.rounded_rectangle([50, y, W - 50, y + 58], radius=20, fill=BLU2)
     ctext(d, "TODOS CON ACCESO A ODOO", y + 14, F(36, bold=True), WHITE)
     ty = y + 70
@@ -269,12 +270,13 @@ def make_s2():
         d.text((80, ty), num, font=F(29, bold=True), fill=BLU2)
         d.text((140, ty), step, font=F(29), fill=NAVY)
         ty += 40
-    card(d, 75, ty + 2, W - 150, 38, (210, 228, 248), r=10)
-    ctext(d, "Captura IP, geolocalización y hora automáticamente", ty + 10, F(24), BLU2)
-    y += 210
+    card(d, 75, ty + 8, W - 150, 38, (210, 228, 248), r=10)
+    ctext(d, "Captura IP, geolocalización y hora automáticamente", ty + 16, F(24), BLU2)
+    y += 265
 
     # ── Contingency 2: Docentes ───────────────────────────────
-    card(d, 50, y, W - 100, 210, LGRN, r=20, outline=DGRN, ow=4)
+    # Header 58px + gap 12px + 4 lines×38=152px + gap 10px + note 36px + pad 10px = 278px
+    card(d, 50, y, W - 100, 278, LGRN, r=20, outline=DGRN, ow=4)
     d.rounded_rectangle([50, y, W - 50, y + 58], radius=20, fill=DGRN)
     ctext(d, "DOCENTES", y + 14, F(36, bold=True), WHITE)
     ty = y + 70
@@ -289,12 +291,13 @@ def make_s2():
             d.text((80, ty), num, font=F(29, bold=True), fill=DGRN)
         d.text((140, ty), step, font=F(29), fill=NAVY)
         ty += 38
-    card(d, 75, ty + 4, W - 150, 36, (195, 232, 205), r=10)
-    ctext(d, "Sin acción adicional de tu parte", ty + 11, F(24, bold=True), DGRN)
-    y += 226
+    card(d, 75, ty + 10, W - 150, 36, (195, 232, 205), r=10)
+    ctext(d, "Sin acción adicional de tu parte", ty + 18, F(24, bold=True), DGRN)
+    y += 295
 
     # ── Contingency 3: Admin / Mant. ──────────────────────────
-    card(d, 50, y, W - 100, 210, LAMB, r=20, outline=DAMB, ow=4)
+    # Header 58px + gap 12px + 4 lines×38=152px + gap 10px + note 36px + pad 10px = 278px
+    card(d, 50, y, W - 100, 278, LAMB, r=20, outline=DAMB, ow=4)
     d.rounded_rectangle([50, y, W - 50, y + 58], radius=20, fill=DAMB)
     ctext(d, "ADMIN & MANTENIMIENTO", y + 14, F(33, bold=True), WHITE)
     ty = y + 70
@@ -309,9 +312,9 @@ def make_s2():
             d.text((80, ty), num, font=F(29, bold=True), fill=DAMB)
         d.text((140, ty), step, font=F(29), fill=NAVY)
         ty += 38
-    card(d, 75, ty + 4, W - 150, 36, (250, 240, 195), r=10)
-    ctext(d, "Control de Asistencias tiene prioridad siempre", ty + 11, F(24), DAMB)
-    y += 226
+    card(d, 75, ty + 10, W - 150, 36, (250, 240, 195), r=10)
+    ctext(d, "Control de Asistencias tiene prioridad siempre", ty + 18, F(24), DAMB)
+    y += 295
 
     # ── Sync note ─────────────────────────────────────────────
     card(d, 50, y, W - 100, 92, (36, 60, 120), r=16, outline=BLUE, ow=2)
