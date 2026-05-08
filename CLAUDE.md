@@ -133,7 +133,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.67.2 | 2026-05-08 |
+| ueipab_payroll_enhancements | 17.0.1.67.4 | 2026-05-08 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -144,7 +144,7 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.67.2 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report bonus-only fix) |
+| ueipab_payroll_enhancements | 17.0.1.67.4 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report + total net payable fixes) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.4.0 | **Deployed 2026-05-07** |
@@ -408,6 +408,8 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - **HR Loan exchange rate not updating on date change — FIXED (v1.64.8):** `_get_veb_rate()` always returned the latest BCV rate; no `@api.onchange('date')` existed. Fixed by adding a `for_date` parameter with `name <= date` filter, plus a new `_onchange_date_rate` that fires when the user changes the loan date. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
 - **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
 - **Decreto Ingreso Mínimo $240 (2026-04-30) — AJUSTE PENDIENTE:** 2 empleados por debajo del umbral mínimo: LUIS RODRIGUEZ ($191.37, gap +$48.63) y NIDYA LIRA ($228.67, gap +$11.33). Acción: incrementar `ueipab_bonus_v2` en ambos contratos. Cestaticket $40 sin cambio. 9 empleados en banda de riesgo $240–$300. Ver [Análisis Completo](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
+- **Payroll Disbursement Detail + Total Net Payable — FIXED (v1.67.1→v1.67.4, 2026-05-08):** Four cascading bugs found when running report against BONO-MADRES26: (1) V2 detection used `VE_BASIC_V2` (non-existent rule) → all V2 payslips fell into bonus-only path showing salary=0; (2) Bonus-only path summed all BASIC-category lines including BASE aggregator BASIC rule → inflated totals; (3) NET fallback grabbed BASE NET aggregator instead of `BONO_MADRES_NET`; (4) `_compute_total_net_amount` only knew `VE_NET/VE_NET_V2/AGUINALDOS/LIQUID_NET_V2`. All fixed via `struct_rule_ids = payslip.struct_id.rule_ids.ids` pattern to isolate structure-specific lines. Root cause of extra lines: `setup_bono_madres.py` set `parent_id=BASE` — production BASE has 3 aggregator rules; fixed to `parent_id=False`.
+- **BONO_MADRES structure parent_id=BASE — FIXED (2026-05-08):** BASE structure in production has BASIC/GROSS/NET aggregator rules that injected 3 spurious lines into every BONO_MADRES payslip (BASIC=contract.wage, GROSS, NET). Testing BASE has 0 rules so bug was invisible there. Fixed: `parent_id=False` in both envs; BONO-MADRES26 draft payslips recomputed (now 2 lines each). `setup_bono_madres.py` updated.
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
