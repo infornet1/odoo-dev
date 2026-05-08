@@ -360,6 +360,9 @@ class PayrollDisbursementWizard(models.TransientModel):
         # Write data rows
         row = 3
         for payslip in payslips.sorted(lambda p: p.employee_id.name):
+            # Rules that belong specifically to this payslip's structure (excludes BASE aggregators)
+            struct_rule_ids = set(payslip.struct_id.rule_ids.ids)
+
             # Detect structure type: VE_NET_V2 present = regular V2 payroll
             has_v2_net = bool(payslip.line_ids.filtered(
                 lambda l: l.salary_rule_id.code == 'VE_NET_V2'))
@@ -379,11 +382,14 @@ class PayrollDisbursementWizard(models.TransientModel):
                 salary_prorated = payslip.contract_id.wage or 0.0
                 bonus_prorated = 0.0
             else:
-                # Bonus-only structure (e.g. BONO_MADRES, AGUINALDOS): read from payslip lines
-                # No proration — flat amounts already computed by salary rules
+                # Bonus-only structure (e.g. BONO_MADRES, AGUINALDOS): read from payslip lines.
+                # Filter to structure-specific rules only — BASE parent aggregators (BASIC,
+                # GROSS, NET rule codes) inflate the totals and must be excluded.
+                struct_lines = payslip.line_ids.filtered(
+                    lambda l: l.salary_rule_id.id in struct_rule_ids)
                 salary_prorated = 0.0
                 bonus_prorated = sum(
-                    payslip.line_ids.filtered(
+                    struct_lines.filtered(
                         lambda l: l.salary_rule_id.category_id.code == 'BASIC' and l.total > 0
                     ).mapped('total')
                 )
@@ -412,9 +418,11 @@ class PayrollDisbursementWizard(models.TransientModel):
             if not net_line:
                 net_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')
             if not net_line:
-                # Bonus-only structures: find any NET category line
+                # Bonus-only structures: restrict to structure-specific rules to avoid
+                # picking up the BASE parent NET aggregator
                 net_line = payslip.line_ids.filtered(
-                    lambda l: l.salary_rule_id.category_id.code == 'NET' and l.total > 0)
+                    lambda l: l.salary_rule_id.id in struct_rule_ids
+                    and l.salary_rule_id.category_id.code == 'NET' and l.total > 0)
 
             # Get values
             ari = abs(ari_line[0].total) if ari_line else 0.0

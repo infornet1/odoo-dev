@@ -105,6 +105,8 @@
                                     <t t-set="loan_recovery_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
+                                    <!-- Rules belonging specifically to this structure (excludes BASE aggregators) -->
+                                    <t t-set="struct_rule_ids" t-value="set(payslip.struct_id.rule_ids.ids)"/>
                                     <!-- Detect structure: VE_NET_V2 present = regular V2 payroll -->
                                     <t t-set="has_v2_net" t-value="bool(payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2'))"/>
 
@@ -120,10 +122,11 @@
                                         <t t-set="bonus_amount" t-value="0.0"/>
                                     </t>
                                     <t t-else="">
-                                        <!-- Bonus-only structure (BONO_MADRES, AGUINALDOS, etc.) -->
-                                        <!-- Read directly from payslip lines — no proration -->
+                                        <!-- Bonus-only (BONO_MADRES, AGUINALDOS): restrict to structure-specific rules.
+                                             BASE aggregators (BASIC/GROSS/NET rule codes) inflate totals and must be excluded. -->
+                                        <t t-set="struct_basic_lines" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.id in struct_rule_ids and l.salary_rule_id.category_id.code == 'BASIC' and l.total &gt; 0)"/>
                                         <t t-set="salary_amount" t-value="0.0"/>
-                                        <t t-set="bonus_amount" t-value="sum(payslip.line_ids.filtered(lambda l: l.salary_rule_id.category_id.code == 'BASIC' and l.total > 0).mapped('total'))"/>
+                                        <t t-set="bonus_amount" t-value="sum(struct_basic_lines.mapped('total'))"/>
                                     </t>
 
                                     <!-- Calculate ARI (income tax withholding) - V2 first, then V1 -->
@@ -173,13 +176,14 @@
                                         <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
                                     </t>
 
-                                    <!-- Get NET amount - V2, then V1, then any NET category line -->
+                                    <!-- Get NET amount - V2, then V1, then structure-specific NET line -->
                                     <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')"/>
                                     <t t-if="not net_line">
                                         <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
                                     </t>
                                     <t t-if="not net_line">
-                                        <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.category_id.code == 'NET' and l.total > 0)"/>
+                                        <!-- Bonus-only: use struct_rule_ids to skip BASE NET aggregator -->
+                                        <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.id in struct_rule_ids and l.salary_rule_id.category_id.code == 'NET' and l.total &gt; 0)"/>
                                     </t>
                                     <t t-if="net_line">
                                         <t t-set="net_amount" t-value="net_line[0].total"/>
