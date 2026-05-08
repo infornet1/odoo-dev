@@ -130,7 +130,7 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
                     </td>
                     <td style="padding:0 10px 0 0;vertical-align:top;white-space:normal;width:216px;">
                       <div style="border-radius:12px;overflow:hidden;border:3px solid #2471a3;display:inline-block;">
-                        <img src="{BASE_URL}/asistencia_story_s2.png" width="210" height="373" alt="Parte 2" style="display:block;">
+                        <img src="{BASE_URL}/asistencia_story_s2.png?v=2" width="210" height="373" alt="Parte 2" style="display:block;">
                       </div>
                       <p style="margin:6px 0 0;text-align:center;font-size:11px;color:#2471a3;font-weight:bold;width:216px;">2 &middot; C&Oacute;MO REGISTRAR</p>
                     </td>
