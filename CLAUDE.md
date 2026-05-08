@@ -57,6 +57,7 @@
 | 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
+| 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
 
 ---
 
@@ -148,7 +149,7 @@
 | ueipab_payroll_enhancements | 17.0.1.67.6 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report fixes + bank account column + 4 employee date columns in disbursement report) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.5.0 | **Testing 2026-05-08** — hr.notice.acknowledgment + /notice-ack controller + email ACK button (deploy to prod pending) |
+| ueipab_attendance_report | 17.0.1.5.0 | **Deployed 2026-05-08** — hr.notice.acknowledgment + /notice-ack controller + email ACK button |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 
 ---
