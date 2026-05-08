@@ -244,6 +244,7 @@ vals = {
     'model_id':   model_id,
     'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
     'email_to':   '{{ object.employee_id.work_email }}',
+    'email_cc':   'recursoshumanos@ueipab.edu.ve',
     'auto_delete': False,
 }
 if existing:

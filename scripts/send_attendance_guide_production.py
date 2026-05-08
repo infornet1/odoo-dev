@@ -218,6 +218,7 @@ tmpl_vals = {
     'body_html':  BODY,
     'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
     'email_to':   '{{ object.work_email }}',
+    'email_cc':   'recursoshumanos@ueipab.edu.ve',
     'auto_delete': False,
 }
 
