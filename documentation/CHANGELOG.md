@@ -4,6 +4,40 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-08 — Gestión de Control de Asistencia — Guía Visual para Empleados
+
+**Tipo:** Asset operacional + actualización conocimiento Glenda | **Estado:** Testing validado, listo para producción
+
+### Componentes
+
+**1. Instagram Stories — 4 slides PNG (1080×1920 px)**
+Script: `scripts/create_attendance_story.py` | Output: `/home/ftpuser/odoo-dev/` → `/var/www/dev/flyers/`
+
+| Slide | Contenido |
+|---|---|
+| S1 | Jerarquía del sistema: Kiosko (obligatorio) + 3 contingencias |
+| S2 | Detalle de los 3 métodos de contingencia con pasos |
+| S3 | Preview del reporte quincenal por email + leyenda de íconos |
+| S4 | 4 pasos de acción + alerta política 1° junio 2026 |
+
+Jerarquía de registro: Kiosko (obligatorio) → Dashboard Odoo Check In/Out (contingencia digital) → Control de Asistencias (contingencia docentes) → WiFi UEIPAB ≥2h (contingencia admin/mant).
+
+**2. Email Template `mail.template` — Testing id=83**
+- Nombre: `Gestión de Control de Asistencia — Guía Visual para Empleados`
+- Modelo: `hr.employee` | From: `recursoshumanos@ueipab.edu.ve`
+- Carousel horizontal con las 4 stories + resumen + alerta junio 2026
+- Script: `scripts/setup_attendance_email_template.py`
+- **Nota técnica:** `body_html` es JSONB multilingual (`render_engine='qweb'`). Siempre actualizar via SQL directo con AMBAS claves `en_US` y `es_VE`. El sistema usa `es_VE`; solo actualizar `en_US` deja el ORM leyendo la versión antigua.
+
+**3. Glenda (`general_inquiry.py`) — conocimiento actualizado**
+- Kiosko como método principal obligatorio
+- Dashboard Odoo Check In/Out como contingencia digital #1
+- Control de Asistencias y WiFi reenmarcados como contingencia automática
+- 3 nuevas FAQs sobre uso del Dashboard, impacto en nómina desde junio, qué pasa sin ningún registro
+- Lógica de Glenda: Kiosko → Dashboard Odoo → Control/WiFi → enlace corrección
+
+---
+
 ## 2026-05-08 — Payroll Disbursement Detail: 4 employee date columns (v1.67.6)
 
 **Module:** `ueipab_payroll_enhancements` | **Deployed:** Testing + Production

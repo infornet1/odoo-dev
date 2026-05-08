@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-08
 
 ## Core Instructions
 
@@ -56,6 +56,7 @@
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 | 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
+| 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
 
 ---
 
