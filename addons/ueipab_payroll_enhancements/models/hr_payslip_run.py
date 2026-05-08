@@ -215,10 +215,19 @@ class HrPayslipRun(models.Model):
             # Sum the NET line from each payslip
             total = 0.0
             for slip in valid_slips:
-                # Find the NET salary rule line (supports V1: VE_NET, V2: VE_NET_V2, AGUINALDOS, liquidacion)
+                # Find the NET salary rule line — try known codes first, then fall back to
+                # any NET-category line belonging to the payslip's own structure rules
+                # (excludes BASE aggregator NET line which overstates the total).
                 net_line = slip.line_ids.filtered(
                     lambda l: l.salary_rule_id.code in ('VE_NET', 'VE_NET_V2', 'AGUINALDOS', 'LIQUID_NET_V2')
                 )
+                if not net_line:
+                    struct_rule_ids = set(slip.struct_id.rule_ids.ids)
+                    net_line = slip.line_ids.filtered(
+                        lambda l: l.salary_rule_id.id in struct_rule_ids
+                        and l.salary_rule_id.category_id.code == 'NET'
+                        and l.total > 0
+                    )
                 if net_line:
                     # Should only be one NET line per payslip
                     total += net_line[0].total
