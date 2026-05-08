@@ -1,7 +1,7 @@
 # Cashea Campaign — Instituto Privado Andrés Bello
 
 **Created:** 2026-05-08  
-**Status:** Testing — pending production send
+**Status:** Sent 2026-05-08 — 279 emails delivered (v2, no price)
 
 ## Overview
 
@@ -23,10 +23,11 @@ Cashea is Venezuela's leading BNPL (Buy Now, Pay Later) platform — 5M+ users, 
 Both templates feature:
 - School logo (served from `https://dev.ueipab.edu.ve/flyers/school_logo.png`)
 - Cashea brand colors: yellow `#FFD600`, black `#111111`, white
-- Personalized greeting via `{{ object.name }}`
 - Cashea Club de Niveles 6-tier breakdown table
 - Google Play + App Store + cashea.app download buttons
 - `email_from`: `"Instituto Privado Andrés Bello" <pagos@ueipab.edu.ve>`
+
+**Note:** v2 template has no personalized greeting — opens directly with intro paragraph.
 
 ### Instagram Images
 
@@ -67,7 +68,8 @@ All levels: **0% interest, 0 surcharges**.
 | `scripts/create_cashea_campaign_template_v2.py` | Creates/updates Odoo email template id=82 (v2, no price) |
 | `scripts/create_cashea_instagram.py` | Generates v1 Instagram Post + Story (with $197,38) |
 | `scripts/create_cashea_instagram_v2.py` | Generates v2 Instagram Post + Story (no price, % levels) |
-| `scripts/send_cashea_campaign.py` | Mass send campaign to all active customers with email |
+| `scripts/send_cashea_campaign.py` | Mass send via Odoo partner list (customer_rank > 0) |
+| `scripts/send_cashea_campaign_from_sheet.py` | Mass send via Google Sheet Customers tab (Active + Pipeline, col J emails) |
 
 ---
 
@@ -75,32 +77,41 @@ All levels: **0% interest, 0 surcharges**.
 
 All scripts run via Odoo shell (XML-RPC is non-functional in this installation).
 
-```bash
-# Step 1 — Create/update template (run once)
-docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
-  < /opt/odoo-dev/scripts/create_cashea_campaign_template_v2.py
+### Option A — From Google Sheet (recommended, used for 2026-05-08 send)
 
-# Step 2 — DRY RUN (see recipient list, no emails sent)
+Source: Spreadsheet `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`, tab `Customers`.  
+Filter: column C = `ACTIVE` or `PIPELINE`. Emails: column J (semicolon-separated, all sent).
+
+```bash
+# Step 1 — Build clean recipient list (validates emails, deduplicates)
+python3 /opt/odoo-dev/scripts/send_cashea_campaign_from_sheet.py --dry-run
+
+# Step 2 — Real send
+python3 /opt/odoo-dev/scripts/send_cashea_campaign_from_sheet.py --send
+```
+
+**2026-05-08 send results:**
+- 184 customers (178 ACTIVE + 6 PIPELINE) → 282 raw emails
+- Skipped 1 invalid (`sheni0702gmail.com` — missing `@`)
+- Skipped 2 exact duplicates (`jbisleibymata@gmail.com`, `joachim@brusseel.be`)
+- **279 emails sent — 0 errors** · template id=82 · from `pagos@ueipab.edu.ve`
+
+### Option B — From Odoo Partner List
+
+```bash
+# DRY RUN
 docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
   < /opt/odoo-dev/scripts/send_cashea_campaign.py
 
-# Step 3 — Real send (set CASHEA_TEMPLATE_ID to 82 for v2)
+# Real send (v2 template)
 CASHEA_TEMPLATE_ID=82 DRY_RUN=false \
   docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
   < /opt/odoo-dev/scripts/send_cashea_campaign.py
 ```
 
-### Recipient Filter
+Targets Odoo partners with `active=True`, `email` set, `customer_rank > 0`, excluding `@ueipab.edu.ve`.
 
-`send_cashea_campaign.py` targets:
-- `active = True`
-- `email` is set
-- `customer_rank > 0`
-- email does **not** contain `@ueipab.edu.ve` (excludes internal staff)
-
-Expected recipients in production: ~263 partners.
-
-### Environment Variables
+### Environment Variables (Option B)
 
 | Variable | Default | Description |
 |---|---|---|

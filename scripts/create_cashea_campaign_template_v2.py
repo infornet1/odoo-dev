@@ -100,13 +100,10 @@ BODY_HTML = f"""<!DOCTYPE html>
         </td>
       </tr>
 
-      <!-- SALUDO PERSONALIZADO -->
+      <!-- INTRO -->
       <tr>
         <td style="background-color:#FFFFFF;padding:28px 32px 8px;">
-          <p style="color:#111111;font-size:15px;line-height:1.7;margin:0;">
-            Estimado/a <strong>{{{{ object.name }}}}</strong>,
-          </p>
-          <p style="color:#555555;font-size:14px;line-height:1.7;margin:10px 0 0;">
+          <p style="color:#555555;font-size:14px;line-height:1.7;margin:0;">
             Nos complace anunciar que el
             <strong>Instituto Privado Andrés Bello</strong> es ahora
             un <strong>comercio aliado de Cashea</strong>. Esto significa que
