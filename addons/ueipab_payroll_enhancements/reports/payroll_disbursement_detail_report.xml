@@ -105,17 +105,27 @@
                                     <t t-set="loan_recovery_amount" t-value="0.0"/>
                                     <t t-set="net_amount" t-value="0.0"/>
 
-                                    <!-- Calculate SALARY and BONUS (V2 first, then V1 fallback) -->
-                                    <t t-if="payslip.contract_id.ueipab_salary_v2 and payslip.contract_id.ueipab_salary_v2 > 0">
-                                        <!-- V2: Use direct contract field values -->
-                                        <t t-set="salary_amount" t-value="payslip.contract_id.ueipab_salary_v2 or 0.0"/>
-                                        <t t-set="bonus_amount" t-value="(payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + (payslip.contract_id.ueipab_bonus_v2 or 0.0) + (payslip.contract_id.cesta_ticket_usd or 0.0)"/>
+                                    <!-- Detect structure: presence of VE_BASIC_V2 line = V2 regular payroll -->
+                                    <t t-set="has_v2_basic" t-value="bool(payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_BASIC_V2'))"/>
+
+                                    <!-- Calculate SALARY and BONUS -->
+                                    <t t-if="has_v2_basic">
+                                        <!-- V2 regular payroll: contract fields prorated by period -->
+                                        <t t-set="period_days" t-value="(payslip.date_to - payslip.date_from).days + 1"/>
+                                        <t t-set="proration" t-value="period_days / 30.0"/>
+                                        <t t-set="salary_amount" t-value="(payslip.contract_id.ueipab_salary_v2 or 0.0) * proration"/>
+                                        <t t-set="bonus_amount" t-value="((payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + (payslip.contract_id.ueipab_bonus_v2 or 0.0) + (payslip.contract_id.cesta_ticket_usd or 0.0)) * proration"/>
                                     </t>
-                                    <t t-else="">
-                                        <!-- V1 fallback (ueipab_deduction_base removed Nov 2025 in v2.0.0) -->
-                                        <!-- Safe fallback: use wage for salary, 0 for bonus -->
+                                    <t t-elif="payslip.contract_id.wage and not payslip.contract_id.ueipab_salary_v2">
+                                        <!-- V1 fallback -->
                                         <t t-set="salary_amount" t-value="payslip.contract_id.wage or 0.0"/>
                                         <t t-set="bonus_amount" t-value="0.0"/>
+                                    </t>
+                                    <t t-else="">
+                                        <!-- Bonus-only structure (BONO_MADRES, AGUINALDOS, etc.) -->
+                                        <!-- Read directly from payslip lines — no proration -->
+                                        <t t-set="salary_amount" t-value="0.0"/>
+                                        <t t-set="bonus_amount" t-value="sum(payslip.line_ids.filtered(lambda l: l.salary_rule_id.category_id.code == 'BASIC' and l.total > 0).mapped('total'))"/>
                                     </t>
 
                                     <!-- Calculate ARI (income tax withholding) - V2 first, then V1 -->
@@ -165,10 +175,13 @@
                                         <t t-set="other_deductions_amount" t-value="other_deductions_amount + abs(line.total)"/>
                                     </t>
 
-                                    <!-- Get NET amount - V2 first, then V1 -->
+                                    <!-- Get NET amount - V2, then V1, then any NET category line -->
                                     <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')"/>
                                     <t t-if="not net_line">
                                         <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')"/>
+                                    </t>
+                                    <t t-if="not net_line">
+                                        <t t-set="net_line" t-value="payslip.line_ids.filtered(lambda l: l.salary_rule_id.category_id.code == 'NET' and l.total > 0)"/>
                                     </t>
                                     <t t-if="net_line">
                                         <t t-set="net_amount" t-value="net_line[0].total"/>

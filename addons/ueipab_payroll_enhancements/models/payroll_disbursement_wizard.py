@@ -360,25 +360,33 @@ class PayrollDisbursementWizard(models.TransientModel):
         # Write data rows
         row = 3
         for payslip in payslips.sorted(lambda p: p.employee_id.name):
-            # Get salary and bonus (V2 vs V1)
-            if payslip.contract_id.ueipab_salary_v2 and payslip.contract_id.ueipab_salary_v2 > 0:
-                # V2: Use direct contract field values
+            # Detect structure type by presence of VE_BASIC_V2 line
+            has_v2_basic = bool(payslip.line_ids.filtered(
+                lambda l: l.salary_rule_id.code == 'VE_BASIC_V2'))
+
+            if has_v2_basic:
+                # V2 regular payroll: read salary/bonus from contract fields and prorate
                 salary = payslip.contract_id.ueipab_salary_v2 or 0.0
                 bonus = (payslip.contract_id.ueipab_extrabonus_v2 or 0.0) + \
                         (payslip.contract_id.ueipab_bonus_v2 or 0.0) + \
                         (payslip.contract_id.cesta_ticket_usd or 0.0)
+                period_days = (payslip.date_to - payslip.date_from).days + 1
+                proration = period_days / 30.0
+                salary_prorated = salary * proration
+                bonus_prorated = bonus * proration
+            elif payslip.contract_id.wage and not payslip.contract_id.ueipab_salary_v2:
+                # V1 fallback
+                salary_prorated = payslip.contract_id.wage or 0.0
+                bonus_prorated = 0.0
             else:
-                # V1 fallback (ueipab_deduction_base removed Nov 2025 in v2.0.0)
-                # Safe fallback: use wage for salary, 0 for bonus
-                # Only triggered if contract missing or ueipab_salary_v2 not set
-                salary = payslip.contract_id.wage or 0.0
-                bonus = 0.0
-
-            # Prorate by period
-            period_days = (payslip.date_to - payslip.date_from).days + 1
-            proration = period_days / 30.0
-            salary_prorated = salary * proration
-            bonus_prorated = bonus * proration
+                # Bonus-only structure (e.g. BONO_MADRES, AGUINALDOS): read from payslip lines
+                # No proration — flat amounts already computed by salary rules
+                salary_prorated = 0.0
+                bonus_prorated = sum(
+                    payslip.line_ids.filtered(
+                        lambda l: l.salary_rule_id.category_id.code == 'BASIC' and l.total > 0
+                    ).mapped('total')
+                )
 
             # Get deduction lines (V2 with V1 fallback)
             ari_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_ARI_DED_V2')
@@ -403,6 +411,10 @@ class PayrollDisbursementWizard(models.TransientModel):
             net_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET_V2')
             if not net_line:
                 net_line = payslip.line_ids.filtered(lambda l: l.salary_rule_id.code == 'VE_NET')
+            if not net_line:
+                # Bonus-only structures: find any NET category line
+                net_line = payslip.line_ids.filtered(
+                    lambda l: l.salary_rule_id.category_id.code == 'NET' and l.total > 0)
 
             # Get values
             ari = abs(ari_line[0].total) if ari_line else 0.0
