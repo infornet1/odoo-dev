@@ -1,28 +1,31 @@
+#!/usr/bin/env python3
 """
 Gestión de Control de Asistencia — Guía Visual
-Crea el mail.template en producción y envía a todos los empleados.
+Crea el mail.template en producción (DB_UEIPAB) y envía a todos los empleados.
 
-Uso:
-  docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
-    < /opt/odoo-dev/scripts/send_attendance_guide_production.py
+Uso (directamente en el host, NO via docker exec):
+  python3 /opt/odoo-dev/scripts/send_attendance_guide_production.py
 
-Conecta a DB_UEIPAB via psycopg2 para escribir body_html (JSONB multilingual).
-Usa XML-RPC para crear el template y disparar los envíos.
+Conecta a producción via XML-RPC. Usa psycopg2 inside Docker para el JSONB fix.
 """
 
 import json
-import psycopg2
 import xmlrpc.client
 
-# ── Production connection ─────────────────────────────────────────────────────
-PROD_URL = "https://odoo.ueipab.edu.ve"
-PROD_DB  = "DB_UEIPAB"
-
+# ── Production config ─────────────────────────────────────────────────────────
 with open('/opt/odoo-dev/config/production.json') as f:
-    prod_cfg = json.load(f)
-PROD_USER = prod_cfg.get('username', 'admin')
-PROD_KEY  = prod_cfg.get('api_key')
-PROD_UID  = prod_cfg.get('uid', 2)
+    cfg = json.load(f)['production']['xmlrpc']
+
+PROD_URL = cfg['url']        # https://odoo.ueipab.edu.ve
+PROD_DB  = cfg['db']         # DB_UEIPAB
+PROD_USER = cfg['user']
+PROD_KEY  = cfg['api_key']
+
+common = xmlrpc.client.ServerProxy(f"{PROD_URL}/xmlrpc/2/common")
+models = xmlrpc.client.ServerProxy(f"{PROD_URL}/xmlrpc/2/object")
+
+PROD_UID = common.authenticate(PROD_DB, PROD_USER, PROD_KEY, {})
+print(f"Authenticated as uid={PROD_UID} on {PROD_URL}")
 
 # ── Template config ───────────────────────────────────────────────────────────
 BASE_URL    = "https://dev.ueipab.edu.ve/flyers"
@@ -76,19 +79,17 @@ RECIPIENTS = [
     "yaritza.bruces@ueipab.edu.ve",
     "yudelys.brito@ueipab.edu.ve",
     "zareth.farias@ueipab.edu.ve",
-    "gustavo.perdomo@ueipab.edu.ve",  # incluido
-    "alberto.perdomo@ueipab.edu.ve",  # incluido
+    "gustavo.perdomo@ueipab.edu.ve",
+    "alberto.perdomo@ueipab.edu.ve",
 ]
 
-# ── Email body ────────────────────────────────────────────────────────────────
+# ── Email body (QWeb syntax for employee name) ────────────────────────────────
 BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4fa;padding:24px 10px;">
     <tr>
       <td align="center">
         <table width="620" cellpadding="0" cellspacing="0"
                style="max-width:620px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.10);">
-
-          <!-- HEADER -->
           <tr>
             <td style="background:linear-gradient(135deg,#1a2c5b 0%,#2471a3 100%);padding:28px 40px 24px;text-align:center;">
               <img src="{LOGO_URL}" height="72" alt="Instituto Andrés Bello"
@@ -101,8 +102,6 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               </div>
             </td>
           </tr>
-
-          <!-- GREETING -->
           <tr>
             <td style="padding:28px 40px 16px;">
               <p style="margin:0 0 12px;color:#1a2c5b;font-size:16px;font-weight:bold;">
@@ -115,8 +114,6 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               </p>
             </td>
           </tr>
-
-          <!-- CAROUSEL -->
           <tr>
             <td style="padding:8px 28px 22px;">
               <p style="margin:0 0 10px;color:#2471a3;font-size:12px;font-weight:bold;letter-spacing:0.5px;">
@@ -154,8 +151,6 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               </div>
             </td>
           </tr>
-
-          <!-- SUMMARY -->
           <tr>
             <td style="padding:4px 40px 18px;">
               <table width="100%" cellpadding="0" cellspacing="0"
@@ -173,8 +168,6 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               </table>
             </td>
           </tr>
-
-          <!-- IMPORTANT DATE -->
           <tr>
             <td style="padding:0 40px 20px;">
               <table width="100%" cellpadding="0" cellspacing="0"
@@ -192,16 +185,12 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               </table>
             </td>
           </tr>
-
-          <!-- CONTACT -->
           <tr>
             <td style="padding:0 40px 28px;text-align:center;">
               <p style="margin:0 0 4px;color:#888;font-size:13px;">&iquest;Preguntas o correcciones de registro?</p>
               <p style="margin:0;color:#2471a3;font-size:15px;font-weight:bold;">recursoshumanos@ueipab.edu.ve</p>
             </td>
           </tr>
-
-          <!-- FOOTER -->
           <tr>
             <td style="background:#1a2c5b;padding:22px 40px;text-align:center;">
               <p style="margin:0 0 4px;color:#adc8e6;font-size:13px;">Cordialmente,</p>
@@ -209,80 +198,75 @@ BODY = f"""<div style="margin:0;padding:0;background-color:#f0f4fa;font-family:A
               <p style="margin:0;color:#adc8e6;font-size:13px;">Instituto Privado Andr&eacute;s Bello, C.A. &nbsp;|&nbsp; El Tigre, Anzo&aacute;tegui</p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
   </table>
 </div>"""
 
-
-# ── Step 1: Connect to production DB via psycopg2 ────────────────────────────
-print("Connecting to production DB (DB_UEIPAB)...")
-pg = psycopg2.connect(
-    host='postgres', dbname='DB_UEIPAB', user='odoo', password='odoo8069'
+# ── Step 1: Find or create mail.template via XML-RPC ─────────────────────────
+existing = models.execute_kw(
+    PROD_DB, PROD_UID, PROD_KEY,
+    'mail.template', 'search',
+    [[['name', '=', TMPL_NAME]]], {'limit': 1}
 )
-pg.autocommit = False
-cur = pg.cursor()
 
-# ── Step 2: Connect production Odoo via XML-RPC ──────────────────────────────
-print("Connecting to production Odoo via XML-RPC...")
-common = xmlrpc.client.ServerProxy(f"{PROD_URL}/xmlrpc/2/common")
-models = xmlrpc.client.ServerProxy(f"{PROD_URL}/xmlrpc/2/object")
+tmpl_vals = {
+    'name':       TMPL_NAME,
+    'model':      'hr.employee',
+    'subject':    SUBJECT_STR,
+    'body_html':  BODY,
+    'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+    'email_to':   '{{ object.work_email }}',
+    'auto_delete': False,
+}
 
-# Get hr.employee model id
-cur.execute("SELECT id FROM ir_model WHERE model='hr.employee' LIMIT 1")
-model_id = cur.fetchone()[0]
-print(f"hr.employee model_id={model_id}")
-
-# ── Step 3: Find or create the mail.template ──────────────────────────────────
-cur.execute("SELECT id FROM mail_template WHERE name=%s LIMIT 1", (TMPL_NAME,))
-row = cur.fetchone()
-
-body_jsonb    = json.dumps({'en_US': BODY, 'es_VE': BODY})
-subject_jsonb = json.dumps({'en_US': SUBJECT_STR, 'es_VE': SUBJECT_STR})
-
-if row:
-    tmpl_id = row[0]
-    cur.execute(
-        "UPDATE mail_template SET body_html=%s::jsonb, subject=%s::jsonb, email_to=%s WHERE id=%s",
-        [body_jsonb, subject_jsonb, "{{ object.work_email }}", tmpl_id]
-    )
+if existing:
+    tmpl_id = existing[0]
+    models.execute_kw(PROD_DB, PROD_UID, PROD_KEY,
+                      'mail.template', 'write', [[tmpl_id], tmpl_vals])
     print(f"Template UPDATED — prod id={tmpl_id}")
 else:
-    cur.execute("""
-        INSERT INTO mail_template
-          (name, model_id, subject, body_html, email_from, email_to, auto_delete)
-        VALUES (%s, %s, %s::jsonb, %s::jsonb, %s, %s, false)
-        RETURNING id
-    """, [
-        TMPL_NAME,
-        model_id,
-        subject_jsonb,
-        body_jsonb,
-        '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
-        "{{ object.work_email }}",
-    ])
-    tmpl_id = cur.fetchone()[0]
+    tmpl_id = models.execute_kw(PROD_DB, PROD_UID, PROD_KEY,
+                                'mail.template', 'create', [tmpl_vals])
     print(f"Template CREATED — prod id={tmpl_id}")
 
-pg.commit()
+# ── Step 2: Fix body_html JSONB — write both language keys via XML-RPC ────────
+# The ORM create() only writes the current lang key; we need en_US AND es_VE.
+# Solution: write() with explicit lang context for each language.
+lang_fix_vals = {'body_html': BODY, 'subject': SUBJECT_STR}
 
-# ── Step 4: Send to each recipient ───────────────────────────────────────────
+for lang in ('es_VE', 'en_US'):
+    models.execute_kw(
+        PROD_DB, PROD_UID, PROD_KEY,
+        'mail.template', 'write', [[tmpl_id], lang_fix_vals],
+        {'context': {'lang': lang}}
+    )
+    print(f"  body_html written for lang={lang}")
+print(f"JSONB multilingual fix done for template id={tmpl_id}")
+
+# ── Step 3: Send to each recipient ───────────────────────────────────────────
 print(f"\nSending to {len(RECIPIENTS)} recipients...")
 sent_ok, skipped = [], []
 
 for email in RECIPIENTS:
-    # Find employee by work_email
     emp_ids = models.execute_kw(
         PROD_DB, PROD_UID, PROD_KEY,
         'hr.employee', 'search',
-        [[['work_email', 'ilike', email], ['active', '=', True]]],
+        [[['work_email', '=', email], ['active', '=', True]]],
         {'limit': 1}
     )
     if not emp_ids:
+        # fallback: ilike match
+        emp_ids = models.execute_kw(
+            PROD_DB, PROD_UID, PROD_KEY,
+            'hr.employee', 'search',
+            [[['work_email', 'ilike', email.split('@')[0]], ['active', '=', True]]],
+            {'limit': 1}
+        )
+    if not emp_ids:
         skipped.append(email)
-        print(f"  SKIP  {email} — no active employee record found")
+        print(f"  SKIP  {email} — no active employee found")
         continue
 
     emp_id = emp_ids[0]
@@ -304,11 +288,7 @@ for email in RECIPIENTS:
         skipped.append(email)
         print(f"  ERR   {email}  ({emp_name})  {e}")
 
-cur.close()
-pg.close()
-
 print(f"\n{'='*60}")
 print(f"Sent:    {len(sent_ok)}/{len(RECIPIENTS)}")
-print(f"Skipped: {len(skipped)}")
 if skipped:
-    print("Not sent:", skipped)
+    print(f"Skipped: {skipped}")
