@@ -45,7 +45,7 @@ else:
     struct = Structure.create({
         'name': 'Bono Día de las Madres',
         'code': 'BONO_MADRES',
-        'parent_id': base_struct.id if base_struct else False,
+        'parent_id': False,  # No parent — flat bonus, BASE aggregators would pollute payslip lines
     })
     print(f"✅ Salary structure created: BONO_MADRES (id={struct.id})")
 
