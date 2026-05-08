@@ -262,20 +262,24 @@ class PayrollDisbursementWizard(models.TransientModel):
         # Set column widths
         worksheet.set_column('A:A', 25)  # Employee Name
         worksheet.set_column('B:B', 12)  # Employee ID
-        worksheet.set_column('C:C', 22)  # Bank Account
-        worksheet.set_column('D:D', 28)  # Email
-        worksheet.set_column('E:E', 12)  # Salary
-        worksheet.set_column('F:F', 12)  # Bonus
-        worksheet.set_column('G:G', 12)  # Gross
-        worksheet.set_column('H:H', 12)  # ARI TAX
-        worksheet.set_column('I:I', 12)  # SSO 4%
-        worksheet.set_column('J:J', 12)  # FAOV 1%
-        worksheet.set_column('K:K', 12)  # PARO 0.5%
-        worksheet.set_column('L:L', 12)  # Loan Rec.
-        worksheet.set_column('M:M', 12)  # Total Deductions
-        worksheet.set_column('N:N', 12)  # Net Payable
+        worksheet.set_column('C:C', 13)  # Orig. Hire Date
+        worksheet.set_column('D:D', 15)  # Contract Start Date
+        worksheet.set_column('E:E', 14)  # Last Liquidation
+        worksheet.set_column('F:F', 14)  # Last Vacation
+        worksheet.set_column('G:G', 22)  # Bank Account
+        worksheet.set_column('H:H', 28)  # Email
+        worksheet.set_column('I:I', 12)  # Salary
+        worksheet.set_column('J:J', 12)  # Bonus
+        worksheet.set_column('K:K', 12)  # Gross
+        worksheet.set_column('L:L', 12)  # ARI TAX
+        worksheet.set_column('M:M', 12)  # SSO 4%
+        worksheet.set_column('N:N', 12)  # FAOV 1%
+        worksheet.set_column('O:O', 12)  # PARO 0.5%
+        worksheet.set_column('P:P', 12)  # Loan Rec.
+        worksheet.set_column('Q:Q', 12)  # Total Deductions
+        worksheet.set_column('R:R', 12)  # Net Payable
         if is_advance:
-            worksheet.set_column('O:O', 14)  # Advance Amount
+            worksheet.set_column('S:S', 14)  # Advance Amount
 
         # Get currency info
         currency_symbol = self.currency_id.symbol
@@ -292,7 +296,7 @@ class PayrollDisbursementWizard(models.TransientModel):
         title += f' ({currency_name})'
 
         # Merge range depends on whether advance column is included
-        merge_end = 'O1' if is_advance else 'N1'
+        merge_end = 'S1' if is_advance else 'R1'
         worksheet.merge_range(f'A1:{merge_end}', title, workbook.add_format({
             'bold': True,
             'font_size': 14,
@@ -304,6 +308,10 @@ class PayrollDisbursementWizard(models.TransientModel):
         headers = [
             'Employee Name',
             'Employee ID',
+            'Ing. Original',
+            'Ini. Contrato',
+            'Ult. Liq.',
+            'Ult. Vac.',
             'Bank Account',
             'Email',
             f'Salary ({currency_symbol})',
@@ -453,23 +461,31 @@ class PayrollDisbursementWizard(models.TransientModel):
             # Calculate advance amount
             advance_amt = net * (advance_pct / 100.0) if is_advance else net
 
+            # Format date fields as DD/MM/YYYY strings
+            def _fmt_date(d):
+                return d.strftime('%d/%m/%Y') if d else ''
+
             # Write row
             worksheet.write(row, 0, payslip.employee_id.name, text_format)
             worksheet.write(row, 1, payslip.employee_id.identification_id or '', text_format)
-            worksheet.write(row, 2, payslip.employee_id.bank_account_id.acc_number or '', text_format)
-            worksheet.write(row, 3, payslip.employee_id.work_email or '', text_format)
-            worksheet.write(row, 4, salary_prorated, currency_format)
-            worksheet.write(row, 5, bonus_prorated, currency_format)
-            worksheet.write(row, 6, gross, currency_format)
-            worksheet.write(row, 7, ari, currency_format)
-            worksheet.write(row, 8, sso, currency_format)
-            worksheet.write(row, 9, faov, currency_format)
-            worksheet.write(row, 10, paro, currency_format)
-            worksheet.write(row, 11, loan, currency_format)
-            worksheet.write(row, 12, deductions, currency_format)
-            worksheet.write(row, 13, net, currency_format)
+            worksheet.write(row, 2, _fmt_date(payslip.contract_id.ueipab_original_hire_date), text_format)
+            worksheet.write(row, 3, _fmt_date(payslip.contract_id.date_start), text_format)
+            worksheet.write(row, 4, _fmt_date(payslip.contract_id.ueipab_previous_liquidation_date), text_format)
+            worksheet.write(row, 5, _fmt_date(payslip.contract_id.ueipab_vacation_paid_until), text_format)
+            worksheet.write(row, 6, payslip.employee_id.bank_account_id.acc_number or '', text_format)
+            worksheet.write(row, 7, payslip.employee_id.work_email or '', text_format)
+            worksheet.write(row, 8, salary_prorated, currency_format)
+            worksheet.write(row, 9, bonus_prorated, currency_format)
+            worksheet.write(row, 10, gross, currency_format)
+            worksheet.write(row, 11, ari, currency_format)
+            worksheet.write(row, 12, sso, currency_format)
+            worksheet.write(row, 13, faov, currency_format)
+            worksheet.write(row, 14, paro, currency_format)
+            worksheet.write(row, 15, loan, currency_format)
+            worksheet.write(row, 16, deductions, currency_format)
+            worksheet.write(row, 17, net, currency_format)
             if is_advance:
-                worksheet.write(row, 14, advance_amt, currency_format)
+                worksheet.write(row, 18, advance_amt, currency_format)
 
             # Add to totals
             total_salary += salary_prorated
@@ -488,19 +504,23 @@ class PayrollDisbursementWizard(models.TransientModel):
 
         # Write totals
         worksheet.write(row, 0, 'TOTAL', workbook.add_format({'bold': True}))
-        worksheet.write(row, 1, '', text_format)
-        worksheet.write(row, 2, '', text_format)  # Bank Account (empty for totals)
-        worksheet.write(row, 3, '', text_format)  # Email (empty for totals)
-        worksheet.write(row, 4, total_salary, total_format)
-        worksheet.write(row, 5, total_bonus, total_format)
-        worksheet.write(row, 6, total_gross, total_format)
-        worksheet.write(row, 7, total_ari, total_format)
-        worksheet.write(row, 8, total_sso, total_format)
-        worksheet.write(row, 9, total_faov, total_format)
-        worksheet.write(row, 10, total_paro, total_format)
-        worksheet.write(row, 11, total_loan, total_format)
-        worksheet.write(row, 12, total_deductions, total_format)
-        worksheet.write(row, 13, total_net, total_format)
+        worksheet.write(row, 1, '', text_format)   # Employee ID
+        worksheet.write(row, 2, '', text_format)   # Orig. Hire
+        worksheet.write(row, 3, '', text_format)   # Contract Start
+        worksheet.write(row, 4, '', text_format)   # Last Liq.
+        worksheet.write(row, 5, '', text_format)   # Last Vac.
+        worksheet.write(row, 6, '', text_format)   # Bank Account
+        worksheet.write(row, 7, '', text_format)   # Email
+        worksheet.write(row, 8, total_salary, total_format)
+        worksheet.write(row, 9, total_bonus, total_format)
+        worksheet.write(row, 10, total_gross, total_format)
+        worksheet.write(row, 11, total_ari, total_format)
+        worksheet.write(row, 12, total_sso, total_format)
+        worksheet.write(row, 13, total_faov, total_format)
+        worksheet.write(row, 14, total_paro, total_format)
+        worksheet.write(row, 15, total_loan, total_format)
+        worksheet.write(row, 16, total_deductions, total_format)
+        worksheet.write(row, 17, total_net, total_format)
         if is_advance:
             advance_total_format = workbook.add_format({
                 'bold': True,
@@ -510,7 +530,7 @@ class PayrollDisbursementWizard(models.TransientModel):
                 'bg_color': '#FFF3E0',
                 'font_color': '#E65100',
             })
-            worksheet.write(row, 14, total_advance, advance_total_format)
+            worksheet.write(row, 18, total_advance, advance_total_format)
 
         # Close workbook
         workbook.close()

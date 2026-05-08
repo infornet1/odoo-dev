@@ -4,6 +4,26 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-08 — Payroll Disbursement Detail: 4 employee date columns (v1.67.6)
+
+**Module:** `ueipab_payroll_enhancements` | **Deployed:** Testing + Production
+
+Added 4 employee contract date columns to the Payroll Disbursement Detail report (both PDF and Excel output), inserted after `VAT ID` and before `Cuenta`:
+
+| Column header | Source field | Notes |
+|---|---|---|
+| Ing. Original | `contract_id.ueipab_original_hire_date` | Original hire date (rehire antigüedad continuity) |
+| Ini. Contrato | `contract_id.date_start` | Last contract start date |
+| Ult. Liq. | `contract_id.ueipab_previous_liquidation_date` | Date of last liquidation settlement |
+| Ult. Vac. | `contract_id.ueipab_vacation_paid_until` | Vacations paid through this date |
+
+Dates display as `DD/MM/YYYY`; shows `-` (PDF) or blank (Excel) when field is empty on contract.
+PDF column widths rebalanced to fit within landscape width. Excel column indexes shifted +4 for all financial columns.
+
+**Files changed:** `__manifest__.py` (v1.67.5 → v1.67.6), `reports/payroll_disbursement_detail_report.xml`, `models/payroll_disbursement_wizard.py`
+
+---
+
 ## 2026-05-07 — Mikrotik Hotspot digest always sent to HR
 
 Fixed `sync_mikrotik_attendance.py` to send the daily HTML summary email to `recursoshumanos@ueipab.edu.ve` on every live run — previously only sent when at least one record was created. HR now receives both digests (control_asistencias + Mikrotik) every weekday as cron confirmation.

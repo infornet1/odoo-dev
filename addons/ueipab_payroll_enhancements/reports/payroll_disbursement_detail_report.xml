@@ -80,18 +80,22 @@
                             <thead style="background-color: #e9ecef;">
                                 <tr>
                                     <th style="width: 2%; text-align: center; padding: 3px; font-size: 7pt;">#</th>
-                                    <th style="width: 7%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
-                                    <th style="width: 13%; padding: 3px; font-size: 7pt;">Cuenta</th>
-                                    <th style="width: 12%; padding: 3px; font-size: 7pt;">Employee</th>
+                                    <th style="width: 6%; text-align: center; padding: 3px; font-size: 7pt;">VAT ID</th>
+                                    <th style="width: 5%; text-align: center; padding: 3px; font-size: 6pt;">Ing.<br/>Original</th>
+                                    <th style="width: 5%; text-align: center; padding: 3px; font-size: 6pt;">Ini.<br/>Contrato</th>
+                                    <th style="width: 5%; text-align: center; padding: 3px; font-size: 6pt;">Ult.<br/>Liq.</th>
+                                    <th style="width: 5%; text-align: center; padding: 3px; font-size: 6pt;">Ult.<br/>Vac.</th>
+                                    <th style="width: 10%; padding: 3px; font-size: 7pt;">Cuenta</th>
+                                    <th style="width: 11%; padding: 3px; font-size: 7pt;">Employee</th>
                                     <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Salary</th>
                                     <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Bonus</th>
-                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
-                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
-                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
-                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
-                                    <th style="width: 7%; text-align: right; padding: 3px; font-size: 7pt;">Loan Rec.</th>
-                                    <th style="width: 8%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
-                                    <th style="width: 10%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
+                                    <th style="width: 5%; text-align: right; padding: 3px; font-size: 7pt;">ARI</th>
+                                    <th style="width: 5%; text-align: right; padding: 3px; font-size: 7pt;">SSO 4%</th>
+                                    <th style="width: 5%; text-align: right; padding: 3px; font-size: 7pt;">FAOV 1%</th>
+                                    <th style="width: 5%; text-align: right; padding: 3px; font-size: 7pt;">PARO 0.5%</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">Loan Rec.</th>
+                                    <th style="width: 6%; text-align: right; padding: 3px; font-size: 7pt;">Other Ded</th>
+                                    <th style="width: 5%; text-align: right; padding: 3px; font-size: 7pt;">Net <t t-esc="currency.name"/></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -205,7 +209,11 @@
                                     <tr>
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="sequence"/></td>
                                         <td style="text-align: center; padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.identification_id or 'N/A'"/></td>
-                                        <td style="padding: 2px; font-size: 7pt; font-size: 6.5pt;"><t t-esc="payslip.employee_id.bank_account_id.acc_number or 'N/A'"/></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="payslip.contract_id.ueipab_original_hire_date.strftime('%d/%m/%Y') if payslip.contract_id.ueipab_original_hire_date else '-'"/></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="payslip.contract_id.date_start.strftime('%d/%m/%Y') if payslip.contract_id.date_start else '-'"/></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="payslip.contract_id.ueipab_previous_liquidation_date.strftime('%d/%m/%Y') if payslip.contract_id.ueipab_previous_liquidation_date else '-'"/></td>
+                                        <td style="text-align: center; padding: 2px; font-size: 6pt;"><t t-esc="payslip.contract_id.ueipab_vacation_paid_until.strftime('%d/%m/%Y') if payslip.contract_id.ueipab_vacation_paid_until else '-'"/></td>
+                                        <td style="padding: 2px; font-size: 6.5pt;"><t t-esc="payslip.employee_id.bank_account_id.acc_number or 'N/A'"/></td>
                                         <td style="padding: 2px; font-size: 7pt;"><t t-esc="payslip.employee_id.name"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(salary_amount * exchange_rate)"/></td>
                                         <td style="text-align: right; padding: 2px; font-size: 7pt;"><t t-esc="'{:,.2f}'.format(bonus_amount * exchange_rate)"/></td>
