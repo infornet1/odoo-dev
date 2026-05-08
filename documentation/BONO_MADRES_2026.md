@@ -1,8 +1,9 @@
 # Bono Día de las Madres 2026
 
-**Status:** Testing — pending production deployment
+**Status:** Production — deployed 2026-05-08
 **Version:** ueipab_payroll_enhancements 17.0.1.67.0
 **Implemented:** 2026-05-06
+**Deployed to production:** 2026-05-08
 **Event date:** Domingo 10 de mayo de 2026 (Día de las Madres, Venezuela)
 
 One-time discretionary bonus of $10–$15 USD for all employees in recognition of Mother's Day. Amount configured via System Parameters — no code change needed to adjust it.
@@ -64,7 +65,7 @@ result = float(payslip.env['ir.config_parameter'].sudo().get_param('payroll.bono
 |-------|-------|
 | Name | `Bono Día de las Madres - Entrega Especial` |
 | Testing template id | 77 |
-| Production template id | *assigned on deployment* |
+| Production template id | 57 |
 | Model | `hr.payslip` |
 | Subject | `🌸 Bono Día de las Madres │ Nro.: {{object.number}}{{ (" │ Lote: " + object.payslip_run_id.name) if object.payslip_run_id else "" }}` |
 | From | `"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>` |

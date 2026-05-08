@@ -53,7 +53,7 @@
 | 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.4.0: holidays + special schedule + self-service correction + resend buttons |
-| 38 | Bono Día de las Madres 2026 | Testing | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
+| 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 | 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
 
@@ -144,7 +144,7 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.67.0 | Testing 2026-05-06 (Madres bonus pending prod) |
+| ueipab_payroll_enhancements | 17.0.1.67.0 | **Deployed 2026-05-08** (Bono Día de las Madres) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.4.0 | **Deployed 2026-05-07** |
