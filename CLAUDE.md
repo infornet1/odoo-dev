@@ -139,7 +139,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.31.0 | 2026-04-19 |
+| ueipab_ai_agent | 17.0.1.31.2 | 2026-05-09 |
 | ueipab_attendance_report | 17.0.1.5.0 | 2026-05-08 |
 
 ### Production Environment

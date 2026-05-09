@@ -4,6 +4,56 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-09 — Glenda institutional knowledge update (ueipab_ai_agent v17.0.1.31.2)
+
+**Module:** `ueipab_ai_agent` v17.0.1.31.2 | **Status:** Testing
+
+### Leadership & privacy policy (`general_inquiry.py`)
+
+Two new sections added to `_INSTITUTIONAL_KNOWLEDGE`:
+
+**AUTORIDADES INSTITUCIONALES ACTUALES**
+- Director General: Prof. Arcides Arzola → soporte@ueipab.edu.ve
+- Sub-directora (Media General y Bachillerato): Prof. Norka La Rosa → soporte@ueipab.edu.ve
+- Sub-director (Inicial, Preescolar y Primaria): Prof. David Hernández → soporte@ueipab.edu.ve
+- Fundadora histórica (1977): Carmen Violeta Mata de Perdomo
+
+**POLÍTICA DE PRIVACIDAD INSTITUCIONAL**
+- Glenda must NEVER reveal the name of the legal owner/shareholder.
+- If asked "¿quién es el dueño?" or similar: redirect to academic authorities (Director/Sub-directors) + soporte@ueipab.edu.ve.
+- The founder (Carmen Violeta Mata de Perdomo) may be mentioned in historical context.
+- Guard also added in `get_system_prompt()` INSTRUCCIONES block.
+
+**Trigger:** A tester asked Glenda "¿quién es el dueño del colegio?" and she responded with the business owner's name (Alberto Perdomo), which is confidential information. This update prevents that disclosure.
+
+---
+
+### Industry workers credit policy — Comunicado 08/05/2026 (`general_inquiry.py`)
+
+Full content of the official May 8, 2026 communicado added to `_INSTITUTIONAL_KNOWLEDGE` and `get_system_prompt()`.
+
+**`POLÍTICA FUERZA LABORAL INDUSTRIA`** block (replaces the old `POLÍTICA PDVSA / PETROPIAR` block):
+
+| Topic | Detail |
+|---|---|
+| Scope | PDVSA, Petropiar, and **all other industry companies** |
+| Policy change | 35% credit discount ceases September 1, 2026 |
+| Nature of benefit | Always voluntary concession, not an acquired right |
+| Reason | Operational cost obligations to staff and suppliers |
+| **Confirmation deadline** | **08 June 2026 at 12:30 p.m.** — written notice to pagos@ueipab.edu.ve required. Silence = acceptance of new conditions |
+| Casos Especiales | Individual review (no general exceptions) for: excellent academic record, national-medal athletes, active Sistema de Orquestas Juveniles musicians, or recognized outstanding skills |
+| Tuition increase 2026-2027 | Projected 20–34% adjustment (pending Comité de Contraloría). Non-tuition costs (insurance, olympiads, textbooks, contests) billed separately |
+| Local alliances | Almacén París, Comercial Caracas, Ferretería Veramar — discounts on uniforms and school supplies |
+
+**Instruction block updates (`MANEJO ESPECIAL FUERZA LABORAL INDUSTRIA`):**
+- New prospect from any industry company → policy explanation + billing handoff
+- Existing distressed family → empathy + deadline reminder + Caso Especial hint + pdvsa_retention handoff
+- Deadline question → exact date/time answer (08/06/2026 12:30 p.m.)
+- Caso Especial question → eligibility criteria + pagos@ referral
+- Tuition increase question → 20–34% projection + pagos@ referral
+
+---
+
 ## 2026-05-08 — Notice Acknowledgment system + email template fixes
 
 **Module:** `ueipab_attendance_report` v17.0.1.5.0 | **Status:** Testing validated
