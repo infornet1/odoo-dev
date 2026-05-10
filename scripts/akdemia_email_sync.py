@@ -47,10 +47,10 @@ ODOO_CONFIGS = {
         'password': '35baa2abcc6dee920fa75014f0274c8e551871ce',
     },
     'production': {
-        'url': 'https://odoo.ueipab.edu.ve',
-        'db': 'DB_UEIPAB',
-        'user': 'tdv.devs@gmail.com',
-        'password': 'f69330e5bd6ae043320f054e9df9fcbbb34522db',
+        'url': os.environ.get('ODOO_URL', 'https://odoo.ueipab.edu.ve'),
+        'db': os.environ.get('ODOO_DB', 'DB_UEIPAB'),
+        'user': os.environ.get('ODOO_USER', 'tdv.devs@gmail.com'),
+        'password': os.environ.get('ODOO_PASSWORD', ''),
     },
 }
 
@@ -58,6 +58,12 @@ ODOO_URL = ODOO_CONFIGS[TARGET_ENV]['url']
 ODOO_DB = ODOO_CONFIGS[TARGET_ENV]['db']
 ODOO_USER = ODOO_CONFIGS[TARGET_ENV]['user']
 ODOO_PASSWORD = ODOO_CONFIGS[TARGET_ENV]['password']
+
+if TARGET_ENV == 'production' and not ODOO_PASSWORD:
+    raise RuntimeError(
+        "ODOO_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
 
 # Akdemia downloads directory
 AKDEMIA_DOWNLOADS_DIR = '/var/www/dev/odoo_api_bridge/akdemia_downloads'

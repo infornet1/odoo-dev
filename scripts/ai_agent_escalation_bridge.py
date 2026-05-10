@@ -58,6 +58,12 @@ ODOO_DB = ODOO_CONFIGS[TARGET_ENV]['db']
 ODOO_USER = ODOO_CONFIGS[TARGET_ENV]['user']
 ODOO_PASSWORD = ODOO_CONFIGS[TARGET_ENV]['password']
 
+if TARGET_ENV == 'production' and not ODOO_PASSWORD:
+    raise RuntimeError(
+        "ODOO_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
+
 FREESCOUT_BASE_URL = 'https://freescout.ueipab.edu.ve'
 
 # WhatsApp group for notifications

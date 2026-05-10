@@ -67,6 +67,18 @@ ODOO_DB = ODOO_CONFIGS[TARGET_ENV]['db']
 ODOO_USER = ODOO_CONFIGS[TARGET_ENV]['user']
 ODOO_PASSWORD = ODOO_CONFIGS[TARGET_ENV]['password']
 
+# Fail fast if production credentials are missing from environment
+if TARGET_ENV == 'production' and not ODOO_PASSWORD:
+    raise RuntimeError(
+        "ODOO_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
+if TARGET_ENV == 'production' and not os.environ.get('FREESCOUT_DB_PASSWORD'):
+    raise RuntimeError(
+        "FREESCOUT_DB_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
+
 # Freescout MySQL
 FREESCOUT_DB_HOST = os.environ.get('FREESCOUT_DB_HOST', 'localhost')
 FREESCOUT_DB_USER = os.environ.get('FREESCOUT_DB_USER', 'free297')

@@ -61,18 +61,30 @@ ODOO_CONFIGS = {
         'password': '35baa2abcc6dee920fa75014f0274c8e551871ce',
     },
     'production': {
-        'url': 'https://odoo.ueipab.edu.ve',
-        'db': 'DB_UEIPAB',
-        'user': 'tdv.devs@gmail.com',
-        'password': 'f69330e5bd6ae043320f054e9df9fcbbb34522db',
+        'url': os.environ.get('ODOO_URL', 'https://odoo.ueipab.edu.ve'),
+        'db': os.environ.get('ODOO_DB', 'DB_UEIPAB'),
+        'user': os.environ.get('ODOO_USER', 'tdv.devs@gmail.com'),
+        'password': os.environ.get('ODOO_PASSWORD', ''),
     },
 }
 
 # Freescout MySQL
 FREESCOUT_DB_HOST = os.environ.get('FREESCOUT_DB_HOST', 'localhost')
 FREESCOUT_DB_USER = os.environ.get('FREESCOUT_DB_USER', 'free297')
-FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '1gczp1S@3!')
+FREESCOUT_DB_PASSWORD = os.environ.get('FREESCOUT_DB_PASSWORD', '')
 FREESCOUT_DB_NAME = os.environ.get('FREESCOUT_DB_NAME', 'free297')
+
+# Fail fast if production credentials are missing from environment
+if TARGET_ENV == 'production' and not ODOO_CONFIGS['production']['password']:
+    raise RuntimeError(
+        "ODOO_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
+if TARGET_ENV == 'production' and not FREESCOUT_DB_PASSWORD:
+    raise RuntimeError(
+        "FREESCOUT_DB_PASSWORD env var required for TARGET_ENV=production. "
+        "Run: source /root/.odoo_agent_env_prod"
+    )
 
 # WhatsApp support group for notifications
 WA_GROUP_ID = '1594720028@g.us'  # ueipab soporte

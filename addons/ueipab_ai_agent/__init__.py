@@ -26,7 +26,8 @@ def _load_api_configs(env):
         config_dirs.append(env_dir)
     config_dirs.extend([
         '/opt/odoo-dev/config',
-        '/home/vision/ueipab17/config',
+        '/etc/odoo',                    # production container mount point
+        '/home/vision/ueipab17/config', # production host path (for scripts)
     ])
 
     def _find_config(filename):

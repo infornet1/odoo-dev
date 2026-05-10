@@ -4,6 +4,53 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-10 — Glenda AI Agent production deployment (GAP 0 → Phase D)
+
+**Type:** Production Deployment | **Modules:** `ueipab_hr_employee` + `ueipab_bounce_log` + `ueipab_ai_agent` v17.0.1.31.2
+
+### Summary
+
+Glenda deployed to production (`DB_UEIPAB`). All prior testing work (v1.0–v1.31.2) now live. `dry_run=False`, `active_db=DB_UEIPAB`, all 6 host crons targeting production.
+
+### Security hardening (GAP 0)
+
+- Removed hardcoded production Odoo API key and Freescout password from `ai_agent_wa_health_monitor.py` and `daily_bounce_processor.py` — replaced with `os.environ.get()` + `RuntimeError` fail-fast
+- Added `RuntimeError` fail-fast to all 6 bridge scripts for `TARGET_ENV=production` without env vars
+- Created `/root/.odoo_agent_env_prod` (chmod 600) and `/var/www/dev/.odoo_agent_env_prod` (chmod 640, root:www-data)
+- Updated all 5 `/etc/cron.d/ai_agent_*` files: source env file, `TARGET_ENV=production`
+- Fixed `akdemia_api_sync.py` production block to use env vars; `customer_matching_wrapper.sh` sources env file
+- Updated `.gitignore`: added `.odoo_agent_env_prod`, `google_sheets_credentials.json`
+
+### Module installation (GAP 1 + GAP 2)
+
+- DB backup: `/backup/DB_UEIPAB_20260510_pre_ai_agent.dump`
+- `PyMuPDF (fitz)` installed in production container (was missing, blocked install)
+- `__init__.py` updated: added `/etc/odoo` to config search paths (production container mount point for `/home/vision/ueipab17/config/`)
+- Config params loaded manually via Odoo shell after install (post_init_hook searched wrong path)
+- 6 skills + 7 crons created; 2 deferred (Timeouts, HR Collection)
+
+### Cron switch (GAP 4 + GAP 10)
+
+- All 5 host AI agent crons switched to production; testing locked (`active_db=''`)
+- Akdemia pipeline: `customer_matching_wrapper.sh` now sources production credentials
+- Dry-run verified all 5 bridge scripts against production before go-live
+
+### Go-live (Phase D)
+
+- `ai_agent.dry_run = False` set on production Odoo
+- `ai_agent.claude_spend_limit_usd = 4.15` (90% of ~$4.61 Anthropic credit remaining after testing)
+- Initial bounce load: 2 records created (dcontrerasperez82@gmail.com tier=not_found, lacruzde@pdvsa.com tier=flag)
+- Poll cron running at 5 min interval; webhook deferred (poll sufficient for current volume)
+
+### Post-deploy TODOs
+
+- Enable "Check Conversation Timeouts" cron after 48h stable
+- Phase 2: enable "Stagger HR Data Collection" cron
+- Raise `claude_spend_limit_usd` on each Anthropic credit top-up
+- Optional: add nginx `/ai-agent/` proxy on production server for <1s webhook responses
+
+---
+
 ## 2026-05-10 — Odoo 17.0 base container update (both environments)
 
 **Type:** Infrastructure | **Environments:** Testing + Production

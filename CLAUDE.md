@@ -40,17 +40,17 @@
 | 22 | Aguinaldos Disbursement Report | Production | `ueipab_payroll_enhancements` | - |
 | 23 | Advance Payment System | Production | `ueipab_payroll_enhancements` | [Docs](documentation/ADVANCE_PAYMENT_SYSTEM.md) |
 | 24 | WebSocket/Nginx Fix | Production | Infrastructure | [Docs](documentation/WEBSOCKET_NGINX_FIX.md) |
-| 25 | Email Bounce Processor | Testing | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
-| 26 | AI Agent (WhatsApp + Claude) | Testing | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
-| 27 | Akdemia Data Pipeline | Testing | Script + Cron | [Docs](documentation/AKDEMIA_DATA_PIPELINE.md) |
-| 28 | WhatsApp Health Monitor | Testing | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
-| 29 | Resolution Bridge | Testing | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
+| 25 | Email Bounce Processor | Production | Script + `ueipab_bounce_log` | [Docs](documentation/BOUNCE_EMAIL_PROCESSOR.md) |
+| 26 | AI Agent (WhatsApp + Claude) | Production | `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
+| 27 | Akdemia Data Pipeline | Production | Script + Cron | [Docs](documentation/AKDEMIA_DATA_PIPELINE.md) |
+| 28 | WhatsApp Health Monitor | Production | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
+| 29 | Resolution Bridge | Production | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
-| 31 | HR Data Collection (Glenda) | Testing | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
+| 31 | HR Data Collection (Glenda) | Production | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 | 32 | Payslip Ack Confirmation Email | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 33 | Payroll Requisition Estimation Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
-| 35 | Payslip Ack Reminder via Glenda (WA) | Testing | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
+| 35 | Payslip Ack Reminder via Glenda (WA) | Production | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.5.0: holidays + special schedule + self-service correction + resend buttons + **Notice ACK system** |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
@@ -158,6 +158,9 @@
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.5.0 | **Deployed 2026-05-08** — hr.notice.acknowledgment + /notice-ack controller + email ACK button |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
+| ueipab_hr_employee | 17.0.1.0.0 | **Deployed 2026-05-10** — Glenda dependency |
+| ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
+| ueipab_ai_agent | 17.0.1.31.2 | **Deployed 2026-05-10** — Glenda AI WhatsApp agent LIVE (dry_run=False, active_db=DB_UEIPAB) |
 
 ---
 
@@ -318,27 +321,40 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number from pre-switch waiting conversations. **TODO:** restore `account_id=primary_account_id` filter once pre-switch conversations drain.
 
-### Testing Environment Status (2026-03-31)
+### Production Environment Status (2026-05-10)
 
 | Setting | Value |
 |---------|-------|
 | `ai_agent.dry_run` | `False` (LIVE) |
-| `ai_agent.active_db` | `testing` |
+| `ai_agent.active_db` | `DB_UEIPAB` |
 | `ai_agent.credits_ok` | `True` |
-| Poll cron | active, 1 min |
-| Timeout cron | active, 1 hour |
+| `ai_agent.claude_spend_limit_usd` | `4.15` (~$4.61 remaining after testing usage) |
+| Poll cron | active, 5 min |
+| Timeout cron | **inactive** — enable after 48h stable |
 | Credit Guard | active, 30 min |
 | Archive Attachments | active, 2 hours |
+| Stagger Payslip Ack Reminders | active, 30 min |
+| Auto-Resolve Ack Reminders | active, 30 min |
+| Stagger HR Data Collection | **inactive** — Phase 2 |
 
-**System crons (host-level):** escalation (5 min, LIVE), resolution (5 min, LIVE), email checker (15 min, LIVE), bounce processor (daily 05:00, LIVE), WA health (15 min, LIVE), Akdemia pipeline (daily 06:00, LIVE). All 6 system crons are LIVE as of 2026-02-14.
+**System crons (host-level, all targeting production via `/root/.odoo_agent_env_prod`):** escalation (5 min), resolution (5 min), email checker (15 min), bounce processor (daily 05:00), WA health (15 min), Akdemia pipeline (daily 06:00, via `/var/www/dev/.odoo_agent_env_prod`). All switched to production 2026-05-10.
 
-**Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7). Holidays configured in Dashboard Configuracion tab (`ai_agent.holidays` param, MM-DD CSV).
+**Testing lockout:** `ai_agent.active_db=''` on testing Odoo — all AI agent crons self-skip.
 
-**WhatsApp account status (2026-03-30):** Primary switched to dedicated number +584148321989 (new). Backup: +584248944898. Tertiary (manual only, not in auto-failover): +584148321963. All 3 confirmed connected via MassivaMóvil API.
+**Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
+
+**WhatsApp accounts:** Primary +584148321989 (dedicated), Backup +584248944898, Tertiary +584148321963 (manual only).
+
+### Testing Environment Status (2026-05-10)
+
+| Setting | Value |
+|---------|-------|
+| `ai_agent.dry_run` | `False` |
+| `ai_agent.active_db` | `''` (locked — crons self-skip) |
 
 ### Production Migration Checklist
 
-See [Full Checklist](documentation/AI_AGENT_MODULE.md). **BLOCKERs:** bounce_log module in prod, hardcoded API creds in bridge scripts, webhook callback URL, Freescout MySQL access from dev server.
+**COMPLETE as of 2026-05-10.** All gaps resolved. See [Full Checklist](documentation/AI_AGENT_MODULE.md) for history.
 
 ### HR Loan Module Production Migration Checklist
 
