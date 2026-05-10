@@ -176,44 +176,73 @@ def slide1():
     img = make_base(NAVY, (10, 18, 50))
     d   = ImageDraw.Draw(img)
 
-    paste_logo(img, cy=110)
+    paste_logo(img, cy=100)
+    d.line([(PAD * 2, 162), (W - PAD * 2, 162)], fill=GOLD, width=2)
 
-    # Thin gold separator line under logo
-    d.line([(PAD * 2, 175), (W - PAD * 2, 175)], fill=GOLD, width=2)
-
-    # Paste flyer image below logo (cropped/resized to fit width)
+    # Flyer — tighter crop
     if FLYER:
-        fw = W - PAD * 2
+        fw    = W - PAD * 2
         ratio = fw / FLYER.width
-        fh = int(FLYER.height * ratio)
-        fh = min(fh, 340)
-        resized = FLYER.resize((fw, fh), Image.LANCZOS)
-        img.paste(resized, (PAD, 190), resized)
-        flyer_bot = 190 + fh + 20
+        fh    = min(int(FLYER.height * ratio), 290)
+        img.paste(FLYER.resize((fw, fh), Image.LANCZOS), (PAD, 172), FLYER.resize((fw, fh), Image.LANCZOS))
+        flyer_bot = 172 + fh + 14
     else:
-        flyer_bot = 200
+        flyer_bot = 186
 
     d.line([(PAD * 2, flyer_bot), (W - PAD * 2, flyer_bot)], fill=GOLD, width=2)
 
-    y = flyer_bot + 30
-    y += ctext(d, "UNA NUEVA ERA EN ANDRÉS BELLO", y, F(44, bold=True), GOLD,
-               shadow=(0, 0, 0)) + 12
-    y += ctext(d, "La inteligencia artificial llega a nuestro", y, F(36), LIGHT) + 8
-    y += ctext(d, "equipo para servir mejor a las familias.", y, F(36), LIGHT) + 30
+    y = flyer_bot + 20
+    y += ctext(d, "UNA NUEVA ERA EN ANDRÉS BELLO", y, F(40, bold=True), GOLD,
+               shadow=(0, 0, 0)) + 6
+    y += ctext(d, "La IA llega para servir mejor a nuestras familias.", y, F(32), LIGHT) + 20
 
-    # Big WA badge
-    badge_h = 110
-    rrect(d, PAD, y, W - PAD, y + badge_h, 24, fill=GREEN, outline=GOLD, width=3)
-    wa_icon_x = PAD + 30
-    ltext(d, "WA", wa_icon_x, y + 28, F(48, bold=True), WHITE)
-    ltext(d, "+58 414 832 1989", wa_icon_x + 100, y + 28, F(46, bold=True), WHITE)
-    ltext(d, "Escríbele directamente a Glenda", wa_icon_x + 100, y + 76, F(30), LGRN)
-    y += badge_h + 25
+    # WA badge — compact
+    badge_h = 90
+    rrect(d, PAD, y, W - PAD, y + badge_h, 20, fill=GREEN, outline=GOLD, width=3)
+    ltext(d, "WA", PAD + 28, y + 22, F(44, bold=True), WHITE)
+    ltext(d, "+58 414 832 1989", PAD + 104, y + 22, F(42, bold=True), WHITE)
+    ltext(d, "Escríbele a Glenda ahora", PAD + 104, y + 64, F(28), LGRN)
+    y += badge_h + 20
 
-    # Powered-by line
-    rrect(d, PAD + 60, y, W - PAD - 60, y + 64, 16, fill=(20, 20, 50))
-    ctext(d, "Impulsada por Claude AI  ·  Anthropic", y + 14, F(30), LGOLD)
-    y += 90
+    # ── 6 capability teaser cards in 2 columns ────────────────────────────────
+    caps = [
+        ("🕐", "24/7 sin descanso",     LTEAL,   DTEAL),
+        ("📋", "Inscripciones y tarifas", LVIOLT,  DVIOLT),
+        ("💳", "Gestión de facturación", LGOLD,   DGOLD),
+        ("✅", "Conformidad de nómina",  LGRN,    DGRN),
+        ("📊", "Datos de RRHH",          LRED,    DRED),
+        ("📧", "Rebotes de email",       LGRAY,   (50, 60, 80)),
+    ]
+    col_w    = (W - PAD * 2 - 18) // 2
+    card_h   = 118
+    title_f  = F(30, bold=True)
+    icon_f   = F(40)
+
+    for i, (icon, title, bg, tc) in enumerate(caps):
+        col  = i % 2
+        row  = i // 2
+        cx   = PAD + col * (col_w + 18)
+        cy   = y + row * (card_h + 14)
+        rrect(d, cx, cy, cx + col_w, cy + card_h, 16, fill=bg, outline=tc, width=2)
+        # Icon centred top
+        bb = d.textbbox((0, 0), icon, font=icon_f)
+        ix = cx + (col_w - (bb[2] - bb[0])) // 2
+        d.text((ix, cy + 10 - bb[1]), icon, font=icon_f, fill=tc)
+        # Title centred bottom
+        wrap = textwrap.wrap(title, width=14)
+        ty = cy + 62
+        for line in wrap:
+            bb2 = d.textbbox((0, 0), line, font=title_f)
+            lx  = cx + (col_w - (bb2[2] - bb2[0])) // 2
+            d.text((lx, ty - bb2[1]), line, font=title_f, fill=tc)
+            ty += bb2[3] - bb2[1] + 4
+
+    y += 3 * (card_h + 14) + 8
+
+    # Powered-by strip
+    rrect(d, PAD + 40, y, W - PAD - 40, y + 52, 14, fill=(18, 18, 48))
+    ctext(d, "Impulsada por Claude AI  ·  Anthropic", y + 12, F(27), LGOLD)
+    y += 66
 
     dot_nav(d, 0)
     footer(img, d)

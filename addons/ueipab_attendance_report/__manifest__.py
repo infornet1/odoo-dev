@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB Attendance Biweekly Report',
-    'version': '17.0.1.5.0',
+    'version': '17.0.1.5.1',
     'category': 'Human Resources/Attendance',
     'summary': 'Reporte quincenal de asistencia con confirmación digital del empleado',
     'depends': ['hr_attendance', 'mail', 'ueipab_payroll_enhancements'],

@@ -17,6 +17,7 @@
                        decoration-warning="state == 'pending'"/>
                 <field name="sent_date"    optional="show"/>
                 <field name="ack_date"     optional="show"/>
+                <field name="wa_number"    optional="show" string="WA Calibración"/>
                 <field name="days_pending" optional="show" string="Days Pending"/>
                 <field name="ack_ip"       optional="hide"/>
             </tree>
@@ -56,6 +57,7 @@
                         <group string="Acknowledgment">
                             <field name="ack_date"/>
                             <field name="ack_ip"/>
+                            <field name="wa_number"/>
                             <field name="days_pending"
                                    invisible="state == 'acknowledged'"/>
                         </group>

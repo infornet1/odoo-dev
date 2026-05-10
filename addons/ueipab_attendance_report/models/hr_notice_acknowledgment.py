@@ -24,6 +24,8 @@ class HrNoticeAcknowledgment(models.Model):
     sent_date    = fields.Datetime(string='Sent On', default=fields.Datetime.now)
     ack_date     = fields.Datetime(string='Acknowledged On', readonly=True)
     ack_ip       = fields.Char(string='IP at Acknowledgment', readonly=True)
+    wa_number    = fields.Char(string='WA Number (Calibración)',
+                               help='WhatsApp number confirmed by employee for Glenda calibration tracking')
 
     # Summary computed for the list view
     days_pending = fields.Integer(string='Days Pending', compute='_compute_days_pending',
