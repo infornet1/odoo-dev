@@ -162,6 +162,115 @@ class GeneralInquirySkill:
             'institution': icp.get_param('ai_agent.institution_display_name', 'Instituto Privado Andrés Bello'),
         }
 
+    # ── Balance query helpers ─────────────────────────────────────────────────
+
+    def _query_partner_balance(self, conversation, partner):
+        """Return outstanding invoice breakdown for a partner (and their children)."""
+        if not partner:
+            return None
+        Move = conversation.env['account.move'].sudo()
+        partner_ids = [partner.id] + list(partner.child_ids.ids)
+        invoices = Move.search([
+            ('partner_id', 'in', partner_ids),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('payment_state', 'in', ('not_paid', 'partial')),
+            ('amount_residual_signed', '>', 0),
+        ], order='invoice_date asc')
+
+        lines = []
+        total = 0.0
+        for inv in invoices:
+            residual = float(inv.amount_residual_signed)
+            if residual <= 0:
+                continue
+            total += residual
+            # Collect non-section line names
+            descriptions = [
+                l.name for l in inv.invoice_line_ids
+                if l.name and not l.display_type
+            ]
+            lines.append({
+                'ref':         inv.name or '',
+                'date':        inv.invoice_date.strftime('%d/%m/%Y') if inv.invoice_date else '',
+                'total_orig':  float(inv.amount_total),
+                'residual':    residual,
+                'description': ', '.join(descriptions[:3]) or 'Sin descripción',
+                'partial':     inv.payment_state == 'partial',
+            })
+
+        return {
+            'partner_name': partner.name,
+            'partner_vat':  partner.vat or '',
+            'total':        round(total, 2),
+            'count':        len(lines),
+            'lines':        lines,
+        }
+
+    def _find_partner_by_cedula(self, conversation, cedula):
+        """Search res.partner by VAT (cédula). Normalises input."""
+        raw = re.sub(r'[^0-9VvEeJjGgPp]', '', cedula).upper()
+        if raw and not raw[0].isalpha():
+            raw = 'V' + raw
+        Partner = conversation.env['res.partner'].sudo()
+        # Try exact, then prefix match
+        partner = Partner.search([('vat', '=', raw)], limit=1)
+        if not partner:
+            partner = Partner.search([('vat', 'ilike', raw[-7:])], limit=1)
+        return partner or None
+
+    def _format_balance_message(self, balance, bcv_rate=None):
+        """Format balance dict into a WhatsApp-friendly message."""
+        if not balance or balance['count'] == 0:
+            return "No tienes facturas pendientes de pago en nuestro sistema."
+
+        name  = balance['partner_name']
+        total = balance['total']
+        lines = balance['lines']
+
+        veb_line = ''
+        if bcv_rate and bcv_rate > 0:
+            veb_total = total * bcv_rate
+            veb_line = f" (aprox. Bs. {veb_total:,.2f} a tasa BCV {bcv_rate:,.4f})"
+
+        header = (
+            f"Hola {name.split()[0].capitalize()}, aqui el detalle de tu cuenta:\n\n"
+            f"*SALDO PENDIENTE: ${total:,.2f}*{veb_line}\n"
+            f"Total de facturas: {len(lines)}\n"
+            "─────────────────────\n"
+        )
+
+        detail_lines = []
+        for inv in lines:
+            partial_tag = " *(pago parcial)*" if inv['partial'] else ""
+            detail_lines.append(
+                f"• {inv['ref']} | {inv['date']}\n"
+                f"  Monto pendiente: *${inv['residual']:,.2f}*{partial_tag}\n"
+                f"  Concepto: {inv['description']}"
+            )
+
+        footer = (
+            "\n─────────────────────\n"
+            "Para pagar o coordinar un acuerdo, escribe a:\n"
+            "pagos@ueipab.edu.ve"
+        )
+
+        return header + '\n'.join(detail_lines) + footer
+
+    def _get_bcv_rate_from_context(self, conversation):
+        """Extract current BCV rate from ir.config_parameter."""
+        import json as _j
+        raw = conversation.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.bcv_rate_context', '')
+        if not raw:
+            return 0.0
+        try:
+            return float(_j.loads(raw).get('current', {}).get('rate', 0))
+        except Exception:
+            return 0.0
+
+    # ── BCV context helpers ───────────────────────────────────────────────────
+
     def _get_bcv_context(self, conversation):
         """Read BCV rate context from ir.config_parameter (populated by sync_bcv_to_odoo.py)."""
         import json as _json
@@ -180,10 +289,16 @@ class GeneralInquirySkill:
         partner_found = bool(
             partner and not partner.name.startswith('Consulta WhatsApp')
         )
+        balance = (
+            self._query_partner_balance(conversation, partner)
+            if partner_found else None
+        )
         return {
-            'partner_name': partner.name if partner_found else '',
+            'partner_name':       partner.name if partner_found else '',
+            'partner_vat':        (partner.vat or '') if partner_found else '',
             'partner_found_in_odoo': partner_found,
-            'bcv': self._get_bcv_context(conversation),
+            'balance':            balance,
+            'bcv':                self._get_bcv_context(conversation),
             **cfg,
         }
 
@@ -237,14 +352,43 @@ class GeneralInquirySkill:
         agent_name = context.get('agent_name', 'Glenda')
         institution = context.get('institution', 'Instituto Privado Andrés Bello')
         partner_name = context.get('partner_name', '')
+        partner_vat  = context.get('partner_vat', '')
         partner_found = context.get('partner_found_in_odoo', False)
+        balance = context.get('balance')
         bcv = context.get('bcv')
 
-        contact_ctx = (
-            f"- Este contacto está registrado en el sistema como: {partner_name}. Puedes dirigirte a él/ella por su nombre.\n"
-            if partner_found
-            else "- Este contacto NO está registrado en el sistema. Si no dice su nombre, pregúntaselo de forma natural.\n"
-        )
+        if partner_found:
+            contact_ctx = (
+                f"- Contacto registrado: {partner_name}"
+                + (f" | Cédula: {partner_vat}" if partner_vat else '')
+                + ". Dirígete a él/ella por su nombre.\n"
+            )
+        else:
+            contact_ctx = "- Contacto NO registrado en el sistema. Si no dice su nombre, pregúntaselo de forma natural.\n"
+
+        # Balance context block
+        if balance and balance['count'] > 0:
+            bal_total = balance['total']
+            bal_count = balance['count']
+            balance_ctx = (
+                f"\nSALDO EN SISTEMA (dato interno — úsalo solo si el contacto pregunta):\n"
+                f"- {partner_name} tiene {bal_count} factura(s) pendiente(s) por un total de "
+                f"*${bal_total:,.2f}*.\n"
+                f"- Si el contacto pregunta su saldo o deuda, responde directamente con este dato "
+                f"e incluye ACTION:QUERY_BALANCE:FOUND al final para enviarle el desglose completo.\n"
+            )
+        elif balance and balance['count'] == 0:
+            balance_ctx = (
+                f"\nSALDO EN SISTEMA: {partner_name} no tiene facturas pendientes registradas.\n"
+                f"- Si el contacto pregunta si debe algo, puedes informarle que su cuenta está al día.\n"
+            )
+        else:
+            balance_ctx = (
+                "\nSALDO: Contacto no identificado. Si pregunta por su saldo o deuda:\n"
+                "- Pídele su número de cédula (ej: V-12345678).\n"
+                "- Cuando lo proporcione, incluye ACTION:QUERY_BALANCE:V-12345678 al final de tu "
+                "respuesta (reemplaza con la cédula real).\n"
+            )
 
         flyer_list = "\n".join(
             f"  - {key}: {desc}" for key, (_, desc) in _FLYERS.items()
@@ -254,6 +398,7 @@ class GeneralInquirySkill:
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
             + _INSTITUTIONAL_KNOWLEDGE
             + self._build_bcv_block(bcv) + "\n"
+            + balance_ctx + "\n"
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx
@@ -268,9 +413,17 @@ class GeneralInquirySkill:
             "u otros temas cubiertos por un flyer disponible, añade ACTION:SEND_FLYER:clave al final de tu "
             "respuesta (usa exactamente la clave de la lista de flyers). Solo un flyer por respuesta.\n"
             "  Ejemplo: ACTION:SEND_FLYER:inscripcion\n"
+            "- Si la consulta es sobre su SALDO, DEUDA o FACTURAS PENDIENTES:\n"
+            "  * Si el contacto ya está identificado y el SALDO EN SISTEMA indica facturas pendientes: "
+            "infórmale el total y añade ACTION:QUERY_BALANCE:FOUND para que reciba el desglose.\n"
+            "  * Si el contacto ya está identificado y no tiene saldo: dile que está al día.\n"
+            "  * Si el contacto NO está identificado: pídele su cédula. Cuando la proporcione, "
+            "incluye ACTION:QUERY_BALANCE:V-XXXXXXXX (con su cédula real). No inventes datos.\n"
+            "  * Después de mostrar el saldo, si quiere pagar o negociar, usa ACTION:HANDOFF:nombre|resumen|billing.\n"
+            "  * IMPORTANTE: Nunca muestres el saldo de una persona a otra. Solo informa al contacto identificado.\n"
             "- Si la consulta es sobre facturación, deuda, saldo, estado de cuenta, ajuste de cobro o pagos "
-            "pendientes: infórmale que la canalizarás con el equipo de Pagos y Facturación "
-            "(pagos@ueipab.edu.ve) que la atenderá a la brevedad. Usa ACTION:HANDOFF con ruta 'billing'.\n"
+            "pendientes y NO puedes resolverla con el saldo disponible: infórmale que la canalizarás "
+            "con el equipo de Pagos y Facturación (pagos@ueipab.edu.ve). Usa ACTION:HANDOFF con ruta 'billing'.\n"
             "- Si la consulta requiere acceso a otros datos personales (documentos, trámites, asuntos del "
             "alumno, quejas, etc.): infórmale que la conectarás con el equipo de soporte "
             "(soporte@ueipab.edu.ve). Usa ACTION:HANDOFF con ruta 'support'.\n"
@@ -379,8 +532,41 @@ class GeneralInquirySkill:
             'ai_agent.flyer_base_url', 'https://dev.ueipab.edu.ve/flyers'
         )
 
+    def _handle_balance_action(self, conversation, ai_response, context):
+        """Resolve ACTION:QUERY_BALANCE and return formatted balance message or None."""
+        bal_match = re.search(
+            r'ACTION:QUERY_BALANCE:(FOUND|[VvEeJjGgPp]?-?\d+)',
+            ai_response, re.MULTILINE
+        )
+        if not bal_match:
+            return None
+
+        token = bal_match.group(1).strip().upper()
+        partner = None
+
+        if token == 'FOUND':
+            # Use already-identified partner from conversation
+            p = conversation.partner_id
+            if p and not p.name.startswith('Consulta WhatsApp'):
+                partner = p
+        else:
+            partner = self._find_partner_by_cedula(conversation, token)
+
+        if not partner:
+            return (
+                "No encontre una cuenta registrada con esa cédula en nuestro sistema. "
+                "Verifica el número e intenta nuevamente, o escribe a pagos@ueipab.edu.ve."
+            )
+
+        balance = self._query_partner_balance(conversation, partner)
+        bcv_rate = self._get_bcv_rate_from_context(conversation)
+        return self._format_balance_message(balance, bcv_rate)
+
     def process_ai_response(self, conversation, ai_response, context):
-        """Parse AI response for ACTION:SEND_FLYER and ACTION:HANDOFF markers."""
+        """Parse AI response for ACTION:SEND_FLYER, ACTION:QUERY_BALANCE and ACTION:HANDOFF markers."""
+        # Check for balance query — resolve and append to visible text before other actions
+        balance_msg = self._handle_balance_action(conversation, ai_response, context)
+
         # Check for flyer send request
         flyer_match = re.search(r'ACTION:SEND_FLYER:(\w+)', ai_response, re.MULTILINE)
         flyer_key = flyer_match.group(1).strip() if flyer_match else None
@@ -417,7 +603,13 @@ class GeneralInquirySkill:
             return result
 
         visible_text = self._extract_visible_text(ai_response)
-        result = {'message': visible_text or ai_response}
+        # If balance query resolved, append the breakdown as a second message
+        if balance_msg:
+            # Strip ACTION:QUERY_BALANCE from visible text (already extracted above)
+            final_text = visible_text or ai_response
+            result = {'message': final_text, 'balance_message': balance_msg}
+        else:
+            result = {'message': visible_text or ai_response}
         if flyer_key:
             result['flyer_key'] = flyer_key
         return result

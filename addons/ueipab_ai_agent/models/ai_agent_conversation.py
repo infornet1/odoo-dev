@@ -463,6 +463,21 @@ class AiAgentConversation(models.Model):
         if flyer_key and hasattr(skill_handler, 'send_flyer'):
             skill_handler.send_flyer(self, flyer_key)
 
+        # Send balance breakdown as a separate WA message if present
+        balance_msg = action.get('balance_message')
+        if balance_msg:
+            try:
+                wa_service = self.env['ai.agent.whatsapp.service'].sudo()
+                wa_service.send_message(self.phone, balance_msg)
+                self.env['ai.agent.message'].sudo().create({
+                    'conversation_id': self.id,
+                    'direction':       'outbound',
+                    'body':            balance_msg,
+                })
+                _logger.info("Balance breakdown sent to %s", self.phone)
+            except Exception as e:
+                _logger.warning("Failed to send balance breakdown to %s: %s", self.phone, e)
+
         self.write({
             'state': 'waiting',
             'last_message_date': fields.Datetime.now(),
