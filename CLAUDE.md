@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-08 (v2)
+**Last Updated:** 2026-05-10 (v2)
 
 ## Core Instructions
 
@@ -129,6 +129,13 @@
 ---
 
 ## Module Versions
+
+### Odoo Base Container
+
+| Environment | Image | Build | Odoo Commit | Updated |
+|-------------|-------|-------|-------------|---------|
+| Testing | `odoo:17.0` | `17.0-20260504` | `d66bb0d7` | 2026-05-10 |
+| Production | `odoo:17.0` | `17.0-20260504` | `d66bb0d7` | 2026-05-10 |
 
 ### Testing Environment
 

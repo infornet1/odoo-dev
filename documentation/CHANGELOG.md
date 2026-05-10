@@ -4,6 +4,53 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-10 — Odoo 17.0 base container update (both environments)
+
+**Type:** Infrastructure | **Environments:** Testing + Production
+
+### Summary
+
+Both Odoo containers updated from `17.0-20251106` (testing) / `17.0-20250807` (production) to `17.0-20260504` — closing a 6–9 month upstream gap.
+
+| Environment | Before | After | Gap closed |
+|-------------|--------|-------|------------|
+| Testing | `17.0-20251106` (`cdf3ad5c`) | `17.0-20260504` (`d66bb0d7`) | 6 months |
+| Production | `17.0-20250807` (`2026212d`) | `17.0-20260504` (`d66bb0d7`) | 9 months |
+
+### Upstream fixes now applied
+
+| Module | Key fix |
+|--------|---------|
+| `mail` | Duplicate records on concurrent email processing (`a4d3386`) |
+| `mail` | Ignore archived email blacklists (`3e70e71`) |
+| `mail` | Sanitize `mail.catchall.domain.allowed` (`7324c39`) |
+| `account` | Stop rounding discount on import (`7ebce9b`) |
+| `account` | Allow branch users to create journal currency transactions (`05e9714`) |
+| `web` | PERF: respect limit during onchange fetch (`14d3893`) |
+| `web` | Fix translation button save on nested records (`9da5291`) |
+| `web` | Realign x2many cache filtering in web_read (`0b2356d`) |
+| `hr_attendance` | Checkout employee when archived (`ca8e687`) |
+| `hr` | Clear bank account on employee duplication (`94e4f85`) |
+| `hr_holidays` | Leave dual-approval fallback fix (`e834bf7`) |
+
+### Procedure
+
+1. Pre-update compatibility audit — all UEIPAB custom modules: no hard blockers (MEDIUM risk areas verified via smoke tests)
+2. Testing DB backup: `testing_backup_before_odoo_update_20260510_082038.sql.gz`
+3. `docker pull odoo:17.0` on both servers
+4. `docker-compose down && docker-compose up -d` — testing first, production after validation
+5. Module upgrade: `ueipab_payroll_enhancements -u` (registers wizard models in DB)
+6. Full smoke test suite: 18/18 checks passed on testing, 11/11 on production
+
+### Notes
+
+- `ueipab_ai_agent` not installed in production — `ai.agent.conversation` missing there is expected
+- Pre-existing transient vacuum error from `base_accounting_kit` (unrelated to update)
+- Production had a stale container name conflict (`/ueipab17`) — resolved with `docker rm -f` before `docker-compose up -d`
+- Both environments now on identical image digest: `sha256:f4d974041d580ef358ab2d7a49a67439252797a791b7799d3a3432da3ac92722`
+
+---
+
 ## 2026-05-09 — Glenda institutional knowledge update (ueipab_ai_agent v17.0.1.31.2)
 
 **Module:** `ueipab_ai_agent` v17.0.1.31.2 | **Status:** Testing
