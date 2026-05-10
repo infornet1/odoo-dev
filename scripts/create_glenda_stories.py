@@ -296,26 +296,52 @@ def slide3():
          LGRN, DGRN),
     ]
 
-    def step_card(d, y, num, title, body, bg, tc, card_h=170):
-        x1, x2, inner = PAD, W - PAD, 24
+    def step_card(d, y, num, title, body, bg, tc):
+        x1, x2, inner = PAD, W - PAD, 26
+        circ_r  = 32
+        circ_sz = circ_r * 2          # 64 px diameter
+        title_f = F(38, bold=True)
+        body_f  = F(33)
+        gap     = 12                  # gap between circle row and body lines
+
+        # Measure heights
+        bb_t  = d.textbbox((0, 0), title, font=title_f)
+        title_h = bb_t[3] - bb_t[1]
+        body_heights = [d.textbbox((0, 0), l, font=body_f)[3] for l in body]
+        body_total   = sum(body_heights) + (len(body) - 1) * 10
+
+        # Card height: top-pad + max(circle, title) + gap + body + bottom-pad
+        row_h  = max(circ_sz, title_h)
+        card_h = inner + row_h + gap + body_total + inner + 10
         rrect(d, x1, y, x2, y + card_h, 20, fill=bg, outline=tc, width=3)
+
         cy = y + inner
-        circ_r = 34
-        d.ellipse([x1 + inner, cy, x1 + inner + circ_r * 2, cy + circ_r * 2], fill=tc)
+
+        # Circle with number — vertically centred in row
+        circ_y = cy + (row_h - circ_sz) // 2
+        d.ellipse([x1 + inner, circ_y,
+                   x1 + inner + circ_sz, circ_y + circ_sz], fill=tc)
         cx_circ = x1 + inner + circ_r
-        bn = d.textbbox((0, 0), num, font=F(42, bold=True))
-        d.text((cx_circ - (bn[2] - bn[0]) // 2, cy + 4 - bn[1]), num,
-               font=F(42, bold=True), fill=WHITE)
-        tx = x1 + inner + circ_r * 2 + 20
-        ltext(d, title, tx, cy + 4, F(38, bold=True), tc)
-        cy += circ_r * 2 + 14
-        for line in body:
-            ltext(d, line, x1 + inner + 10, cy, F(31), tc)
-            cy += d.textbbox((0, 0), line, font=F(31))[3] + 8
+        bn = d.textbbox((0, 0), num, font=F(44, bold=True))
+        nw, nh = bn[2] - bn[0], bn[3] - bn[1]
+        d.text((cx_circ - nw // 2, circ_y + (circ_sz - nh) // 2 - bn[1]),
+               num, font=F(44, bold=True), fill=WHITE)
+
+        # Title — right of circle, vertically centred in row
+        tx = x1 + inner + circ_sz + 20
+        title_y = cy + (row_h - title_h) // 2
+        ltext(d, title, tx, title_y, title_f, tc)
+
+        # Body lines — below the circle+title row
+        by = cy + row_h + gap
+        for i, line in enumerate(body):
+            ltext(d, line, x1 + inner + 10, by, body_f, tc)
+            by += body_heights[i] + 10
+
         return y + card_h + 18
 
     for num, title, body, bg, tc in steps:
-        y = step_card(d, y, num, title, body, bg, tc, card_h=175)
+        y = step_card(d, y, num, title, body, bg, tc)
 
     # Who can participate box
     rrect(d, PAD, y, W - PAD, y + 100, 20, fill=(30, 20, 70), outline=VIOLET, width=2)
