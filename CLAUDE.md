@@ -59,6 +59,7 @@
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
 | 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `mail.template` + Stories PNG | — notice_key=glenda_calibracion_v1; WA-number form at /glenda-calibracion/<token>; mismatch → HR alert; 4 Instagram stories; mail.template id=86 (testing) |
+| 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | — `sync_bcv_to_odoo.py` every 30 min; queries BCV MySQL → `ir.config_parameter` ai_agent.bcv_rate_context; Glenda answers tasa BCV + USD↔VEB conversions |
 
 ---
 
@@ -147,7 +148,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.31.2 | 2026-05-09 |
+| ueipab_ai_agent | 17.0.1.31.3 | 2026-05-10 |
 | ueipab_attendance_report | 17.0.1.5.2 | 2026-05-10 |
 
 ### Production Environment
@@ -161,7 +162,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.0.0 | **Deployed 2026-05-10** — Glenda dependency |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.31.2 | **Deployed 2026-05-10** — Glenda AI WhatsApp agent LIVE (dry_run=False, active_db=DB_UEIPAB) |
+| ueipab_ai_agent | 17.0.1.31.3 | **Deployed 2026-05-10** — Glenda LIVE (dry_run=False, active_db=DB_UEIPAB) + BCV rate context (ai_agent.bcv_rate_context) |
 
 ---
 
@@ -198,6 +199,17 @@
 - **Future campaigns:** change `notice_key` only — add key to `_WA_FORM_KEYS` in controller if WA capture needed
 - **Infrastructure:** `/notice-ack/` + `/glenda-calibracion/` added to nginx Odoo proxy; `dbfilter=^DB_UEIPAB$` on prod; `web.base.url=https://odoo.ueipab.edu.ve`
 - **Glenda calibration notice_key:** `glenda_calibracion_v1` | Testing mail.template id=86 | Production mail.template id=TBD
+
+### Glenda BCV Rate Context
+
+- **Param:** `ai_agent.bcv_rate_context` (JSON) — set by `scripts/sync_bcv_to_odoo.py` every 30 min via `/etc/cron.d/sync_bcv_odoo`
+- **Source:** BCV MySQL `exchange_rates_bcv.bcv_rates` (host `127.0.0.1`, user `bcv_script`) — same DB used by `/var/www/dev/bcv/` Flask app (gunicorn on `:5001`)
+- **JSON shape:** `{"current": {"rate": 499.86, "date": "YYYY-MM-DD", "updated_at": "YYYY-MM-DD HH:MM"}, "history": [{"date": ..., "rate": ..., "min_rate": ..., "max_rate": ...}, ...]}`
+- **History:** last 30 days of daily rates (AVG/MIN/MAX per day)
+- **Skill:** `general_inquiry.get_context()` reads param → passes `bcv` key in context dict → `_build_bcv_block()` formats it into the system prompt between `_INSTITUTIONAL_KNOWLEDGE` and `CONTEXTO`
+- **Why host-side sync:** Odoo Docker container cannot reach host `127.0.0.1:5001` (Flask) or `127.0.0.1:3306` (MySQL); XML-RPC push from host is the established pattern
+- **Glenda can answer:** ¿Cuál es la tasa BCV hoy? / ¿Cuánto son $X en bolívares? / ¿Cuál era la tasa el [fecha en historial]? — if date not in history, directs to `bcv.gob.ve`
+- **Fallback:** if param missing/empty, `_build_bcv_block()` returns a "no disponible, consulta bcv.gob.ve" message — Glenda degrades gracefully
 
 ### mail.template body_html — multilingual JSONB (critical pattern)
 

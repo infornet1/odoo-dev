@@ -4,6 +4,58 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-10 — Glenda BCV Rate Context (ueipab_ai_agent v17.0.1.31.3)
+
+**Type:** Feature | **Environments:** Testing + Production
+
+### Summary
+
+Glenda (`general_inquiry` skill) can now answer BCV exchange rate questions and USD↔VEB conversion requests in real time, using a 30-minute synced rate context injected directly into her system prompt.
+
+### Architecture
+
+```
+BCV MySQL (exchange_rates_bcv.bcv_rates, host localhost)
+    ↓  scripts/sync_bcv_to_odoo.py  (cron every 30 min)
+ir.config_parameter  ai_agent.bcv_rate_context  (JSON)
+    ↓  general_inquiry.get_context()  (read at conversation load)
+Claude system prompt  →  Glenda response
+```
+
+No runtime DB or HTTP calls from within the Odoo Docker container — the host-side cron pre-populates the param. Zero latency added to conversation processing.
+
+### Files
+
+| File | Change |
+|------|--------|
+| `scripts/sync_bcv_to_odoo.py` | New — queries BCV MySQL, pushes JSON to both Odoo envs via XML-RPC |
+| `/etc/cron.d/sync_bcv_odoo` | New — runs sync every 30 min, sources `/root/.odoo_agent_env_prod` |
+| `addons/ueipab_ai_agent/skills/general_inquiry.py` | `_get_bcv_context()` reads ICP param; `_build_bcv_block()` formats prompt block; `get_context()` adds `bcv` key; `get_system_prompt()` injects block |
+| `addons/ueipab_ai_agent/__manifest__.py` | Bumped to 17.0.1.31.3 |
+
+### JSON param shape
+
+```json
+{
+  "current": {"rate": 499.8608, "date": "2026-05-08", "updated_at": "2026-05-10 03:00"},
+  "history": [
+    {"date": "2026-05-08", "rate": 499.8608, "min_rate": 499.8608, "max_rate": 499.8608},
+    ...
+  ]
+}
+```
+History: last 30 days, one entry per day (AVG/MIN/MAX). Updated every 30 min.
+
+### Glenda capabilities added
+
+- ¿Cuál es la tasa BCV hoy? → exact rate with effective date
+- ¿Cuánto son $197.38 en bolívares? → inline multiplication
+- ¿Cuál era la tasa el [fecha]? → looks up history (last 30 days); outside range → directs to `bcv.gob.ve`
+- Quotes mensualidades/aranceles in VEB at today's rate on request
+- Graceful fallback if param missing: "no disponible, consulta bcv.gob.ve"
+
+---
+
 ## 2026-05-10 — Glenda Calibration Programme + Instagram Stories (ueipab_attendance_report v17.0.1.5.2)
 
 **Type:** Feature | **Environments:** Testing → Production
