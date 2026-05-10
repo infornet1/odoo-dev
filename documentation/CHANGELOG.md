@@ -4,6 +4,39 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-10 — Glenda Daily Executive Digest + Invoice Balance Query (ueipab_ai_agent v17.0.1.31.4)
+
+**Type:** Feature | **Environments:** Testing + Production
+
+### Invoice Balance Query — ACTION:QUERY_BALANCE
+
+Glenda can now retrieve and send customers their outstanding invoice balance directly via WhatsApp.
+
+**How it works:**
+- If customer is identified by phone → balance pre-loaded in `get_context()` from `account.move` ORM query; Claude answers immediately and appends `ACTION:QUERY_BALANCE:FOUND`
+- If customer unknown → Claude asks for cédula, customer provides it → Claude appends `ACTION:QUERY_BALANCE:V-XXXXXXXX`
+- Handler: `_handle_balance_action()` → `_query_partner_balance()` → posted invoices with outstanding balance → `_format_balance_message()` with BCV VEB conversion
+- Breakdown sent as separate WA message (logged in `ai.agent.message`)
+- Security: only shows balance for identified partner
+
+**Files changed:** `general_inquiry.py` (3 new methods + `get_context()` + `get_system_prompt()` + `process_ai_response()`), `ai_agent_conversation.py` (`balance_message` key handling)
+
+### Daily Executive Digest — glenda_daily_digest.py
+
+HTML email sent to `gustavo.perdomo@ueipab.edu.ve` daily at 07:00 VET with previous day's activity summary.
+
+**5 sections:**
+1. **KPI cards** — total/resolved/escalated/timeout/active conversations + resolution rate + WA sent/recv + Claude tokens + cost estimate
+2. **By-skill table** — per-skill breakdown with avg turns and top topics
+3. **Topic frequency** — 12-category keyword detection (inscripciones, saldo/deuda, PDVSA, BCV, etc.) from resolution summaries and escalation reasons — horizontal bar chart
+4. **Escalations / unresolved** — table of what Glenda couldn't handle (input for future enhancement roadmap)
+5. **Suspicious activity alerts** — same phone >3 convs/day (bot candidate), avg tokens/turn >600 (prompt injection probe), night activity 01:00-05:00 VET, conversations >18 turns
+
+**Cron:** `/etc/cron.d/glenda_daily_digest` — `0 11 * * *` UTC (07:00 VET), sources `/root/.odoo_agent_env_prod`
+**Manual run:** `python3 scripts/glenda_daily_digest.py --env production [--date YYYY-MM-DD] [--dry-run]`
+
+---
+
 ## 2026-05-10 — Glenda BCV Rate Context (ueipab_ai_agent v17.0.1.31.3)
 
 **Type:** Feature | **Environments:** Testing + Production

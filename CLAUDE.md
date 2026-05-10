@@ -60,6 +60,8 @@
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
 | 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `mail.template` + Stories PNG | — notice_key=glenda_calibracion_v1; WA-number form at /glenda-calibracion/<token>; mismatch → HR alert; 4 Instagram stories; mail.template id=86 (testing) |
 | 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | — `sync_bcv_to_odoo.py` every 30 min; queries BCV MySQL → `ir.config_parameter` ai_agent.bcv_rate_context; Glenda answers tasa BCV + USD↔VEB conversions |
+| 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
+| 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
 
 ---
 
@@ -148,7 +150,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.31.3 | 2026-05-10 |
+| ueipab_ai_agent | 17.0.1.31.4 | 2026-05-10 |
 | ueipab_attendance_report | 17.0.1.5.2 | 2026-05-10 |
 
 ### Production Environment
@@ -162,7 +164,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.0.0 | **Deployed 2026-05-10** — Glenda dependency |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.31.3 | **Deployed 2026-05-10** — Glenda LIVE (dry_run=False, active_db=DB_UEIPAB) + BCV rate context (ai_agent.bcv_rate_context) |
+| ueipab_ai_agent | 17.0.1.31.4 | **Deployed 2026-05-10** — Glenda LIVE + BCV rate context + ACTION:QUERY_BALANCE invoice breakdown + daily digest script |
 
 ---
 
@@ -210,6 +212,31 @@
 - **Why host-side sync:** Odoo Docker container cannot reach host `127.0.0.1:5001` (Flask) or `127.0.0.1:3306` (MySQL); XML-RPC push from host is the established pattern
 - **Glenda can answer:** ¿Cuál es la tasa BCV hoy? / ¿Cuánto son $X en bolívares? / ¿Cuál era la tasa el [fecha en historial]? — if date not in history, directs to `bcv.gob.ve`
 - **Fallback:** if param missing/empty, `_build_bcv_block()` returns a "no disponible, consulta bcv.gob.ve" message — Glenda degrades gracefully
+
+### Glenda Invoice Balance Query (ACTION:QUERY_BALANCE)
+
+- **Trigger:** Claude appends `ACTION:QUERY_BALANCE:FOUND` (partner identified by phone) or `ACTION:QUERY_BALANCE:V-XXXXXXXX` (cédula provided by customer) to its response
+- **Handler:** `general_inquiry._handle_balance_action()` → resolves partner → `_query_partner_balance()` → `account.move` ORM query (posted out_invoices, payment_state in not_paid/partial, amount_residual_signed > 0, partner + children)
+- **Output:** `_format_balance_message()` — WA-friendly breakdown with per-invoice bullets (ref, date, residual, description from line_ids, partial flag) + BCV VEB conversion
+- **Delivery:** `ai_agent_conversation.action_process_reply()` checks `action.get('balance_message')` → sends as separate WA message + logs in `ai.agent.message`
+- **Context pre-load:** when partner found by phone, `get_context()` runs `_query_partner_balance()` immediately — total + count injected into system prompt so Claude can answer without waiting for ACTION resolution
+- **Security:** only shows balance for the identified partner — never for a different contact
+- **Fallback:** cédula not found → "no encontré cuenta con esa cédula" message to customer
+
+### Glenda Daily Executive Digest (glenda_daily_digest.py)
+
+- **Script:** `scripts/glenda_daily_digest.py` | **Cron:** `/etc/cron.d/glenda_daily_digest` — daily 07:00 VET (`0 11 * * *` UTC), sources `/root/.odoo_agent_env_prod`
+- **Target:** `gustavo.perdomo@ueipab.edu.ve` | **From:** `recursoshumanos@ueipab.edu.ve`
+- **Data window:** previous calendar day, UTC-adjusted (VET = UTC-4: 04:00 UTC start)
+- **Queries:** `ai.agent.conversation` (created OR last_message in window) + `ai.agent.message` (for token counts) via XML-RPC
+- **5 sections:**
+  1. KPI cards — total, resolved, escalated, timeout, active, resolution rate + WA counts + Claude cost
+  2. By-skill table — total/resolved/escalated/timeout/avg turns/top topics per skill
+  3. Topic frequency — 12-category keyword detection from `resolution_summary` + `escalation_reason`
+  4. Escalations/unresolved — table for future enhancement input (what Glenda couldn't handle)
+  5. Suspicious activity — same phone >3 convs, avg tokens/turn >600 (injection probe), 01:00-05:00 VET activity, turns >18
+- **Manual run:** `python3 scripts/glenda_daily_digest.py --env production [--date YYYY-MM-DD] [--dry-run]`
+- **Email delivery:** creates `mail.mail` as `state=outgoing`, Odoo scheduler sends within minutes
 
 ### mail.template body_html — multilingual JSONB (critical pattern)
 
