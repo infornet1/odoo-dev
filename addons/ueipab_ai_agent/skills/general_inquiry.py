@@ -162,6 +162,18 @@ class GeneralInquirySkill:
             'institution': icp.get_param('ai_agent.institution_display_name', 'Instituto Privado Andrés Bello'),
         }
 
+    def _get_bcv_context(self, conversation):
+        """Read BCV rate context from ir.config_parameter (populated by sync_bcv_to_odoo.py)."""
+        import json as _json
+        icp = conversation.env['ir.config_parameter'].sudo()
+        raw = icp.get_param('ai_agent.bcv_rate_context', '')
+        if not raw:
+            return None
+        try:
+            return _json.loads(raw)
+        except Exception:
+            return None
+
     def get_context(self, conversation):
         cfg = self._get_agent_config(conversation)
         partner = conversation.partner_id
@@ -171,14 +183,62 @@ class GeneralInquirySkill:
         return {
             'partner_name': partner.name if partner_found else '',
             'partner_found_in_odoo': partner_found,
+            'bcv': self._get_bcv_context(conversation),
             **cfg,
         }
+
+    @staticmethod
+    def _build_bcv_block(bcv):
+        """Format BCV rate data into a system-prompt block."""
+        if not bcv:
+            return (
+                "TASA BCV:\n"
+                "- Información de tasa BCV no disponible en este momento. "
+                "Si alguien pregunta por la tasa, indícales que consulten bcv.gob.ve "
+                "o escriban a pagos@ueipab.edu.ve.\n"
+            )
+
+        current = bcv.get('current', {})
+        rate    = current.get('rate', 0)
+        eff_date = current.get('date', '')
+        updated  = current.get('updated_at', '')
+
+        # Format date as DD/MM/YYYY for Venezuelan audience
+        def fmt_date(d):
+            if not d:
+                return d
+            try:
+                from datetime import datetime
+                return datetime.strptime(d, '%Y-%m-%d').strftime('%d/%m/%Y')
+            except Exception:
+                return d
+
+        history = bcv.get('history', [])
+        history_lines = '\n'.join(
+            f"  {fmt_date(h['date'])}: Bs. {h['rate']:,.4f}"
+            for h in history[:10]  # last 10 days inline
+        )
+
+        return (
+            "TASA BCV (Banco Central de Venezuela — USD/VEB):\n"
+            f"- Tasa actual: *Bs. {rate:,.4f}* por 1 USD "
+            f"(efectiva {fmt_date(eff_date)}, actualizada {updated})\n"
+            f"- Para convertir: multiplica el monto en USD × {rate:,.4f}\n"
+            f"  Ejemplo: $197,38 × {rate:,.4f} = Bs. {197.38 * rate:,.2f}\n"
+            f"- Historial reciente (últimos {len(history)} días disponibles):\n"
+            + history_lines + "\n"
+            "- Si alguien pide una fecha fuera del historial, indica que solo tienes "
+            f"los últimos {len(history)} días y sugiere bcv.gob.ve.\n"
+            "- Cuando cotices mensualidades o aranceles en bolívares, usa siempre "
+            "esta tasa y aclara la fecha de referencia.\n"
+        )
 
     def get_system_prompt(self, conversation, context):
         agent_name = context.get('agent_name', 'Glenda')
         institution = context.get('institution', 'Instituto Privado Andrés Bello')
         partner_name = context.get('partner_name', '')
         partner_found = context.get('partner_found_in_odoo', False)
+        bcv = context.get('bcv')
 
         contact_ctx = (
             f"- Este contacto está registrado en el sistema como: {partner_name}. Puedes dirigirte a él/ella por su nombre.\n"
@@ -193,6 +253,7 @@ class GeneralInquirySkill:
         return (
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
             + _INSTITUTIONAL_KNOWLEDGE
+            + self._build_bcv_block(bcv) + "\n"
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx
