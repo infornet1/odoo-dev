@@ -52,12 +52,13 @@
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 | 35 | Payslip Ack Reminder via Glenda (WA) | Production | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
-| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.5.0: holidays + special schedule + self-service correction + resend buttons + **Notice ACK system** |
+| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.5.2: holidays + special schedule + self-service correction + resend buttons + **Notice ACK system** + **Glenda calibration WA-ACK** |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
 | 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
+| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `mail.template` + Stories PNG | — notice_key=glenda_calibracion_v1; WA-number form at /glenda-calibracion/<token>; mismatch → HR alert; 4 Instagram stories; mail.template id=86 (testing) |
 
 ---
 
@@ -147,7 +148,7 @@
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.31.2 | 2026-05-09 |
-| ueipab_attendance_report | 17.0.1.5.0 | 2026-05-08 |
+| ueipab_attendance_report | 17.0.1.5.2 | 2026-05-10 |
 
 ### Production Environment
 
@@ -156,7 +157,7 @@
 | ueipab_payroll_enhancements | 17.0.1.67.6 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report fixes + bank account column + 4 employee date columns in disbursement report) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.5.0 | **Deployed 2026-05-08** — hr.notice.acknowledgment + /notice-ack controller + email ACK button |
+| ueipab_attendance_report | 17.0.1.5.2 | **Deployed 2026-05-10** — Glenda calibration WA-ACK: wa_number field, /glenda-calibracion/<token> route, WA mismatch HR alert, notice_key=glenda_calibracion_v1 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.0.0 | **Deployed 2026-05-10** — Glenda dependency |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
@@ -185,16 +186,18 @@
 
 ### Notice Acknowledgment System (hr.notice.acknowledgment)
 
-- **Module:** `ueipab_attendance_report` v17.0.1.5.0 | **Testing id=84**, **Production id=58**
-- **Model:** `hr.notice.acknowledgment` — one record per employee per `notice_key`
+- **Module:** `ueipab_attendance_report` v17.0.1.5.2 | **Testing attendance_guide id=84**, **Production id=58**
+- **Model:** `hr.notice.acknowledgment` — one record per employee per `notice_key`; fields: `notice_key`, `notice_label`, `employee_id`, `token`, `state`, `sent_date`, `ack_date`, `ack_ip`, `wa_number`
 - **Token:** UUID auto-generated on `create()`, used in public URL
-- **Public route:** `/notice-ack/<token>` — `auth='public'`, sets `state=acknowledged`, `ack_date`, `ack_ip`
-- **Email template model:** `hr.notice.acknowledgment` (not `hr.employee`) — `object.employee_id.name` for name, `object._get_ack_url()` for button URL
+- **Public route:** `/notice-ack/<token>` — `auth='public'`; for generic keys: one-click ACK; for `_WA_FORM_KEYS` (e.g. `glenda_calibracion_v1`): shows WA-number form first
+- **Glenda calibration flow:** GET `/notice-ack/<token>` → WA form (pre-filled from `employee.mobile_phone`) → POST `/glenda-calibracion/<token>` → saves `wa_number`, updates `employee.mobile_phone` if empty; if number differs from Odoo record → auto-update + HR alert email
+- **WA mismatch alert:** sent to `recursoshumanos@ueipab.edu.ve` with old/new number, employee name, timestamp
+- **Email template model:** `hr.notice.acknowledgment` — `object.employee_id.name`, `object._get_ack_url()` for button; CC `recursoshumanos@ueipab.edu.ve` on every send
 - **ACK button in body:** `<a t-att-href="object._get_ack_url()">` — stored via SQL to bypass ORM sanitizer
-- **Send flow:** create ack record → `send_mail(ack.id, force_send=True)` → email goes to `object.employee_id.work_email`, CC `recursoshumanos@ueipab.edu.ve`
-- **Menu:** Payroll → Reports → Notice Acknowledgments
-- **Future campaigns:** just change `notice_key` (e.g. `reglamento_v1`) — no new code needed
-- **Infrastructure:** `/notice-ack/` added to nginx Odoo proxy regex; `dbfilter=^testing$` so Odoo auto-selects DB for cookieless public requests; `web.base.url=https://dev.ueipab.edu.ve`
+- **Menu:** Payroll → Reports → Notice Acknowledgments (WA Calibración column shows confirmed number)
+- **Future campaigns:** change `notice_key` only — add key to `_WA_FORM_KEYS` in controller if WA capture needed
+- **Infrastructure:** `/notice-ack/` + `/glenda-calibracion/` added to nginx Odoo proxy; `dbfilter=^DB_UEIPAB$` on prod; `web.base.url=https://odoo.ueipab.edu.ve`
+- **Glenda calibration notice_key:** `glenda_calibracion_v1` | Testing mail.template id=86 | Production mail.template id=TBD
 
 ### mail.template body_html — multilingual JSONB (critical pattern)
 

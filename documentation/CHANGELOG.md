@@ -4,6 +4,55 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-10 — Glenda Calibration Programme + Instagram Stories (ueipab_attendance_report v17.0.1.5.2)
+
+**Type:** Feature | **Environments:** Testing → Production
+
+### Summary
+
+Staff introduction campaign for Glenda AI Agent: 4 Instagram story slides + email template with per-employee WA-number ACK tracking for calibration programme bonus calculation.
+
+### Instagram Stories (`scripts/create_glenda_stories.py`)
+
+| Slide | Content |
+|-------|---------|
+| S1 | Bienvenida — flyer composite + WA badge + 6 capability teaser cards (2-col grid) + Claude AI credit |
+| S2 | 5 capability cards (24/7, billing, payslip ACK, HR data, bounce resolution) |
+| S3 | Calibration programme — 3 steps + who can participate + bono teaser |
+| S4 | Bonus formula (Salario Base ÷ 21.75 per documented weekly session) + CTA |
+
+Output: `/home/ftpuser/odoo-dev/glenda_story_s[1-4].png`
+
+### ueipab_attendance_report v17.0.1.5.1 → v17.0.1.5.2
+
+**Model `hr.notice.acknowledgment`:**
+- New field `wa_number` (Char) — WhatsApp number confirmed by employee for Glenda calibration
+
+**Controller `notice_ack.py`:**
+- `_WA_FORM_KEYS` set: notice keys that trigger the 2-step WA form instead of one-click ACK
+- GET `/notice-ack/<token>` for `glenda_calibracion_v1` → shows WA confirmation form pre-filled from `employee.mobile_phone`
+- POST `/glenda-calibracion/<token>` → validates WA number (VE format normalisation), saves `wa_number` on ACK record, updates `employee.mobile_phone` if empty
+- **Mismatch detection:** if submitted WA ≠ existing `mobile_phone` → auto-update employee + send HR alert email (old/new number, employee name, timestamp) to `recursoshumanos@ueipab.edu.ve`
+- Success page shows amber notice when number was auto-updated
+
+**Views:** `wa_number` column added to ACK list + form views
+
+### Email template (mail.template id=86, testing)
+
+- **Model:** `hr.notice.acknowledgment` (renders per-employee token)
+- **Subject:** ¡Bienvenida Glenda! — Confirma tu participación en el Programa de Calibración
+- **CC:** `recursoshumanos@ueipab.edu.ve` on every send
+- **Body:** intro + 2nd paragraph (ciclo escolar 2026-2027 / ajuste mensualidad / competitividad salarial) + capabilities grid + 3-step programme + bonus formula + per-employee ACK button → `/notice-ack/<token>`
+- Body stored via SQL (both `en_US` + `es_VE` JSONB keys)
+
+### Production deployment
+
+- 47 staff emails sent to `@ueipab.edu.ve` addresses (44 employees + gustavo.perdomo + alberto.perdomo + yelitza.chirinos as direct recipients); CC: recursoshumanos@ueipab.edu.ve
+- `hr.notice.acknowledgment` records created for each employee (`notice_key=glenda_calibracion_v1`)
+- HR tracks registrations at: Nómina → Reports → Notice Acknowledgments → filter `glenda_calibracion_v1`
+
+---
+
 ## 2026-05-10 — Glenda AI Agent production deployment (GAP 0 → Phase D)
 
 **Type:** Production Deployment | **Modules:** `ueipab_hr_employee` + `ueipab_bounce_log` + `ueipab_ai_agent` v17.0.1.31.2
