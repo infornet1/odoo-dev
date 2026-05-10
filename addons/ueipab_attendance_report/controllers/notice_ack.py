@@ -75,18 +75,26 @@ class NoticeAckController(http.Controller):
         elif wa_clean.startswith('04') and len(wa_clean) > 7:
             wa_clean = '+58' + wa_clean[1:]
 
-        ip = self._client_ip()
+        ip  = self._client_ip()
+        emp = ack.employee_id
+        old_mobile = (emp.mobile_phone or '').strip()
+
         ack.write({
             'state':     'acknowledged',
             'ack_date':  datetime.datetime.now(),
             'ack_ip':    ip,
             'wa_number': wa_clean,
         })
-        # Also write to employee mobile_phone if empty
-        if not ack.employee_id.mobile_phone:
-            ack.employee_id.write({'mobile_phone': wa_clean})
 
-        return self._respond(self._page_glenda_success(ack, wa_clean))
+        # Compare with existing mobile — update and notify HR if different
+        number_changed = old_mobile and old_mobile != wa_clean
+        if not old_mobile or number_changed:
+            emp.write({'mobile_phone': wa_clean})
+
+        if number_changed:
+            self._notify_hr_number_change(emp, old_mobile, wa_clean)
+
+        return self._respond(self._page_glenda_success(ack, wa_clean, number_changed))
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -204,11 +212,96 @@ class NoticeAckController(http.Controller):
 """
         )
 
+    # ── HR notification on WA number mismatch ────────────────────────────────
+
+    def _notify_hr_number_change(self, emp, old_number, new_number):
+        """Send an alert to recursoshumanos when an employee's WA number differs
+        from what Odoo had on file and has been updated automatically."""
+        dt = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+        body = f"""
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
+  <div style="background:#1a2c5b;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;font-size:18px;">📱 Actualización de número WA — Glenda Calibración</h2>
+    <p style="margin:6px 0 0;font-size:13px;opacity:0.8;">Notificación automática del sistema</p>
+  </div>
+  <div style="background:#fff;border:1px solid #dde;padding:24px;border-radius:0 0 8px 8px;">
+    <p style="font-size:14px;color:#333;margin:0 0 16px;">
+      El empleado <strong>{emp.name}</strong> confirmó su número de WhatsApp
+      para el Programa de Calibración de Glenda. El número ingresado
+      <strong>no coincide</strong> con el registrado en Odoo —
+      se actualizó automáticamente.
+    </p>
+    <table cellpadding="0" cellspacing="0"
+           style="width:100%;background:#f5f7ff;border-radius:8px;
+                  border:1px solid #c8d0e8;">
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #dde;">
+          <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">
+            EMPLEADO
+          </span>
+          <strong style="font-size:15px;color:#1a2c5b;">{emp.name}</strong>
+          &nbsp;·&nbsp;
+          <span style="font-size:13px;color:#555;">{emp.work_email or ''}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #dde;">
+          <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">
+            NÚMERO ANTERIOR (Odoo)
+          </span>
+          <span style="font-size:15px;color:#c62828;
+                       text-decoration:line-through;">{old_number}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #dde;">
+          <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">
+            NÚMERO NUEVO (confirmado por empleado)
+          </span>
+          <strong style="font-size:15px;color:#155724;">{new_number}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;">
+          <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">
+            FECHA DE CONFIRMACIÓN
+          </span>
+          <span style="font-size:13px;color:#333;">{dt}</span>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:12px;color:#888;margin:16px 0 0;">
+      El campo <em>Teléfono móvil</em> del empleado en Odoo fue actualizado
+      automáticamente al nuevo número. Si hay algún error, corríjalo directamente
+      en el perfil del empleado.
+    </p>
+  </div>
+</div>"""
+        try:
+            request.env['mail.mail'].sudo().create({
+                'subject':    f'[Glenda Calibración] WA actualizado — {emp.name}',
+                'email_from': 'Sistema UEIPAB <recursoshumanos@ueipab.edu.ve>',
+                'email_to':   'recursoshumanos@ueipab.edu.ve',
+                'body_html':  body,
+                'state':      'outgoing',
+            }).send()
+        except Exception:
+            pass  # Notification is best-effort; don't break the ACK flow
+
     # ── Glenda success page ───────────────────────────────────────────────────
 
-    def _page_glenda_success(self, ack, wa_number):
+    def _page_glenda_success(self, ack, wa_number, number_changed=False):
         emp = ack.employee_id.name
         dt  = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        update_note = ''
+        if number_changed:
+            update_note = """
+<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
+            padding:12px 16px;font-size:12px;color:#795548;margin-bottom:14px;">
+  ⚠️&nbsp; <strong>Número actualizado:</strong> el número ingresado difiere del
+  registrado en Odoo — tu perfil fue actualizado automáticamente y se notificó
+  a Recursos Humanos.
+</div>"""
         return self._base_page(
             'Registro confirmado',
             f"""
@@ -220,18 +313,13 @@ class NoticeAckController(http.Controller):
   </p>
 </div>
 <div style="background:#d4edda;border:1px solid #c3e6cb;border-radius:8px;
-            padding:18px;font-size:13px;color:#155724;margin-bottom:18px;
+            padding:18px;font-size:13px;color:#155724;margin-bottom:14px;
             line-height:1.8;">
-  <p style="margin:0 0 6px;">
-    ✅ &nbsp;<strong>Participación confirmada</strong>
-  </p>
-  <p style="margin:0 0 6px;">
-    📱 &nbsp;<strong>WA registrado:</strong> {wa_number}
-  </p>
-  <p style="margin:0 0 6px;">
-    🕐 &nbsp;<strong>Fecha:</strong> {dt}
-  </p>
+  <p style="margin:0 0 6px;">✅ &nbsp;<strong>Participación confirmada</strong></p>
+  <p style="margin:0 0 6px;">📱 &nbsp;<strong>WA registrado:</strong> {wa_number}</p>
+  <p style="margin:0;">🕐 &nbsp;<strong>Fecha:</strong> {dt}</p>
 </div>
+{update_note}
 <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;
             padding:14px 18px;font-size:13px;color:#795548;margin-bottom:16px;">
   <strong>¿Qué sigue?</strong><br/>
