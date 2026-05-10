@@ -1,8 +1,13 @@
 import datetime
+import logging
 import re
+
+import requests as _requests
 
 from odoo import fields, http
 from odoo.http import request
+
+_logger = logging.getLogger(__name__)
 
 _WA_RE = re.compile(r'^\+?[0-9\s\-]{7,20}$')
 
@@ -94,6 +99,9 @@ class NoticeAckController(http.Controller):
         if number_changed:
             self._notify_hr_number_change(emp, old_mobile, wa_clean)
 
+        # Send WA welcome message to the confirmed number
+        self._send_glenda_wa_welcome(wa_clean, emp.name)
+
         return self._respond(self._page_glenda_success(ack, wa_clean, number_changed))
 
     # ── Helpers ───────────────────────────────────────────────────────────────
@@ -154,6 +162,85 @@ class NoticeAckController(http.Controller):
   </div>
 </body>
 </html>"""
+
+    # ── Glenda WA welcome message ─────────────────────────────────────────────
+
+    def _send_glenda_wa_welcome(self, wa_number, emp_name):
+        """Send a WhatsApp welcome message to the employee's confirmed number.
+
+        Uses ir.config_parameter for WA credentials so this controller does
+        not hard-depend on ueipab_ai_agent. Respects dry_run flag. Best-effort
+        — never raises so it cannot break the ACK confirmation flow.
+        """
+        try:
+            ICP = request.env['ir.config_parameter'].sudo()
+
+            dry_run = ICP.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+            secret  = ICP.get_param('ai_agent.whatsapp_api_secret', '')
+            account = ICP.get_param('ai_agent.whatsapp_account_id', '')
+            base_url = ICP.get_param(
+                'ai_agent.whatsapp_base_url',
+                'https://whatsapp.massivamovil.com/api'
+            ).rstrip('/')
+
+            if not secret or not account:
+                _logger.info(
+                    "Glenda WA welcome: WA credentials not configured — skipping"
+                )
+                return
+
+            today    = datetime.date.today()
+            end_date = today + datetime.timedelta(days=60)
+            today_s  = today.strftime('%d/%m/%Y')
+            end_s    = end_date.strftime('%d/%m/%Y')
+
+            first_name = emp_name.split()[0].capitalize()
+
+            message = (
+                f"¡Hola {first_name}! 🤖 Soy *Glenda*, la asistente virtual de "
+                f"inteligencia artificial del *Instituto Andrés Bello*.\n\n"
+                f"Tu participación en el *Programa de Calibración* ha sido confirmada. ✅\n\n"
+                f"📋 *Detalles del programa:*\n"
+                f"• Inicio: {today_s}\n"
+                f"• Vigencia: 60 días\n"
+                f"• Vencimiento: {end_s}\n\n"
+                f"Durante este período, escríbeme semanalmente por WhatsApp. "
+                f"Cada sesión documentada genera un bono equivalente a *1 día de tu salario base*.\n\n"
+                f"¡Gracias por ser parte de esta iniciativa! 🎉\n"
+                f"_Recursos Humanos — UEIPAB_"
+            )
+
+            if dry_run:
+                _logger.info(
+                    "Glenda WA welcome [DRY RUN]: would send to %s — %s",
+                    wa_number, message[:80]
+                )
+                return
+
+            resp = _requests.post(
+                f"{base_url}/send/whatsapp",
+                data={
+                    'secret':    secret,
+                    'account':   account,
+                    'recipient': wa_number,
+                    'type':      'text',
+                    'message':   message,
+                },
+                timeout=15,
+            )
+            result = resp.json()
+            if result.get('status') == 200:
+                _logger.info(
+                    "Glenda WA welcome sent to %s (msg_id=%s)",
+                    wa_number, result.get('data', {}).get('id')
+                )
+            else:
+                _logger.warning(
+                    "Glenda WA welcome: API returned status %s for %s",
+                    result.get('status'), wa_number
+                )
+        except Exception as e:
+            _logger.warning("Glenda WA welcome: failed for %s — %s", wa_number, e)
 
     # ── Glenda form page ──────────────────────────────────────────────────────
 
