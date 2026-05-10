@@ -339,18 +339,26 @@ def build_html(data, env_name):
         if data['total_convs'] else 'N/A'
     )
 
-    # ── Summary cards ─────────────────────────────────────────────────────────
+    # ── Summary cards — email-safe: explicit align on every element ───────────
     def card(value, label, color='#1a2c5b'):
         return (
-            f'<td style="padding:8px;text-align:center;">'
-            f'<div style="background:{color};border-radius:8px;padding:14px 10px;min-width:90px;">'
-            f'<div style="font-size:28px;font-weight:900;color:#fff;">{value}</div>'
-            f'<div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;">{label}</div>'
-            f'</div></td>'
+            f'<td align="center" valign="top" style="padding:6px;">'
+            f'<table cellpadding="0" cellspacing="0" width="100"'
+            f' style="background:{color};border-radius:8px;">'
+            f'<tr><td align="center" valign="middle"'
+            f' style="padding:16px 10px 6px 10px;font-size:30px;font-weight:900;'
+            f'color:#ffffff;text-align:center;line-height:1;">'
+            f'{value}</td></tr>'
+            f'<tr><td align="center" valign="middle"'
+            f' style="padding:2px 8px 14px 8px;font-size:11px;'
+            f'color:rgba(255,255,255,0.85);text-align:center;line-height:1.3;">'
+            f'{label}</td></tr>'
+            f'</table></td>'
         )
 
     cards_html = (
-        '<table cellpadding="0" cellspacing="6" style="margin:0 auto;">'
+        '<table cellpadding="0" cellspacing="0" width="100%"'
+        ' style="max-width:620px;margin:0 auto;">'
         '<tr>'
         + card(data['total_convs'],  'Conversaciones', '#1a2c5b')
         + card(data['resolved'],     'Resueltas',      '#2e7d32')
