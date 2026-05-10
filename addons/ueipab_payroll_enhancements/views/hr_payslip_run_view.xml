@@ -86,6 +86,15 @@
                         icon="fa-print"
                         help="Generate ICF-compliant disbursement list report for finance approval"/>
 
+                <!-- Calibración Glenda Bonus Button -->
+                <button name="%(ueipab_payroll_enhancements.action_calibracion_bonus_wizard)d"
+                        type="action"
+                        string="Bonos Calibración Glenda"
+                        class="btn-secondary"
+                        icon="fa-star"
+                        help="Enter Glenda calibration session counts and apply bonus inputs to draft payslips"
+                        invisible="not slip_ids"/>
+
                 <!-- Email Actions - Compact button group -->
                 <div class="btn-group" invisible="not slip_ids">
                     <button name="action_send_batch_emails"

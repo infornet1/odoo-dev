@@ -7,3 +7,4 @@ from . import ack_reminder_wizard
 from . import aguinaldos_disbursement_wizard
 from . import arc_report_wizard
 from . import payslip_batch_date_check_wizard
+from . import calibracion_bonus_wizard

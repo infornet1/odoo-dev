@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================
+         Calibración Bonus Wizard — Form View
+         ============================================================ -->
+    <record id="view_calibracion_bonus_wizard_form" model="ir.ui.view">
+        <field name="name">calibracion.bonus.wizard.form</field>
+        <field name="model">calibracion.bonus.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Bonos Calibración Glenda">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Bonos Calibración Glenda</h2>
+                    </div>
+
+                    <!-- Summary counters -->
+                    <group>
+                        <group>
+                            <field name="payslip_run_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="registered_count" string="Registered in Glenda"/>
+                            <field name="not_registered_count" string="Not Registered"/>
+                        </group>
+                    </group>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info" role="alert">
+                        <strong>Instructions:</strong>
+                        Enter the number of documented Glenda calibration sessions
+                        for each employee. Employees highlighted in green have an
+                        active Glenda registration. Enter 0 to skip an employee
+                        (no bonus will be applied). After clicking "Apply Bonuses",
+                        recompute each payslip to see the bonus line.
+                        <br/>
+                        <strong>Formula:</strong> Bonus = Sessions × (Monthly Salary / 21.75)
+                    </div>
+
+                    <!-- Employee Lines -->
+                    <field name="line_ids" nolabel="1">
+                        <tree editable="bottom"
+                              decoration-success="is_registered and sessions &gt; 0"
+                              decoration-info="is_registered and sessions == 0"
+                              decoration-muted="not is_registered">
+                            <field name="employee_id" readonly="1"/>
+                            <field name="is_registered" widget="boolean" readonly="1" string="Registered"/>
+                            <field name="wa_number" readonly="1" optional="show"/>
+                            <field name="ack_date" readonly="1" optional="show"/>
+                            <field name="sessions" string="Sessions"/>
+                            <field name="payslip_id" readonly="1" optional="hide"/>
+                            <field name="payslip_state" readonly="1" string="Payslip State"/>
+                        </tree>
+                    </field>
+                </sheet>
+
+                <!-- Footer with action buttons -->
+                <footer>
+                    <button name="action_apply_bonuses"
+                            string="Apply Bonuses"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-check"/>
+                    <button name="action_close"
+                            string="Cancel"
+                            type="object"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================
+         Window Action — opened from batch form via context button
+         ============================================================ -->
+    <record id="action_calibracion_bonus_wizard" model="ir.actions.act_window">
+        <field name="name">Bonos Calibración Glenda</field>
+        <field name="res_model">calibracion.bonus.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_calibracion_bonus_wizard_form"/>
+        <field name="target">new</field>
+        <field name="context">{'default_payslip_run_id': active_id}</field>
+    </record>
+</odoo>
