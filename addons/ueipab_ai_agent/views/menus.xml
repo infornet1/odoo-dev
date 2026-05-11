@@ -44,6 +44,23 @@
               action="action_create_collection_standalone"
               sequence="4"/>
 
+    <menuitem id="menu_ai_agent_calibration"
+              name="Programa Calibración"
+              parent="menu_ai_agent_operations"
+              sequence="5"/>
+
+    <menuitem id="menu_ai_agent_feedback"
+              name="Sugerencias"
+              parent="menu_ai_agent_calibration"
+              action="ai_agent_feedback_action"
+              sequence="0"/>
+
+    <menuitem id="menu_ai_agent_calibration_tracker"
+              name="Seguimiento de Bono"
+              parent="menu_ai_agent_calibration"
+              action="calibration_tracker_action"
+              sequence="1"/>
+
     <!-- Configuracion category -->
     <menuitem id="menu_ai_agent_config"
               name="Configuracion"

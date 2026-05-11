@@ -4,6 +4,37 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — Glenda Calibration Programme (ueipab_ai_agent v17.0.1.32.0)
+
+**Type:** Feature | **Status:** Production ✅
+
+Internal employee UX testing programme for Glenda. 20 employees enrolled (Round 1, closed).
+Guide emails sent to 19 (YUDELYS BRITO pending personal WA). Deadline: 2026-05-30.
+
+**New:** `ai.agent.feedback` model — stores improvement suggestions by category (flujo,
+respuesta, idioma, asistencia, conocimiento, tecnico, otro) with state workflow
+(pending → reviewed → implemented/rejected).
+
+**New:** Calibration mode in `general_inquiry` skill — detects enrolled testers by WA
+digits match against `glenda_calibracion_v1` ack records; adds transparent testing-mode
+system prompt; `ACTION:LOG_FEEDBACK:category|suggestion` auto-creates feedback records.
+
+**New:** Bonus tracker view — `hr.notice.acknowledgment` inherited with computed
+`calibration_conversation_count`, `calibration_feedback_count`, `bonus_eligible`
+(≥3 conversations + ≥1 suggestion).
+
+**New menus:** AI Agent → Programa Calibración → Sugerencias / Seguimiento de Bono.
+
+**WA number normalization:** All 20 enrolled employees standardized to `+58 XXX XXXXXXX`
+on both `hr.notice.acknowledgment.wa_number` and `hr.employee.mobile_phone`.
+4 employees corrected from institutional number to personal (private_info_v1 source).
+
+**Day 1 status (2026-05-11):** 13/20 already contacted Glenda, 0 suggestions logged,
+0/20 bonus-eligible. Most active: JOSEFINA RODRIGUEZ, Maria Figuera, NIDYA LIRA,
+YARITZA BRUCES (2 convs each).
+
+---
+
 ## 2026-05-11 — Representante Continuity Survey script (letter pending)
 
 **Type:** Feature scaffold | **Script only — no module change**

@@ -283,6 +283,20 @@ class GeneralInquirySkill:
         except Exception:
             return None
 
+    def _get_calibration_tester(self, conversation):
+        """Return (employee, ack) if this phone belongs to a calibration programme participant."""
+        digits = re.sub(r'\D', '', conversation.phone or '')
+        if not digits:
+            return None, None
+        acks = conversation.env['hr.notice.acknowledgment'].sudo().search([
+            ('notice_key', '=', 'glenda_calibracion_v1'),
+            ('state', '=', 'acknowledged'),
+        ])
+        for ack in acks:
+            if re.sub(r'\D', '', ack.wa_number or '') == digits:
+                return ack.employee_id, ack
+        return None, None
+
     def get_context(self, conversation):
         cfg = self._get_agent_config(conversation)
         partner = conversation.partner_id
@@ -293,12 +307,16 @@ class GeneralInquirySkill:
             self._query_partner_balance(conversation, partner)
             if partner_found else None
         )
+        calibration_employee, _ = self._get_calibration_tester(conversation)
         return {
-            'partner_name':       partner.name if partner_found else '',
-            'partner_vat':        (partner.vat or '') if partner_found else '',
-            'partner_found_in_odoo': partner_found,
-            'balance':            balance,
-            'bcv':                self._get_bcv_context(conversation),
+            'partner_name':              partner.name if partner_found else '',
+            'partner_vat':               (partner.vat or '') if partner_found else '',
+            'partner_found_in_odoo':     partner_found,
+            'balance':                   balance,
+            'bcv':                       self._get_bcv_context(conversation),
+            'is_calibration_tester':     bool(calibration_employee),
+            'calibration_employee_name': calibration_employee.name if calibration_employee else '',
+            'calibration_employee_id':   calibration_employee.id if calibration_employee else False,
             **cfg,
         }
 
@@ -394,8 +412,31 @@ class GeneralInquirySkill:
             f"  - {key}: {desc}" for key, (_, desc) in _FLYERS.items()
         )
 
+        calibration_block = ''
+        if context.get('is_calibration_tester'):
+            emp_name = context.get('calibration_employee_name', 'Empleado/a')
+            first = emp_name.split()[0].capitalize()
+            calibration_block = (
+                f"\n⚙️ MODO PRUEBA INTERNA — EMPLEADO TESTER:\n"
+                f"- Estás hablando con {first} ({emp_name}), empleado/a de {institution} "
+                f"que participa en el Programa de Calibración de Glenda.\n"
+                f"- Puedes ser completamente transparente: confirmar que eres una IA, "
+                f"reconocer limitaciones, explicar cómo funciona el sistema.\n"
+                f"- Si {first} menciona 'tengo una sugerencia', 'mejorar', 'debería poder', "
+                f"'no entendiste', 'fallo en', o similares, captura la sugerencia al final "
+                f"de tu respuesta con el marcador interno:\n"
+                f"  ACTION:LOG_FEEDBACK:categoria|texto_de_la_sugerencia\n"
+                f"  Categorías válidas: flujo, respuesta, idioma, asistencia, conocimiento, tecnico, otro\n"
+                f"  Ejemplo: ACTION:LOG_FEEDBACK:flujo|Debería poder retomar una conversación anterior sin empezar de cero\n"
+                f"- Agradece siempre la sugerencia calurosamente.\n"
+                f"- Si {first} quiere probar un escenario específico (ej: 'actúa como si fuera un representante'), "
+                f"entra en ese rol naturalmente y demuestra tus capacidades.\n"
+                f"- ACTION:LOG_FEEDBACK es un marcador interno. {first} NO lo verá.\n\n"
+            )
+
         return (
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
+            + calibration_block
             + _INSTITUTIONAL_KNOWLEDGE
             + self._build_bcv_block(bcv) + "\n"
             + balance_ctx + "\n"
@@ -562,8 +603,29 @@ class GeneralInquirySkill:
         bcv_rate = self._get_bcv_rate_from_context(conversation)
         return self._format_balance_message(balance, bcv_rate)
 
+    def _handle_log_feedback(self, conversation, ai_response, context):
+        """Create ai.agent.feedback record if ACTION:LOG_FEEDBACK marker is present."""
+        match = re.search(
+            r'ACTION:LOG_FEEDBACK:(\w+)\|(.+?)(?=\nACTION:|\Z)',
+            ai_response, re.MULTILINE | re.DOTALL
+        )
+        if not match:
+            return
+        category = match.group(1).strip().lower()
+        suggestion = match.group(2).strip()
+        try:
+            conversation.env['ai.agent.feedback'].sudo().log_from_conversation(
+                conversation, category, suggestion
+            )
+        except Exception as e:
+            _logger.error("Failed to log calibration feedback: %s", e)
+
     def process_ai_response(self, conversation, ai_response, context):
-        """Parse AI response for ACTION:SEND_FLYER, ACTION:QUERY_BALANCE and ACTION:HANDOFF markers."""
+        """Parse AI response for ACTION:SEND_FLYER, ACTION:QUERY_BALANCE, ACTION:LOG_FEEDBACK and ACTION:HANDOFF markers."""
+        # Log calibration feedback if present (before stripping markers)
+        if context.get('is_calibration_tester'):
+            self._handle_log_feedback(conversation, ai_response, context)
+
         # Check for balance query — resolve and append to visible text before other actions
         balance_msg = self._handle_balance_action(conversation, ai_response, context)
 

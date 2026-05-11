@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── ai.agent.feedback ───────────────────────────────────────────── -->
+
+    <record id="ai_agent_feedback_view_tree" model="ir.ui.view">
+        <field name="name">ai.agent.feedback.tree</field>
+        <field name="model">ai.agent.feedback</field>
+        <field name="arch" type="xml">
+            <tree string="Sugerencias de Calibración" decoration-success="state == 'implemented'"
+                  decoration-muted="state == 'rejected'" default_order="date desc">
+                <field name="date"/>
+                <field name="employee_id"/>
+                <field name="category"/>
+                <field name="suggestion"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state == 'pending'"
+                       decoration-info="state == 'reviewed'"
+                       decoration-success="state == 'implemented'"
+                       decoration-danger="state == 'rejected'"/>
+                <field name="conversation_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="ai_agent_feedback_view_form" model="ir.ui.view">
+        <field name="name">ai.agent.feedback.form</field>
+        <field name="model">ai.agent.feedback</field>
+        <field name="arch" type="xml">
+            <form string="Sugerencia de Calibración">
+                <header>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,reviewed,implemented"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="employee_id"/>
+                            <field name="wa_number"/>
+                            <field name="category"/>
+                        </group>
+                        <group>
+                            <field name="date"/>
+                            <field name="conversation_id"/>
+                        </group>
+                    </group>
+                    <field name="suggestion" placeholder="Sugerencia enviada por el empleado..."/>
+                    <field name="notes" placeholder="Notas internas del equipo de RRHH..."/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="ai_agent_feedback_action" model="ir.actions.act_window">
+        <field name="name">Sugerencias Calibración</field>
+        <field name="res_model">ai.agent.feedback</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <record id="ai_agent_feedback_view_search" model="ir.ui.view">
+        <field name="name">ai.agent.feedback.search</field>
+        <field name="model">ai.agent.feedback</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="suggestion"/>
+                <filter name="pending" string="Pendientes" domain="[('state','=','pending')]"/>
+                <filter name="implemented" string="Implementadas" domain="[('state','=','implemented')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_category" string="Categoría" context="{'group_by': 'category'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Calibration Tracker (hr.notice.acknowledgment filtered view) ── -->
+
+    <record id="calibration_tracker_view_tree" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.calibration.tree</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="arch" type="xml">
+            <tree string="Participantes Programa Calibración" create="0" delete="0"
+                  decoration-success="bonus_eligible"
+                  decoration-muted="state != 'acknowledged'">
+                <field name="employee_id"/>
+                <field name="wa_number"/>
+                <field name="ack_date"/>
+                <field name="calibration_conversation_count" string="Conversaciones"/>
+                <field name="calibration_feedback_count" string="Sugerencias"/>
+                <field name="bonus_eligible" widget="boolean_toggle" string="Bono ✓"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'acknowledged'"
+                       decoration-warning="state == 'pending'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="calibration_tracker_action" model="ir.actions.act_window">
+        <field name="name">Seguimiento de Bono — Calibración Glenda</field>
+        <field name="res_model">hr.notice.acknowledgment</field>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="calibration_tracker_view_tree"/>
+        <field name="domain">[('notice_key', '=', 'glenda_calibracion_v1')]</field>
+        <field name="context">{'default_notice_key': 'glenda_calibracion_v1'}</field>
+    </record>
+
+</odoo>

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-10 (v2)
+**Last Updated:** 2026-05-11 (v3)
 
 ## Core Instructions
 
@@ -58,7 +58,7 @@
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
-| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `mail.template` + Stories PNG | — notice_key=glenda_calibracion_v1; WA-number form at /glenda-calibracion/<token>; mismatch → HR alert; 4 Instagram stories; mail.template id=86 (testing) |
+| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `ueipab_ai_agent` | [Docs](documentation/GLENDA_CALIBRATION_PROGRAMME.md) — notice_key=glenda_calibracion_v1; 20 enrolled; guide emails sent 2026-05-11; deadline 2026-05-30; `ai.agent.feedback` model + calibration mode in general_inquiry; bonus ≥3 convs + ≥1 suggestion |
 | 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | — `sync_bcv_to_odoo.py` every 30 min; queries BCV MySQL → `ir.config_parameter` ai_agent.bcv_rate_context; Glenda answers tasa BCV + USD↔VEB conversions |
 | 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
@@ -154,7 +154,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.31.4 | 2026-05-10 |
+| ueipab_ai_agent | 17.0.1.32.0 | 2026-05-11 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
 
@@ -169,7 +169,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.31.4 | **Deployed 2026-05-10** — Glenda LIVE + BCV rate context + ACTION:QUERY_BALANCE invoice breakdown + daily digest script |
+| ueipab_ai_agent | 17.0.1.32.0 | **Deployed 2026-05-11** — Glenda Calibration Programme: `ai.agent.feedback` model, calibration mode in general_inquiry, ACTION:LOG_FEEDBACK, bonus tracker view |
 
 ---
 
