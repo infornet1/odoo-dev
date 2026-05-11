@@ -91,13 +91,21 @@ class NoticeAckController(http.Controller):
             'wa_number': wa_clean,
         })
 
-        # Compare with existing mobile — update and notify HR if different
-        number_changed = old_mobile and old_mobile != wa_clean
+        # Compare with existing mobile — update if new or different
+        number_changed = bool(old_mobile and old_mobile != wa_clean)
         if not old_mobile or number_changed:
             emp.write({'mobile_phone': wa_clean})
 
+        # Determine ACK status for HR notification
         if number_changed:
-            self._notify_hr_number_change(emp, old_mobile, wa_clean)
+            ack_status = 'updated'    # had a number, it changed
+        elif not old_mobile:
+            ack_status = 'registered' # no number on file, now saved
+        else:
+            ack_status = 'confirmed'  # number matched exactly
+
+        # Always notify HR of every ACK (unified email covers all scenarios)
+        self._notify_hr_ack_confirmed(emp, wa_clean, ack_status, old_mobile)
 
         # Send WA welcome message to the confirmed number
         self._send_glenda_wa_welcome(wa_clean, emp.name)
@@ -299,7 +307,86 @@ class NoticeAckController(http.Controller):
 """
         )
 
-    # ── HR notification on WA number mismatch ────────────────────────────────
+    # ── HR notification — ACK confirmed (always sent) ────────────────────────
+
+    def _notify_hr_ack_confirmed(self, emp, wa_number, status, old_number=''):
+        """Send a confirmation email to recursoshumanos for every calibration ACK.
+
+        status: 'registered' (no prior number), 'confirmed' (matched),
+                'updated' (mismatch — auto-updated).
+        """
+        dt = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+
+        status_cfg = {
+            'registered': ('#155724', '#d4edda', '#c3e6cb', '✅ Número registrado',
+                           'registró su número de WhatsApp por primera vez'),
+            'confirmed':  ('#1a2c5b', '#e8f0fe', '#c8d0e8', '✅ Número confirmado',
+                           'confirmó su número de WhatsApp (coincide con Odoo)'),
+            'updated':    ('#856404', '#fff3cd', '#ffeeba', '⚠️ Número actualizado',
+                           'actualizó su número de WhatsApp (era diferente al de Odoo)'),
+        }
+        color, bg, border, badge, desc = status_cfg.get(status, status_cfg['confirmed'])
+
+        old_row = ''
+        if status == 'updated' and old_number:
+            old_row = f"""
+      <tr>
+        <td style="padding:12px 18px;border-bottom:1px solid {border};">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">NÚMERO ANTERIOR (Odoo)</span>
+          <span style="font-size:14px;color:#c62828;text-decoration:line-through;">{old_number}</span>
+        </td>
+      </tr>"""
+
+        body = f"""
+<div style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;">
+  <div style="background:#1a2c5b;color:#fff;padding:18px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;font-size:17px;">📋 Programa Glenda AI — ACK Recibido</h2>
+    <p style="margin:5px 0 0;font-size:12px;opacity:0.8;">Confirmación de participación</p>
+  </div>
+  <div style="background:#fff;border:1px solid #dde;padding:20px 24px;border-radius:0 0 8px 8px;">
+    <p style="font-size:13px;color:#333;margin:0 0 14px;">
+      El empleado <strong>{emp.name}</strong> {desc}.
+    </p>
+    <span style="display:inline-block;background:{bg};color:{color};border:1px solid {border};
+                 font-size:12px;font-weight:bold;padding:4px 12px;border-radius:20px;
+                 margin-bottom:16px;">{badge}</span>
+    <table cellpadding="0" cellspacing="0"
+           style="width:100%;background:{bg};border-radius:8px;border:1px solid {border};">
+      <tr>
+        <td style="padding:12px 18px;border-bottom:1px solid {border};">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">EMPLEADO</span>
+          <strong style="font-size:14px;color:#1a2c5b;">{emp.name}</strong>
+          &nbsp;·&nbsp;
+          <span style="font-size:12px;color:#555;">{emp.work_email or ''}</span>
+        </td>
+      </tr>{old_row}
+      <tr>
+        <td style="padding:12px 18px;border-bottom:1px solid {border};">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">NÚMERO WHATSAPP CONFIRMADO</span>
+          <strong style="font-size:14px;color:{color};">{wa_number}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 18px;">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">FECHA DE CONFIRMACIÓN</span>
+          <span style="font-size:13px;color:#333;">{dt}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>"""
+        try:
+            request.env['mail.mail'].sudo().create({
+                'subject':    f'[Glenda Calibración] {badge} — {emp.name}',
+                'email_from': 'Sistema UEIPAB <recursoshumanos@ueipab.edu.ve>',
+                'email_to':   'recursoshumanos@ueipab.edu.ve',
+                'body_html':  body,
+                'state':      'outgoing',
+            }).send()
+        except Exception:
+            pass  # best-effort, never break the ACK flow
+
+    # ── HR notification on WA number mismatch (kept for backward compat) ─────
 
     def _notify_hr_number_change(self, emp, old_number, new_number):
         """Send an alert to recursoshumanos when an employee's WA number differs
