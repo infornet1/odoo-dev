@@ -349,7 +349,7 @@ for partner in partners:
 
         mail = Mail.create({
             'subject':    f'Responder encuesta continuidad — Período 2026-2027 | {partner.name}',
-            'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
+            'email_from': 'Colegio Andrés Bello <soporte@ueipab.edu.ve>',
             'reply_to':   'votacion@ueipab.edu.ve',
             'email_to':   to_addrs,
             'email_cc':   'votacion@ueipab.edu.ve',
