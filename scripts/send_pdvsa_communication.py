@@ -42,8 +42,12 @@ print("=" * 70)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+LETTER_URL = 'https://docs.google.com/document/d/1z9_Dr3qvWdytEcrDUCp7NcVoJQHq4MKiveNoV_kC2jE/edit?tab=t.0'
+
+
 def _build_email_html(partner_name, si_url, no_url):
-    """Return the full HTML email body for the PDVSA communication."""
+    """Return the HTML email body — decision-first layout, 3-bullet summary."""
+    first_name = partner_name.split()[0].capitalize() if partner_name else 'Representante'
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -51,266 +55,187 @@ def _build_email_html(partner_name, si_url, no_url):
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
 <body style="margin:0;padding:0;background-color:#f0f4fa;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0"
-         style="background-color:#f0f4fa;">
-    <tr>
-      <td align="center" style="padding:30px 10px;">
-        <table width="640" cellpadding="0" cellspacing="0" border="0"
-               style="max-width:640px;background:#ffffff;border-radius:8px;
-                      box-shadow:0 2px 12px rgba(0,0,0,0.10);">
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#f0f4fa;">
+  <tr>
+    <td align="center" style="padding:24px 10px 32px;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:10px;
+                    box-shadow:0 2px 16px rgba(0,0,0,0.11);">
 
-          <!-- HEADER -->
-          <tr>
-            <td style="background-color:#1a2c5b;padding:28px 36px 24px;
-                       border-radius:8px 8px 0 0;text-align:center;">
-              <img src="https://dev.ueipab.edu.ve/flyers/ueipab_logo.png"
-                   alt="Colegio Andr&eacute;s Bello"
-                   width="200" height="83"
-                   style="display:block;margin:0 auto 14px;max-width:200px;
-                          border:0;outline:none;"/>
-              <p style="margin:4px 0 0;font-size:12px;color:#a8bfda;">
-                El Tigre, Estado Anzo&aacute;tegui
-              </p>
-            </td>
-          </tr>
+        <!-- ── HEADER ── -->
+        <tr>
+          <td style="background-color:#1a2c5b;padding:24px 32px 20px;
+                     border-radius:10px 10px 0 0;text-align:center;">
+            <img src="https://dev.ueipab.edu.ve/flyers/ueipab_logo.png"
+                 alt="Colegio Andr&eacute;s Bello"
+                 width="190" height="79"
+                 style="display:block;margin:0 auto;border:0;outline:none;"/>
+          </td>
+        </tr>
 
-          <!-- DATE + TITLE -->
-          <tr>
-            <td style="padding:28px 36px 0;border-bottom:2px solid #1a2c5b;">
-              <p style="margin:0 0 6px;font-size:12px;color:#888;">
-                El Tigre, 08 de mayo de 2026
-              </p>
-              <h2 style="margin:0 0 20px;font-size:20px;color:#1a2c5b;
-                          letter-spacing:1px;text-transform:uppercase;">
-                Comunicado
-              </h2>
-            </td>
-          </tr>
+        <!-- ── HERO: question + greeting ── -->
+        <tr>
+          <td style="padding:28px 36px 0;text-align:center;">
+            <h1 style="margin:0 0 10px;font-size:21px;color:#1a2c5b;line-height:1.3;">
+              &iquest;Continuar&aacute; en el Colegio<br/>para el per&iacute;odo
+              <span style="white-space:nowrap;">2026&ndash;2027?</span>
+            </h1>
+            <p style="margin:0 0 6px;font-size:14px;color:#555;line-height:1.5;">
+              Estimado(a) <strong>{partner_name}</strong>, le comunicamos un cambio
+              importante en nuestra pol&iacute;tica de pagos.<br/>
+              Por favor ind&iacute;quenos su intenci&oacute;n con un clic:
+            </p>
+          </td>
+        </tr>
 
-          <!-- BODY -->
-          <tr>
-            <td style="padding:24px 36px;font-size:14px;color:#333;line-height:1.7;">
+        <!-- ── BUTTONS (above fold) ── -->
+        <tr>
+          <td style="padding:20px 36px 8px;text-align:center;">
+            <table cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 auto;">
+              <tr>
+                <td style="padding:0 6px 0 0;">
+                  <a href="{si_url}"
+                     style="display:inline-block;background-color:#1a2c5b;
+                            color:#ffffff;padding:15px 30px;border-radius:8px;
+                            font-size:15px;font-weight:bold;text-decoration:none;">
+                    &#10003;&nbsp; S&iacute;, continuar&eacute;
+                  </a>
+                </td>
+                <td style="padding:0 0 0 6px;">
+                  <a href="{no_url}"
+                     style="display:inline-block;background-color:#5d6d7e;
+                            color:#ffffff;padding:15px 30px;border-radius:8px;
+                            font-size:15px;font-weight:bold;text-decoration:none;">
+                    No continuar&eacute;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-              <p style="margin:0 0 18px;">
-                <strong>Estimado(a) representante {partner_name}:</strong>
-              </p>
-              <p style="margin:0 0 18px;">
-                Reciba un cordial saludo cargado de gratitud por la confianza depositada
-                en el Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo;. Como instituci&oacute;n,
-                siempre hemos navegado junto a ustedes los desaf&iacute;os econ&oacute;micos
-                de nuestro pa&iacute;s, priorizando la permanencia de nuestros alumnos
-                por encima de los m&aacute;rgenes financieros.
-              </p>
+        <!-- ── DEADLINE CALLOUT ── -->
+        <tr>
+          <td style="padding:16px 36px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background-color:#fff8e1;border:1px solid #ffe082;
+                           border-radius:8px;padding:13px 18px;text-align:center;">
+                  <p style="margin:0;font-size:13px;color:#5d4037;line-height:1.5;">
+                    &#128197;&nbsp;
+                    <strong>Fecha l&iacute;mite: lunes 08 de junio de 2026 &mdash; 12:30 p.m.</strong>
+                    <br/>
+                    <span style="font-size:12px;">
+                      Si no responde antes de esta fecha, el sistema asumir&aacute; que
+                      acepta las nuevas condiciones.
+                    </span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-              <!-- Section 1 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="margin:0 0 18px;">
-                <tr>
-                  <td style="border-left:3px solid #2471a3;padding:12px 16px;
-                              background:#f8faff;border-radius:0 6px 6px 0;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                      1. Cese de la Pol&iacute;tica de Descuento Discrecional (35%)
-                    </p>
-                    <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
-                      Durante los &uacute;ltimos a&ntilde;os, el colegio realiz&oacute; un esfuerzo
-                      extraordinario al otorgar un descuento discrecional del 35%
-                      (bajo una modalidad de cr&eacute;dito similar a &ldquo;Cashea&rdquo;) para
-                      apoyar a las familias del sector industria y otros convenios.
-                      Sin embargo, la realidad socioecon&oacute;mica actual y el incremento
-                      de los costos operativos nos obligan a tomar una decisi&oacute;n
-                      dif&iacute;cil pero necesaria para la continuidad del plantel.
-                      <br/><br/>
-                      <strong>Informamos que, a partir del 1&deg; de septiembre de 2026,
-                      la instituci&oacute;n no estar&aacute; en capacidad de mantener la
-                      modalidad de aporte del 35% para factura a cr&eacute;dito.</strong>
-                      Esta medida responde estrictamente a la necesidad de honrar nuestras
-                      obligaciones contractuales con nuestros trabajadores (docentes y
-                      administrativos) y proveedores.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+        <!-- ── DIVIDER ── -->
+        <tr>
+          <td style="padding:24px 36px 0;">
+            <hr style="border:none;border-top:1px solid #e0e7ef;margin:0;"/>
+          </td>
+        </tr>
 
-              <!-- Section 2 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="margin:0 0 18px;">
-                <tr>
-                  <td style="border-left:3px solid #2471a3;padding:12px 16px;
-                              background:#f8faff;border-radius:0 6px 6px 0;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                      2. Resoluci&oacute;n y Casos Especiales
-                    </p>
-                    <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
-                      Entendemos que este cambio puede generar inquietudes. Reiteramos
-                      que este beneficio fue siempre una concesi&oacute;n voluntaria y no
-                      un derecho adquirido; no obstante, estamos abiertos al di&aacute;logo.
-                      Aquellos representantes que deseen canalizar planteamientos o dudas
-                      pueden escribir a
-                      <a href="mailto:pagos@ueipab.edu.ve"
-                         style="color:#2471a3;">pagos@ueipab.edu.ve</a>.
-                      <br/><br/>
-                      La instituci&oacute;n evaluar&aacute; <strong>Casos Especiales</strong>
-                      de familias con alumnas/os que posean m&eacute;ritos excepcionales
-                      (excelente rendimiento acad&eacute;mico, atletas con medallas nacionales,
-                      m&uacute;sicos activos del Sistema de Orquestas Juveniles y/o habilidades
-                      destacadas reconocidas). Estos casos podr&aacute;n solicitar una revisi&oacute;n
-                      individual v&iacute;a correo electr&oacute;nico.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+        <!-- ── 3-BULLET SUMMARY ── -->
+        <tr>
+          <td style="padding:20px 36px 0;">
+            <p style="margin:0 0 14px;font-size:13px;color:#888;
+                      text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;">
+              Resumen del comunicado
+            </p>
+            <!-- Bullet 1 -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 10px;">
+              <tr>
+                <td width="28" valign="top"
+                    style="font-size:18px;color:#2471a3;padding-top:1px;">&#8226;</td>
+                <td style="font-size:13px;color:#333;line-height:1.6;">
+                  El descuento discrecional del <strong>35%</strong> (tipo cr&eacute;dito)
+                  finaliza el <strong>1&deg; de septiembre de 2026</strong>. Esta medida
+                  es necesaria para sostener los compromisos salariales del plantel.
+                </td>
+              </tr>
+            </table>
+            <!-- Bullet 2 -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 10px;">
+              <tr>
+                <td width="28" valign="top"
+                    style="font-size:18px;color:#2471a3;padding-top:1px;">&#8226;</td>
+                <td style="font-size:13px;color:#333;line-height:1.6;">
+                  Para 2026&ndash;2027 se proyecta un ajuste de matr&iacute;cula de
+                  <strong>20% a 34%</strong>. Los conceptos de seguro escolar,
+                  olimpiadas e ingl&eacute;s no est&aacute;n incluidos en la cuota mensual.
+                </td>
+              </tr>
+            </table>
+            <!-- Bullet 3 -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 10px;">
+              <tr>
+                <td width="28" valign="top"
+                    style="font-size:18px;color:#2471a3;padding-top:1px;">&#8226;</td>
+                <td style="font-size:13px;color:#333;line-height:1.6;">
+                  Se evaluar&aacute;n <strong>Casos Especiales</strong> para familias con
+                  alumnos de m&eacute;ritos excepcionales (acad&eacute;micos, deportivos,
+                  art&iacute;sticos). Escr&iacute;banos a
+                  <a href="mailto:votacion@ueipab.edu.ve"
+                     style="color:#2471a3;">votacion@ueipab.edu.ve</a>.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-              <!-- Section 3 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="margin:0 0 18px;">
-                <tr>
-                  <td style="border-left:3px solid #2471a3;padding:12px 16px;
-                              background:#f8faff;border-radius:0 6px 6px 0;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                      3. Fecha L&iacute;mite de Confirmaci&oacute;n
-                    </p>
-                    <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
-                      Deseamos que cada familia tome esta decisi&oacute;n con la previsi&oacute;n
-                      necesaria. Por ello, establecemos como plazo m&aacute;ximo el
-                      <strong>lunes 08 de junio de 2026 a las 12:30 p.m.</strong>
-                      para informar si desea continuar en la instituci&oacute;n.
-                      <br/><br/>
-                      De no recibir comunicaci&oacute;n, el sistema asumir&aacute;
-                      autom&aacute;ticamente que usted acepta las nuevas condiciones
-                      para el per&iacute;odo 2026-2027.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+        <!-- ── LINK TO FULL LETTER ── -->
+        <tr>
+          <td style="padding:16px 36px 0;text-align:center;">
+            <a href="{LETTER_URL}"
+               style="font-size:13px;color:#2471a3;text-decoration:underline;">
+              &#128196;&nbsp; Ver comunicado completo
+            </a>
+          </td>
+        </tr>
 
-              <!-- Section 4 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="margin:0 0 18px;">
-                <tr>
-                  <td style="border-left:3px solid #2471a3;padding:12px 16px;
-                              background:#f8faff;border-radius:0 6px 6px 0;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                      4. Proyecciones para el Per&iacute;odo 2026-2027
-                    </p>
-                    <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
-                      Para su planificaci&oacute;n familiar, informamos que se estima presentar
-                      ante el Comit&eacute; de Contralor&iacute;a un ajuste de la matr&iacute;cula base
-                      de entre un <strong>20% a 34%</strong>, calculado sobre indicadores
-                      de inflaci&oacute;n, salarios del sector privado y riesgo pa&iacute;s.
-                      <br/><br/>
-                      Recordamos que conceptos como seguro escolar, olimpiadas acad&eacute;micas,
-                      gu&iacute;as de texto/ingl&eacute;s, concursos nacionales (rob&oacute;tica,
-                      qu&iacute;mica, etc.) y eventos externos, <strong>no est&aacute;n incluidos
-                      en la matr&iacute;cula</strong> y deben ser cubiertos seg&uacute;n el
-                      desempe&ntilde;o y participaci&oacute;n del alumno.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+        <!-- ── SIGNATURE ── -->
+        <tr>
+          <td style="padding:20px 36px 24px;">
+            <hr style="border:none;border-top:1px solid #e0e7ef;margin:0 0 16px;"/>
+            <p style="margin:0 0 2px;font-size:13px;color:#555;">Atentamente,</p>
+            <p style="margin:0;font-size:13px;color:#1a2c5b;font-weight:bold;">
+              La Administraci&oacute;n &mdash; Colegio &ldquo;Andr&eacute;s Bello&rdquo;
+            </p>
+            <p style="margin:2px 0 0;font-size:12px;color:#888;">
+              El Tigre, 08 de mayo de 2026
+            </p>
+          </td>
+        </tr>
 
-              <!-- Section 5 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="margin:0 0 24px;">
-                <tr>
-                  <td style="border-left:3px solid #2471a3;padding:12px 16px;
-                              background:#f8faff;border-radius:0 6px 6px 0;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                      5. Alianzas y Beneficios Locales
-                    </p>
-                    <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
-                      Conscientes de la situaci&oacute;n econ&oacute;mica en El Tigre,
-                      hemos consolidado alianzas comerciales con <strong>Almac&eacute;n
-                      Par&iacute;s</strong>, <strong>Comercial Caracas</strong> y
-                      <strong>Ferretera Veramar</strong>. Nuestros representantes
-                      disfrutar&aacute;n de descuentos especiales en uniformes y &uacute;tiles
-                      escolares en estos establecimientos. Pronto informaremos sobre el
-                      aliado autorizado para la adquisici&oacute;n o bordado del
-                      distintivo escolar oficial.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td style="background-color:#1a2c5b;padding:16px 32px;
+                     border-radius:0 0 10px 10px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#a8bfda;line-height:1.6;">
+              Este enlace es personal e intransferible &mdash;
+              <a href="mailto:votacion@ueipab.edu.ve"
+                 style="color:#a8bfda;">votacion@ueipab.edu.ve</a>
+            </p>
+          </td>
+        </tr>
 
-              <!-- Signature -->
-              <p style="margin:0 0 4px;font-size:14px;color:#555;">Atentamente,</p>
-              <p style="margin:0;font-size:14px;color:#1a2c5b;font-weight:bold;">
-                La Administraci&oacute;n
-              </p>
-              <p style="margin:2px 0 0;font-size:12px;color:#888;">
-                Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo; C.A.
-              </p>
-
-            </td>
-          </tr>
-
-          <!-- DECISION SECTION -->
-          <tr>
-            <td style="background-color:#f0f4fa;padding:28px 36px;
-                       border-top:3px solid #1a2c5b;">
-              <h3 style="margin:0 0 8px;font-size:16px;color:#1a2c5b;text-align:center;">
-                &iquest;Desea continuar en nuestra instituci&oacute;n<br/>
-                para el per&iacute;odo 2026-2027?
-              </h3>
-              <p style="margin:0 0 20px;font-size:13px;color:#555;text-align:center;">
-                Por favor confirme antes del <strong>08 de junio de 2026</strong>
-                a las 12:30 p.m.
-              </p>
-
-              <!-- Buttons -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center">
-                    <table cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="padding:0 8px;">
-                          <a href="{si_url}"
-                             style="display:inline-block;background-color:#1a2c5b;
-                                    color:#ffffff;padding:14px 28px;border-radius:8px;
-                                    font-size:15px;font-weight:bold;text-decoration:none;
-                                    letter-spacing:0.3px;">
-                            &#10003;&nbsp; S&iacute;, continuar&eacute; en 2026-2027
-                          </a>
-                        </td>
-                        <td style="padding:0 8px;">
-                          <a href="{no_url}"
-                             style="display:inline-block;background-color:#5d6d7e;
-                                    color:#ffffff;padding:14px 28px;border-radius:8px;
-                                    font-size:15px;font-weight:bold;text-decoration:none;
-                                    letter-spacing:0.3px;">
-                            No continuar&eacute;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin:20px 0 0;font-size:11px;color:#999;text-align:center;">
-                Si no responde antes del plazo, el sistema asumir&aacute; autom&aacute;ticamente
-                que acepta las nuevas condiciones para el per&iacute;odo 2026-2027.<br/>
-                Este enlace es personal e intransferible.
-              </p>
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="background-color:#1a2c5b;padding:20px 36px;
-                       border-radius:0 0 8px 8px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#a8bfda;">
-                Colegio &ldquo;Andr&eacute;s Bello&rdquo; &bull;
-                El Tigre, Edo. Anzo&aacute;tegui &bull;
-                <a href="mailto:votacion@ueipab.edu.ve"
-                   style="color:#a8bfda;">votacion@ueipab.edu.ve</a>
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>"""
 
