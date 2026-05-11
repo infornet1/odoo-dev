@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── Wizard form view ────────────────────────────────────────────────── -->
+    <record id="view_employee_info_wizard_form" model="ir.ui.view">
+        <field name="name">hr.employee.info.wizard.form</field>
+        <field name="model">hr.employee.info.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Solicitar Actualización de Datos Personales">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Enviar solicitudes de actualización</h2>
+                    </div>
+                    <group>
+                        <field name="campaign_key" string="Clave de campaña"
+                               help="Identificador único de esta ronda de solicitudes."/>
+                        <field name="skip_completed"
+                               string="Omitir empleados que ya respondieron"/>
+                    </group>
+                    <group string="Empleados a notificar">
+                        <field name="employee_ids" nolabel="1"
+                               widget="many2many_tags"
+                               domain="[('active','=',True),('employee_type','=','employee')]"/>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <p style="margin:0;">
+                            Se enviará un correo electrónico a la dirección de trabajo
+                            (<strong>work_email</strong>) de cada empleado seleccionado.
+                            Los empleados sin correo registrado serán omitidos.
+                        </p>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_send" type="object"
+                            string="Enviar solicitudes"
+                            class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Wizard action ───────────────────────────────────────────────────── -->
+    <record id="action_employee_info_wizard" model="ir.actions.act_window">
+        <field name="name">Solicitar Actualización de Datos</field>
+        <field name="res_model">hr.employee.info.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_employee_info_wizard_form"/>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_view_types">list</field>
+        <field name="groups_id" eval="[(4, ref('hr.group_hr_user'))]"/>
+    </record>
+
+</odoo>

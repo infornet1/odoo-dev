@@ -14,5 +14,17 @@
             <field name="active">True</field>
         </record>
 
+        <!-- Daily reminder for pending info requests — 09:00 VET (13:00 UTC) -->
+        <record id="ir_cron_employee_info_reminders" model="ir.cron">
+            <field name="name">UEIPAB: Recordatorios de Solicitudes de Datos Personales</field>
+            <field name="model_id" ref="ueipab_hr_employee.model_hr_employee_info_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_send_reminders()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+
     </data>
 </odoo>

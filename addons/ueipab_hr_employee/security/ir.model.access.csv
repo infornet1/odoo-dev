@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_employee_info_request_hr_user,hr.employee.info.request hr user,model_hr_employee_info_request,hr.group_hr_user,1,1,1,1
+access_hr_employee_info_wizard_hr_user,hr.employee.info.wizard hr user,model_hr_employee_info_wizard,hr.group_hr_user,1,1,1,1

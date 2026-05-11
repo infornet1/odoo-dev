@@ -4,6 +4,32 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — Employee Private Info Request System (ueipab_hr_employee v17.0.1.2.0)
+
+**Type:** Feature | **Environments:** Testing + Production
+
+Token-based self-service system for HR to collect and update employee private information. Employees receive a personalized email, click a link, confirm or edit 14 private fields on a public pre-filled form, and submit. HR receives a diff notification.
+
+### Key components
+- **Model:** `hr.employee.info.request` — one record per employee per campaign; token UUID, state pending/completed, sent_date, completed_date, completed_ip, JSON diff snapshot
+- **Reminder tracking:** `reminder_count`, `reminder_last_date`, `days_pending` (computed). Daily cron auto-sends: 1st reminder at day 3, 2nd at day 7 (max 2 auto-reminders). Manual "Enviar Recordatorio" button on form.
+- **Public form:** `/employee-info/<token>` — pre-filled, mobile-friendly, amber highlights for missing fields, 4 sections (Identificación, Contacto Personal, Información Personal, Emergencia, Dirección)
+- **Email template:** Navy blue + UEIPAB logo + "📋 Fase 1" amber banner + pre-filled data table + CTA button. CC: `recursoshumanos@ueipab.edu.ve`. Testing id=88, Production id=59.
+- **HR diff notification:** sent to `recursoshumanos@ueipab.edu.ve` on every form submission, shows old→new per field
+- **HR tracking view:** Employees → Solicitudes de Datos; columns: employee, campaign, state badge, days pending, reminders, last reminder, completed date
+- **Nginx:** `/employee-info` added to testing whitelist; production uses catch-all
+
+### Fase 1 campaign — `private_info_v1` (2026-05-11)
+- 44 employees from ENERO15 batch (excludes Gustavo Perdomo + 2× Administrador 3Dv)
+- All 44 sent at 14:40 UTC; MARIA NIETO completed within 2 minutes
+- Private address bulk-fill: 46/47 employees updated to El Tigre / Anzoátegui / 6050 / Venezuela via XML-RPC (all had empty private address fields)
+- Note: initial 44 emails sent without CC; template fixed immediately after — reminders will CC HR
+
+**Production template IDs:** email=59 | **Testing:** email=88
+**Files:** `models/hr_employee_info_request.py`, `controllers/employee_info_controller.py`, `wizard/`, `data/employee_info_request_template.xml`, `views/hr_employee_info_request_views.xml`, `security/ir.model.access.csv`
+
+---
+
 ## 2026-05-10 — Glenda Daily Executive Digest + Invoice Balance Query (ueipab_ai_agent v17.0.1.31.4)
 
 **Type:** Feature | **Environments:** Testing + Production

@@ -62,6 +62,7 @@
 | 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | — `sync_bcv_to_odoo.py` every 30 min; queries BCV MySQL → `ir.config_parameter` ai_agent.bcv_rate_context; Glenda answers tasa BCV + USD↔VEB conversions |
 | 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
+| 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) — token-based self-service form; 14 private fields; Fase 1 campaign sent to 44 employees 2026-05-11; auto-reminders day 3+7 |
 
 ---
 
@@ -152,6 +153,7 @@
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.31.4 | 2026-05-10 |
 | ueipab_attendance_report | 17.0.1.5.2 | 2026-05-10 |
+| ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
 
 ### Production Environment
 
@@ -162,7 +164,7 @@
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.5.2 | **Deployed 2026-05-10** — Glenda calibration WA-ACK: wa_number field, /glenda-calibracion/<token> route, WA mismatch HR alert, notice_key=glenda_calibracion_v1 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
-| ueipab_hr_employee | 17.0.1.0.0 | **Deployed 2026-05-10** — Glenda dependency |
+| ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
 | ueipab_ai_agent | 17.0.1.31.4 | **Deployed 2026-05-10** — Glenda LIVE + BCV rate context + ACTION:QUERY_BALANCE invoice breakdown + daily digest script |
 
@@ -350,14 +352,13 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **General Inquiry skill (v1.26.0):** Handles unsolicited inbound WA messages — auto-creates conversation, identifies contact, routes handoff to `pagos@` (billing) or `soporte@` (general) based on inquiry type
 - **Billing routing (v1.28.0):** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `ACTION:HANDOFF:name|summary|support` → `soporte@ueipab.edu.ve`
 - **turn_count fix (v1.27.1):** Dedup-only records (empty body) excluded from turn counter
-- **Flyer support (v1.29.0):** `general_inquiry` can send promotional flyer images via `ACTION:SEND_FLYER:key`. Flyers served from `https://dev.ueipab.edu.ve/flyers/` (nginx `/var/www/dev/flyers/`). Config param: `ai_agent.flyer_base_url`. **⚠️ Known issue:** MassivaMóvil `type=photo` API queues successfully but images NOT delivered to end user — awaiting tech support clarification. Code is in place; feature suspended pending API fix or hyperlink fallback.
-- **Credit Guard consecutive-failure fix (v1.29.6):** Kill switch only activates after N consecutive failures (`ai_agent.credits_fail_threshold`, default 2). Prevents false-positive alerts from transient API timeouts. Alert email confirms: "Confirmado tras N chequeos consecutivos fallidos".
-- **2026-2027 enrollment knowledge + PDVSA policy (v1.29.7):** `general_inquiry` `_INSTITUTIONAL_KNOWLEDGE` updated for año escolar 2026-2027. New costs: Inscripción $197,38, Seguro $15, Enciclopedia inglés $30, Enciclopedia digital bachillerato $36, Competencia Kurios $10, Competencia MOA $25. PDVSA/Petropiar benefit discontinued — Scenario A (new prospect) → billing handoff; Scenario B (existing distressed family) → empathetic + `pdvsa_retention` urgent alert to `pagos@`.
-- **Farewell message fix (v1.30.2):** 24h cooldown in `_get_or_create_general_inquiry_conversation` now distinguishes terminal states: `timeout`/`failed` → blocked (unresponsive/broken); `resolved` → allows new conv so customer farewell after handoff gets acknowledged instead of silently dropped.
-- **Annual extras in quotation (v1.30.1):** Quote now includes 4 sections: mensualidad (with sibling discounts) + inscripción + costos anuales ($55/student standard: seguro $15 + enc. inglés $30 + olimpiadas $10; +$36 if bachillerato) + TOTAL PRIMER MES. Optional costs (Kurios, MOA) excluded from standard quote. Glenda asks about bachillerato level before finalizing.
-- **Multi-student quotation engine (v1.30.0):** Sibling discounts: 2nd child 5%, 3rd 6%, 4th+ 7% on mensualidad (inscripción full price per child). Pre-calculated per-child table in knowledge. Glenda asks number of children if not stated, presents per-child breakdown + totals (regular and pronto pago), then hands off to billing with structured quote in summary. Quotation emails flagged with special subject.
-- **Forecast tarifas Sep 2026 (v1.29.9):** `general_inquiry` now knows projected rates effective Sep 1, 2026: inscripción $264,48, mensualidad $264,48, pronto pago $241,16 (8,816% discount). Current $197,38 rates labeled "hasta agosto 2026". Glenda handles both current and upcoming rate questions and confirms price increase on Sep 1.
-- **general_inquiry timeout fix (v1.29.8):** Three bugs fixed: (1) `get_reminder_message` was missing from `general_inquiry` skill → `AttributeError` crashed timeout cron every hour, conversations never timed out; (2) no per-conversation `try/except` in `_cron_check_timeouts` → one bad conv crashed entire cron run for all skills; (3) `max_turns` raised 10→25 for `general_inquiry` to handle multi-session accumulation. Root cause: conv 100 was stuck waiting 14 days (Apr 3–17), new enrollment inquiry appended to stale conv, PDVSA question hit turn limit with no reply.
+- **Flyer support:** `ACTION:SEND_FLYER:key` → `https://dev.ueipab.edu.ve/flyers/` (param: `ai_agent.flyer_base_url`). **⚠️ Suspended** — MassivaMóvil `type=photo` queues but does NOT deliver to end user; awaiting tech support.
+- **Credit Guard fail-threshold:** Kill switch activates after N consecutive failures (param `ai_agent.credits_fail_threshold`, default 2). Prevents false-positives from transient API timeouts.
+- **2026-2027 enrollment + PDVSA policy:** Inscripción $197,38, Seguro $15, Enc.inglés $30, Enc.digital bach. $36, Kurios $10, MOA $25. PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
+- **Farewell message fix:** `resolved` conv allows new conv within 24h (customer farewell ACK); `timeout`/`failed` → blocked.
+- **Quotation engine:** 4-section quote: mensualidad + inscripción + costos anuales ($55/std: seguro $15 + enc.inglés $30 + olimpiadas $10; +$36 bach) + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7% on mensualidad. Glenda asks bach level + # children; presents per-child breakdown, hands off with structured quote.
+- **Sep 2026 tariff forecast:** inscripción $264,48, mensualidad $264,48, pronto pago $241,16 (8.816% disc). Current $197,38 "hasta agosto 2026".
+- **general_inquiry timeout fix (v1.29.8):** Added `get_reminder_message`, per-conv `try/except` in `_cron_check_timeouts`, `max_turns` raised 10→25.
 
 ### WA Poll Cron — Account Filter Note
 
@@ -483,25 +484,28 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [V2 Migration Plan](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md)
 
 ### Known Issues
-- **PAY1 Journal Sequence/Date Mismatch — PERMANENTLY FIXED (v1.61.2, 2026-04-07):** Two-layer auto-fix implemented. Layer 1: date-check wizard detects the conflict and offers "Auto-fix Accounting Dates" button. Layer 2: `action_validate_payslips()` override silently sets `slip.date` to first day of sequence month before confirming. Historical incidents: MARZO31-15 (19 employees, 2026-04-06) and MARZO31-G3 (1 employee, 2026-04-07) both required manual shell fix. See [Changelog](documentation/CHANGELOG.md).
+
+**FIXED** (see [Changelog](documentation/CHANGELOG.md) and linked docs for details):
+- PAY1 Journal Sequence/Date Mismatch — FIXED v1.61.2 (wizard auto-fix button + `action_validate_payslips` sets `slip.date` to sequence month start)
+- Quincena Salary Rule — FIXED 2026-02-25: `period_days/30.0` → `monthly/2.0` for all V2 rules; see [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md)
+- Representante Contact Sync — FIXED 2026-02-15: 318/318 contacts fully synced both envs
+- AI Agent Poll Cron Rollback Bug — FIXED v1.19.0 (savepoint isolation + global WA dedup + phone-based conv guard)
+- HR Loan one-loan-per-employee constraint — FIXED v1.66.0 (unlimited concurrent loans via MRO bypass)
+- HR Loan: batch cancel not cancelling draft payslips — FIXED v1.66.1
+- HR Loan: LO inputs auto-add on compute (conservative guard) — FIXED v1.66.4
+- HR Loan email templates out of sync (prod) — FIXED 2026-05-06 via `scripts/sync_lo_to_production.py`
+- HR Loan backdated approval PAY1 mismatch — FIXED v1.66.5 (`today` used when `loan.date` in past month)
+- HR Loan batch total_net_amount missing LIQUID_NET_V2 — FIXED v1.65.0
+- HR Loan `action_paid_amount` double-accounting + name conflict — FIXED v1.64.6 (no-op override on `hr.loan.line`)
+- PAY1 journal sequence contamination (LOAN/ prefix) — FIXED DB-only 2026-04-27 (entries renamed to PAY1/2026/04/0003-0006)
+- HR Loan exchange rate not updating on date change — FIXED v1.64.8 (`for_date` param + `_onchange_date_rate`)
+- **LIQUID_ANTIGUEDAD_V2 Bug — FIXED 2026-04-08** (prod rule id=29, test id=59); ⚠️ **Open HR case:** SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, Acuerdo drafted 2026-04-24, awaiting signatures. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md).
+- Payroll Disbursement + Total Net Payable — FIXED v1.67.1→v1.67.4: use `struct_rule_ids = payslip.struct_id.rule_ids.ids`; V2 detector = `VE_NET_V2` (not `VE_BASIC_V2`); bonus structures need `parent_id=False`
+
+**PENDING:**
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
-- [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`, affects phone convos with email customers (fixed in upstream master, update Freescout when next release ships)
-- **Quincena Salary Rule Fix (2026-02-25) — RESOLVED:** All V2 salary rules (9 prod + 10 test) fixed from `period_days / 30.0` to `monthly / 2.0`. FEBRERO28 batch cancelled, recomputed, reconfirmed. VEB differences (~Bs. 407,086 total) paid to all 44 employees, corrected comprobantes emailed, journal entries verified `posted`, HR letter distributed. See [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md).
-- **Contact Data Cleanup (2026-02-15):** All Representante contacts (318/318 both envs, 244 Rep + 74 PDVSA) fully synchronized. Fixes: state remap, email sync, empty states, 2 contacts created, ZIP=6050 all, Individual all, city normalized, address gaps filled, tag mismatches resolved, ALBERTO GONZALEZ tagged+fixed. Final: 316 El Tigre + 1 San Tome + 1 San Jose de Guanipa, 0 missing fields, 0 cross-env diffs.
-- **AI Agent Poll Cron Rollback Bug (2026-03-02) — RESOLVED (v1.19.0):** Fixed in 3 parts: (1) savepoint per conversation in poll cron for error isolation, (2) global WA message dedup (not per-conversation), (3) phone-based duplicate conversation guard in wizard. See [AI Agent Known Issues](documentation/AI_AGENT_MODULE.md#known-issues).
-- **HR Loan one-loan-per-employee constraint — FIXED (v1.66.0):** `ohrms_loan.create()` constraint bypassed via MRO in `HrLoan.create()`. Multiple concurrent loans per employee now allowed (Option A, no limit). See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
-- **Batch cancel not cancelling draft payslips — FIXED (v1.66.1):** `action_cancel()` filter excluded draft payslips. Fixed to cancel all non-cancelled payslips. `action_payslip_cancel()` override added to handle journal entry reversal for confirmed payslips.
-- **Option B — LO inputs added on compute when none exist (v1.66.4):** `action_compute_sheet()` override adds LO inputs for all active matching loans when a payslip has zero LO inputs. Conservative guard: if any LO input exists, HR is managing manually — no interference. Use amount=0 to skip a loan for a period (not delete).
-- **HR Loan email templates out of sync (prod) — FIXED (2026-05-06):** Initial deployment had the Payslip Email (id=37) loan block appended after the closing `</div>` — invisible in all payroll emails. Also: `{{:,.2f}}` format bug would output literal `{:,.2f}` text; only `VE_LOAN_DED_V2` covered (missing `LIQUID_LOAN_DED_V2`); duplicate `result =` lines in `VE_TOTAL_DED_V2` (id=19) and `LIQUID_NET_V2` (id=34); `es_VE` translation missing from both templates. All fixed via `scripts/sync_lo_to_production.py`.
-- **HR Loan backdated approval PAY1 mismatch — FIXED (v1.66.5):** Approving a loan with a date in a past calendar month caused "Date doesn't match sequence number" error because PAY1's sequence was already ahead. `_create_advance_journal_entry()` now uses `today` when `loan.date` is in a past month. `loan.date` (disbursement date) unchanged.
-- **HR Loan batch total_net_amount missing LIQUID_NET_V2 — FIXED (v1.65.0):** `_compute_total_net_amount` only summed `VE_NET`, `VE_NET_V2`, `AGUINALDOS` — liquidation batches showed 0. Fixed by adding `LIQUID_NET_V2` to the set.
-- **HR Loan `action_paid_amount` conflict — FIXED (v1.64.6):** `ohrms_loan_accounting.action_paid_amount(month)` generates entry name `LOAN/ {employee}/April-YYYY`. When same employee has two loans cleared in the same calendar month, the second payslip confirmation fails with "Another entry with the same name already exists". Also causes double-accounting (salary rules already post the same DR/CR). Fixed by overriding `action_paid_amount()` to no-op on `hr.loan.line`. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
-- **PAY1 journal sequence contamination — FIXED (DB-only 2026-04-27):** `action_paid_amount()` entries with explicit `LOAN/ EMPLOYEE/April-NNNN` names in PAY1 caused Odoo's prefix-continuation sequence to assign `LOAN/ EMPLOYEE/April-NNNN` names to ALL subsequent unnamed PAY1 entries (payroll accounting + disbursements). Fixed by renaming entries 2435, 2437, 2438, 2442 to `PAY1/2026/04/0003–0006` + correcting `sequence_prefix`/`sequence_number`. Next PAY1/2026/04/ = 0007. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
-- **HR Loan exchange rate not updating on date change — FIXED (v1.64.8):** `_get_veb_rate()` always returned the latest BCV rate; no `@api.onchange('date')` existed. Fixed by adding a `for_date` parameter with `name <= date` filter, plus a new `_onchange_date_rate` that fires when the user changes the loan date. See [HR Loan Docs](documentation/HR_SALARY_ADVANCE_LOAN.md).
-- **LIQUID_ANTIGUEDAD_V2 Bug (2026-04-08) — FIXED:** Terminated+rehired employees had antigüedad computed from original hire date without deducting prior paid period. Fixed in both envs (prod rule id=29, test id=59). Open HR case: SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, resolution pending. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md) and [Changelog](documentation/CHANGELOG.md).
-- **Decreto Ingreso Mínimo $240 (2026-04-30) — AJUSTE PENDIENTE:** 2 empleados por debajo del umbral mínimo: LUIS RODRIGUEZ ($191.37, gap +$48.63) y NIDYA LIRA ($228.67, gap +$11.33). Acción: incrementar `ueipab_bonus_v2` en ambos contratos. Cestaticket $40 sin cambio. 9 empleados en banda de riesgo $240–$300. Ver [Análisis Completo](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
-- **Payroll Disbursement Detail + Total Net Payable — FIXED (v1.67.1→v1.67.4, 2026-05-08):** Four cascading bugs found when running report against BONO-MADRES26: (1) V2 detection used `VE_BASIC_V2` (non-existent rule) → all V2 payslips fell into bonus-only path showing salary=0; (2) Bonus-only path summed all BASIC-category lines including BASE aggregator BASIC rule → inflated totals; (3) NET fallback grabbed BASE NET aggregator instead of `BONO_MADRES_NET`; (4) `_compute_total_net_amount` only knew `VE_NET/VE_NET_V2/AGUINALDOS/LIQUID_NET_V2`. All fixed via `struct_rule_ids = payslip.struct_id.rule_ids.ids` pattern to isolate structure-specific lines. Root cause of extra lines: `setup_bono_madres.py` set `parent_id=BASE` — production BASE has 3 aggregator rules; fixed to `parent_id=False`.
-- **BONO_MADRES structure parent_id=BASE — FIXED (2026-05-08):** BASE structure in production has BASIC/GROSS/NET aggregator rules that injected 3 spurious lines into every BONO_MADRES payslip (BASIC=contract.wage, GROSS, NET). Testing BASE has 0 rules so bug was invisible there. Fixed: `parent_id=False` in both envs; BONO-MADRES26 draft payslips recomputed (now 2 lines each). `setup_bono_madres.py` updated.
+- [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`; fixed upstream, update Freescout on next release
+- **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ ($191.37, gap +$48.63) y NIDYA LIRA ($228.67, gap +$11.33) — incrementar `ueipab_bonus_v2` en contratos. Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List view ───────────────────────────────────────────────────────── -->
+    <record id="view_hr_employee_info_request_list" model="ir.ui.view">
+        <field name="name">hr.employee.info.request.list</field>
+        <field name="model">hr.employee.info.request</field>
+        <field name="arch" type="xml">
+            <tree string="Solicitudes de Datos Personales"
+                  decoration-success="state == 'completed'"
+                  decoration-muted="state == 'pending'">
+                <field name="employee_name" string="Empleado"/>
+                <field name="campaign_key" string="Campaña"/>
+                <field name="state" string="Estado" widget="badge"
+                       decoration-success="state == 'completed'"
+                       decoration-warning="state == 'pending'"/>
+                <field name="sent_date" string="Enviado"/>
+                <field name="days_pending" string="Días pend." optional="show"/>
+                <field name="reminder_count" string="Recordatorios" optional="show"/>
+                <field name="reminder_last_date" string="Último recor." optional="show"/>
+                <field name="completed_date" string="Completado"/>
+                <field name="completed_ip" string="IP" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Form view (mostly readonly — for HR audit) ─────────────────────── -->
+    <record id="view_hr_employee_info_request_form" model="ir.ui.view">
+        <field name="name">hr.employee.info.request.form</field>
+        <field name="model">hr.employee.info.request</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de Datos Personales">
+                <header>
+                    <button name="action_send_reminder" type="object"
+                            string="Enviar Recordatorio"
+                            class="btn-primary"
+                            invisible="state == 'completed'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,completed"
+                           readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="employee_name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Solicitud">
+                            <field name="employee_id" readonly="1"/>
+                            <field name="campaign_key" readonly="1"/>
+                            <field name="sent_date" readonly="1"/>
+                        </group>
+                        <group string="Respuesta">
+                            <field name="completed_date" readonly="1"/>
+                            <field name="completed_ip" readonly="1"/>
+                        </group>
+                        <group string="Recordatorios">
+                            <field name="days_pending" readonly="1"/>
+                            <field name="reminder_count" readonly="1"/>
+                            <field name="reminder_last_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Enlace de formulario">
+                        <field name="token" readonly="1" widget="char"/>
+                    </group>
+                    <notebook>
+                        <page string="Valores enviados (JSON)">
+                            <field name="submitted_values" widget="text" readonly="1"
+                                   placeholder="(vacío hasta que el empleado responda)"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <!-- Chatter for HR notes -->
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Search view ─────────────────────────────────────────────────────── -->
+    <record id="view_hr_employee_info_request_search" model="ir.ui.view">
+        <field name="name">hr.employee.info.request.search</field>
+        <field name="model">hr.employee.info.request</field>
+        <field name="arch" type="xml">
+            <search string="Solicitudes de Datos">
+                <field name="employee_name" string="Empleado"/>
+                <field name="campaign_key" string="Campaña"/>
+                <filter name="filter_pending" string="Pendientes"
+                        domain="[('state', '=', 'pending')]"/>
+                <filter name="filter_completed" string="Completados"
+                        domain="[('state', '=', 'completed')]"/>
+                <filter name="filter_overdue" string="Sin respuesta +3 días"
+                        domain="[('state', '=', 'pending'), ('sent_date', '&lt;=', (datetime.datetime.now() - datetime.timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_campaign" string="Campaña"
+                            context="{'group_by': 'campaign_key'}"/>
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Window action ───────────────────────────────────────────────────── -->
+    <record id="action_hr_employee_info_request" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Datos</field>
+        <field name="res_model">hr.employee.info.request</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_hr_employee_info_request_search"/>
+        <field name="context">{'search_default_filter_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay solicitudes de datos pendientes.
+            </p>
+            <p>
+                Usa el botón "Solicitar Actualización de Datos" en la lista de
+                empleados para crear y enviar solicitudes.
+            </p>
+        </field>
+    </record>
+
+    <!-- ── Menu items ──────────────────────────────────────────────────────── -->
+    <!-- Top-level: under Employees app -->
+    <menuitem id="menu_hr_employee_info_request"
+              name="Solicitudes de Datos"
+              parent="hr.menu_hr_root"
+              action="action_hr_employee_info_request"
+              sequence="30"
+              groups="hr.group_hr_user"/>
+
+</odoo>
