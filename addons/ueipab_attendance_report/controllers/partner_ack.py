@@ -45,9 +45,68 @@ class PartnerAckController(http.Controller):
         ip = self._client_ip()
         ack.write({'state': decision, 'ack_date': datetime.datetime.now(), 'ack_ip': ip})
         _logger.info('partner_ack: %s decision=%s ip=%s', ack.partner_name, decision, ip)
+        self._send_ack_confirmation(ack, decision)
         if decision == 'continuing':
             return self._respond(self._page_success_yes(ack))
         return self._respond(self._page_success_no(ack))
+
+    def _send_ack_confirmation(self, ack, decision):
+        """Send CC confirmation to votacion@ when a partner records their decision."""
+        try:
+            dt       = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+            name     = ack.partner_name or ''
+            email    = ack.partner_email or ''
+            label    = 'Sí, continuará en 2026-2027 ✅' if decision == 'continuing' \
+                       else 'No continuará ❌'
+            bg       = '#d4edda' if decision == 'continuing' else '#e8f4f8'
+            border   = '#c3e6cb' if decision == 'continuing' else '#bee5eb'
+            color    = '#155724' if decision == 'continuing' else '#1a2c5b'
+
+            body = f"""
+<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+  <div style="background:#1a2c5b;color:#fff;padding:18px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;font-size:16px;">
+      &#128221; Encuesta Continuidad 2026-2027 — Respuesta registrada
+    </h2>
+    <p style="margin:5px 0 0;font-size:12px;opacity:0.8;">Confirmaci&oacute;n autom&aacute;tica</p>
+  </div>
+  <div style="background:#fff;border:1px solid #dde;padding:20px 24px;border-radius:0 0 8px 8px;">
+    <table cellpadding="0" cellspacing="0"
+           style="width:100%;background:{bg};border-radius:8px;border:1px solid {border};">
+      <tr>
+        <td style="padding:12px 18px;border-bottom:1px solid {border};">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">REPRESENTANTE</span>
+          <strong style="font-size:14px;color:#1a2c5b;">{name}</strong>
+          &nbsp;&middot;&nbsp;
+          <span style="font-size:12px;color:#555;">{email}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 18px;border-bottom:1px solid {border};">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">DECISI&Oacute;N</span>
+          <strong style="font-size:14px;color:{color};">{label}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 18px;">
+          <span style="font-size:11px;color:#888;display:block;margin-bottom:2px;">FECHA</span>
+          <span style="font-size:13px;color:#333;">{dt}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>"""
+
+            request.env['mail.mail'].sudo().create({
+                'subject':    f'[Encuesta 2026-2027] {label} — {name}',
+                'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
+                'email_to':   f'{name} <{email}>' if email else 'votacion@ueipab.edu.ve',
+                'email_cc':   'votacion@ueipab.edu.ve',
+                'body_html':  body,
+                'state':      'outgoing',
+            }).send()
+        except Exception:
+            pass  # best-effort, never break the ACK flow
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -105,7 +164,7 @@ class PartnerAckController(http.Controller):
     <div class="body">{content}</div>
     <div class="footer">
       ¿Preguntas? Escr&iacute;benos a
-      <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>
+      <a href="mailto:votacion@ueipab.edu.ve" style="color:#2471a3;">votacion@ueipab.edu.ve</a>
     </div>
   </div>
 </body>
@@ -179,7 +238,7 @@ class PartnerAckController(http.Controller):
   <p style="margin:0;">El equipo de administraci&oacute;n le contactar&aacute; con la informaci&oacute;n
   de inscripci&oacute;n para el per&iacute;odo 2026-2027. Si tiene consultas sobre
   facturaci&oacute;n escr&iacute;banos a
-  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>.</p>
+  <a href="mailto:votacion@ueipab.edu.ve" style="color:#2471a3;">votacion@ueipab.edu.ve</a>.</p>
 </div>
 <p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Puede cerrar esta p&aacute;gina.</p>
 """
@@ -207,7 +266,7 @@ class PartnerAckController(http.Controller):
             font-size:13px;color:#444;margin-bottom:16px;">
   <p style="margin:0 0 6px;"><strong>¿Cambi&oacute; de opini&oacute;n?</strong></p>
   <p style="margin:0;">Si desea reconsiderar, escr&iacute;banos a
-  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>
+  <a href="mailto:votacion@ueipab.edu.ve" style="color:#2471a3;">votacion@ueipab.edu.ve</a>
   antes del 08 de junio de 2026 a las 12:30 p.m.</p>
 </div>
 <p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Puede cerrar esta p&aacute;gina.</p>
@@ -248,8 +307,8 @@ class PartnerAckController(http.Controller):
             padding:16px;font-size:13px;color:#555;">
   <p style="margin:0;">Este enlace no es v&aacute;lido o ya expir&oacute;.
   Si necesita ayuda cont&aacute;ctenos en
-  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">
-    pagos@ueipab.edu.ve</a>.</p>
+  <a href="mailto:votacion@ueipab.edu.ve" style="color:#2471a3;">
+    votacion@ueipab.edu.ve</a>.</p>
 </div>
 """
         )

@@ -61,16 +61,14 @@ def _build_email_html(partner_name, si_url, no_url):
 
           <!-- HEADER -->
           <tr>
-            <td style="background-color:#1a2c5b;padding:32px 36px;
+            <td style="background-color:#1a2c5b;padding:28px 36px 24px;
                        border-radius:8px 8px 0 0;text-align:center;">
-              <p style="margin:0 0 4px;font-size:11px;color:#a8bfda;
-                        letter-spacing:2px;text-transform:uppercase;">
-                Instituto Privado
-              </p>
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">
-                &ldquo;Andr&eacute;s Bello&rdquo; C.A.
-              </h1>
-              <p style="margin:8px 0 0;font-size:13px;color:#a8bfda;">
+              <img src="https://dev.ueipab.edu.ve/flyers/ueipab_logo.png"
+                   alt="Colegio Andr&eacute;s Bello"
+                   width="200" height="83"
+                   style="display:block;margin:0 auto 14px;max-width:200px;
+                          border:0;outline:none;"/>
+              <p style="margin:4px 0 0;font-size:12px;color:#a8bfda;">
                 El Tigre, Estado Anzo&aacute;tegui
               </p>
             </td>
@@ -301,10 +299,10 @@ def _build_email_html(partner_name, si_url, no_url):
             <td style="background-color:#1a2c5b;padding:20px 36px;
                        border-radius:0 0 8px 8px;text-align:center;">
               <p style="margin:0;font-size:12px;color:#a8bfda;">
-                Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo; &bull;
+                Colegio &ldquo;Andr&eacute;s Bello&rdquo; &bull;
                 El Tigre, Edo. Anzo&aacute;tegui &bull;
-                <a href="mailto:pagos@ueipab.edu.ve"
-                   style="color:#a8bfda;">pagos@ueipab.edu.ve</a>
+                <a href="mailto:votacion@ueipab.edu.ve"
+                   style="color:#a8bfda;">votacion@ueipab.edu.ve</a>
               </p>
             </td>
           </tr>
@@ -408,9 +406,11 @@ for partner in partners:
         )
 
         mail = Mail.create({
-            'subject':    f'Comunicado Importante — Período 2026-2027 | {partner.name}',
-            'email_from': 'Administración UEIPAB <pagos@ueipab.edu.ve>',
+            'subject':    f'Responder encuesta continuidad — Período 2026-2027 | {partner.name}',
+            'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
+            'reply_to':   'votacion@ueipab.edu.ve',
             'email_to':   to_addrs,
+            'email_cc':   'votacion@ueipab.edu.ve',
             'body_html':  html,
             'state':      'outgoing',
         })
