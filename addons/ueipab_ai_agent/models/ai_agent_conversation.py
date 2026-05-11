@@ -919,6 +919,17 @@ class AiAgentConversation(models.Model):
         if not self._is_active_environment():
             return
 
+        # Prevent concurrent cron runs from re-processing the same messages.
+        # Without this, a slow run (Claude API + 120s WA cooldowns) can overlap
+        # with the next scheduled run. The second run reads an empty
+        # ai.agent.message table (uncommitted by the first) and duplicates every
+        # conversation. pg_try_advisory_xact_lock is released automatically on
+        # transaction commit/rollback, so no cleanup needed.
+        self.env.cr.execute("SELECT pg_try_advisory_xact_lock(941489421)")  # arbitrary unique int
+        if not self.env.cr.fetchone()[0]:
+            _logger.info("Poll cron: another instance is still running — skipping this run")
+            return
+
         # Schedule is enforced per-conversation based on skill.respect_schedule.
         # Skills with respect_schedule=False (e.g. general_inquiry) are always
         # processed; critical business skills are gated by the contact window.
