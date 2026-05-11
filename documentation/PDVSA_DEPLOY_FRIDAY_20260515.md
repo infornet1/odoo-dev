@@ -21,6 +21,8 @@
 | Partners to email | **71** (with email, active, PDVSA tag) |
 | Test partner (prod) | id=**7** — Gustavo Perdomo `<gustavo.perdomo@ueipab.edu.ve>` |
 | Deadline communicated | Monday 08-Jun-2026, 12:30 p.m. |
+| SMTP From (outbound) | `Colegio Andrés Bello <soporte@ueipab.edu.ve>` — Gmail requires authenticated account |
+| Reply-To | `votacion@ueipab.edu.ve` — replies land at votacion@ mailbox |
 
 ---
 
@@ -29,7 +31,8 @@
 - [ ] Confirm `ueipab_attendance_report` v17.0.1.6.0 is committed and clean on `main`
 - [ ] `partner.communication.ack` model NOT yet in production — deploy will create it
 - [ ] Backup production DB before any module upgrade
-- [ ] Confirm `votacion@ueipab.edu.ve` mailbox is monitored (will receive 71 CC emails)
+- [ ] Confirm `votacion@ueipab.edu.ve` mailbox is monitored (will receive 71 Reply-To + CC emails)
+- [ ] Note: emails arrive showing "Colegio Andrés Bello" from `soporte@ueipab.edu.ve` — display name is correct, From address is the SMTP sender
 - [ ] Confirm Google Doc is publicly readable:
       `https://docs.google.com/document/d/1z9_Dr3qvWdytEcrDUCp7NcVoJQHq4MKiveNoV_kC2jE/edit?tab=t.0`
 

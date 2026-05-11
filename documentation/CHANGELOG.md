@@ -4,6 +4,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — PDVSA Campaign: SMTP From fix (`send_pdvsa_communication.py`)
+
+**Type:** Bug fix | **Script only — no module change**
+
+Gmail SMTP rejects (or silently drops) emails where `From:` is not the authenticated account.
+Previous `email_from = votacion@ueipab.edu.ve` was not configured as a "Send As" alias → emails
+were marked `state=sent` by Odoo but never delivered.
+
+**Fix:** `email_from` changed to `soporte@ueipab.edu.ve` (authenticated SMTP account).
+`Reply-To` stays `votacion@ueipab.edu.ve` so all replies land at the correct mailbox.
+Display name `Colegio Andrés Bello` unchanged — recipients see the right name.
+
+**Future option B:** Add `votacion@ueipab.edu.ve` as "Send As" alias in `soporte@` Gmail settings
+→ then From can be changed back to `votacion@`.
+
+---
+
 ## 2026-05-11 — PDVSA Continuity Campaign (ueipab_attendance_report v17.0.1.6.0)
 
 **Type:** Feature | **Status:** Testing ✅ — Production deploy pending 2026-05-15

@@ -27,8 +27,8 @@ Each parent receives a personalized email with three stacked full-width buttons
 | Partner tag | `Representante PDVSA` (id=**26** — confirmed same in testing and production) |
 | Decision deadline | **Monday, June 8, 2026 — 12:30 p.m.** |
 | Default if no response | Auto-accepted (new conditions apply for 2026-2027) |
-| Sender | `Colegio Andrés Bello <votacion@ueipab.edu.ve>` |
-| Reply-to | `votacion@ueipab.edu.ve` |
+| Sender (SMTP From) | `Colegio Andrés Bello <soporte@ueipab.edu.ve>` — Gmail SMTP requires authenticated account as From |
+| Reply-to | `votacion@ueipab.edu.ve` — replies land at votacion@ mailbox |
 | CC on every outbound email | `votacion@ueipab.edu.ve` |
 | CC on every ACK confirmation | `votacion@ueipab.edu.ve` |
 | Full letter link | [Google Doc](https://docs.google.com/document/d/1z9_Dr3qvWdytEcrDUCp7NcVoJQHq4MKiveNoV_kC2jE/edit?tab=t.0) |
@@ -159,7 +159,8 @@ docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
 | 2026-05-11 | v1 sent (full letter body) | mail_id=1042, ack_id=1 ✅ |
 | 2026-05-11 | v2: votacion@ sender + CC + logo + subject | mail_id=1043, ack_id=2 ✅ |
 | 2026-05-11 | v3: redesign — decision-first, 3 bullets | mail_id=1044, ack_id=3 ✅ |
-| 2026-05-11 | v4: ghost button first, stacked full-width | mail_id=1045, ack_id=4 ✅ sent to perdomo.gustavo@gmail.com |
+| 2026-05-11 | v4: ghost button first, stacked full-width | mail_id=1045, ack_id=4 — not received (From=votacion@ rejected by Gmail SMTP) |
+| 2026-05-11 | v5: fix From=soporte@ (authenticated), Reply-To=votacion@ | mail_id=1049, ack_id=5 ✅ delivered to perdomo.gustavo@gmail.com |
 
 ---
 
