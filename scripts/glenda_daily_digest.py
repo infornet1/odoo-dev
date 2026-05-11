@@ -325,7 +325,7 @@ def _s(n, label_s, label_p):
     return f"{n} {label_s if n == 1 else label_p}"
 
 
-def build_html(data, env_name):
+def build_html(data, env_name, calib=None):
     day   = data['day'].strftime('%d/%m/%Y')
     today = datetime.now().strftime('%d/%m/%Y %H:%M')
     env_badge = (
@@ -562,6 +562,16 @@ def build_html(data, env_name):
     <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">🔍 Actividad sospechosa</h2>
     {sus_section}
 
+    <div style="border-top:2px solid #d4af37;margin:22px 0;"></div>
+
+    <!-- Calibration programme -->
+    <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">🧪 Programa Calibración Glenda
+      <span style="font-size:13px;font-weight:normal;color:#555;">
+        — seguimiento de testers y bono (deadline {calib['deadline'] if calib else CALIBRATION_DEADLINE})
+      </span>
+    </h2>
+    {build_calibration_section(calib)}
+
   </div>
 
   <!-- Footer -->
@@ -578,6 +588,218 @@ def build_html(data, env_name):
 </div>
 </body>
 </html>"""
+
+
+# ── Calibration programme data ────────────────────────────────────────────────
+
+CALIBRATION_NOTICE_KEY = 'glenda_calibracion_v1'
+CALIBRATION_DEADLINE   = '2026-05-30'
+BONUS_MIN_CONVS        = 3
+BONUS_MIN_FEEDBACK     = 1
+
+
+def fetch_calibration_data(db, uid, pw, models, start_str, end_str):
+    """Fetch calibration programme scoreboard + yesterday's activity."""
+
+    # All enrolled participants
+    acks = rpc(models, db, uid, pw, 'hr.notice.acknowledgment', 'search_read',
+               [[('notice_key', '=', CALIBRATION_NOTICE_KEY)]],
+               {'fields': ['id', 'employee_id', 'wa_number', 'state'], 'limit': 100})
+    if not acks:
+        return None
+
+    # Build digit → participant map
+    participants = {}
+    for ack in acks:
+        digits = re.sub(r'\D', '', ack['wa_number'] or '')
+        if not digits:
+            continue
+        emp_name = ack['employee_id'][1] if ack['employee_id'] else '—'
+        emp_id   = ack['employee_id'][0] if ack['employee_id'] else None
+        participants[digits] = {
+            'employee':          emp_name,
+            'wa':                ack['wa_number'] or '—',
+            'emp_id':            emp_id,
+            'enrolled':          ack['state'] == 'acknowledged',
+            'conv_total':        0,
+            'conv_yesterday':    0,
+            'feedback_total':    0,
+            'feedback_yesterday': 0,
+            'bonus_eligible':    False,
+        }
+
+    # All general_inquiry conversations — match by phone digits
+    all_convs = rpc(models, db, uid, pw, 'ai.agent.conversation', 'search_read',
+                    [[('skill_id.code', '=', 'general_inquiry')]],
+                    {'fields': ['phone', 'create_date', 'state'], 'limit': 2000})
+    for conv in all_convs:
+        d = re.sub(r'\D', '', conv.get('phone') or '')
+        if d not in participants:
+            continue
+        participants[d]['conv_total'] += 1
+        if start_str <= (conv.get('create_date') or '') < end_str:
+            participants[d]['conv_yesterday'] += 1
+
+    # All feedback records
+    all_fb = rpc(models, db, uid, pw, 'ai.agent.feedback', 'search_read',
+                 [[]],
+                 {'fields': ['employee_id', 'category', 'suggestion', 'state', 'date'], 'limit': 500})
+
+    yesterday_feedback = []
+    for fb in all_fb:
+        emp_id = fb['employee_id'][0] if fb['employee_id'] else None
+        # Match to participant by emp_id
+        for d, p in participants.items():
+            if p['emp_id'] == emp_id:
+                p['feedback_total'] += 1
+                fb_date = fb.get('date') or ''
+                if start_str <= fb_date < end_str:
+                    p['feedback_yesterday'] += 1
+                    yesterday_feedback.append({
+                        'employee': p['employee'],
+                        'category': fb.get('category', 'otro'),
+                        'suggestion': (fb.get('suggestion') or '')[:200],
+                        'state': fb.get('state', 'pending'),
+                    })
+                break
+
+    # Compute bonus eligibility
+    bonus_count = 0
+    for p in participants.values():
+        p['bonus_eligible'] = (
+            p['enrolled'] and
+            p['conv_total'] >= BONUS_MIN_CONVS and
+            p['feedback_total'] >= BONUS_MIN_FEEDBACK
+        )
+        if p['bonus_eligible']:
+            bonus_count += 1
+
+    # Sort: bonus eligible first, then by conv_total desc
+    sorted_participants = sorted(
+        participants.values(),
+        key=lambda p: (not p['bonus_eligible'], -p['conv_total'], -p['feedback_total'])
+    )
+
+    active_yesterday = sum(1 for p in participants.values() if p['conv_yesterday'] > 0)
+
+    return {
+        'participants':       sorted_participants,
+        'yesterday_feedback': yesterday_feedback,
+        'bonus_count':        bonus_count,
+        'total_enrolled':     len(participants),
+        'active_yesterday':   active_yesterday,
+        'deadline':           CALIBRATION_DEADLINE,
+    }
+
+
+def build_calibration_section(calib):
+    """Build the calibration programme HTML section."""
+    if not calib:
+        return '<p style="color:#888;font-size:13px;">Sin datos del programa de calibración.</p>'
+
+    bonus_count   = calib['bonus_count']
+    total         = calib['total_enrolled']
+    active_y      = calib['active_yesterday']
+    deadline      = calib['deadline']
+
+    # Header summary chips
+    def chip(val, label, color):
+        return (
+            f'<span style="display:inline-block;background:{color};color:#fff;'
+            f'border-radius:6px;padding:4px 12px;font-size:13px;margin:2px 4px 2px 0;">'
+            f'<strong>{val}</strong> {label}</span>'
+        )
+
+    chips = (
+        chip(f'{bonus_count}/{total}', 'elegibles bono', '#2e7d32') +
+        chip(active_y, 'activos ayer', '#1565c0') +
+        chip(len(calib['yesterday_feedback']), 'sugerencias nuevas', '#6a1b9a') +
+        f'<span style="font-size:12px;color:#888;margin-left:8px;">Deadline: <strong>{deadline}</strong></span>'
+    )
+
+    # Scoreboard table
+    rows = ''
+    for p in calib['participants']:
+        if not p['enrolled']:
+            continue
+        elig_badge = (
+            '<span style="background:#2e7d32;color:#fff;padding:2px 7px;'
+            'border-radius:4px;font-size:10px;font-weight:bold;">✓ BONO</span>'
+            if p['bonus_eligible'] else ''
+        )
+        conv_y = f' <span style="color:#1565c0;font-size:10px;">(+{p["conv_yesterday"]} ayer)</span>' \
+                 if p['conv_yesterday'] else ''
+        fb_y   = f' <span style="color:#6a1b9a;font-size:10px;">(+{p["feedback_yesterday"]} ayer)</span>' \
+                 if p['feedback_yesterday'] else ''
+
+        conv_color  = '#2e7d32' if p['conv_total'] >= BONUS_MIN_CONVS else ('#f9a825' if p['conv_total'] > 0 else '#bbb')
+        fb_color    = '#2e7d32' if p['feedback_total'] >= BONUS_MIN_FEEDBACK else '#bbb'
+
+        rows += (
+            f'<tr style="border-bottom:1px solid #eee;">'
+            f'<td style="padding:6px 10px;font-size:12px;">{p["employee"]}</td>'
+            f'<td style="padding:6px 10px;font-size:11px;color:#555;">{p["wa"]}</td>'
+            f'<td style="padding:6px 10px;text-align:center;font-weight:bold;color:{conv_color};">'
+            f'{p["conv_total"]}{conv_y}</td>'
+            f'<td style="padding:6px 10px;text-align:center;font-weight:bold;color:{fb_color};">'
+            f'{p["feedback_total"]}{fb_y}</td>'
+            f'<td style="padding:6px 10px;text-align:center;">{elig_badge}</td>'
+            f'</tr>'
+        )
+
+    scoreboard = (
+        '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        '<tr style="background:#f0f4fa;">'
+        '<th style="padding:6px 10px;text-align:left;">Empleado</th>'
+        '<th style="padding:6px 10px;text-align:left;">WhatsApp</th>'
+        f'<th style="padding:6px 10px;text-align:center;">Convs (≥{BONUS_MIN_CONVS})</th>'
+        f'<th style="padding:6px 10px;text-align:center;">Sugerencias (≥{BONUS_MIN_FEEDBACK})</th>'
+        '<th style="padding:6px 10px;text-align:center;">Bono</th>'
+        '</tr>'
+        + (rows or '<tr><td colspan="5" style="padding:10px;color:#888;">Sin actividad aún</td></tr>')
+        + '</table>'
+    )
+
+    # Yesterday's new suggestions
+    if calib['yesterday_feedback']:
+        cat_labels = {
+            'flujo': 'Flujo', 'respuesta': 'Respuesta', 'idioma': 'Lenguaje',
+            'asistencia': 'Asistencia', 'conocimiento': 'Conocimiento',
+            'tecnico': 'Técnico', 'otro': 'Otro',
+        }
+        fb_rows = ''
+        for fb in calib['yesterday_feedback']:
+            cat = cat_labels.get(fb['category'], fb['category'])
+            fb_rows += (
+                f'<tr style="border-bottom:1px solid #f0e6ff;vertical-align:top;">'
+                f'<td style="padding:6px 10px;font-size:12px;font-weight:bold;">{fb["employee"]}</td>'
+                f'<td style="padding:6px 10px;">'
+                f'<span style="background:#6a1b9a;color:#fff;padding:2px 8px;'
+                f'border-radius:4px;font-size:10px;">{cat}</span></td>'
+                f'<td style="padding:6px 10px;font-size:12px;color:#333;">{fb["suggestion"]}</td>'
+                f'</tr>'
+            )
+        fb_section = (
+            '<h4 style="margin:16px 0 8px;color:#6a1b9a;font-size:13px;">Sugerencias recibidas ayer</h4>'
+            '<table style="width:100%;border-collapse:collapse;">'
+            '<tr style="background:#f5e6ff;">'
+            '<th style="padding:6px 10px;text-align:left;font-size:12px;">Empleado</th>'
+            '<th style="padding:6px 10px;text-align:left;font-size:12px;">Categoría</th>'
+            '<th style="padding:6px 10px;text-align:left;font-size:12px;">Sugerencia</th>'
+            '</tr>'
+            + fb_rows + '</table>'
+        )
+    else:
+        fb_section = (
+            '<p style="color:#888;font-size:12px;margin:12px 0 0;">'
+            'Sin sugerencias nuevas ayer.</p>'
+        )
+
+    return f"""
+<div style="margin-bottom:4px;">{chips}</div>
+{scoreboard}
+{fb_section}
+"""
 
 
 # ── Email sending ─────────────────────────────────────────────────────────────
@@ -631,17 +853,33 @@ def main():
             'skill_stats': {}, 'topics': [], 'unresolved': [], 'suspicious': [],
         }
 
+    # Calibration data (uses same connection — re-open)
+    calib = None
+    try:
+        db, uid, pw, models_conn = connect(args.env)
+        start_utc = datetime(day.year, day.month, day.day, 4, 0, 0)
+        end_utc   = start_utc + timedelta(days=1)
+        calib = fetch_calibration_data(
+            db, uid, pw, models_conn,
+            start_utc.strftime('%Y-%m-%d %H:%M:%S'),
+            end_utc.strftime('%Y-%m-%d %H:%M:%S'),
+        )
+    except Exception as e:
+        logger.warning("Could not fetch calibration data: %s", e)
+
     day_str = day.strftime('%d/%m/%Y')
+    bonus_str = f' · {calib["bonus_count"]}/{calib["total_enrolled"]} bono' if calib else ''
     subject = (
         f"[Glenda] Reporte Diario {day_str} — "
         f"{data['total_convs']} conv · "
         f"{data['resolved']} resueltas · "
         f"${data['claude_cost']:.3f} Claude"
+        f"{bonus_str}"
     )
     if args.env == 'testing':
         subject = '[TESTING] ' + subject
 
-    html = build_html(data, args.env)
+    html = build_html(data, args.env, calib)
 
     if args.dry_run:
         print(html)
