@@ -63,6 +63,7 @@
 | 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) — token-based self-service form; 14 private fields; Fase 1 campaign sent to 44 employees 2026-05-11; auto-reminders day 3+7 |
+| 48 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | `partner.communication.ack` model; YES/NO decision links; `/partner-ack/<token>/si` + `/no`; HR tracking view; script `send_pdvsa_communication.py`; notice_key=pdvsa_continuacion_2026_2027; deadline 08-Jun-2026 |
 
 ---
 
@@ -152,7 +153,7 @@
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.31.4 | 2026-05-10 |
-| ueipab_attendance_report | 17.0.1.5.2 | 2026-05-10 |
+| ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
 
 ### Production Environment

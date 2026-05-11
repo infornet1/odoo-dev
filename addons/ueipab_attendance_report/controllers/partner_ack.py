@@ -1,0 +1,255 @@
+import datetime
+import logging
+
+from odoo import http
+from odoo.http import request
+
+_logger = logging.getLogger(__name__)
+
+
+class PartnerAckController(http.Controller):
+
+    # ── Direct YES from email link ────────────────────────────────────────────
+
+    @http.route('/partner-ack/<string:token>/si', type='http', auth='public', website=False)
+    def partner_ack_si(self, token, **kwargs):
+        return self._record_decision(token, 'continuing')
+
+    # ── Direct NO from email link ─────────────────────────────────────────────
+
+    @http.route('/partner-ack/<string:token>/no', type='http', auth='public', website=False)
+    def partner_ack_no(self, token, **kwargs):
+        return self._record_decision(token, 'leaving')
+
+    # ── Landing page (no-param link, shows decision form) ────────────────────
+
+    @http.route('/partner-ack/<string:token>', type='http', auth='public', website=False)
+    def partner_ack_landing(self, token, **kwargs):
+        Ack = request.env['partner.communication.ack'].sudo()
+        ack = Ack.search([('token', '=', token)], limit=1)
+        if not ack:
+            return self._respond(self._page_invalid())
+        if ack.state != 'pending':
+            return self._respond(self._page_already_done(ack))
+        return self._respond(self._page_decision(ack))
+
+    # ── Core decision handler ─────────────────────────────────────────────────
+
+    def _record_decision(self, token, decision):
+        Ack = request.env['partner.communication.ack'].sudo()
+        ack = Ack.search([('token', '=', token)], limit=1)
+        if not ack:
+            return self._respond(self._page_invalid())
+        if ack.state != 'pending':
+            return self._respond(self._page_already_done(ack))
+        ip = self._client_ip()
+        ack.write({'state': decision, 'ack_date': datetime.datetime.now(), 'ack_ip': ip})
+        _logger.info('partner_ack: %s decision=%s ip=%s', ack.partner_name, decision, ip)
+        if decision == 'continuing':
+            return self._respond(self._page_success_yes(ack))
+        return self._respond(self._page_success_no(ack))
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _client_ip(self):
+        return (
+            request.httprequest.environ.get('HTTP_X_FORWARDED_FOR', '')
+            .split(',')[0].strip()
+            or request.httprequest.remote_addr
+        )
+
+    def _respond(self, html):
+        return request.make_response(
+            html, headers=[('Content-Type', 'text/html; charset=utf-8')]
+        )
+
+    def _base_page(self, title, content):
+        return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{title} &mdash; Instituto Andr&eacute;s Bello</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{ font-family: Arial, sans-serif; background: #f0f4fa;
+            margin: 0; padding: 40px 16px; }}
+    .card {{ max-width: 540px; margin: 0 auto; background: white;
+             border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+             overflow: hidden; }}
+    .header {{ background-color: #1a2c5b; color: white;
+               padding: 28px 24px; text-align: center; }}
+    .header h1 {{ margin: 0; font-size: 18px; font-weight: bold; }}
+    .header p  {{ margin: 6px 0 0; font-size: 13px; opacity: 0.85; }}
+    .body   {{ padding: 28px 24px; }}
+    .footer {{ background: #f8f9fa; padding: 14px 24px; text-align: center;
+               font-size: 11px; color: #aaa; border-top: 1px solid #e8e8e8; }}
+    .btn {{ display: inline-block; padding: 14px 28px; border-radius: 8px;
+            font-size: 15px; font-weight: bold; text-decoration: none;
+            cursor: pointer; text-align: center; }}
+    .btn-yes {{ background-color: #1a2c5b; color: white; }}
+    .btn-yes:hover {{ background-color: #2471a3; }}
+    .btn-no  {{ background-color: #5d6d7e; color: white; margin-left: 12px; }}
+    .btn-no:hover {{ background-color: #4a5568; }}
+    @media (max-width: 480px) {{
+      .btn {{ display: block; margin: 8px 0 !important; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo;</h1>
+      <p>El Tigre, Estado Anzo&aacute;tegui</p>
+    </div>
+    <div class="body">{content}</div>
+    <div class="footer">
+      ¿Preguntas? Escr&iacute;benos a
+      <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    # ── Decision landing page ─────────────────────────────────────────────────
+
+    def _page_decision(self, ack):
+        name = ack.partner_name or ''
+        si_url = ack._get_si_url()
+        no_url = ack._get_no_url()
+        return self._base_page(
+            'Confirmar intenci&oacute;n',
+            f"""
+<div style="text-align:center;margin-bottom:24px;">
+  <div style="font-size:48px;">&#127979;</div>
+  <h2 style="color:#1a2c5b;margin:10px 0 4px;font-size:20px;">
+    Per&iacute;odo 2026-2027
+  </h2>
+  <p style="color:#555;font-size:14px;margin:0;">
+    Estimado(a) representante <strong>{name}</strong>
+  </p>
+</div>
+<div style="background:#f0f4fa;border-left:4px solid #1a2c5b;padding:16px 18px;
+            border-radius:4px;font-size:13px;color:#333;margin-bottom:24px;">
+  <p style="margin:0 0 8px;"><strong>Comunicado:</strong> Pol&iacute;tica de descuento PDVSA &mdash; Per&iacute;odo 2026-2027</p>
+  <p style="margin:0;"><strong>Fecha l&iacute;mite:</strong> 08 de junio de 2026 a las 12:30 p.m.</p>
+</div>
+<p style="font-size:14px;color:#333;margin:0 0 20px;">
+  Por favor confirme si desea continuar en nuestra instituci&oacute;n para el
+  pr&oacute;ximo per&iacute;odo escolar:
+</p>
+<div style="text-align:center;padding:10px 0;">
+  <a href="{si_url}" class="btn btn-yes">
+    &#10003;&nbsp; S&iacute;, continuar&eacute; en 2026-2027
+  </a>
+  <a href="{no_url}" class="btn btn-no">
+    No continuar&eacute;
+  </a>
+</div>
+<p style="font-size:11px;color:#aaa;text-align:center;margin:20px 0 0;">
+  Si no responde antes del 08/06/2026, el sistema asumir&aacute; que acepta
+  las nuevas condiciones para el per&iacute;odo 2026-2027.
+</p>
+"""
+        )
+
+    # ── Success pages ─────────────────────────────────────────────────────────
+
+    def _page_success_yes(self, ack):
+        name = ack.partner_name or ''
+        dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        return self._base_page(
+            'Continuidad confirmada',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">&#127881;</div>
+  <h2 style="color:#155724;margin:10px 0 4px;">¡Gracias por confirmar!</h2>
+  <p style="color:#555;font-size:14px;margin:0;">
+    <strong>{name}</strong>
+  </p>
+</div>
+<div style="background:#d4edda;border:1px solid #c3e6cb;border-radius:8px;
+            padding:18px;font-size:13px;color:#155724;margin-bottom:16px;line-height:1.8;">
+  <p style="margin:0 0 6px;">&#10003;&nbsp; <strong>Decisi&oacute;n registrada:</strong> Continuidad en 2026-2027</p>
+  <p style="margin:0;">&#128336;&nbsp; <strong>Confirmado el:</strong> {dt}</p>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;
+            font-size:13px;color:#444;margin-bottom:16px;">
+  <p style="margin:0 0 6px;"><strong>Pr&oacute;ximos pasos:</strong></p>
+  <p style="margin:0;">El equipo de administraci&oacute;n le contactar&aacute; con la informaci&oacute;n
+  de inscripci&oacute;n para el per&iacute;odo 2026-2027. Si tiene consultas sobre
+  facturaci&oacute;n escr&iacute;banos a
+  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Puede cerrar esta p&aacute;gina.</p>
+"""
+        )
+
+    def _page_success_no(self, ack):
+        name = ack.partner_name or ''
+        dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        return self._base_page(
+            'Decisi&oacute;n registrada',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">&#128203;</div>
+  <h2 style="color:#1a2c5b;margin:10px 0 4px;">Decisi&oacute;n registrada</h2>
+  <p style="color:#555;font-size:14px;margin:0;">
+    <strong>{name}</strong>
+  </p>
+</div>
+<div style="background:#e8f4f8;border:1px solid #bee5eb;border-radius:8px;
+            padding:18px;font-size:13px;color:#1a2c5b;margin-bottom:16px;line-height:1.8;">
+  <p style="margin:0 0 6px;">&#128221;&nbsp; <strong>Decisi&oacute;n registrada:</strong> No continuar&aacute; en 2026-2027</p>
+  <p style="margin:0;">&#128336;&nbsp; <strong>Registrado el:</strong> {dt}</p>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;
+            font-size:13px;color:#444;margin-bottom:16px;">
+  <p style="margin:0 0 6px;"><strong>¿Cambi&oacute; de opini&oacute;n?</strong></p>
+  <p style="margin:0;">Si desea reconsiderar, escr&iacute;banos a
+  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>
+  antes del 08 de junio de 2026 a las 12:30 p.m.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Puede cerrar esta p&aacute;gina.</p>
+"""
+        )
+
+    def _page_already_done(self, ack):
+        name  = ack.partner_name or ''
+        dt    = ack.ack_date.strftime('%d/%m/%Y %H:%M') if ack.ack_date else ''
+        state_labels = {'continuing': 'Continuará en 2026-2027 ✅',
+                        'leaving': 'No continuará ℹ️'}
+        label = state_labels.get(ack.state, ack.state)
+        return self._base_page(
+            'Ya respondido',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:52px;">&#128203;</div>
+  <h2 style="color:#1a2c5b;margin:10px 0 4px;">Ya respondiste</h2>
+  <p style="color:#555;font-size:14px;margin:0;"><strong>{name}</strong></p>
+</div>
+<div style="background:#e8f4f8;border:1px solid #bee5eb;border-radius:8px;
+            padding:16px 18px;font-size:13px;color:#1a2c5b;">
+  <p style="margin:0 0 4px;"><strong>Decisi&oacute;n:</strong> {label}</p>
+  <p style="margin:0;"><strong>Respondido el:</strong> {dt}</p>
+</div>
+"""
+        )
+
+    def _page_invalid(self):
+        return self._base_page(
+            'Enlace no v&aacute;lido',
+            """
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">&#10060;</div>
+  <h2 style="color:#5d6d7e;margin:10px 0 4px;">Enlace no v&aacute;lido</h2>
+</div>
+<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;
+            padding:16px;font-size:13px;color:#555;">
+  <p style="margin:0;">Este enlace no es v&aacute;lido o ya expir&oacute;.
+  Si necesita ayuda cont&aacute;ctenos en
+  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">
+    pagos@ueipab.edu.ve</a>.</p>
+</div>
+"""
+        )

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_partner_communication_ack" model="ir.actions.act_window">
+        <field name="name">Comunicados a Representantes</field>
+        <field name="res_model">partner.communication.ack</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <record id="view_partner_communication_ack_tree" model="ir.ui.view">
+        <field name="name">partner.communication.ack.tree</field>
+        <field name="model">partner.communication.ack</field>
+        <field name="arch" type="xml">
+            <tree string="Comunicados a Representantes"
+                  decoration-warning="state == 'pending'"
+                  decoration-success="state == 'continuing'"
+                  decoration-info="state == 'leaving'">
+                <field name="notice_label" optional="show"/>
+                <field name="notice_key"   optional="hide"/>
+                <field name="partner_name"/>
+                <field name="partner_email"/>
+                <field name="sent_date"    optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state == 'pending'"
+                       decoration-success="state == 'continuing'"
+                       decoration-info="state == 'leaving'"/>
+                <field name="ack_date"     optional="show"/>
+                <field name="days_pending" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_partner_communication_ack_form" model="ir.ui.view">
+        <field name="name">partner.communication.ack.form</field>
+        <field name="model">partner.communication.ack</field>
+        <field name="arch" type="xml">
+            <form string="Comunicado a Representante">
+                <header>
+                    <button name="action_mark_continuing" string="Marcar: Continuará"
+                            type="object" class="btn-primary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_mark_leaving" string="Marcar: No continuará"
+                            type="object"
+                            invisible="state != 'pending'"/>
+                    <button name="action_reset_pending" string="Reiniciar a Pendiente"
+                            type="object"
+                            invisible="state == 'pending'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="pending,continuing,leaving"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Campaña">
+                            <field name="notice_key"/>
+                            <field name="notice_label"/>
+                        </group>
+                        <group string="Representante">
+                            <field name="partner_id"/>
+                            <field name="partner_name"/>
+                            <field name="partner_email"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Estado">
+                            <field name="sent_date"/>
+                            <field name="ack_date"/>
+                            <field name="ack_ip"/>
+                            <field name="days_pending"
+                                   invisible="state != 'pending'"/>
+                        </group>
+                        <group string="Token">
+                            <field name="token"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_partner_communication_ack_search" model="ir.ui.view">
+        <field name="name">partner.communication.ack.search</field>
+        <field name="model">partner.communication.ack</field>
+        <field name="arch" type="xml">
+            <search string="Buscar comunicados">
+                <field name="partner_name"/>
+                <field name="partner_email"/>
+                <field name="notice_key"/>
+                <filter string="Pendientes"      name="pending"
+                        domain="[('state','=','pending')]"/>
+                <filter string="Continuarán"     name="continuing"
+                        domain="[('state','=','continuing')]"/>
+                <filter string="No continuarán"  name="leaving"
+                        domain="[('state','=','leaving')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Campaña"  name="group_notice"
+                            context="{'group_by':'notice_key'}"/>
+                    <filter string="Decisión" name="group_state"
+                            context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+</odoo>

@@ -37,4 +37,13 @@
         sequence="95"
         groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Partner Communication Ack (PDVSA continuacion, etc.) -->
+    <menuitem
+        id="menu_partner_communication_ack_list"
+        name="Comunicados a Representantes"
+        parent="ueipab_payroll_enhancements.menu_payroll_reports"
+        action="action_partner_communication_ack"
+        sequence="96"
+        groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
 </odoo>
