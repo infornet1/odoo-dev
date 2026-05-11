@@ -19,3 +19,5 @@ from . import arc_annual_report
 from . import arc_employee_certificate
 from . import payroll_requisition_wizard
 from . import hr_loan_extension
+from . import liquidacion_v2_forecast_wizard
+from . import liquidacion_v2_forecast_report

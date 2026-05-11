@@ -27,6 +27,14 @@
               sequence="10"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report 1.5: Pronóstico Liquidación V2 -->
+    <menuitem id="menu_liquidacion_v2_forecast"
+              name="Pronóstico Liquidación V2"
+              parent="menu_payroll_reports"
+              action="action_liquidacion_v2_forecast_wizard"
+              sequence="11"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 2: Relación de Liquidación (NEW - FULLY WORKING) -->
     <menuitem id="menu_liquidacion_breakdown"
               name="Relación de Liquidación"

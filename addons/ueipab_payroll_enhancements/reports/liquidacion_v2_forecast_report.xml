@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =====================================================================
+         Pronóstico Liquidación V2 — PDF Report
+         Landscape A4, one row per employee with full rule breakdown.
+         ===================================================================== -->
+
+    <template id="liq_v2_forecast">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+                <div class="page" style="font-size: 7pt;">
+
+                    <!-- WATERMARK -->
+                    <div style="position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
+                                font-size: 70pt; color: rgba(0,0,0,0.04); font-weight: bold;
+                                white-space: nowrap; z-index: -1; pointer-events: none;">
+                        PRONÓSTICO
+                    </div>
+
+                    <!-- ── HEADER ─────────────────────────────────────────── -->
+                    <div style="text-align: center; margin-bottom: 8px;">
+                        <h3 style="margin: 0; font-size: 12pt; color: #1a2c5b;">
+                            PRONÓSTICO DE LIQUIDACIÓN V2 POR EMPLEADO
+                        </h3>
+                        <p style="margin: 2px 0 0 0; font-size: 7.5pt; color: #555;">
+                            Estimación hipotética al
+                            <strong><t t-out="as_of_date and as_of_date.strftime('%d/%m/%Y') or ''"/></strong>
+                            — No es un documento oficial de pago
+                        </p>
+                        <p style="margin: 2px 0 0 0; font-size: 7pt; color: #888;">
+                            Tasa VEB/USD utilizada:
+                            <strong><t t-esc="'%.4f' % exchange_rate"/></strong>
+                            ·
+                            <t t-out="employee_count"/> empleados V2 activos
+                        </p>
+                    </div>
+
+                    <!-- ── EMPLOYEE SUMMARY TABLE ─────────────────────────── -->
+                    <table style="width: 100%; border-collapse: collapse; font-size: 6.5pt;">
+                        <thead>
+                            <tr style="background: #1a2c5b; color: white; text-align: center;">
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a;" rowspan="2">#</th>
+                                <th style="padding: 3px 4px; border: 1px solid #0d1c3a; text-align: left;" rowspan="2">Empleado / Departamento</th>
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a;" rowspan="2">Meses<br/>Serv.</th>
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a;" rowspan="2">Antig.<br/>(años)</th>
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a;" rowspan="2">Sal.<br/>Diario</th>
+                                <th colspan="4" style="padding: 3px 2px; border: 1px solid #0d1c3a; background: #22407a;">BENEFICIOS (USD)</th>
+                                <th colspan="2" style="padding: 3px 2px; border: 1px solid #0d1c3a; background: #7a7a7a;">PRE-PAGADOS (referencia)</th>
+                                <th colspan="2" style="padding: 3px 2px; border: 1px solid #0d1c3a; background: #6b2131;">DEDUCCIONES (USD)</th>
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a; background: #145a2c;" rowspan="2">NETO<br/>USD</th>
+                                <th style="padding: 3px 2px; border: 1px solid #0d1c3a; background: #4a3a00;" rowspan="2">NETO<br/>VEB</th>
+                            </tr>
+                            <tr style="text-align: center; font-size: 6pt;">
+                                <th style="padding: 2px; border: 1px solid #1a3a7a; background: #2e5499; color: white;">Vacaciones</th>
+                                <th style="padding: 2px; border: 1px solid #1a3a7a; background: #2e5499; color: white;">Prestaciones</th>
+                                <th style="padding: 2px; border: 1px solid #1a3a7a; background: #2e5499; color: white;">Antigüedad</th>
+                                <th style="padding: 2px; border: 1px solid #1a3a7a; background: #2e5499; color: white;">Intereses</th>
+                                <th style="padding: 2px; border: 1px solid #888; background: #999; color: white;">Bono Vac. ⓟ</th>
+                                <th style="padding: 2px; border: 1px solid #888; background: #999; color: white;">Utilidades ⓟ</th>
+                                <th style="padding: 2px; border: 1px solid #8a2a3e; background: #6b2131; color: white;">FAOV</th>
+                                <th style="padding: 2px; border: 1px solid #8a2a3e; background: #6b2131; color: white;">Adel. Vac.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="lines" t-as="line">
+                                <tr t-attf-style="background: {{ '#f8f9fa' if line_index % 2 == 0 else 'white' }}; vertical-align: middle;">
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: center; color: #666;">
+                                        <t t-out="line_index + 1"/>
+                                    </td>
+                                    <td style="padding: 3px 4px; border: 1px solid #dee2e6;">
+                                        <strong><t t-out="line['employee']"/></strong>
+                                        <t t-if="line['department']">
+                                            <br/><span style="color: #888; font-size: 5.5pt;"><t t-out="line['department']"/></span>
+                                        </t>
+                                        <br/>
+                                        <span style="color: #aaa; font-size: 5pt;">
+                                            Ingreso: <t t-out="line['original_hire'] and line['original_hire'].strftime('%d/%m/%Y') or '—'"/>
+                                            · Contrato: <t t-out="line['contract_start'] and line['contract_start'].strftime('%d/%m/%Y') or '—'"/>
+                                        </span>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: center;">
+                                        <t t-esc="'%.1f' % line['service_months']"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: center;">
+                                        <t t-esc="'%.2f' % line['seniority_years']"/>
+                                        <br/><span style="font-size: 5pt; color: #888;">
+                                            (<t t-esc="'%.0f' % line['annual_rate']"/> d/año)
+                                        </span>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right;">
+                                        $<t t-esc="'%.4f' % line['daily_salary']"/>
+                                    </td>
+                                    <!-- benefits (included in NET) -->
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #1a4a1a;">
+                                        $<t t-esc="'%.2f' % line['vacaciones']"/>
+                                        <br/><span style="font-size: 5pt; color: #888;"><t t-esc="'%.1f' % line['vacation_days']"/>d</span>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #1a4a1a;">
+                                        $<t t-esc="'%.2f' % line['prestaciones']"/>
+                                        <br/><span style="font-size: 5pt; color: #888;"><t t-esc="'%.1f' % line['prestaciones_days']"/>d</span>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #1a4a1a;">
+                                        $<t t-esc="'%.2f' % line['antiguedad']"/>
+                                        <t t-if="line['antiguedad_days'] > 0">
+                                            <br/><span style="font-size: 5pt; color: #888;">
+                                                <t t-esc="'%.1f' % line['antiguedad_days']"/>d
+                                                <t t-if="line['paid_antig_months'] > 0">
+                                                    (−<t t-esc="'%.1f' % line['paid_antig_months']"/>m ya pag.)
+                                                </t>
+                                            </span>
+                                        </t>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #1a4a1a;">
+                                        $<t t-esc="'%.2f' % line['intereses']"/>
+                                    </td>
+                                    <!-- pre-paid reference: shown crossed-out, NOT in NET -->
+                                    <td style="padding: 3px 2px; border: 1px solid #ccc; text-align: right; color: #aaa; background: #f5f5f5;">
+                                        <span style="text-decoration: line-through;">$<t t-esc="'%.2f' % line['bono_vacacional_gross']"/></span>
+                                        <br/><span style="font-size: 5pt;"><t t-esc="'%.1f' % line['bonus_days']"/>d</span>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #ccc; text-align: right; color: #aaa; background: #f5f5f5;">
+                                        <span style="text-decoration: line-through;">$<t t-esc="'%.2f' % line['utilidades_gross']"/></span>
+                                        <br/><span style="font-size: 5pt;"><t t-esc="'%.1f' % line['utilidades_days']"/>d</span>
+                                    </td>
+                                    <!-- deductions -->
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #7a1a1a;">
+                                        $<t t-esc="'%.2f' % line['faov']"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #7a1a1a;">
+                                        <t t-if="line['prepaid'] != 0">
+                                            $<t t-esc="'%.2f' % line['prepaid']"/>
+                                        </t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <!-- net -->
+                                    <td t-attf-style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; font-weight: bold; color: {{ '#145a2c' if line['net'] >= 0 else '#7a1a1a' }};">
+                                        $<t t-esc="'%.2f' % line['net']"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; border: 1px solid #dee2e6; text-align: right; color: #4a3a00;">
+                                        Bs.<t t-esc="'{:,.0f}'.format(line['net_veb'])"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+
+                        <!-- TOTALS ROW -->
+                        <tfoot>
+                            <tr style="background: #1a2c5b; color: white; font-weight: bold; font-size: 7pt;">
+                                <td colspan="5" style="padding: 4px 4px; border: 1px solid #0d1c3a; text-align: right;">
+                                    TOTAL (<t t-out="employee_count"/> empleados)
+                                </td>
+                                <td colspan="4" style="padding: 4px 2px; border: 1px solid #0d1c3a;"/>
+                                <td colspan="2" style="padding: 4px 2px; border: 1px solid #888; background: #e0e0e0;"/>
+                                <td colspan="2" style="padding: 4px 2px; border: 1px solid #0d1c3a;"/>
+                                <td style="padding: 4px 2px; border: 1px solid #0d1c3a; text-align: right; background: #145a2c;">
+                                    $<t t-esc="'%.2f' % total_net_usd"/>
+                                </td>
+                                <td style="padding: 4px 2px; border: 1px solid #0d1c3a; text-align: right; background: #4a3a00;">
+                                    Bs.<t t-esc="'{:,.0f}'.format(total_net_veb)"/>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <!-- ── FORMULA NOTES ──────────────────────────────────── -->
+                    <div style="margin-top: 10px; padding: 6px 8px; background: #f8f9fa;
+                                border-left: 3px solid #1a2c5b; font-size: 6pt; color: #555;">
+                        <strong style="color: #1a2c5b;">Notas metodológicas (LOTTT / Política UEIPAB):</strong>
+                        <span style="color: #7a1a1a; font-weight: bold;">ⓟ Bono Vacacional y Utilidades excluidos del NETO — se asumen pre-pagados (política UEIPAB). Se muestran tachados como referencia.</span><br/>
+                        Vacaciones: progresivo 15+1d/año desde ingreso original (máx. 30d/año) × días servicio/12 × salario diario V2 ·
+                        Prestaciones: 15d/trimestre × salario integral ·
+                        Antigüedad: 2d/mes desde ingreso original, descontando período ya pagado en liquidación previa ·
+                        Intereses: 13% anual sobre saldo promedio de prestaciones ·
+                        FAOV: 1% sobre Vacaciones (Bono+Util excluidos) · INCES: $0 (Utilidades excluidas) ·
+                        Salario integral = salario diario × (1 + 60/360 + 15/360).<br/>
+                        <em>Este documento es una estimación hipotética para planificación financiera.
+                        Los montos reales pueden variar según préstamos pendientes y ajustes salariales.</em>
+                    </div>
+
+                    <!-- ── SIGNATURE BLOCK ────────────────────────────────── -->
+                    <div style="margin-top: 24px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 30%;">
+                            <div style="border-top: 1px solid #333; padding-top: 4px; font-size: 6.5pt;">
+                                Preparado por Finanzas
+                            </div>
+                        </div>
+                        <div style="text-align: center; width: 30%;">
+                            <div style="border-top: 1px solid #333; padding-top: 4px; font-size: 6.5pt;">
+                                Revisado por Recursos Humanos
+                            </div>
+                        </div>
+                        <div style="text-align: center; width: 30%;">
+                            <div style="border-top: 1px solid #333; padding-top: 4px; font-size: 6.5pt;">
+                                Aprobado por Dirección
+                            </div>
+                        </div>
+                    </div>
+
+                    </div><!-- .page -->
+            </t>
+        </t>
+    </template>
+
+    <!-- Report action (ir.actions.report) — called programmatically from action_print_pdf -->
+    <record id="action_liquidacion_v2_forecast_report" model="ir.actions.report">
+        <field name="name">Pronóstico Liquidación V2</field>
+        <field name="model">liquidacion.v2.forecast.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_payroll_enhancements.liq_v2_forecast</field>
+        <field name="report_file">ueipab_payroll_enhancements.liq_v2_forecast</field>
+        <field name="print_report_name">'Pronostico_Liquidacion_V2_%s' % (object.as_of_date or '')</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+
+</odoo>

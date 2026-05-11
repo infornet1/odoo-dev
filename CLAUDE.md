@@ -63,8 +63,8 @@
 | 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) — token-based self-service form; 14 private fields; Fase 1 campaign sent to 44 employees 2026-05-11; auto-reminders day 3+7 |
-| 48 | Liquidación V2 Forecast | Testing | `ueipab_payroll_enhancements` | — wizard at Nómina→Reports→Pronóstico Liquidación V2; as-of date (default 2026-07-31); all 46 V2 active employees; full rule breakdown (vac/bono/util/prest/antig/int/deducciones); screen tree + PDF; v17.0.1.68.1 |
-| 48 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — `partner.communication.ack`; YES/NO links; `/partner-ack/<token>/si\|no`; votacion@; deadline 08-Jun-2026; **Pending:** Cap.2 WA reminders + Cap.3 Glenda stats |
+| 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | — wizard at Nómina→Reports→Pronóstico Liquidación V2; date 2026-07-31; 44 empleados (tag "Empleado" via res.partner.category + work_email fallback); Bono Vac + Utilidades excluidos del NETO (pre-pagados); screen tree + PDF + Excel; v17.0.1.68.2 |
+| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — `partner.communication.ack`; YES/NO links; `/partner-ack/<token>/si\|no`; votacion@; deadline 08-Jun-2026; **Pending:** Cap.2 WA reminders + Cap.3 Glenda stats |
 
 ---
 
@@ -149,7 +149,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.68.1 | 2026-05-11 |
+| ueipab_payroll_enhancements | 17.0.1.68.2 | 2026-05-11 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -161,7 +161,7 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.67.6 | **Deployed 2026-05-08** (Bono Día de las Madres + disbursement report fixes + bank account column + 4 employee date columns in disbursement report) |
+| ueipab_payroll_enhancements | 17.0.1.68.2 | **Deployed 2026-05-11** (Liquidación V2 Forecast: wizard + PDF + Excel, 44 empleados via partner tag, Bono Vac + Utilidades excluded as pre-paid) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.5.2 | **Deployed 2026-05-10** — Glenda calibration WA-ACK: wa_number field, /glenda-calibracion/<token> route, WA mismatch HR alert, notice_key=glenda_calibracion_v1 |

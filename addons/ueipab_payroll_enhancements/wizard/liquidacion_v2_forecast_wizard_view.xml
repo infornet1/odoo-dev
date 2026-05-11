@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Main wizard form -->
+    <record id="view_liquidacion_v2_forecast_wizard_form" model="ir.ui.view">
+        <field name="name">liquidacion.v2.forecast.wizard.form</field>
+        <field name="model">liquidacion.v2.forecast.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Pronóstico Liquidación V2">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Pronóstico de Liquidación V2 por Empleado</h1>
+                        <p class="text-muted">
+                            Estimación de pasivos laborales para todos los empleados activos
+                            con contrato V2, sin generar recibos de nómina.
+                        </p>
+                    </div>
+
+                    <group col="4">
+                        <field name="as_of_date" string="Proyectar al"/>
+                        <field name="exchange_rate" string="Tasa VEB/USD"
+                               help="0 = auto-detectar última tasa BCV disponible en Odoo"/>
+                        <field name="employee_count" readonly="1" string="Empleados V2"/>
+                        <field name="total_net_usd" readonly="1" string="Total Neto USD"
+                               widget="monetary" options="{'currency_field': 'false'}"/>
+                    </group>
+
+                    <group invisible="not computed">
+                        <field name="total_net_veb" readonly="1" string="Total Neto VEB"
+                               digits="[18,0]"/>
+                    </group>
+
+                    <field name="computed" invisible="1"/>
+
+                    <!-- Excel download (shown after export) -->
+                    <group invisible="not excel_file" col="2">
+                        <field name="excel_file" widget="binary"
+                               filename="excel_filename"
+                               string="Descargar Excel"/>
+                        <field name="excel_filename" invisible="1"/>
+                    </group>
+
+                    <!-- Lines (shown after compute) -->
+                    <notebook invisible="not computed">
+                        <page string="Detalle por Empleado">
+                            <field name="forecast_line_ids"
+                                   widget="one2many_list"
+                                   mode="tree"
+                                   readonly="1">
+                                <tree string="Pronóstico por Empleado" create="false" delete="false"
+                                      decoration-muted="net &lt;= 0">
+                                    <field name="employee_id" string="Empleado"/>
+                                    <field name="department_id" string="Depto." optional="show"/>
+                                    <field name="service_months" string="Meses" digits="[8,1]"/>
+                                    <field name="seniority_years" string="Antig. años" digits="[8,2]" optional="show"/>
+                                    <field name="daily_salary" string="Sal./Día" digits="[12,4]" optional="show"/>
+                                    <field name="vacaciones" string="Vacaciones" digits="[12,2]"/>
+                                    <field name="bono_vacacional" string="Bono Vac." digits="[12,2]"/>
+                                    <field name="utilidades" string="Utilidades" digits="[12,2]"/>
+                                    <field name="prestaciones" string="Prestaciones" digits="[12,2]"/>
+                                    <field name="antiguedad" string="Antigüedad" digits="[12,2]"/>
+                                    <field name="intereses" string="Intereses" digits="[12,2]" optional="show"/>
+                                    <field name="faov" string="FAOV" digits="[12,2]" optional="show"/>
+                                    <field name="inces" string="INCES" digits="[12,2]" optional="show"/>
+                                    <field name="prepaid" string="Adel. Vac." digits="[12,2]" optional="show"/>
+                                    <field name="net" string="NETO USD" digits="[12,2]"
+                                           decoration-success="net &gt; 0" decoration-danger="net &lt; 0"/>
+                                    <field name="net_veb" string="NETO VEB" digits="[16,0]" optional="show"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <footer>
+                    <button name="action_compute"
+                            string="Calcular / Actualizar"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_print_pdf"
+                            string="Imprimir PDF"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not computed"/>
+                    <button name="action_export_excel"
+                            string="Exportar Excel"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not computed"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Window action -->
+    <record id="action_liquidacion_v2_forecast_wizard" model="ir.actions.act_window">
+        <field name="name">Pronóstico Liquidación V2</field>
+        <field name="res_model">liquidacion.v2.forecast.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

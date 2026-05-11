@@ -4,6 +4,68 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — Liquidación V2 Forecast Report (ueipab_payroll_enhancements v17.0.1.68.2)
+
+**Type:** Feature | **Environments:** Testing + Production
+
+New budget-planning tool that estimates the total liquidation liability for all active V2 employees projected to any target date — without creating payslips.
+
+### Key components
+
+- **Wizard:** `liquidacion.v2.forecast.wizard` + `liquidacion.v2.forecast.line` (TransientModel) — Nómina → Reports → **Pronóstico Liquidación V2**
+- **Report model:** `report.ueipab_payroll_enhancements.liq_v2_forecast` (AbstractModel, shortened name to avoid 63-char PG limit)
+- **Employee filter:** `res.partner.category` tag "Empleado" (id=19 in production) — partner IDs resolved via raw SQL on `res_partner_res_partner_category_rel`; employees matched via `user_id → partner` OR `work_email` fallback (catches employees without Odoo user like LUIS RODRIGUEZ). Gives exactly **44 employees** in production.
+- **As-of date:** defaults to 2026-07-31 (end of academic year). Seniority, progressive rates and service months all projected to that date.
+- **Exchange rate:** auto-detects latest VEB rate via `res.currency.rate.company_rate`; manual override field.
+
+### Formula logic (pure Python, no payslips)
+
+All formulas replicate the production LIQUID_VE_V2 salary rules exactly:
+
+| Rule | Formula |
+|------|---------|
+| Vacaciones | Progressive 15+1d/yr from `ueipab_original_hire_date` × (service_months/12) × daily |
+| Prestaciones | (service_months/3) × 15d × integral daily |
+| Antigüedad | 2d/month from original hire − already-paid months (via `ueipab_previous_liquidation_date`) |
+| Intereses | 13% annual on average prestaciones balance |
+| FAOV | −1% × Vacaciones only |
+| INCES | $0 (Utilidades excluded) |
+
+### Pre-paid exclusions (Bono Vac + Utilidades)
+
+**Bono Vacacional and Utilidades are always pre-paid by UEIPAB**, so the forecast excludes them from the NET. They are computed (gross reference amounts stored) but zeroed out before totalling. Consequently:
+- FAOV = 1% of Vacaciones only (not Vac+Bono+Util)
+- INCES = $0
+
+Both columns appear **struck-through grey** in PDF and Excel as informational reference only.
+
+### Output formats
+
+- **Screen:** embedded tree in wizard with optional/hideable columns
+- **PDF:** colour-coded table — blue (benefits in NET), grey strikethrough (pre-paid reference), red (deductions), green/gold (NET USD/VEB). Footnote explains exclusions. 3-signature block.
+- **Excel (.xlsx):** 18 columns, frozen panes, same colour grouping, strikethrough formatting on pre-paid columns, totals row.
+
+### Production result (2026-05-11, as-of 2026-07-31)
+
+- **44 employees** · **$74,363 total NET** · Rate Bs. 500.46/USD
+- Previous total ($88,582) before excluding pre-paid Bono+Util — ~$14K difference = UEIPAB annual pre-paid obligations
+
+### Files added
+
+- `models/liquidacion_v2_forecast_wizard.py` — wizard, line model, `compute_forecast_for_contract()` helper
+- `models/liquidacion_v2_forecast_report.py` — AbstractModel for PDF data
+- `reports/liquidacion_v2_forecast_report.xml` — QWeb template + `ir.actions.report`
+- `wizard/liquidacion_v2_forecast_wizard_view.xml` — form view + window action
+
+### Files modified
+
+- `models/__init__.py` — added two new imports
+- `security/ir.model.access.csv` — added access rules for wizard + line models
+- `views/payroll_reports_menu.xml` — added menu item (sequence=11)
+- `__manifest__.py` — bumped to v17.0.1.68.2, added new data files
+
+---
+
 ## 2026-05-11 — Employee Private Info Request System (ueipab_hr_employee v17.0.1.2.0)
 
 **Type:** Feature | **Environments:** Testing + Production
