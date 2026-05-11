@@ -89,30 +89,57 @@ def _build_email_html(partner_name, si_url, no_url):
           </td>
         </tr>
 
-        <!-- ── BUTTONS (above fold) ── -->
+        <!-- ── ACTION BLOCK (above fold) ── -->
         <tr>
-          <td style="padding:20px 36px 8px;text-align:center;">
-            <table cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto;">
+          <td style="padding:20px 36px 8px;">
+
+            <!-- 1. Ghost: Ver comunicado (read before deciding) -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 10px;">
               <tr>
-                <td style="padding:0 6px 0 0;">
-                  <a href="{si_url}"
-                     style="display:inline-block;background-color:#1a2c5b;
-                            color:#ffffff;padding:15px 30px;border-radius:8px;
-                            font-size:15px;font-weight:bold;text-decoration:none;">
-                    &#10003;&nbsp; S&iacute;, continuar&eacute;
+                <td>
+                  <a href="{LETTER_URL}"
+                     style="display:block;background-color:#ffffff;
+                            color:#1a2c5b;padding:14px 20px;border-radius:8px;
+                            font-size:14px;font-weight:bold;text-decoration:none;
+                            border:2px solid #1a2c5b;text-align:center;">
+                    &#128196;&nbsp; Ver comunicado completo
                   </a>
                 </td>
-                <td style="padding:0 0 0 6px;">
+              </tr>
+            </table>
+
+            <!-- 2. YES -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 10px;">
+              <tr>
+                <td>
+                  <a href="{si_url}"
+                     style="display:block;background-color:#1a2c5b;
+                            color:#ffffff;padding:15px 20px;border-radius:8px;
+                            font-size:15px;font-weight:bold;text-decoration:none;
+                            text-align:center;">
+                    &#10003;&nbsp; S&iacute;, continuar&eacute; en 2026-2027
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- 3. NO -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
                   <a href="{no_url}"
-                     style="display:inline-block;background-color:#5d6d7e;
-                            color:#ffffff;padding:15px 30px;border-radius:8px;
-                            font-size:15px;font-weight:bold;text-decoration:none;">
+                     style="display:block;background-color:#5d6d7e;
+                            color:#ffffff;padding:15px 20px;border-radius:8px;
+                            font-size:15px;font-weight:bold;text-decoration:none;
+                            text-align:center;">
                     No continuar&eacute;
                   </a>
                 </td>
               </tr>
             </table>
+
           </td>
         </tr>
 
@@ -193,16 +220,6 @@ def _build_email_html(partner_name, si_url, no_url):
                 </td>
               </tr>
             </table>
-          </td>
-        </tr>
-
-        <!-- ── LINK TO FULL LETTER ── -->
-        <tr>
-          <td style="padding:16px 36px 0;text-align:center;">
-            <a href="{LETTER_URL}"
-               style="font-size:13px;color:#2471a3;text-decoration:underline;">
-              &#128196;&nbsp; Ver comunicado completo
-            </a>
           </td>
         </tr>
 
