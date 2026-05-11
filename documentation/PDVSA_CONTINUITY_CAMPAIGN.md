@@ -1,6 +1,7 @@
 # PDVSA Continuity Campaign — Período 2026-2027
 
 **Status:** Testing complete ✅ — Production deploy pending Friday 2026-05-15
+**See also:** [Representante campaign](REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — same infrastructure, letter pending
 **Created:** 2026-05-11
 **Module:** `ueipab_attendance_report` v17.0.1.6.0
 **Script:** `scripts/send_pdvsa_communication.py`

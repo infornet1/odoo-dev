@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — Representante Continuity Survey script (letter pending)
+
+**Type:** Feature scaffold | **Script only — no module change**
+
+`scripts/send_representante_communication.py` — companion to the PDVSA campaign script.
+Targets `Representante` tag (id=25, 225 prod partners). Identical infrastructure
+(`partner.communication.ack`, `/partner-ack/` routes, 3-button email design).
+
+Five TODO constants at the top of the file must be filled before the script will run:
+`LETTER_URL`, `BULLET_1–3`, `EMAIL_HEADLINE`. Hard guard exits cleanly until all are set.
+`notice_key`: `representante_continuacion_2026_2027`.
+
+---
+
 ## 2026-05-11 — PDVSA Campaign: SMTP From fix (`send_pdvsa_communication.py`)
 
 **Type:** Bug fix | **Script only — no module change**

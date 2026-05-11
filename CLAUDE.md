@@ -65,6 +65,7 @@
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) — token-based self-service form; 14 private fields; Fase 1 campaign sent to 44 employees 2026-05-11; auto-reminders day 3+7 |
 | 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | — wizard at Nómina→Reports→Pronóstico Liquidación V2; date 2026-07-31; 44 empleados (tag "Empleado" via res.partner.category + work_email fallback); Bono Vac + Utilidades excluidos del NETO (pre-pagados); screen tree + PDF + Excel; v17.0.1.68.2 |
 | 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — `partner.communication.ack`; YES/NO links; `/partner-ack/<token>/si\|no`; votacion@; deadline 08-Jun-2026; **Pending:** Cap.2 WA reminders + Cap.3 Glenda stats |
+| 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — same infra as PDVSA; tag id=25; 225 prod partners; script has guard — blocked until 5 TODO constants filled |
 
 ---
 
