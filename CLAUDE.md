@@ -164,7 +164,7 @@
 | ueipab_payroll_enhancements | 17.0.1.68.2 | **Deployed 2026-05-11** (Liquidación V2 Forecast: wizard + PDF + Excel, 44 empleados via partner tag, Bono Vac + Utilidades excluded as pre-paid) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.5.2 | **Deployed 2026-05-10** — Glenda calibration WA-ACK: wa_number field, /glenda-calibracion/<token> route, WA mismatch HR alert, notice_key=glenda_calibracion_v1 |
+| ueipab_attendance_report | 17.0.1.5.2 → **17.0.1.6.0 pending 2026-05-15** | Deployed 2026-05-10 (v17.0.1.5.2). **Pending Friday 2026-05-15:** upgrade to v17.0.1.6.0 — `partner.communication.ack` model, `/partner-ack/` routes, PDVSA campaign send. See [deploy runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |

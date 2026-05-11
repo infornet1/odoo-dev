@@ -4,6 +4,43 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-11 — PDVSA Continuity Campaign (ueipab_attendance_report v17.0.1.6.0)
+
+**Type:** Feature | **Status:** Testing ✅ — Production deploy pending 2026-05-15
+
+New `partner.communication.ack` model + email campaign system for customer-facing surveys/communications.
+
+### Key components
+
+- **Model:** `partner.communication.ack` — one record per partner per `notice_key`; fields: token (UUID), state (pending/continuing/leaving), partner snapshot, ack_date, ack_ip
+- **Public routes:** `/partner-ack/<token>/si` (YES), `/partner-ack/<token>/no` (NO), `/partner-ack/<token>` (landing page with all 3 buttons)
+- **ACK confirmation:** on every click → email to partner + CC `votacion@ueipab.edu.ve`
+- **HR tracking:** Payroll → Reports → Comunicados a Representantes
+- **Email design (v4):** decision-first layout — logo → question → 3 stacked full-width buttons (ghost "Ver comunicado" first, then YES navy, then NO gray) → deadline amber callout → 3-bullet summary → signature. Full letter referenced via Google Doc link, not pasted in body.
+- **Send script:** `scripts/send_pdvsa_communication.py` (Odoo shell, idempotent, DRY_RUN default)
+- **Sender:** `Colegio Andrés Bello <votacion@ueipab.edu.ve>`, reply-to + CC `votacion@`
+- **Campaign:** `pdvsa_continuacion_2026_2027` — 71 partners in production, deadline 08-Jun-2026
+- **Nginx:** `partner-ack` + `glenda-calibracion` added to dev proxy pattern
+
+### Files added
+
+- `models/partner_communication_ack.py`
+- `controllers/partner_ack.py`
+- `views/partner_communication_ack_views.xml`
+- `scripts/send_pdvsa_communication.py`
+- `documentation/PDVSA_CONTINUITY_CAMPAIGN.md`
+- `documentation/PDVSA_DEPLOY_FRIDAY_20260515.md`
+
+### Files modified
+
+- `models/__init__.py`, `controllers/__init__.py` — new imports
+- `security/ir.model.access.csv` — manager + user access for new model
+- `views/menu.xml` — "Comunicados a Representantes" menu entry
+- `__manifest__.py` — version bump 17.0.1.5.4 → 17.0.1.6.0, new view added
+- `/etc/nginx/sites-available/dev.ueipab.edu.ve` — added `partner-ack|glenda-calibracion`
+
+---
+
 ## 2026-05-11 — Liquidación V2 Forecast Report (ueipab_payroll_enhancements v17.0.1.68.2)
 
 **Type:** Feature | **Environments:** Testing + Production

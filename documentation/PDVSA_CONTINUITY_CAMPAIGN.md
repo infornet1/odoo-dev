@@ -1,17 +1,21 @@
 # PDVSA Continuity Campaign — Período 2026-2027
 
-**Status:** Testing (email sent 2026-05-11, WA tracking pending)
+**Status:** Testing complete ✅ — Production deploy pending Friday 2026-05-15
 **Created:** 2026-05-11
 **Module:** `ueipab_attendance_report` v17.0.1.6.0
 **Script:** `scripts/send_pdvsa_communication.py`
+**Deploy runbook:** [PDVSA_DEPLOY_FRIDAY_20260515.md](PDVSA_DEPLOY_FRIDAY_20260515.md)
 
 ---
 
 ## Overview
 
-Mass communication to parents tagged **"Representante PDVSA"** informing them of the end of the 35% discretionary discount (effective September 1, 2026) and asking whether they intend to continue in the institution for 2026-2027.
+Mass communication to parents tagged **"Representante PDVSA"** informing them of the end
+of the 35% discretionary discount (effective September 1, 2026) and asking whether they
+intend to continue in the institution for 2026-2027.
 
-Each parent receives a personalized email with two one-click decision links. Responses are tracked in Odoo and CC'd to `votacion@ueipab.edu.ve`.
+Each parent receives a personalized email with three stacked full-width buttons
+(read letter → yes → no). Responses are tracked in Odoo and CC'd to `votacion@ueipab.edu.ve`.
 
 ---
 
@@ -20,24 +24,63 @@ Each parent receives a personalized email with two one-click decision links. Res
 | Parameter | Value |
 |---|---|
 | `notice_key` | `pdvsa_continuacion_2026_2027` |
-| Partner tag | `Representante PDVSA` (id=26 testing, check prod) |
+| Partner tag | `Representante PDVSA` (id=**26** — confirmed same in testing and production) |
 | Decision deadline | **Monday, June 8, 2026 — 12:30 p.m.** |
-| Default if no response | Auto-accepted (new conditions apply) |
+| Default if no response | Auto-accepted (new conditions apply for 2026-2027) |
 | Sender | `Colegio Andrés Bello <votacion@ueipab.edu.ve>` |
 | Reply-to | `votacion@ueipab.edu.ve` |
-| CC (outbound + ACK) | `votacion@ueipab.edu.ve` |
-| Testing ack_id | 2 (Gustavo Perdomo) |
+| CC on every outbound email | `votacion@ueipab.edu.ve` |
+| CC on every ACK confirmation | `votacion@ueipab.edu.ve` |
+| Full letter link | [Google Doc](https://docs.google.com/document/d/1z9_Dr3qvWdytEcrDUCp7NcVoJQHq4MKiveNoV_kC2jE/edit?tab=t.0) |
 
 ---
 
-## Partner Coverage (Testing DB Snapshot — 2026-05-11)
+## Partner Coverage
 
-| Metric | Count |
-|---|---|
-| Total PDVSA partners (active) | 74 |
-| With email | 68 |
-| With mobile phone | 65 |
-| With phone (landline) | 23 |
+| Metric | Testing | Production (confirmed 2026-05-11) |
+|---|---|---|
+| Total PDVSA partners (active) | 74 | — |
+| With email | 68 | **71** |
+| With mobile phone | 65 | — |
+| PDVSA tag id | 26 | **26** |
+| Test partner | id=3676 Gustavo Perdomo | id=7 Gustavo Perdomo |
+
+---
+
+## Email Design (current — v3)
+
+Decision-first layout. Buttons are visible **above the fold** on mobile without scrolling.
+
+```
+[LOGO — navy header]
+¿Continuará en el Colegio para el período 2026-2027?
+Estimado(a) {name}, le comunicamos un cambio importante...
+
+┌─────────────────────────────────────────┐
+│  📄  Ver comunicado completo            │  ← navy ghost (opens Google Doc)
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  ✓  Sí, continuaré en 2026-2027        │  ← navy solid → /partner-ack/<token>/si
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  No continuaré                          │  ← gray solid → /partner-ack/<token>/no
+└─────────────────────────────────────────┘
+
+📅 Fecha límite: lunes 08 de junio de 2026 — 12:30 p.m.
+   (amber callout — "si no responde, se asume aceptación")
+
+• Bullet 1: descuento 35% finaliza 1° sep 2026
+• Bullet 2: ajuste matrícula estimado 20–34% para 2026-2027
+• Bullet 3: Casos Especiales evaluados individualmente → votacion@
+
+La Administración — Colegio "Andrés Bello" | 08 mayo 2026
+[FOOTER — navy]
+```
+
+**Key UX decisions:**
+- Ghost button first = "read the letter before deciding" flow
+- All buttons full-width stacked = no mobile cramping, no misclick between YES/NO
+- Full letter text removed from email body — linked via Google Doc instead
 
 ---
 
@@ -54,7 +97,7 @@ Lives in `ueipab_attendance_report`. One record per partner per `notice_key`.
 | `partner_id` | Many2one `res.partner` | Cascades on delete |
 | `partner_name` | Char | Snapshot at send time |
 | `partner_email` | Char | Snapshot at send time |
-| `token` | Char | UUID, auto-generated, public ACK links |
+| `token` | Char | UUID, auto-generated |
 | `state` | Selection | `pending` / `continuing` / `leaving` |
 | `sent_date` | Datetime | When email was sent |
 | `ack_date` | Datetime | When parent clicked |
@@ -64,31 +107,33 @@ Lives in `ueipab_attendance_report`. One record per partner per `notice_key`.
 
 | Route | Action |
 |---|---|
-| `GET /partner-ack/<token>/si` | Records `state=continuing`, shows success page |
-| `GET /partner-ack/<token>/no` | Records `state=leaving`, shows success page |
-| `GET /partner-ack/<token>` | Landing page with both buttons (fallback) |
+| `GET /partner-ack/<token>/si` | Records `state=continuing`, shows success, fires ACK confirmation email |
+| `GET /partner-ack/<token>/no` | Records `state=leaving`, shows success, fires ACK confirmation email |
+| `GET /partner-ack/<token>` | Landing page with all 3 buttons (fallback if no direct link click) |
 
-All routes fire `_send_ack_confirmation()` → email to partner + CC `votacion@`.
+ACK confirmation email → partner + CC `votacion@ueipab.edu.ve`.
 
 ### Nginx
 
-Added to `dev.ueipab.edu.ve` proxy pattern (line 183):
+Added to `dev.ueipab.edu.ve` proxy pattern (and `glenda-calibracion` was also fixed):
 ```
-^/(... |partner-ack)(/|$)
+^/(web|...|notice-ack|glenda-calibracion|employee-info|partner-ack)(/|$)
 ```
-**Production:** same change needed on `10.124.0.3` nginx config.
+**Production:** same pattern needed on `10.124.0.3` — covered in deploy runbook.
 
-### HR Tracking
+### HR Tracking View
 
 **Payroll → Reports → Comunicados a Representantes**
-— list view with state badges, days pending, filters by decision, group by campaign key.
+— list with state badges (`pending`/`continuing`/`leaving`), days pending, filters, group by campaign key.
 
 ---
 
 ## Send Script
 
+`scripts/send_pdvsa_communication.py` — Odoo shell script (stdin pipe pattern).
+
 ```bash
-# Dry run (default) — shows who would be sent to, no records created
+# Dry run (default) — lists recipients, no records created
 docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
   < /opt/odoo-dev/scripts/send_pdvsa_communication.py
 
@@ -97,26 +142,39 @@ docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
   cat /opt/odoo-dev/scripts/send_pdvsa_communication.py; } \
   | docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http
 
-# Live — single partner (for test)
+# Live — single partner (for test, replace PARTNER_ID)
 { echo "import os; os.environ['LIVE']='true'; os.environ['PARTNER_ID']='3676'"; \
   cat /opt/odoo-dev/scripts/send_pdvsa_communication.py; } \
   | docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http
 ```
 
-Script is idempotent — re-running skips partners who already have a record for this `notice_key`.
+**Idempotent** — re-running skips partners who already have a record for this `notice_key`.
 
 ---
 
-## Production Deployment Checklist
+## Testing History
 
-| Step | Action |
-|---|---|
-| 1 | Copy `ueipab_attendance_report` v17.0.1.6.0 to `/home/vision/ueipab17/addons` |
-| 2 | `docker exec 0ef7d03db702_ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_attendance_report --stop-after-init --http-port=18069` |
-| 3 | Add `partner-ack` to prod nginx Odoo location regex + `nginx -s reload` |
-| 4 | Verify `https://odoo.ueipab.edu.ve/partner-ack/test-token` returns 404-style page (not 502) |
-| 5 | Run send script with `PARTNER_ID=<gustavo_prod_id> LIVE=true` for one-off test |
-| 6 | Run full blast Friday morning VET |
+| Date | Action | Result |
+|---|---|---|
+| 2026-05-11 | v1 sent (full letter body) | mail_id=1042, ack_id=1 ✅ |
+| 2026-05-11 | v2: votacion@ sender + CC + logo + subject | mail_id=1043, ack_id=2 ✅ |
+| 2026-05-11 | v3: redesign — decision-first, 3 bullets | mail_id=1044, ack_id=3 ✅ |
+| 2026-05-11 | v4: ghost button first, stacked full-width | mail_id=1045, ack_id=4 ✅ sent to perdomo.gustavo@gmail.com |
+
+---
+
+## Production Deployment
+
+**Target: Friday 2026-05-15, ~9:00 AM VET**
+
+See full step-by-step runbook: **[PDVSA_DEPLOY_FRIDAY_20260515.md](PDVSA_DEPLOY_FRIDAY_20260515.md)**
+
+Summary:
+1. Backup DB_UEIPAB
+2. Copy + upgrade `ueipab_attendance_report` v17.0.1.5.2 → v17.0.1.6.0
+3. Add `partner-ack` to prod nginx location regex
+4. Test send to partner id=7 (Gustavo, `gustavo.perdomo@ueipab.edu.ve`)
+5. Full blast — **71 partners**
 
 ---
 
@@ -127,18 +185,14 @@ Script is idempotent — re-running skips partners who already have a record for
 **Status:** Pending implementation
 **Target run date:** June 3–5, 2026 (3–5 days before deadline)
 
-A standalone host script that sends a WhatsApp nudge to every PDVSA partner with `state=pending` whose initial email was sent more than 7 days ago.
-
-#### Script: `scripts/send_pdvsa_wa_reminders.py`
+Script: `scripts/send_pdvsa_wa_reminders.py` (to be created)
 
 **Logic:**
 1. Connect to Odoo via XML-RPC (prod env file)
 2. Query `partner.communication.ack` → `state=pending` + `sent_date < now - 7 days` + `notice_key = pdvsa_continuacion_2026_2027`
-3. For each record: look up `res.partner.mobile` (fallback `phone`), normalize to `+58` format
-4. Build WA message with direct YES/NO deep-links
-5. POST to MassivaMóvil `/api/send/whatsapp`
-6. Respect 120 s anti-spam delay between sends
-7. Log result per partner
+3. For each: look up `res.partner.mobile` (fallback `phone`), normalize to `+58` format
+4. Send WA via MassivaMóvil with direct YES/NO deep-links
+5. Respect 120 s anti-spam delay between sends
 
 **WA message template:**
 ```
@@ -156,28 +210,11 @@ Por favor confirme su decisión:
 ¿Preguntas? Escríbanos a votacion@ueipab.edu.ve
 ```
 
-**Coverage (from current data):** 65 of 74 PDVSA partners have mobile; remainder may have landline only — those are skipped with a warning log.
-
-**Key implementation details:**
-- Source creds from `/root/.odoo_agent_env_prod` (or `--env testing`)
-- WA config from `/opt/odoo-dev/config/whatsapp_massiva.json`
-- DRY_RUN=true default
-- `--partner-id N` for single-partner test
-- Skip partners who already responded (`state != pending`)
-- Normalize Venezuelan numbers: `04XX-XXXXXXX` → `+58 4XX XXXXXXX`
-- Do NOT record a new `mail.mail` — this is WA-only
+**Coverage:** 65 of 74 testing partners have mobile. Production TBD.
 
 **Run command:**
 ```bash
-# Dry run
-python3 /opt/odoo-dev/scripts/send_pdvsa_wa_reminders.py
-
-# Live (all pending)
 LIVE=true python3 /opt/odoo-dev/scripts/send_pdvsa_wa_reminders.py --env production
-
-# Test with one partner
-LIVE=true python3 /opt/odoo-dev/scripts/send_pdvsa_wa_reminders.py \
-  --env production --partner-id <id>
 ```
 
 ---
@@ -185,64 +222,45 @@ LIVE=true python3 /opt/odoo-dev/scripts/send_pdvsa_wa_reminders.py \
 ### Capability 3 — Glenda HR Query Interface
 
 **Status:** Pending implementation
-**Module:** `ueipab_ai_agent` — `general_inquiry` skill
-**File:** `addons/ueipab_ai_agent/skills/general_inquiry.py`
+**File to edit:** `addons/ueipab_ai_agent/skills/general_inquiry.py`
 
-Glenda answers HR staff questions like *"¿Cuántos PDVSA respondieron la encuesta?"* using live counts from `partner.communication.ack`.
-
-#### Implementation
-
-Add `_build_pdvsa_survey_context()` to `general_inquiry.py`:
+Add `_build_pdvsa_survey_context()` method — queries `partner.communication.ack` counts
+and injects live stats into Glenda's system prompt `_INSTITUTIONAL_KNOWLEDGE` block.
 
 ```python
 def _build_pdvsa_survey_context(self):
-    """Return a text block with live PDVSA survey stats for the system prompt."""
     try:
         Ack = self.env['partner.communication.ack']
-        notice_key = 'pdvsa_continuacion_2026_2027'
-        total      = Ack.search_count([('notice_key', '=', notice_key)])
-        pending    = Ack.search_count([('notice_key', '=', notice_key), ('state', '=', 'pending')])
-        si_count   = Ack.search_count([('notice_key', '=', notice_key), ('state', '=', 'continuing')])
-        no_count   = Ack.search_count([('notice_key', '=', notice_key), ('state', '=', 'leaving')])
+        key = 'pdvsa_continuacion_2026_2027'
+        total   = Ack.search_count([('notice_key', '=', key)])
+        pending = Ack.search_count([('notice_key', '=', key), ('state', '=', 'pending')])
+        si      = Ack.search_count([('notice_key', '=', key), ('state', '=', 'continuing')])
+        no      = Ack.search_count([('notice_key', '=', key), ('state', '=', 'leaving')])
         return (
             f"ENCUESTA PDVSA 2026-2027 (cierre 08-Jun): "
-            f"{si_count} continuarán, {no_count} no continuarán, "
+            f"{si} continuarán, {no} no continuarán, "
             f"{pending} sin respuesta de {total} enviados."
         )
     except Exception:
         return ""
 ```
 
-Inject into `get_context()` inside the `_INSTITUTIONAL_KNOWLEDGE` block, after the BCV rate block:
-
-```python
-pdvsa_block = self._build_pdvsa_survey_context()
-if pdvsa_block:
-    knowledge_lines.append(pdvsa_block)
-```
-
 **Sample HR ↔ Glenda exchange:**
 > **HR:** ¿Cuántos representantes PDVSA han respondido la encuesta?
-> **Glenda:** Hasta ahora: 12 confirmaron que continuarán, 3 indicaron que no continuarán, y 53 aún no han respondido. El cierre es el lunes 08 de junio.
-
-**Notes:**
-- Stats reflect the state at conversation start, not real-time mid-conversation
-- Only available in `general_inquiry` skill (24/7, HR-facing)
-- Depends on `partner.communication.ack` model — if `ueipab_attendance_report` not installed, returns empty string (graceful fallback)
-- No new Odoo module changes needed — `general_inquiry.py` edits only
+> **Glenda:** Hasta ahora: 12 confirmaron continuidad, 3 no continuarán, 56 aún no han respondido. Cierre el 08 de junio.
 
 ---
 
 ## Status Summary
 
-| Component | Status | Notes |
-|---|---|---|
-| `partner.communication.ack` model | ✅ Done | v17.0.1.6.0 |
-| Public ACK routes `/partner-ack/` | ✅ Done | nginx updated (dev) |
-| HR tracking view | ✅ Done | Payroll → Reports menu |
-| Send script (email) | ✅ Done | `send_pdvsa_communication.py` |
-| Confirmation CC email on ACK | ✅ Done | `votacion@` auto-CC |
-| School logo in email | ✅ Done | `dev.ueipab.edu.ve/flyers/ueipab_logo.png` |
-| Production deployment | ⏳ Pending | See checklist above |
-| Capability 2 — WA reminders | ⏳ Pending | Run Jun 3–5 |
-| Capability 3 — Glenda stats | ⏳ Pending | `general_inquiry.py` edit |
+| Component | Status |
+|---|---|
+| `partner.communication.ack` model | ✅ Testing |
+| Public ACK routes `/partner-ack/` | ✅ Testing (nginx updated) |
+| HR tracking view | ✅ Testing |
+| Send script (email, 3-button design) | ✅ Testing — 4 iterations, final v4 sent |
+| CC `votacion@` on outbound + ACK | ✅ Verified |
+| School logo in email header | ✅ `dev.ueipab.edu.ve/flyers/ueipab_logo.png` |
+| Production deploy | ⏳ **Friday 2026-05-15** |
+| Capability 2 — WA reminders | ⏳ Implement before Jun 3 |
+| Capability 3 — Glenda stats | ⏳ Pending |
