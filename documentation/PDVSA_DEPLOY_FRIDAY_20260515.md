@@ -11,8 +11,8 @@
 | Item | Value |
 |---|---|
 | Module to deploy | `ueipab_attendance_report` |
-| Testing version (current) | 17.0.1.5.2 |
-| Target version | 17.0.1.6.0 |
+| Testing version (current) | 17.0.1.6.0 ✅ (upgraded 2026-05-11) |
+| Target version (production) | 17.0.1.6.0 |
 | Production server | `10.124.0.3` |
 | Container | `0ef7d03db702_ueipab17` |
 | Production DB | `DB_UEIPAB` |
