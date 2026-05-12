@@ -360,7 +360,9 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **2026-2027 enrollment + PDVSA policy:** Inscripción $197,38, Seguro $15, Enc.inglés $30, Enc.digital bach. $36, Kurios $10, MOA $25. PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
 - **Farewell message fix:** `resolved` conv allows new conv within 24h (customer farewell ACK); `timeout`/`failed` → blocked.
 - **Quotation engine:** 4-section quote: mensualidad + inscripción + costos anuales ($55/std: seguro $15 + enc.inglés $30 + olimpiadas $10; +$36 bach) + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7% on mensualidad. Glenda asks bach level + # children; presents per-child breakdown, hands off with structured quote.
-- **Sep 2026 tariff forecast:** inscripción $264,48, mensualidad $264,48, pronto pago $241,16 (8.816% disc). Current $197,38 "hasta agosto 2026".
+- **Tarifas 2025-2026 (hasta 31 ago):** mensualidad $197,38 (regular) / $162,39 (pronto pago, 10 primeros días).
+- **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** inscripción $187,51 / mensualidad septiembre $197,38.
+- **Nueva mensualidad desde 1 sep 2026:** $218,88 (regular) / $207,93 (pronto pago, 5% dto). Tarifas preliminares, sujetas a aprobación Comité Contraloría.
 - **general_inquiry timeout fix (v1.29.8):** Added `get_reminder_message`, per-conv `try/except` in `_cron_check_timeouts`, `max_turns` raised 10→25.
 
 ### WA Poll Cron — Account Filter Note

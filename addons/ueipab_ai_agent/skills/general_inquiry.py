@@ -8,8 +8,8 @@ _logger = logging.getLogger(__name__)
 # Flyers available to send via WhatsApp.
 # key → (filename, short description for Claude's reference)
 _FLYERS = {
-    'inscripcion':          ('inscripcion.png',          'Inscripciones abiertas año escolar 2026-2027 — $197.38/año, 17.72% descuento hasta el 1 de mayo'),
-    'pronto_pago':          ('pronto_pago.png',          'Pronto pago: mensualidad congelada a $162.39 si pagas en los primeros 10 días del mes'),
+    'inscripcion':          ('inscripcion.png',          'Inscripciones 2026-2027 — Promo hasta 31 julio: inscripción $187,51 + mensualidad sept $197,38'),
+    'pronto_pago':          ('pronto_pago.png',          'Pronto pago: mensualidad $207,93 si pagas en los primeros 10 días del mes (vs $218,88 regular desde septiembre 2026)'),
     'tarjeta_credito':      ('tarjeta_credito.png',      'Aceptamos tarjetas de crédito nacionales e internacionales sin comisiones adicionales'),
     'english':              ('english.png',              'MOA School: Cursos de Inglés After School, grupos pequeños, $38/mes'),
     'robotica':             ('robotica.png',             'Clases de Robótica con Kurios — 2 clases/semana, $52/mes, inscripción gratis'),
@@ -36,12 +36,15 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- Año escolar: 2026-2027\n"
     "- Enfoque pedagógico: metodología STEAM, Proyectos de Aprendizaje (PA), competencias digitales e inteligencia artificial\n"
     "- Aliados educativos: Akademia, Dawere, Kurios, Universidad Europea del Atlántico, Move on Academy, Edugogo\n"
-    "- Inscripción (tarifa vigente hasta agosto 2026): $197,38\n"
-    "- Mensualidad (tarifa vigente hasta agosto 2026): $197,38 | Pronto pago: $162,39 (10 primeros días de cada mes)\n"
-    "TARIFAS A PARTIR DEL 1 DE SEPTIEMBRE DE 2026 (inicio año escolar 2026-2027) [PROYECTADAS]:\n"
-    "- Inscripción: $264,48\n"
-    "- Mensualidad: $264,48 | Pronto pago (primeros 10 días del mes): $241,16 (descuento 8,816%)\n"
-    "- Estas tarifas son proyectadas. Si el representante quiere confirmar o tiene dudas sobre su caso particular, orientar a pagos@ueipab.edu.ve\n"
+    "TARIFAS VIGENTES (período 2025-2026, hasta el 31 de agosto de 2026):\n"
+    "- Inscripción: $197,38\n"
+    "- Mensualidad: $197,38 (regular) | Pronto pago: $162,39 (10 primeros días de cada mes)\n"
+    "TARIFAS 2026-2027 — PROMOCIÓN DE INSCRIPCIÓN ANTICIPADA (desde promulgación hasta el 31 de julio de 2026):\n"
+    "- Inscripción en promoción: $187,51 (descuento especial por inscripción anticipada)\n"
+    "- Mensualidad de septiembre: $197,38 (se mantiene la tarifa actual durante el primer mes)\n"
+    "TARIFAS 2026-2027 — NUEVA MENSUALIDAD EFECTIVA 1 DE SEPTIEMBRE DE 2026:\n"
+    "- Mensualidad: $218,88 (regular) | Pronto pago: $207,93 (10 primeros días de cada mes)\n"
+    "- Estas tarifas son preliminares. Para confirmación o casos particulares, orientar a pagos@ueipab.edu.ve\n"
     "COSTOS ANUALES ÚNICOS (pago único por año escolar, sin descuento, por alumno):\n"
     "    Seguro escolar: $15\n"
     "    Enciclopedia de Inglés: $30\n"
@@ -59,11 +62,11 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- 4to alumno en adelante: 7% de descuento sobre mensualidad\n"
     "- Los descuentos de hermano y pronto pago se acumulan (el pronto pago se aplica sobre la mensualidad ya descontada)\n"
     "- Inscripción: precio completo por alumno, sin descuento por hermano\n"
-    "TABLA DE MENSUALIDAD POR ALUMNO (tarifas Sep 2026, proyectadas):\n"
-    "  1er alumno: mensualidad $264,48 | pronto pago $241,16\n"
-    "  2do alumno: mensualidad $251,26 | pronto pago $229,11\n"
-    "  3er alumno: mensualidad $248,61 | pronto pago $226,69\n"
-    "  4to alumno en adelante: mensualidad $245,97 | pronto pago $224,28\n"
+    "TABLA DE MENSUALIDAD POR ALUMNO (tarifas Sep 2026, preliminares — pronto pago = 5% dto. sobre mensualidad ya descontada):\n"
+    "  1er alumno: mensualidad $218,88 | pronto pago $207,93\n"
+    "  2do alumno (5% dto.): mensualidad $207,94 | pronto pago $197,54\n"
+    "  3er alumno (6% dto.): mensualidad $205,55 | pronto pago $195,27\n"
+    "  4to alumno en adelante (7% dto.): mensualidad $203,56 | pronto pago $193,38\n"
     "POLÍTICA FUERZA LABORAL INDUSTRIA (PDVSA / Petropiar / otras Industrias) — Comunicado 08/05/2026:\n"
     "- Período anterior (2025-2026): existía un descuento discrecional del 35% en modalidad de crédito (similar a 'Cashea') para familias del sector industria.\n"
     "- A partir del 1° de septiembre de 2026: este beneficio CESA completamente. El colegio no podrá mantener la modalidad del 35% de factura a crédito. Aplica a PDVSA, Petropiar y cualquier otra empresa del sector industria.\n"
@@ -76,8 +79,8 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "CASOS ESPECIALES (solo familias industria con estudiantes de mérito excepcional):\n"
     "- La institución evaluará solicitudes individuales de familias cuyos alumnos tengan: excelente rendimiento académico, atletas con medallas nacionales, músicos activos del Sistema de Orquestas Juveniles, o habilidades destacadas reconocidas.\n"
     "- No existen excepciones generales. Solo revisión caso a caso vía correo electrónico a pagos@ueipab.edu.ve.\n"
-    "PROYECCIONES MATRÍCULA 2026-2027 (para familias industria y general):\n"
-    "- Se estima un ajuste de la matrícula base de entre 20% y 34%, calculado sobre inflación, salarios del sector privado y riesgo país. Tarifas definitivas se presentarán ante el Comité de Contraloría.\n"
+    "TARIFAS DEFINITIVAS 2026-2027 (información preliminar, sujeta a confirmación):\n"
+    "- Nueva mensualidad desde septiembre 2026: $218,88 regular / $207,93 pronto pago. Tarifas definitivas sujetas a aprobación del Comité de Contraloría.\n"
     "- Costos NO incluidos en la matrícula: seguro escolar, olimpiadas académicas, guías de texto/inglés, concursos nacionales (robótica, química, etc.) y eventos externos — se pagan según participación del alumno.\n"
     "ALIANZAS COMERCIALES LOCALES (El Tigre):\n"
     "- Almacén París, Comercial Caracas y Ferretería Veramar ofrecen descuentos especiales en uniformes y útiles escolares a representantes del colegio.\n"
@@ -357,7 +360,7 @@ class GeneralInquirySkill:
             f"- Tasa actual: *Bs. {rate:,.4f}* por 1 USD "
             f"(efectiva {fmt_date(eff_date)}, actualizada {updated})\n"
             f"- Para convertir: multiplica el monto en USD × {rate:,.4f}\n"
-            f"  Ejemplo: $197,38 × {rate:,.4f} = Bs. {197.38 * rate:,.2f}\n"
+            f"  Ejemplo: $218,88 × {rate:,.4f} = Bs. {218.88 * rate:,.2f}\n"
             f"- Historial reciente (últimos {len(history)} días disponibles):\n"
             + history_lines + "\n"
             "- Si alguien pide una fecha fuera del historial, indica que solo tienes "
