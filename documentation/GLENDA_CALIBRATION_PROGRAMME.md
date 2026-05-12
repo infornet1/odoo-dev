@@ -48,6 +48,15 @@ reach the bonus threshold receive a cash bonus.
 | YARITZA BRUCES | +58 424 8795332 | ✓ Email sent |
 | YUDELYS BRITO | — | ⚠️ Pending personal WA |
 
+## Status as of 2026-05-12 (Day 2)
+
+- 14/20 started (at least 1 conversation with Glenda)
+- 6/20 not started yet: ARCIDES ARZOLA, DAVID HERNANDEZ, Daniel Bongianni, MAGYELYS MATA, MARIA NIETO, ROBERT QUIJADA
+- 3 suggestions logged: LUISA ELENA ABREU (conocimiento + asistencia), Maria Figuera (flujo)
+- 0/20 bonus-eligible (deadline May 30)
+- Closest to bonus: JOSEFINA RODRIGUEZ (3 convs, needs 1 suggestion), Maria Figuera (2 convs + 1 suggestion, needs 1 conv)
+- Group status report emailed 2026-05-12 to all participants via `recursoshumanos@ueipab.edu.ve`
+
 ## Status as of 2026-05-11 (Day 1)
 
 - 13/20 testers already contacted Glenda (before guide email — from enrolment flow)
@@ -101,6 +110,10 @@ Inherited in `ueipab_ai_agent` (`hr_notice_ack_calibration.py`):
 
 `scripts/send_calibration_programme_email.py` — set `PILOT_ONLY=False`, `ALREADY_SENT` to re-run for new batches. Always requires `env.cr.commit()` (Odoo shell does not auto-commit).
 
+### Status report script
+
+`scripts/send_calibration_status_report.py` — queries production via XML-RPC, builds an HTML group progress report in Spanish, and queues it to `recursoshumanos@ueipab.edu.ve`. Run any time to send an updated scoreboard to HR (then forward manually to all participants). Includes: KPI chips, scoreboard table per participant (color-coded), and feedback suggestions received.
+
 ## WA Number Convention
 
 All enrolled employees stored in `+58 XXX XXXXXXX` format (space-separated) on both:
@@ -117,4 +130,5 @@ Phone matching uses digit-only comparison (`re.sub(r'\D', '', phone)`) to handle
 | 2026-05-11 | 20 employees enrolled, WA numbers normalized |
 | 2026-05-11 | `ueipab_ai_agent` v17.0.1.32.0 deployed to production |
 | 2026-05-11 | Guide emails sent to 19 employees (YUDELYS BRITO pending) |
+| 2026-05-12 | Day 2 group status report sent to all participants (14/20 started, 3 suggestions) |
 | 2026-05-30 | **Bonus deadline** |
