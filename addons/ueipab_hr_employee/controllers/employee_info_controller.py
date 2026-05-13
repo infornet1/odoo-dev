@@ -689,7 +689,7 @@ class EmployeeInfoController(http.Controller):
 // Auto-normalize Venezuelan phone numbers to +58XXXXXXXXXX on submit
 (function() {{
   function normalizePhone(val) {{
-    var d = val.replace(/\D/g, '');
+    var d = val.replace(/\\D/g, '');
     var local;
     if (val.trim().startsWith('+')) {{
       if (d.startsWith('58')) local = d.slice(2);
