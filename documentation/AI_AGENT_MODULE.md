@@ -179,8 +179,8 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 - **Scenario A** — New prospect identifying as PDVSA/Petropiar: informs discontinuation cordially, routes to `billing`.
 - **Scenario B** — Existing 2025-2026 enrolled family expressing economic hardship: responds with maximum empathy, invites Director meeting, fires urgent retention alert via `pdvsa_retention` route. Subject: `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación — {name}`.
 
-**Audio/voice note transcription (v17.0.1.35.0, 2026-05-13) — ⏳ pending deploy:**
-`_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads WA audio attachment, POSTs to OpenAI Whisper API (`whisper-1`, `language=es`), injects transcription as message body before Claude. Fallback: `[audio sin transcripción]` → Claude asks user to write. Requires `ai_agent.openai_api_key` in `ir.config_parameter`. Cost ~$0.003/voice note. `MENSAJES DE AUDIO` block added to `general_inquiry` system prompt.
+**Audio/voice note transcription (v17.0.1.35.0, 2026-05-13) — ✅ ACTIVE in production:**
+`_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads WA audio attachment, POSTs to OpenAI Whisper API (`whisper-1`, `language=es`), injects transcription as message body before Claude. Fallback: API fails → Claude asks user to write. Key `ai_agent.openai_api_key` set in production (id=70, `UEIPAB-Glenda-Whisper`), backup at `config/openai_api.json`. Cost ~$0.003/voice note. `MENSAJES DE AUDIO` block in `general_inquiry` system prompt. **Tested 2026-05-13:** 172-char Spanish voice note transcribed with 100% accuracy end-to-end on DB_UEIPAB.
 
 **general_inquiry conciseness rules (v17.0.1.34.0, 2026-05-13):**
 `REGLAS DE COMUNICACIÓN` block added to system prompt based on Calibration Programme UX feedback (top theme, 4+ mentions):

@@ -6,27 +6,24 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## 2026-05-13 — Glenda Audio/Voice Note Support (ueipab_ai_agent v17.0.1.35.0)
 
-**Type:** Feature | **Status:** Production ✅ (inactive until `ai_agent.openai_api_key` is set in ir.config_parameter)
+**Type:** Feature | **Status:** Production ✅ — ACTIVE (OpenAI key set 2026-05-13, ir.config_parameter id=70)
 
 Adds WhatsApp voice note / audio message transcription via OpenAI Whisper API.
 Built in response to UX tester feedback (Maria Figuera ×2 — can't type, always sends audios).
 
 **Pipeline:**
-1. `_cron_poll_messages` receives audio attachment URL from MassivaMóvil (already happening — `_detect_attachment_type` classifies `.ogg/.opus/.m4a` as `'audio'`)
-2. New `_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads audio, POSTs to `https://api.openai.com/v1/audio/transcriptions` with `model=whisper-1, language=es`
+1. `_cron_poll_messages` receives audio attachment URL from MassivaMóvil (`_detect_attachment_type` classifies `.ogg/.opus/.m4a` as `'audio'`)
+2. `_transcribe_audio(url)` — downloads audio, POSTs to `https://api.openai.com/v1/audio/transcriptions` with `model=whisper-1, language=es`
 3. Transcription injected as `message_text` before Claude processes it; stored as message body in Odoo
-4. Fallback: if no key or API fails → sends `[audio sin transcripción]` → Claude tells user to write instead
+4. Fallback: API fails or no key → Claude asks user to write instead
 
-**Config required before deploy:**
-- Set `ai_agent.openai_api_key` in `ir.config_parameter` (production Odoo) to an OpenAI API key with Whisper access
-- Cost: ~$0.006/min of audio (voice notes typically 5-30s → <$0.003 each)
+**Cost:** ~$0.006/min of audio (voice notes 5-30s → <$0.003 each). OpenAI key: `UEIPAB-Glenda-Whisper`, local backup at `config/openai_api.json`.
 
-**System prompt update (`general_inquiry.py`):**
-- Added `MENSAJES DE AUDIO` block: Claude treats transcribed text as normal message; handles `[audio sin transcripción]` gracefully
+**System prompt:** `MENSAJES DE AUDIO` block — Claude treats transcribed text as normal; handles fallback gracefully.
 
-**Files changed:** `ai_agent_conversation.py`, `skills/general_inquiry.py`, `__manifest__.py`
-
-**To deploy:** Set OpenAI key → SCP 3 files → `docker restart ueipab17`
+**Production test (2026-05-13):** TTS-generated Spanish voice note transcribed with 100% accuracy in production DB_UEIPAB shell:
+- Input: *"Hola buenas tardes, quería consultar sobre la mensualidad... Tengo dos hijos y me gustaría saber si hay algún descuento por hermanos."*
+- Whisper output: identical (172 chars), Odoo log confirmed: `Audio transcribed (172 chars): Hola, buenas tardes...`
 
 ---
 
