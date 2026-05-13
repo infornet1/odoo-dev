@@ -4,6 +4,39 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Glenda Auto Draft Payment + Pagos@ Processor (ueipab_ai_agent v17.0.1.39.0)
+
+**Type:** Feature | **Status:** Production ✅ | **Deployed:** 2026-05-13
+
+### WhatsApp receipt → draft account.payment
+
+When a customer sends a payment screenshot via WhatsApp, Glenda now automatically creates a draft `account.payment` in Odoo and emails pagos@ a direct validation link.
+
+**New methods on `ai_agent_conversation`:**
+- `_extract_payment_receipt()` — upgraded to OpenAI **Structured Outputs** (`json_schema`); `monto` guaranteed float; `moneda`/`tipo_pago` enums; no markdown fence parsing needed
+- `_check_duplicate_payment()` — blocks if same partner + last-4 ref digits found within 30 days; returns payment name for warning
+- `_resolve_journal_for_payment()` — keyword match `banco` → journal_id via `ai_agent.payment_journal_map` (JSON param); 10 banks: venezuela(162/159), mercantil(161/160), plaza(163), banplus/provincial/bbva(164), bancamiga(165), cashea(171), zelle(158), bicentenario(162); fallback BDV VEB
+- `_match_invoice_for_payment()` — VES→USD via BCV rate; exact ±2% or partial match (monto < residual); oldest-first
+- `_create_draft_payment()` — `account.payment` state=draft; amount in payment currency (VEB or USD); full ref context string; `payment_method_line_id` from journal's first inbound line
+- `_notify_pagos_payment_receipt()` — enhanced: Odoo deep link + BCV conversion + invoice match + duplicate/no-match block
+
+**Config params (production):** `ai_agent.payment_journal_map` param id=71 | Currency ids: USD=1, VEB=2
+
+### Freescout pagos@ email processor (`pagos_receipt_processor.py`)
+
+New script monitors unassigned conversations in pagos@ mailbox (Freescout id=2). Same payment pipeline via XML-RPC.
+
+**3-strategy extraction (cheapest first):**
+- Regex — bank auto-notification emails (`Monto:`, `Fecha de Operación:`, `Entidad:` patterns) — **$0**
+- GPT text — unstructured customer email body, structured outputs — **~$0.0001**
+- GPT Vision — receipt image, structured outputs — **~$0.001**
+
+**Freescout API attachment discovery:** Images in `_embedded.attachments[].fileUrl` (field is `fileUrl` not `url`) AND body `<img src>` regex. Both are public tokenized URLs (HTTP 200). `GET /api/conversations/{id}` returns full thread list with `_embedded.threads` and `_embedded.attachments`. Thread GET endpoint (`/conversations/{id}/threads`) returns 405 — use the conversation GET instead.
+
+Posts Freescout internal note with Odoo link, prefixes subject `[GLENDA]`. Skips: internal senders (ueipab.edu.ve), assigned conversations, already-processed subjects. **Status:** Testing — no production cron yet.
+
+---
+
 ## 2026-05-13 — Business Case: U.E. Colegio Andrés Bello — Adquisición Institucional
 
 **Type:** Documentation | **Status:** Draft ✅

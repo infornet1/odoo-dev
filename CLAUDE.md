@@ -45,7 +45,7 @@
 | 27 | Akdemia Data Pipeline | Production | Script + Cron | [Docs](documentation/AKDEMIA_DATA_PIPELINE.md) |
 | 28 | WhatsApp Health Monitor | Production | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 29 | Resolution Bridge | Production | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
-| 30 | Freescout API Migration | Production (Phase 2) | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
+| 30 | Freescout API Migration | Production (Phase 2+3) | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
 | 31 | HR Data Collection (Glenda) | Production | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 | 32 | Payslip Ack Confirmation Email | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 33 | Payroll Requisition Estimation Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
@@ -66,6 +66,8 @@
 | 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | — wizard at Nómina→Reports→Pronóstico Liquidación V2; date 2026-07-31; 44 empleados (tag "Empleado" via res.partner.category + work_email fallback); Bono Vac + Utilidades excluidos del NETO (pre-pagados); screen tree + PDF + Excel; v17.0.1.68.2 |
 | 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — `partner.communication.ack`; YES/NO links; `/partner-ack/<token>/si\|no`; votacion@; deadline 08-Jun-2026; **Pending:** Cap.2 WA reminders + Cap.3 Glenda stats |
 | 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — same infra as PDVSA; tag id=25; 225 prod partners; script has guard — blocked until 5 TODO constants filled |
+| 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | — v17.0.1.39.0; OpenAI Structured Outputs OCR → `_resolve_journal_for_payment` → `_match_invoice_for_payment` → draft `account.payment`; dedup by last-4 ref (30d); email to pagos@ with Odoo deep link; config: `ai_agent.payment_journal_map` (10 banks) |
+| 52 | Pagos@ Email Receipt Processor | Testing (no cron yet) | Script | — `scripts/pagos_receipt_processor.py`; monitors unassigned Freescout pagos@ convs; 3-strategy extraction: regex (free) → GPT text ($0.0001) → GPT Vision ($0.001); posts FS internal note + Odoo link; marks with [GLENDA] prefix |
 
 ---
 
@@ -154,7 +156,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.32.0 | 2026-05-11 |
+| ueipab_ai_agent | 17.0.1.39.0 | 2026-05-13 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
 
@@ -169,7 +171,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.3.0 | **Deployed 2026-05-13** — Phone/email validation on private info form: server-side + client-side + auto-normalize +58; DB fix: 504 phone fields normalized on 324 tagged partners |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.38.0 | **Deployed 2026-05-13** — Payment receipt OCR: GPT-4o-mini extracts banco/monto/referencia/fecha from customer payment screenshots → structured email to pagos@ |
+| ueipab_ai_agent | 17.0.1.39.0 | **Deployed 2026-05-13** — Auto draft payment from WA receipt: Structured Outputs OCR, journal resolution (10 banks), invoice matching, dedup check, draft account.payment + Odoo link to pagos@ |
 
 ---
 
@@ -217,6 +219,18 @@
 - **Hybrid pattern:** API for writes (proper ORM handling), SQL kept for reads and `threads.body` search (no API equivalent)
 - **Helper functions** in `ai_agent_resolution_bridge.py`: `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` and `fs_api_add_note(conv_db_id, html_body, user_id=1)` — config loaded lazily from `freescout_api.json`
 - **Phase 2 complete (2026-05-13):** Resolution bridge primary writes migrated; `close_related_conversations()` stays SQL (thread body search)
+
+### Glenda Auto Draft Payment — Payment Journal Map
+
+- **Config key:** `ai_agent.payment_journal_map` (JSON `ir.config_parameter`) — set in prod param id=71, testing param id=87
+- **Schema:** `{"keywords": {"venezuela": {"VES": 162, "USD": 159}, ...}, "fallback_veb": 162, "fallback_usd": 158}`
+- **10 banks mapped:** venezuela, mercantil, plaza, banplus, provincial/bbva (→ Banplus journal id=164), bancamiga, cashea, zelle, bicentenario
+- **Currency ids:** USD=1, VEB=2 (used in all VEB journals); VES from OCR normalised to VEB
+- **Matching:** VES amounts converted via BCV rate → USD for invoice comparison; exact ±2% tolerance; partial fallback (oldest-first)
+- **Dedup:** last-4 digits of referencia, 30-day window, same partner — blocks draft creation entirely
+- **Draft creation:** `account.payment` state=draft, never auto-posts; `payment_method_line_id` from journal's first inbound line
+- **pagos@ email:** Odoo deep link + BCV conversion line + invoice match info + duplicate/no-match warning block
+- **`pagos_receipt_processor.py`:** standalone script for Freescout unassigned convs; same pipeline via XML-RPC; image from `_embedded.attachments[].fileUrl` or body `<img>` regex; Freescout API `POST /conversations/{id}/threads` for note; subject prefix `[GLENDA]`
 
 ### Glenda BCV Rate Context
 
