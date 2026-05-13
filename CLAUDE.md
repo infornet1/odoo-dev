@@ -356,6 +356,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **Billing routing (v1.28.0):** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `ACTION:HANDOFF:name|summary|support` → `soporte@ueipab.edu.ve`
 - **turn_count fix (v1.27.1):** Dedup-only records (empty body) excluded from turn counter
 - **Flyer support:** `ACTION:SEND_FLYER:key` → `https://dev.ueipab.edu.ve/flyers/` (param: `ai_agent.flyer_base_url`). **⚠️ Suspended** — MassivaMóvil `type=photo` queues but does NOT deliver to end user; awaiting tech support.
+- **Audio delivery (TTS voice responses):** **⚠️ Not supported** — MassivaMóvil `type=audio` and `type=voice` both queue (return 200 + messageId) but do NOT deliver to end user. Confirmed 2026-05-13. Glenda receives and transcribes audio (Whisper) but replies in text only. Same root issue as photo delivery.
 - **Credit Guard fail-threshold:** Kill switch activates after N consecutive failures (param `ai_agent.credits_fail_threshold`, default 2). Prevents false-positives from transient API timeouts.
 - **2026-2027 enrollment + PDVSA policy:** Costos anuales: Seguro $15, Enc.inglés $30, Olimpiadas $10 = $55/alumno (+$36 bach). PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
 - **Farewell message fix:** `resolved` conv allows new conv within 24h (customer farewell ACK); `timeout`/`failed` → blocked.
