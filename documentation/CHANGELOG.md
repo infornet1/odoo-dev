@@ -4,6 +4,26 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Glenda Audio Fix: WA Voice Notes Now Transparently Transcribed (ueipab_ai_agent v17.0.1.40.0)
+
+**Type:** Bug Fix | **Status:** Production ✅ | **Deployed:** 2026-05-13
+
+### Root cause
+
+MassivaMóvil returns WA's own auto-transcription in the `message` field alongside the audio URL (`.m4a`). The prior code condition `if att_type == 'audio' and not message_text:` skipped Whisper **and** left the body without any prefix, so Claude didn't know it was processing a voice note. When the customer asked directly about audio capability, Claude responded "actualmente no puedo procesar audio" — factually wrong.
+
+### Fix — `ai_agent_conversation.py` (line ~322)
+
+When `att_type == 'audio'`:
+- **WA already transcribed** (`message_text` present): prefix the body with `[Audio transcrito]: ` so Claude knows the message came from a voice note. WA's transcription is used as-is (often higher quality than Whisper for WhatsApp voice notes).
+- **No WA transcription** (pure audio URL): call Whisper as before, prefix result the same way; fall back to `[audio sin transcripción]` only on failure.
+
+### Fix — `general_inquiry.py` MENSAJES DE AUDIO block
+
+Updated system prompt: Glenda now knows she **can** process voice notes (they're transcribed before reaching her). If a customer asks "did you listen to my audio?", she confirms yes. The `[audio sin transcripción]` path is kept for the rare case transcription truly fails.
+
+---
+
 ## 2026-05-13 — Glenda Auto Draft Payment + Pagos@ Processor (ueipab_ai_agent v17.0.1.39.0)
 
 **Type:** Feature | **Status:** Production ✅ | **Deployed:** 2026-05-13

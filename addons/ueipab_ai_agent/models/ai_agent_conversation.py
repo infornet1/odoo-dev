@@ -318,15 +318,21 @@ class AiAgentConversation(models.Model):
             att_type = self._detect_attachment_type(attachment_url)
             msg_vals['attachment_url'] = attachment_url
             msg_vals['attachment_type'] = att_type
-            # Transcribe audio before logging — inject transcription as message body
-            if att_type == 'audio' and not message_text:
-                transcription = self._transcribe_audio(attachment_url)
-                if transcription:
-                    message_text = transcription
-                    msg_vals['body'] = transcription
+            # Transcribe audio — always mark with prefix so Claude knows it was a voice note.
+            # If WA already auto-transcribed (message_text present), use that and mark it.
+            # If no text, call Whisper; fall back to '[audio sin transcripción]' only on failure.
+            if att_type == 'audio':
+                if message_text:
+                    # WhatsApp platform already transcribed the voice note — mark it so Claude
+                    # knows this is audio content (may have minor transcription errors).
+                    message_text = f"[Audio transcrito]: {message_text}"
                 else:
-                    message_text = '[audio sin transcripción]'
-                    msg_vals['body'] = '[audio sin transcripción]'
+                    transcription = self._transcribe_audio(attachment_url)
+                    if transcription:
+                        message_text = f"[Audio transcrito]: {transcription}"
+                    else:
+                        message_text = '[audio sin transcripción]'
+                msg_vals['body'] = message_text
         self.env['ai.agent.message'].create(msg_vals)
 
         # Create separate records for extra attachments (batched images)

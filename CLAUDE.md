@@ -156,7 +156,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.39.0 | 2026-05-13 |
+| ueipab_ai_agent | 17.0.1.40.0 | 2026-05-13 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
 
@@ -171,7 +171,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.3.0 | **Deployed 2026-05-13** — Phone/email validation on private info form: server-side + client-side + auto-normalize +58; DB fix: 504 phone fields normalized on 324 tagged partners |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.39.0 | **Deployed 2026-05-13** — Auto draft payment from WA receipt: Structured Outputs OCR, journal resolution (10 banks), invoice matching, dedup check, draft account.payment + Odoo link to pagos@ |
+| ueipab_ai_agent | 17.0.1.40.0 | **Deployed 2026-05-13** — v17.0.1.39.0: Auto draft payment from WA receipt. v17.0.1.40.0: Audio fix — WA auto-transcribed voice notes prefixed `[Audio transcrito]:` so Claude knows it's audio; Glenda confirms she processed the voice note when asked |
 
 ---
 
@@ -507,6 +507,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
+- [Finanzas Email Spoofing Fix](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) — SPF/DMARC added 2026-05-13; backscatter from gosportrotaryclub.org spoofing finanzas@; DKIM was already present
 - [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
 - [WebSocket/Nginx Fix](documentation/WEBSOCKET_NGINX_FIX.md)
 
