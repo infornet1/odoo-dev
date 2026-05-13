@@ -315,8 +315,18 @@ class AiAgentConversation(models.Model):
             'whatsapp_message_id': wa_message_id,
         }
         if attachment_url:
+            att_type = self._detect_attachment_type(attachment_url)
             msg_vals['attachment_url'] = attachment_url
-            msg_vals['attachment_type'] = self._detect_attachment_type(attachment_url)
+            msg_vals['attachment_type'] = att_type
+            # Transcribe audio before logging — inject transcription as message body
+            if att_type == 'audio' and not message_text:
+                transcription = self._transcribe_audio(attachment_url)
+                if transcription:
+                    message_text = transcription
+                    msg_vals['body'] = transcription
+                else:
+                    message_text = '[audio sin transcripción]'
+                    msg_vals['body'] = '[audio sin transcripción]'
         self.env['ai.agent.message'].create(msg_vals)
 
         # Create separate records for extra attachments (batched images)
@@ -535,6 +545,49 @@ class AiAgentConversation(models.Model):
             return base64.b64encode(png_data).decode('utf-8')
         except Exception as e:
             _logger.warning("Failed to convert PDF to image for msg %d: %s", msg.id, e)
+            return None
+
+    def _transcribe_audio(self, url):
+        """Download an audio attachment and transcribe it via OpenAI Whisper API.
+
+        Requires ir.config_parameter 'ai_agent.openai_api_key' to be set.
+        Returns Spanish transcription string, or None on failure/no key.
+        """
+        icp = self.env['ir.config_parameter'].sudo()
+        api_key = icp.get_param('ai_agent.openai_api_key', '')
+        if not api_key:
+            _logger.info("Audio transcription skipped: ai_agent.openai_api_key not configured")
+            return None
+
+        try:
+            audio_resp = requests.get(url, timeout=30)
+            audio_resp.raise_for_status()
+            audio_bytes = audio_resp.content
+        except Exception as e:
+            _logger.warning("Failed to download audio for transcription: %s", e)
+            return None
+
+        # Detect filename/extension for Whisper (must know the format)
+        url_path = url.split('?')[0]
+        ext = url_path.rsplit('.', 1)[-1].lower() if '.' in url_path else 'ogg'
+        filename = f'audio.{ext}'
+
+        try:
+            whisper_resp = requests.post(
+                'https://api.openai.com/v1/audio/transcriptions',
+                headers={'Authorization': f'Bearer {api_key}'},
+                files={'file': (filename, audio_bytes, f'audio/{ext}')},
+                data={'model': 'whisper-1', 'language': 'es'},
+                timeout=60,
+            )
+            whisper_resp.raise_for_status()
+            result = whisper_resp.json()
+            transcription = result.get('text', '').strip()
+            if transcription:
+                _logger.info("Audio transcribed (%d chars): %s...", len(transcription), transcription[:60])
+            return transcription or None
+        except Exception as e:
+            _logger.warning("Whisper transcription failed: %s", e)
             return None
 
     def _send_verification_email(self, recipient_email):

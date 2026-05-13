@@ -4,6 +4,32 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Glenda Audio/Voice Note Support (ueipab_ai_agent v17.0.1.35.0)
+
+**Type:** Feature | **Status:** ⏳ Pending production deploy — needs `ai_agent.openai_api_key`
+
+Adds WhatsApp voice note / audio message transcription via OpenAI Whisper API.
+Built in response to UX tester feedback (Maria Figuera ×2 — can't type, always sends audios).
+
+**Pipeline:**
+1. `_cron_poll_messages` receives audio attachment URL from MassivaMóvil (already happening — `_detect_attachment_type` classifies `.ogg/.opus/.m4a` as `'audio'`)
+2. New `_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads audio, POSTs to `https://api.openai.com/v1/audio/transcriptions` with `model=whisper-1, language=es`
+3. Transcription injected as `message_text` before Claude processes it; stored as message body in Odoo
+4. Fallback: if no key or API fails → sends `[audio sin transcripción]` → Claude tells user to write instead
+
+**Config required before deploy:**
+- Set `ai_agent.openai_api_key` in `ir.config_parameter` (production Odoo) to an OpenAI API key with Whisper access
+- Cost: ~$0.006/min of audio (voice notes typically 5-30s → <$0.003 each)
+
+**System prompt update (`general_inquiry.py`):**
+- Added `MENSAJES DE AUDIO` block: Claude treats transcribed text as normal message; handles `[audio sin transcripción]` gracefully
+
+**Files changed:** `ai_agent_conversation.py`, `skills/general_inquiry.py`, `__manifest__.py`
+
+**To deploy:** Set OpenAI key → SCP 3 files → `docker restart ueipab17`
+
+---
+
 ## 2026-05-13 — Glenda Message Conciseness Rules (ueipab_ai_agent v17.0.1.34.0)
 
 **Type:** UX improvement | **Status:** Production ✅
