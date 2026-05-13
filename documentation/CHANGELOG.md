@@ -4,6 +4,28 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Business Case: U.E. Colegio Andrés Bello — Adquisición Institucional
+
+**Type:** Documentation | **Status:** Draft ✅
+
+Initial business plan drafted for investor review — school acquisition opportunity.
+
+**Files:**
+- `documentation/CAB_BUSINESS_CASE_ACQUISITION.md` — full business case in Markdown
+- `documentation/CAB_Plan_Negocios_Adquisicion_Mayo2026.docx` — formatted Word document
+- Google Doc (live): `https://docs.google.com/document/d/16XYKOjwleft_ZyVLKYrgZCJizztf-4pG_v_C-rJVa-4`
+- Data source: Google Sheets `1i4WQ9z86uNv4aFo5wE-RdX76g3xaZIjkGxC8R-FA1TY` (Matriz Costos 2026-2027)
+
+**Key figures:**
+- 207 alumnos · 43 empleados · Fundado 1978 (48 años)
+- Ingresos brutos anuales ≈ USD 510,352 · EBITDA base ≈ USD 111,165
+- Rango de inversión sugerido: USD 1,000,000 – 1,800,000
+- ROI base: 8.6% – 11.1% · Período de recuperación: 9 – 12 años
+- CEO retenido/a post-adquisición: USD 4,500/mes
+- Tasa de cambio planificada: Bs. 788 / USD (sep-2026)
+
+---
+
 ## 2026-05-13 — Freescout REST API Migration — Email Checkers Phase 3
 
 **Type:** Infrastructure | **Status:** Production ✅

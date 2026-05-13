@@ -5,6 +5,7 @@
 **Fecha:** 2026-05-13  
 **Confidencialidad:** Exclusivo para revisión de inversores  
 **Archivo Word:** `documentation/CAB_Plan_Negocios_Adquisicion_Mayo2026.docx`  
+**Google Doc (editable):** `https://docs.google.com/document/d/16XYKOjwleft_ZyVLKYrgZCJizztf-4pG_v_C-rJVa-4`  
 **Fuente de datos:** Google Sheets `1i4WQ9z86uNv4aFo5wE-RdX76g3xaZIjkGxC8R-FA1TY` (Matriz Costos 2026-2027)
 
 ---
