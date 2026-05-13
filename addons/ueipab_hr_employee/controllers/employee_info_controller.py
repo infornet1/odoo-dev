@@ -12,9 +12,61 @@ controller works even if the module has no website/template installed.
 import datetime
 import json
 import logging
+import re
 
 from odoo import http
 from odoo.http import request
+
+# ── Validation helpers ────────────────────────────────────────────────────────
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+_DIGITS   = re.compile(r'\D')
+_VE_PREFIXES = {
+    '412','414','416','424','426',           # mobile
+    '212','241','251','261','263','265','269',
+    '271','272','273','274','275','276',
+    '281','283','284','285','286','287','288','289',
+    '291','293','294','295','299',           # landlines
+}
+
+def _normalize_ve_phone(raw):
+    """Normalize a Venezuelan phone to +58XXXXXXXXXX.
+    Returns normalized string or None if invalid/non-Venezuelan.
+    """
+    if not raw:
+        return None
+    d = _DIGITS.sub('', raw.strip())
+    if raw.strip().startswith('+'):
+        if d.startswith('58'):
+            local = d[2:]
+        else:
+            return raw  # non-Venezuelan, pass through unchanged
+    elif d.startswith('58'):
+        local = d[2:]
+    elif d.startswith('04'):
+        local = d[1:]
+    elif d.startswith('4') and len(d) == 10:
+        local = d
+    else:
+        return None
+    if len(local) != 10 or local[:3] not in _VE_PREFIXES:
+        return None
+    return f'+58{local}'
+
+def _validate_fields(form_data):
+    """Validate submitted form fields. Returns list of (field, message) errors."""
+    errors = []
+    email = form_data.get('private_email', '').strip()
+    if email and not _EMAIL_RE.match(email):
+        errors.append(('private_email', 'El correo no tiene un formato válido (ej: nombre@gmail.com)'))
+
+    for fname in ('private_phone', 'emergency_phone'):
+        raw = form_data.get(fname, '').strip()
+        if not raw:
+            continue
+        norm = _normalize_ve_phone(raw)
+        if norm is None:
+            errors.append((fname, 'Número venezolano inválido. Formato esperado: +58 4XX XXXXXXX'))
+    return errors
 
 _logger = logging.getLogger(__name__)
 
@@ -109,12 +161,19 @@ class EmployeeInfoController(http.Controller):
 
         emp = info_req.employee_id
 
+        # Validate before writing — re-render form with errors if invalid
+        validation_errors = _validate_fields(form_data)
+        if validation_errors:
+            error_map = dict(validation_errors)
+            return self._respond(self._page_form(info_req, errors=error_map, prefill=form_data))
+
         # Snapshot old values before any write
         old_vals = self._snapshot_employee(emp)
 
         # Build write dict from submitted form fields
         write_vals = {}
         m2o_fields = {'country_of_birth', 'private_state_id', 'private_country_id'}
+        phone_fields = {'private_phone', 'emergency_phone'}
 
         for fname in _FORM_FIELDS:
             raw = form_data.get(fname, '').strip()
@@ -126,6 +185,10 @@ class EmployeeInfoController(http.Controller):
                     write_vals[fname] = int(raw)
                 except (ValueError, TypeError):
                     pass
+            elif fname in phone_fields:
+                # Auto-normalize phone to +58XXXXXXXXXX on save
+                norm = _normalize_ve_phone(raw)
+                write_vals[fname] = norm if norm else raw
             else:
                 write_vals[fname] = raw
 
@@ -405,6 +468,17 @@ class EmployeeInfoController(http.Controller):
       color: #f39c12;
       margin: 4px 0 0;
     }}
+    .field-error input,
+    .field-error select {{
+      border-left: 4px solid #e74c3c;
+      background: #fff5f5;
+    }}
+    .field-error-msg {{
+      font-size: 11px;
+      color: #e74c3c;
+      margin: 4px 0 0;
+      font-weight: 500;
+    }}
     .section-title {{
       font-size: 11px;
       font-weight: bold;
@@ -470,9 +544,15 @@ class EmployeeInfoController(http.Controller):
 </body>
 </html>"""
 
-    def _page_form(self, info_req):
-        """Build the data-entry form pre-filled with current employee values."""
+    def _page_form(self, info_req, errors=None, prefill=None):
+        """Build the data-entry form pre-filled with current employee values.
+
+        errors: dict {field_name: error_message} to highlight invalid fields.
+        prefill: dict of submitted values to re-populate form after validation failure.
+        """
         emp = info_req.employee_id
+        errors = errors or {}
+        prefill = prefill or {}
 
         # Fetch all countries and states for <select> dropdowns
         Country = request.env['res.country'].sudo()
@@ -511,19 +591,34 @@ class EmployeeInfoController(http.Controller):
                 opts.append(f'<option value="{k}"{sel}>{v}</option>')
             return ''.join(opts)
 
+        # Field-specific HTML attributes for validation hints
+        _field_attrs = {
+            'private_email':    ('placeholder="nombre@gmail.com"',
+                                 'pattern="[^@\\s]+@[^@\\s]+\\.[^@\\s]+"'),
+            'private_phone':    ('placeholder="+58 412 1234567"',
+                                 'pattern="\\+58[0-9]{10}"'),
+            'emergency_phone':  ('placeholder="+58 412 1234567"',
+                                 'pattern="\\+58[0-9]{10}"'),
+        }
+
         def inp(fname, ftype='text', value=''):
-            """Render a labeled <input> field."""
-            label = _FIELD_LABELS.get(fname, fname)
-            empty_cls = ' field-empty' if not value else ''
+            """Render a labeled <input> field with validation and error support."""
+            label  = _FIELD_LABELS.get(fname, fname)
+            # Prefer re-submitted value (after validation failure) over stored value
+            value  = prefill.get(fname, value)
+            err    = errors.get(fname)
+            extra_cls  = ' field-error' if err else (' field-empty' if not value else '')
             empty_hint = (
                 '<p class="empty-hint">No registrado — por favor completa este campo</p>'
-                if not value else ''
+                if not value and not err else ''
             )
-            val_attr = f'value="{self._esc(str(value))}"' if value else 'value=""'
-            return f"""<div class="field-group{empty_cls}">
+            error_hint = f'<p class="field-error-msg">⚠ {err}</p>' if err else ''
+            val_attr   = f'value="{self._esc(str(value))}"' if value else 'value=""'
+            extra_attrs = ' '.join(_field_attrs.get(fname, ()))
+            return f"""<div class="field-group{extra_cls}">
   <label for="f_{fname}">{label}</label>
-  <input type="{ftype}" id="f_{fname}" name="{fname}" {val_attr}/>
-  {empty_hint}
+  <input type="{ftype}" id="f_{fname}" name="{fname}" {val_attr} {extra_attrs}/>
+  {error_hint}{empty_hint}
 </div>"""
 
         def sel(fname, options_html, value=''):
@@ -586,10 +681,42 @@ class EmployeeInfoController(http.Controller):
   {inp('emergency_contact', 'text', emp.emergency_contact or '')}
   {inp('emergency_phone', 'tel', emp.emergency_phone or '')}
 
-  <button type="submit" class="btn-submit">
+  <button type="submit" class="btn-submit" id="btn-submit">
     &#10003;&nbsp;&nbsp;Confirmar mis datos
   </button>
-</form>"""
+</form>
+<script>
+// Auto-normalize Venezuelan phone numbers to +58XXXXXXXXXX on submit
+(function() {{
+  function normalizePhone(val) {{
+    var d = val.replace(/\D/g, '');
+    var local;
+    if (val.trim().startsWith('+')) {{
+      if (d.startsWith('58')) local = d.slice(2);
+      else return val;
+    }} else if (d.startsWith('58')) {{
+      local = d.slice(2);
+    }} else if (d.startsWith('04')) {{
+      local = d.slice(1);
+    }} else if (d.startsWith('4') && d.length === 10) {{
+      local = d;
+    }} else {{
+      return val;
+    }}
+    if (local.length !== 10) return val;
+    return '+58' + local;
+  }}
+  var form = document.querySelector('form');
+  if (form) {{
+    form.addEventListener('submit', function() {{
+      ['f_private_phone', 'f_emergency_phone'].forEach(function(id) {{
+        var el = document.getElementById(id);
+        if (el && el.value.trim()) el.value = normalizePhone(el.value.trim());
+      }});
+    }});
+  }}
+}})();
+</script>"""
 
         return self._base_page(
             'Actualización de Datos Personales',
