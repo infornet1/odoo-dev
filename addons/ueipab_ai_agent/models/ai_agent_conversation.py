@@ -493,6 +493,16 @@ class AiAgentConversation(models.Model):
         if flyer_key and hasattr(skill_handler, 'send_flyer'):
             skill_handler.send_flyer(self, flyer_key)
 
+        # Payment receipt OCR — if customer sent an image, try structured extraction
+        if attachment_url and self._detect_attachment_type(attachment_url) == 'image':
+            receipt = self._extract_payment_receipt(attachment_url)
+            if receipt:
+                partner_name = self.partner_id.name if self.partner_id else None
+                self._notify_pagos_payment_receipt(receipt, partner_name, self.phone)
+                self.message_post(body=_(
+                    "🧾 Comprobante detectado y enviado a pagos@: %s %s %s"
+                ) % (receipt.get('banco', ''), receipt.get('monto', ''), receipt.get('moneda', '')))
+
         # Send balance breakdown as a separate WA message if present
         balance_msg = action.get('balance_message')
         if balance_msg:
@@ -566,6 +576,131 @@ class AiAgentConversation(models.Model):
         except Exception as e:
             _logger.warning("Failed to convert PDF to image for msg %d: %s", msg.id, e)
             return None
+
+    def _extract_payment_receipt(self, url):
+        """Use GPT-4o-mini Vision to extract structured data from a payment receipt image.
+
+        Returns a dict with receipt fields, or None if not a payment receipt / API unavailable.
+        """
+        import base64
+        icp = self.env['ir.config_parameter'].sudo()
+        api_key = icp.get_param('ai_agent.openai_api_key', '')
+        if not api_key:
+            return None
+
+        # Download image and encode as base64 (MassivaMóvil URLs may not be public forever)
+        try:
+            img_resp = requests.get(url, timeout=20)
+            img_resp.raise_for_status()
+            img_b64 = base64.b64encode(img_resp.content).decode('utf-8')
+            mime = img_resp.headers.get('Content-Type', 'image/jpeg').split(';')[0]
+        except Exception as e:
+            _logger.warning("Receipt OCR: failed to download image: %s", e)
+            return None
+
+        prompt = (
+            "Analiza esta imagen. Si es un comprobante de pago (transferencia bancaria, "
+            "pago móvil, Zelle, recibo de depósito, captura de app bancaria, etc.), "
+            "extrae los datos y responde ÚNICAMENTE con JSON válido con estos campos "
+            "(usa null si no encuentras el dato):\n"
+            '{"is_receipt":true,"banco":"...","monto":"...","moneda":"VES/USD/etc",'
+            '"referencia":"...","fecha":"...","titular_origen":"...","cuenta_destino":"...",'
+            '"tipo_pago":"transferencia/pago_movil/zelle/otro"}\n'
+            "Si NO es un comprobante de pago responde exactamente: {\"is_receipt\":false}"
+        )
+
+        try:
+            resp = requests.post(
+                'https://api.openai.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={
+                    'model': 'gpt-4o-mini',
+                    'max_tokens': 300,
+                    'messages': [{
+                        'role': 'user',
+                        'content': [
+                            {'type': 'image_url', 'image_url': {
+                                'url': f'data:{mime};base64,{img_b64}',
+                                'detail': 'low',
+                            }},
+                            {'type': 'text', 'text': prompt},
+                        ],
+                    }],
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            raw = resp.json()['choices'][0]['message']['content'].strip()
+            # Strip markdown code fences if present
+            if raw.startswith('```'):
+                raw = raw.split('```')[1]
+                if raw.startswith('json'):
+                    raw = raw[4:]
+            import json as _json
+            data = _json.loads(raw)
+            if not data.get('is_receipt'):
+                return None
+            _logger.info("Payment receipt extracted: banco=%s monto=%s %s ref=%s",
+                         data.get('banco'), data.get('monto'), data.get('moneda'), data.get('referencia'))
+            return data
+        except Exception as e:
+            _logger.warning("Receipt OCR extraction failed: %s", e)
+            return None
+
+    def _notify_pagos_payment_receipt(self, receipt, partner_name, phone):
+        """Send a structured payment receipt notification email to pagos@ueipab.edu.ve."""
+        icp = self.env['ir.config_parameter'].sudo()
+        pagos_email = 'pagos@ueipab.edu.ve'
+        from_email = icp.get_param('ai_agent.verification_email_from',
+                                   'Glenda — Colegio Andrés Bello <recursoshumanos@ueipab.edu.ve>')
+
+        fields = [
+            ('Banco / Plataforma', receipt.get('banco') or '—'),
+            ('Monto',              receipt.get('monto') or '—'),
+            ('Moneda',             receipt.get('moneda') or '—'),
+            ('Referencia',         receipt.get('referencia') or '—'),
+            ('Fecha',              receipt.get('fecha') or '—'),
+            ('Titular origen',     receipt.get('titular_origen') or '—'),
+            ('Cuenta destino',     receipt.get('cuenta_destino') or '—'),
+            ('Tipo de pago',       receipt.get('tipo_pago') or '—'),
+        ]
+        rows = ''.join(
+            f'<tr><td style="padding:6px 12px;font-weight:bold;color:#1a2c5b;white-space:nowrap">{k}</td>'
+            f'<td style="padding:6px 12px">{v}</td></tr>'
+            for k, v in fields
+        )
+        customer_line = f'<b>Cliente:</b> {partner_name} · ' if partner_name else ''
+        body = (
+            f'<div style="font-family:Arial,sans-serif;max-width:560px">'
+            f'<div style="background:#1a2c5b;padding:16px 20px;border-radius:8px 8px 0 0">'
+            f'<h2 style="color:#fff;margin:0;font-size:18px">🧾 Comprobante de Pago Recibido</h2>'
+            f'<p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:13px">'
+            f'Detectado automáticamente por Glenda vía WhatsApp</p></div>'
+            f'<div style="background:#f8fafc;padding:14px 20px;font-size:13px;color:#555">'
+            f'{customer_line}<b>Teléfono WA:</b> {phone}</div>'
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px">'
+            f'<tbody>{rows}</tbody></table>'
+            f'<div style="background:#e8f5e9;padding:12px 20px;font-size:12px;color:#2e7d32;'
+            f'border-radius:0 0 8px 8px">Por favor verifica y aplica el pago en el sistema.</div>'
+            f'</div>'
+        )
+        banco = receipt.get('banco', '')
+        monto = receipt.get('monto', '')
+        moneda = receipt.get('moneda', '')
+        subject = f'[Glenda] Comprobante de Pago — {phone} — {banco} {monto} {moneda}'.strip()
+
+        try:
+            mail = self.env['mail.mail'].sudo().create({
+                'subject': subject,
+                'email_from': from_email,
+                'email_to': pagos_email,
+                'body_html': body,
+                'auto_delete': True,
+            })
+            mail.send()
+            _logger.info("Payment receipt notification sent to %s for phone %s", pagos_email, phone)
+        except Exception as e:
+            _logger.warning("Failed to send receipt notification: %s", e)
 
     def _transcribe_audio(self, url):
         """Download an audio attachment and transcribe it via OpenAI Whisper API.
