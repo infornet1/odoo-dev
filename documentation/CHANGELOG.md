@@ -27,6 +27,31 @@ Built in response to UX tester feedback (Maria Figuera ×2 — can't type, alway
 
 ---
 
+## 2026-05-13 — Glenda Cashea + Mora Policy Knowledge (ueipab_ai_agent v17.0.1.36.0)
+
+**Type:** Knowledge update | **Status:** Production ✅
+
+Addresses two remaining UX tester suggestions from Calibration Programme.
+
+**Cashea (Jessica Bolívar + Luisa Abreu):**
+- Added to `MEDIOS DE PAGO`: "sí aceptamos pagos vía Cashea"
+- Glenda confirms acceptance and directs to `pagos@ueipab.edu.ve` to confirm link/process before paying
+- Fires `ACTION:HANDOFF` to `billing` route
+
+**Mora e impago policy (Luisa Abreu):**
+- Added `POLÍTICA DE MORA E IMPAGO` block
+- No formal automatic sanctions policy — each case handled individually by Pagos team
+- Glenda responds with empathy, never threatens sanctions, always routes to `pagos@ueipab.edu.ve`
+- Fires `ACTION:HANDOFF` to `billing` route
+
+**All 4 calibration UX suggestions now implemented:**
+1. ✅ Message conciseness / single farewell (v17.0.1.34.0)
+2. ✅ Audio/voice note support (v17.0.1.35.0)
+3. ✅ Cashea info (v17.0.1.36.0)
+4. ✅ Mora policy (v17.0.1.36.0)
+
+---
+
 ## 2026-05-13 — Glenda Message Conciseness Rules (ueipab_ai_agent v17.0.1.34.0)
 
 **Type:** UX improvement | **Status:** Production ✅

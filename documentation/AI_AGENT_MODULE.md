@@ -182,6 +182,11 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 **Audio/voice note transcription (v17.0.1.35.0, 2026-05-13) — ✅ ACTIVE in production:**
 `_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads WA audio attachment, POSTs to OpenAI Whisper API (`whisper-1`, `language=es`), injects transcription as message body before Claude. Fallback: API fails → Claude asks user to write. Key `ai_agent.openai_api_key` set in production (id=70, `UEIPAB-Glenda-Whisper`), backup at `config/openai_api.json`. Cost ~$0.003/voice note. `MENSAJES DE AUDIO` block in `general_inquiry` system prompt. **Tested 2026-05-13:** 172-char Spanish voice note transcribed with 100% accuracy end-to-end on DB_UEIPAB.
 
+**Cashea + mora policy knowledge (v17.0.1.36.0, 2026-05-13):**
+- `MEDIOS DE PAGO` updated: Cashea accepted — Glenda confirms and redirects to `pagos@` for process details
+- `POLÍTICA DE MORA E IMPAGO` block: empathetic, case-by-case handling, never threatens automatic sanctions, always routes to `pagos@` + `ACTION:HANDOFF billing`
+- Completes all 4 UX tester suggestions from Calibration Programme Round 1
+
 **general_inquiry conciseness rules (v17.0.1.34.0, 2026-05-13):**
 `REGLAS DE COMUNICACIÓN` block added to system prompt based on Calibration Programme UX feedback (top theme, 4+ mentions):
 - **Single message per turn** — no consecutive messages on same topic
