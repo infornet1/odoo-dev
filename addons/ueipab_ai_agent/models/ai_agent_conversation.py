@@ -493,15 +493,36 @@ class AiAgentConversation(models.Model):
         if flyer_key and hasattr(skill_handler, 'send_flyer'):
             skill_handler.send_flyer(self, flyer_key)
 
-        # Payment receipt OCR — if customer sent an image, try structured extraction
+        # Payment receipt OCR — structured extraction + auto draft payment
         if attachment_url and self._detect_attachment_type(attachment_url) == 'image':
             receipt = self._extract_payment_receipt(attachment_url)
             if receipt:
-                partner_name = self.partner_id.name if self.partner_id else None
-                self._notify_pagos_payment_receipt(receipt, partner_name, self.phone)
+                partner = self.partner_id
+                payment_id, odoo_url, matched_info, duplicate = None, None, None, None
+
+                if partner:
+                    duplicate = self._check_duplicate_payment(
+                        partner.id, receipt.get('referencia'))
+                    if not duplicate:
+                        bcv_rate = self._get_bcv_rate_for_payment()
+                        journal_id = self._resolve_journal_for_payment(
+                            receipt.get('banco'), receipt.get('moneda'))
+                        matched_info = self._match_invoice_for_payment(
+                            partner, receipt.get('monto'), receipt.get('moneda'), bcv_rate)
+                        payment_id, odoo_url = self._create_draft_payment(
+                            partner, receipt, journal_id, matched_info)
+
+                self._notify_pagos_payment_receipt(
+                    receipt, partner, self.phone,
+                    payment_id=payment_id, odoo_url=odoo_url,
+                    matched_invoice_info=matched_info, duplicate_payment=duplicate,
+                )
+                draft_tag = f" — Borrador #{payment_id}" if payment_id else ""
+                dup_tag = " — ⚠️ DUPLICADO" if duplicate else ""
                 self.message_post(body=_(
-                    "🧾 Comprobante detectado y enviado a pagos@: %s %s %s"
-                ) % (receipt.get('banco', ''), receipt.get('monto', ''), receipt.get('moneda', '')))
+                    "🧾 Comprobante: %s %s %s%s%s"
+                ) % (receipt.get('banco', ''), receipt.get('monto', ''),
+                     receipt.get('moneda', ''), draft_tag, dup_tag))
 
         # Send balance breakdown as a separate WA message if present
         balance_msg = action.get('balance_message')
@@ -578,17 +599,17 @@ class AiAgentConversation(models.Model):
             return None
 
     def _extract_payment_receipt(self, url):
-        """Use GPT-4o-mini Vision to extract structured data from a payment receipt image.
+        """Use GPT-4o-mini Vision with Structured Outputs to extract payment receipt data.
 
-        Returns a dict with receipt fields, or None if not a payment receipt / API unavailable.
+        Returns a dict with typed fields (monto guaranteed float), or None if not a receipt.
+        Uses OpenAI json_schema response_format — no markdown fence stripping needed.
         """
-        import base64
+        import base64, json as _json
         icp = self.env['ir.config_parameter'].sudo()
         api_key = icp.get_param('ai_agent.openai_api_key', '')
         if not api_key:
             return None
 
-        # Download image and encode as base64 (MassivaMóvil URLs may not be public forever)
         try:
             img_resp = requests.get(url, timeout=20)
             img_resp.raise_for_status()
@@ -598,15 +619,33 @@ class AiAgentConversation(models.Model):
             _logger.warning("Receipt OCR: failed to download image: %s", e)
             return None
 
+        schema = {
+            'type': 'object',
+            'properties': {
+                'is_receipt':     {'type': 'boolean'},
+                'banco':          {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+                'monto':          {'anyOf': [{'type': 'number'}, {'type': 'null'}]},
+                'moneda':         {'anyOf': [{'type': 'string', 'enum': ['VES', 'USD', 'EUR']}, {'type': 'null'}]},
+                'referencia':     {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+                'fecha':          {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+                'titular_origen': {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+                'cuenta_destino': {'anyOf': [{'type': 'string'}, {'type': 'null'}]},
+                'tipo_pago':      {'anyOf': [{'type': 'string',
+                                              'enum': ['pago_movil', 'transferencia', 'zelle',
+                                                       'biopago', 'cashea', 'otro']},
+                                             {'type': 'null'}]},
+            },
+            'required': ['is_receipt', 'banco', 'monto', 'moneda', 'referencia',
+                         'fecha', 'titular_origen', 'cuenta_destino', 'tipo_pago'],
+            'additionalProperties': False,
+        }
+
         prompt = (
-            "Analiza esta imagen. Si es un comprobante de pago (transferencia bancaria, "
-            "pago móvil, Zelle, recibo de depósito, captura de app bancaria, etc.), "
-            "extrae los datos y responde ÚNICAMENTE con JSON válido con estos campos "
-            "(usa null si no encuentras el dato):\n"
-            '{"is_receipt":true,"banco":"...","monto":"...","moneda":"VES/USD/etc",'
-            '"referencia":"...","fecha":"...","titular_origen":"...","cuenta_destino":"...",'
-            '"tipo_pago":"transferencia/pago_movil/zelle/otro"}\n'
-            "Si NO es un comprobante de pago responde exactamente: {\"is_receipt\":false}"
+            "Analiza esta imagen. Si es un comprobante de pago venezolano "
+            "(transferencia, pago móvil, Zelle, biopago, Cashea, depósito, app bancaria), "
+            "extrae los datos. El campo 'monto' debe ser número decimal puro "
+            "(p.ej. 35134.12, no texto). "
+            "Si NO es comprobante de pago, responde con is_receipt=false y el resto en null."
         )
 
         try:
@@ -615,80 +654,128 @@ class AiAgentConversation(models.Model):
                 headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
                 json={
                     'model': 'gpt-4o-mini',
-                    'max_tokens': 300,
-                    'messages': [{
-                        'role': 'user',
-                        'content': [
-                            {'type': 'image_url', 'image_url': {
-                                'url': f'data:{mime};base64,{img_b64}',
-                                'detail': 'low',
-                            }},
-                            {'type': 'text', 'text': prompt},
-                        ],
-                    }],
+                    'max_tokens': 400,
+                    'response_format': {
+                        'type': 'json_schema',
+                        'json_schema': {'name': 'payment_receipt', 'strict': True, 'schema': schema},
+                    },
+                    'messages': [{'role': 'user', 'content': [
+                        {'type': 'image_url',
+                         'image_url': {'url': f'data:{mime};base64,{img_b64}', 'detail': 'low'}},
+                        {'type': 'text', 'text': prompt},
+                    ]}],
                 },
                 timeout=30,
             )
             resp.raise_for_status()
-            raw = resp.json()['choices'][0]['message']['content'].strip()
-            # Strip markdown code fences if present
-            if raw.startswith('```'):
-                raw = raw.split('```')[1]
-                if raw.startswith('json'):
-                    raw = raw[4:]
-            import json as _json
-            data = _json.loads(raw)
+            data = _json.loads(resp.json()['choices'][0]['message']['content'])
             if not data.get('is_receipt'):
                 return None
-            _logger.info("Payment receipt extracted: banco=%s monto=%s %s ref=%s",
-                         data.get('banco'), data.get('monto'), data.get('moneda'), data.get('referencia'))
+            _logger.info("Receipt (structured): banco=%s monto=%s %s ref=%s",
+                         data.get('banco'), data.get('monto'), data.get('moneda'),
+                         data.get('referencia'))
             return data
         except Exception as e:
-            _logger.warning("Receipt OCR extraction failed: %s", e)
+            _logger.warning("Receipt OCR structured extraction failed: %s", e)
             return None
 
-    def _notify_pagos_payment_receipt(self, receipt, partner_name, phone):
-        """Send a structured payment receipt notification email to pagos@ueipab.edu.ve."""
+    def _notify_pagos_payment_receipt(self, receipt, partner, phone,
+                                       payment_id=None, odoo_url=None,
+                                       matched_invoice_info=None, duplicate_payment=None):
+        """Send structured payment receipt email to pagos@ueipab.edu.ve.
+
+        Includes draft payment deep link, invoice match result, and duplicate warning.
+        partner: res.partner record or None.
+        """
         icp = self.env['ir.config_parameter'].sudo()
         pagos_email = 'pagos@ueipab.edu.ve'
         from_email = icp.get_param('ai_agent.verification_email_from',
                                    'Glenda — Colegio Andrés Bello <recursoshumanos@ueipab.edu.ve>')
+        partner_name = partner.name if partner else None
+        banco  = receipt.get('banco') or '—'
+        monto  = receipt.get('monto')
+        moneda = receipt.get('moneda') or '—'
+        ref    = receipt.get('referencia') or '—'
 
-        fields = [
-            ('Banco / Plataforma', receipt.get('banco') or '—'),
-            ('Monto',              receipt.get('monto') or '—'),
-            ('Moneda',             receipt.get('moneda') or '—'),
-            ('Referencia',         receipt.get('referencia') or '—'),
-            ('Fecha',              receipt.get('fecha') or '—'),
-            ('Titular origen',     receipt.get('titular_origen') or '—'),
-            ('Cuenta destino',     receipt.get('cuenta_destino') or '—'),
-            ('Tipo de pago',       receipt.get('tipo_pago') or '—'),
-        ]
-        rows = ''.join(
-            f'<tr><td style="padding:6px 12px;font-weight:bold;color:#1a2c5b;white-space:nowrap">{k}</td>'
-            f'<td style="padding:6px 12px">{v}</td></tr>'
-            for k, v in fields
-        )
-        customer_line = f'<b>Cliente:</b> {partner_name} · ' if partner_name else ''
+        # Format monto with thousands separator if it's a number
+        monto_str = f"{float(monto):,.2f}" if monto is not None else '—'
+
+        # BCV conversion line
+        bcv_line = ''
+        if moneda in ('VES', 'VEB') and monto:
+            bcv_rate = self._get_bcv_rate_for_payment()
+            if bcv_rate > 0:
+                monto_usd = float(monto) / bcv_rate
+                bcv_line = (f'<tr><td style="{_TD_LABEL}">Equiv. USD</td>'
+                            f'<td style="{_TD_VAL}">'
+                            f'<b>${monto_usd:,.2f}</b> '
+                            f'<span style="color:#888;font-size:12px">(BCV {bcv_rate:,.2f})</span>'
+                            f'</td></tr>')
+
+        receipt_rows = ''.join(
+            f'<tr><td style="{_TD_LABEL}">{k}</td><td style="{_TD_VAL}">{v}</td></tr>'
+            for k, v in [
+                ('Banco / Plataforma', banco),
+                ('Tipo de pago',       receipt.get('tipo_pago') or '—'),
+                ('Monto',              f'{monto_str} {moneda}'),
+                ('Referencia',         ref),
+                ('Fecha',              receipt.get('fecha') or '—'),
+                ('Titular origen',     receipt.get('titular_origen') or '—'),
+                ('Cuenta destino',     receipt.get('cuenta_destino') or '—'),
+            ]
+        ) + bcv_line
+
+        # --- Status block ---
+        if duplicate_payment:
+            status_bg = '#fff3e0'
+            status_color = '#e65100'
+            status_icon = '⚠️'
+            status_msg = (
+                f'Referencia ya registrada — <b>{duplicate_payment.name}</b>. '
+                f'No se creó borrador. Verificar si es envío duplicado.'
+            )
+        elif payment_id and odoo_url:
+            inv_line = ''
+            if matched_invoice_info:
+                inv = matched_invoice_info['invoice']
+                mtype = matched_invoice_info['match_type']
+                mtype_label = {'exact': 'Coincidencia exacta', 'partial': 'Pago parcial'}.get(mtype, mtype)
+                inv_line = (f'<br/><span style="color:#555;font-size:12px">'
+                            f'Factura: <b>{inv.name}</b> · Pendiente: '
+                            f'<b>${float(inv.amount_residual_signed):,.2f}</b> · {mtype_label}</span>')
+            status_bg = '#e8f5e9'
+            status_color = '#2e7d32'
+            status_icon = '✅'
+            status_msg = (
+                f'Borrador creado: <b>#{payment_id}</b>{inv_line}<br/>'
+                f'<a href="{odoo_url}" style="color:#1a2c5b;font-weight:bold">'
+                f'→ Abrir y validar en Odoo</a>'
+            )
+        else:
+            status_bg = '#f5f5f5'
+            status_color = '#555'
+            status_icon = 'ℹ️'
+            reason = 'cliente no identificado' if not partner else 'sin factura activa'
+            status_msg = f'No se creó borrador automático ({reason}). Registrar manualmente.'
+
+        customer_line = (f'<b>Cliente:</b> {partner_name} · ' if partner_name else '')
         body = (
-            f'<div style="font-family:Arial,sans-serif;max-width:560px">'
+            f'<div style="font-family:Arial,sans-serif;max-width:580px">'
             f'<div style="background:#1a2c5b;padding:16px 20px;border-radius:8px 8px 0 0">'
-            f'<h2 style="color:#fff;margin:0;font-size:18px">🧾 Comprobante de Pago Recibido</h2>'
+            f'<h2 style="color:#fff;margin:0;font-size:18px">🧾 Comprobante de Pago — Glenda</h2>'
             f'<p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:13px">'
-            f'Detectado automáticamente por Glenda vía WhatsApp</p></div>'
-            f'<div style="background:#f8fafc;padding:14px 20px;font-size:13px;color:#555">'
-            f'{customer_line}<b>Teléfono WA:</b> {phone}</div>'
+            f'Detectado automáticamente vía WhatsApp</p></div>'
+            f'<div style="background:#f8fafc;padding:12px 20px;font-size:13px;color:#555">'
+            f'{customer_line}<b>Teléfono:</b> {phone}</div>'
             f'<table style="width:100%;border-collapse:collapse;font-size:14px">'
-            f'<tbody>{rows}</tbody></table>'
-            f'<div style="background:#e8f5e9;padding:12px 20px;font-size:12px;color:#2e7d32;'
-            f'border-radius:0 0 8px 8px">Por favor verifica y aplica el pago en el sistema.</div>'
+            f'<tbody>{receipt_rows}</tbody></table>'
+            f'<div style="background:{status_bg};padding:14px 20px;font-size:13px;'
+            f'color:{status_color};border-top:1px solid #e0e0e0">'
+            f'{status_icon} {status_msg}</div>'
             f'</div>'
         )
-        banco = receipt.get('banco', '')
-        monto = receipt.get('monto', '')
-        moneda = receipt.get('moneda', '')
-        subject = f'[Glenda] Comprobante de Pago — {phone} — {banco} {monto} {moneda}'.strip()
 
+        subject = f'[Glenda] Pago — {phone} — {banco} {monto_str} {moneda}'.strip()
         try:
             mail = self.env['mail.mail'].sudo().create({
                 'subject': subject,
@@ -698,9 +785,179 @@ class AiAgentConversation(models.Model):
                 'auto_delete': True,
             })
             mail.send()
-            _logger.info("Payment receipt notification sent to %s for phone %s", pagos_email, phone)
+            _logger.info("Receipt notification sent to %s (payment_id=%s)", pagos_email, payment_id)
         except Exception as e:
             _logger.warning("Failed to send receipt notification: %s", e)
+
+    # -------------------------------------------------------------------------
+    # Payment receipt helpers
+    # -------------------------------------------------------------------------
+
+    # CSS shortcuts used in email tables
+    _TD_LABEL = "padding:6px 12px;font-weight:bold;color:#1a2c5b;white-space:nowrap"
+    _TD_VAL   = "padding:6px 12px"
+
+    def _get_bcv_rate_for_payment(self):
+        """Return current BCV rate (float) from ir.config_parameter."""
+        import json as _j
+        raw = self.env['ir.config_parameter'].sudo().get_param('ai_agent.bcv_rate_context', '')
+        if not raw:
+            return 0.0
+        try:
+            return float(_j.loads(raw).get('current', {}).get('rate', 0.0))
+        except Exception:
+            return 0.0
+
+    def _resolve_journal_for_payment(self, banco, moneda):
+        """Map bank name + currency to a journal_id.
+
+        Config key: ai_agent.payment_journal_map (JSON).
+        Fallback: Banco Venezuela VEB (id=162).
+        """
+        import json as _j
+        fallback_veb = 162
+        fallback_usd = 158
+        if not banco:
+            return fallback_usd if (moneda or '').upper() == 'USD' else fallback_veb
+
+        raw = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.payment_journal_map', '')
+        if not raw:
+            return fallback_veb
+        try:
+            config = _j.loads(raw)
+        except Exception:
+            return fallback_veb
+
+        banco_lower = banco.lower()
+        moneda_key = (moneda or 'VES').upper()
+        for keyword, currency_map in config.get('keywords', {}).items():
+            if keyword in banco_lower:
+                jid = currency_map.get(moneda_key) or currency_map.get('VES')
+                if jid:
+                    return jid
+        return config.get('fallback_usd', fallback_usd) if moneda_key == 'USD' \
+            else config.get('fallback_veb', fallback_veb)
+
+    def _match_invoice_for_payment(self, partner, monto, moneda, bcv_rate):
+        """Find best matching outstanding invoice for this payment.
+
+        Converts VES amount to USD via BCV rate for comparison.
+        Returns {'invoice': record, 'residual': float, 'match_type': str} or None.
+        match_type: 'exact' (within 2%) | 'partial' (monto_usd < residual)
+        """
+        if not partner or not monto or float(monto) <= 0:
+            return None
+
+        if (moneda or '').upper() in ('VES', 'VEB') and bcv_rate > 0:
+            monto_usd = float(monto) / bcv_rate
+        else:
+            monto_usd = float(monto)
+
+        Move = self.env['account.move'].sudo()
+        partner_ids = [partner.id] + list(partner.child_ids.ids)
+        invoices = Move.search([
+            ('partner_id', 'in', partner_ids),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('payment_state', 'in', ('not_paid', 'partial')),
+            ('amount_residual_signed', '>', 0),
+        ], order='invoice_date asc')
+
+        best = None
+        for inv in invoices:
+            residual = float(inv.amount_residual_signed)
+            if residual <= 0:
+                continue
+            if abs(monto_usd - residual) / residual <= 0.02:
+                return {'invoice': inv, 'residual': residual, 'match_type': 'exact'}
+            if monto_usd < residual and best is None:
+                best = {'invoice': inv, 'residual': residual, 'match_type': 'partial'}
+        return best
+
+    def _check_duplicate_payment(self, partner_id, referencia):
+        """Return existing inbound payment matching partner + last 4 ref digits (30-day window).
+
+        Returns account.payment record or None.
+        """
+        import re
+        from datetime import datetime, timedelta
+        if not referencia:
+            return None
+        digits = re.sub(r'\D', '', str(referencia))
+        last4 = digits[-4:] if len(digits) >= 4 else digits
+        if not last4:
+            return None
+        cutoff = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        result = self.env['account.payment'].sudo().search([
+            ('partner_id', '=', partner_id),
+            ('ref', 'ilike', last4),
+            ('date', '>=', cutoff),
+            ('payment_type', '=', 'inbound'),
+        ], limit=1)
+        return result or None
+
+    def _create_draft_payment(self, partner, receipt, journal_id, matched_invoice_info):
+        """Create a draft account.payment from OCR receipt data.
+
+        Stays in draft — accountant validates in Odoo (one click).
+        Returns (payment_id, odoo_url) or (None, None) on failure.
+        """
+        from datetime import datetime
+        import re
+
+        monto  = receipt.get('monto') or 0.0
+        moneda = (receipt.get('moneda') or 'VES').upper()
+        ref    = receipt.get('referencia') or ''
+        banco  = receipt.get('banco') or ''
+        tipo   = receipt.get('tipo_pago') or ''
+        fecha  = receipt.get('fecha') or ''
+
+        currency_id = 2 if moneda in ('VES', 'VEB') else 1  # VEB=2, USD=1
+
+        payment_date = datetime.now().strftime('%Y-%m-%d')
+        for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d'):
+            try:
+                payment_date = datetime.strptime(fecha[:10], fmt).strftime('%Y-%m-%d')
+                break
+            except (ValueError, TypeError):
+                continue
+
+        # Build ref field: bank reference + context
+        parts = [ref] if ref else []
+        parts += [p for p in [banco, tipo, f"WA {self.phone}"] if p]
+        if matched_invoice_info:
+            parts.append(f"Factura {matched_invoice_info['invoice'].name}")
+        ref_field = ' | '.join(parts)[:190]  # account.payment ref field limit
+
+        journal = self.env['account.journal'].sudo().browse(journal_id)
+        method_line = journal.inbound_payment_method_line_ids[:1]
+
+        vals = {
+            'payment_type': 'inbound',
+            'partner_type': 'customer',
+            'partner_id':   partner.id,
+            'amount':       float(monto),
+            'currency_id':  currency_id,
+            'journal_id':   journal_id,
+            'date':         payment_date,
+            'ref':          ref_field,
+        }
+        if method_line:
+            vals['payment_method_line_id'] = method_line.id
+
+        try:
+            payment = self.env['account.payment'].sudo().create(vals)
+            base_url = self.env['ir.config_parameter'].sudo().get_param(
+                'web.base.url', 'https://odoo.ueipab.edu.ve')
+            odoo_url = (f"{base_url}/web#id={payment.id}"
+                        f"&model=account.payment&view_type=form")
+            _logger.info("Draft payment #%d created: %s %s %s journal=%d",
+                         payment.id, monto, moneda, partner.name, journal_id)
+            return payment.id, odoo_url
+        except Exception as e:
+            _logger.error("Failed to create draft payment: %s", e)
+            return None, None
 
     def _transcribe_audio(self, url):
         """Download an audio attachment and transcribe it via OpenAI Whisper API.
