@@ -165,7 +165,7 @@
 | ueipab_payroll_enhancements | 17.0.1.68.2 | **Deployed 2026-05-11** (Liquidación V2 Forecast: wizard + PDF + Excel, 44 empleados via partner tag, Bono Vac + Utilidades excluded as pre-paid) |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.5.2 → **17.0.1.6.0 pending 2026-05-15** | Deployed 2026-05-10 (v17.0.1.5.2). **Pending Friday 2026-05-15:** upgrade to v17.0.1.6.0 — `partner.communication.ack` model, `/partner-ack/` routes, PDVSA campaign send. See [deploy runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) |
+| ueipab_attendance_report | 17.0.1.6.0 | **Deployed 2026-05-13** — `partner.communication.ack` model, `/partner-ack/` routes live. **Pending:** PDVSA bulk send (71 partners) — run Steps 6–8 of [deploy runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.3.0 | **Deployed 2026-05-13** — Phone/email validation on private info form: server-side + client-side + auto-normalize +58; DB fix: 504 phone fields normalized on 324 tagged partners |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |

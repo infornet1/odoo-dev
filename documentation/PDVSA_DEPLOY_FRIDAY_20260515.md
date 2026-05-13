@@ -1,7 +1,7 @@
 # PDVSA Campaign — Production Deploy & Bulk Send (Friday 15-May-2026)
 
-**Status:** PENDING
-**Target date:** Friday 2026-05-15, ~9:00 AM VET (13:00 UTC)
+**Status:** MODULE DEPLOYED ✅ — PDVSA bulk send still pending
+**Deployed:** 2026-05-13 (ahead of schedule) — module upgrade + nginx route confirmed
 **Owner:** Gustavo Perdomo
 
 ---
