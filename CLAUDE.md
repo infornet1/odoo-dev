@@ -169,7 +169,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.35.0 | **⏳ Pending deploy** — Audio/voice note support: Whisper API transcription; key `ai_agent.openai_api_key` required before production deploy |
+| ueipab_ai_agent | 17.0.1.35.0 | **Deployed 2026-05-13** — Audio/voice note support: Whisper API transcription; set `ai_agent.openai_api_key` in ir.config_parameter to activate |
 
 ---
 

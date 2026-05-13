@@ -6,7 +6,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## 2026-05-13 — Glenda Audio/Voice Note Support (ueipab_ai_agent v17.0.1.35.0)
 
-**Type:** Feature | **Status:** ⏳ Pending production deploy — needs `ai_agent.openai_api_key`
+**Type:** Feature | **Status:** Production ✅ (inactive until `ai_agent.openai_api_key` is set in ir.config_parameter)
 
 Adds WhatsApp voice note / audio message transcription via OpenAI Whisper API.
 Built in response to UX tester feedback (Maria Figuera ×2 — can't type, always sends audios).
