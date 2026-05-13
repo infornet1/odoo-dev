@@ -45,7 +45,7 @@
 | 27 | Akdemia Data Pipeline | Production | Script + Cron | [Docs](documentation/AKDEMIA_DATA_PIPELINE.md) |
 | 28 | WhatsApp Health Monitor | Production | Script + `ueipab_ai_agent` | [Docs](documentation/AI_AGENT_MODULE.md) |
 | 29 | Resolution Bridge | Production | Script + Cron | [Docs](documentation/AI_AGENT_MODULE.md) |
-| 30 | Freescout API Migration | Planned | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
+| 30 | Freescout API Migration | Production (Phase 2) | Scripts | [Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md) |
 | 31 | HR Data Collection (Glenda) | Production | `ueipab_ai_agent` + `ueipab_hr_employee` | [Docs](documentation/GLENDA_HR_DATA_COLLECTION.md) |
 | 32 | Payslip Ack Confirmation Email | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 33 | Payroll Requisition Estimation Report | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) |
@@ -206,6 +206,17 @@
 - **Future campaigns:** change `notice_key` only — add key to `_WA_FORM_KEYS` in controller if WA capture needed
 - **Infrastructure:** `/notice-ack/` + `/glenda-calibracion/` added to nginx Odoo proxy; `dbfilter=^DB_UEIPAB$` on prod; `web.base.url=https://odoo.ueipab.edu.ve`
 - **Glenda calibration notice_key:** `glenda_calibracion_v1` | Testing mail.template id=86 | Production mail.template id=TBD
+
+### Freescout REST API (api_key + hybrid pattern)
+
+- **Config:** `/opt/odoo-dev/config/freescout_api.json` (gitignored) — `api_url`, `api_key`, `webhook_secret`
+- **Auth:** `X-FreeScout-API-Key` header — no OAuth, single static key
+- **Conversation ID in URL:** DB primary key (`conversations.id`) — NOT the display number (`conversations.number`)
+- **`PUT /api/conversations/{id}`** — updates subject/status/assignTo/customerId; status must be **string** (`"active"`, `"closed"`); `byUser` (int user_id) **required** alongside any status change; API auto-manages `folder_id`, `closed_at`, `user_updated_at`
+- **`POST /api/conversations/{id}/threads`** — add note: `{"type":"note","text":"<html>","user":<int>}`; `user` is **required** (field name, not `userId`); returns 201
+- **Hybrid pattern:** API for writes (proper ORM handling), SQL kept for reads and `threads.body` search (no API equivalent)
+- **Helper functions** in `ai_agent_resolution_bridge.py`: `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` and `fs_api_add_note(conv_db_id, html_body, user_id=1)` — config loaded lazily from `freescout_api.json`
+- **Phase 2 complete (2026-05-13):** Resolution bridge primary writes migrated; `close_related_conversations()` stays SQL (thread body search)
 
 ### Glenda BCV Rate Context
 

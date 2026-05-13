@@ -4,6 +4,34 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Freescout REST API Migration — Resolution Bridge Phase 2
+
+**Type:** Infrastructure | **Status:** Production ✅
+
+Migrated primary Freescout write operations in `scripts/ai_agent_resolution_bridge.py` from direct MySQL to the Freescout REST API (API & Webhooks module, installed 2026-05-13).
+
+**What changed:**
+- `UPDATE conversations SET subject, status, user_id, folder_id, closed_at, ...` → `PUT /api/conversations/{id}`
+- `INSERT INTO threads` (note) + `UPDATE threads_count` → `POST /api/conversations/{id}/threads`
+- Customer reassignment (mailer-daemon → real customer) folded into API payload as `customerId`
+- Folder assignment now auto-managed by API — `get_freescout_folder()` removed from main flow
+
+**What stays SQL (no API equivalent):**
+- `get_freescout_conversation()` — subject check + mailbox_id read
+- `find_freescout_customer()` — email → customer lookup via `emails` JOIN `customers`
+- `close_related_conversations()` — thread body search (`threads.body LIKE '%email%'`)
+
+**API quirks discovered during smoke testing:**
+- Status must be string (`"active"`, `"closed"`), not integer (1/3)
+- `byUser` (int user_id) required alongside any status change in PUT
+- Note thread field is `user` (int), NOT `userId` — API returns 400 otherwise
+- Conversation URL uses DB `id` (primary key), not display `number` ✓
+- PUT → 204 No Content; POST thread → 201 Created
+
+**Config:** `/opt/odoo-dev/config/freescout_api.json` — `api_url`, `api_key`, `webhook_secret`
+
+---
+
 ## 2026-05-13 — Contact Phone Normalization + Employee Form Validation (ueipab_hr_employee v17.0.1.3.0)
 
 **Type:** Data quality + UX hardening | **Status:** Production ✅

@@ -28,6 +28,9 @@ Usage:
 
 Author: Claude Code Assistant
 Date: 2026-02-09
+Updated: 2026-05-13 — Primary Freescout writes migrated to REST API (PUT /api/conversations,
+  POST /api/conversations/{id}/threads). SQL kept for reads and close_related_conversations
+  (thread body search has no API equivalent).
 """
 
 import argparse
@@ -39,6 +42,7 @@ import xmlrpc.client
 from datetime import datetime
 
 import pymysql
+import requests
 
 # ============================================================================
 # Configuration
@@ -235,10 +239,10 @@ def find_freescout_customer(fs_conn, email):
 
 
 def update_conversation_customer(fs_conn, conversation_id, customer_id, customer_email):
-    """Update a Freescout conversation's customer_id and customer_email.
+    """Update a Freescout conversation's customer_id and customer_email via SQL.
 
-    Used to replace mailer-daemon@googlemail.com with the actual person
-    on DSN bounce conversations, so support staff see the real customer.
+    Kept for use inside close_related_conversations() which must stay SQL.
+    Primary conversation reassignment is now done via fs_api_update_conversation().
     """
     with fs_conn.cursor() as cursor:
         cursor.execute(
@@ -246,6 +250,73 @@ def update_conversation_customer(fs_conn, conversation_id, customer_id, customer
             "updated_at = NOW(), user_updated_at = NOW() WHERE id = %s",
             (customer_id, customer_email, conversation_id),
         )
+
+
+# ============================================================================
+# Helpers — Freescout REST API
+# ============================================================================
+
+_FS_API_CFG = None
+
+
+def _get_fs_api_cfg():
+    global _FS_API_CFG
+    if _FS_API_CFG is not None:
+        return _FS_API_CFG
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.normpath(os.path.join(script_dir, '..', 'config', 'freescout_api.json')),
+        '/home/vision/ueipab17/config/freescout_api.json',
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            with open(path) as f:
+                _FS_API_CFG = json.load(f)
+            logger.info("Freescout API config loaded from %s", path)
+            return _FS_API_CFG
+    raise RuntimeError("freescout_api.json not found in config dirs")
+
+
+def _fs_api_headers():
+    return {'X-FreeScout-API-Key': _get_fs_api_cfg()['api_key']}
+
+
+_FS_STATUS_STR = {1: 'active', 2: 'pending', 3: 'closed',
+                  'active': 'active', 'pending': 'pending', 'closed': 'closed'}
+
+
+def fs_api_update_conversation(conv_db_id, payload, by_user_id=1):
+    """PUT /api/conversations/{id} — update conversation via REST API.
+
+    The API automatically handles folder_id, closed_at, closed_by_user_id,
+    user_updated_at, and threads_count — no manual SQL field management needed.
+    conv_db_id: Freescout conversations.id (DB primary key).
+    Supported payload keys: subject, status (string: active/closed), assignTo (user_id),
+    customerId (customer reassignment).
+    byUser is injected automatically alongside status (required by API).
+    """
+    cfg = _get_fs_api_cfg()
+    url = f"{cfg['api_url']}/conversations/{conv_db_id}"
+    if 'status' in payload:
+        payload = dict(payload)
+        payload['status'] = _FS_STATUS_STR.get(payload['status'], str(payload['status']))
+        payload.setdefault('byUser', by_user_id)
+    resp = requests.put(url, json=payload, headers=_fs_api_headers(), timeout=15)
+    resp.raise_for_status()
+    return resp
+
+
+def fs_api_add_note(conv_db_id, html_body, user_id=1):
+    """POST /api/conversations/{id}/threads — add internal note via REST API.
+
+    'user' (integer user ID) is required by the API.
+    """
+    cfg = _get_fs_api_cfg()
+    url = f"{cfg['api_url']}/conversations/{conv_db_id}/threads"
+    payload = {'type': 'note', 'text': html_body, 'user': user_id}
+    resp = requests.post(url, json=payload, headers=_fs_api_headers(), timeout=15)
+    resp.raise_for_status()
+    return resp
 
 
 # ============================================================================
@@ -269,6 +340,94 @@ def connect_sheets():
     spreadsheet = gc.open_by_key(SPREADSHEET_ID)
     logger.info("Google Sheets connected (spreadsheet: %s)", SPREADSHEET_ID)
     return spreadsheet, gc
+
+
+def load_akdemia_data(spreadsheet):
+    """Load Akdemia2526 tab once and return (emails_set, cedula_map, family_map).
+
+    Replaces three separate get_all_values() calls with one, cutting API
+    round-trips from 3 to 1 per run.
+    """
+    import re
+
+    try:
+        ws = spreadsheet.worksheet(AKDEMIA_TAB)
+    except Exception:
+        logger.warning("Akdemia2526 tab not found, skipping Akdemia data")
+        return set(), {}, {}
+
+    all_values = ws.get_all_values()
+
+    # Email columns (0-indexed): 46=AU, 75=BX, 104=DA
+    # Cedula columns:            33=AH, 62=BK, 91=CN
+    # Parent slots: (first_name, last_name, cedula, email, slot_label)
+    parent_slots = [
+        (27, 30, 33, 46, 'Representante'),
+        (56, 59, 62, 75, 'Representante.1'),
+        (85, 88, 91, 104, 'Representante.2'),
+    ]
+    email_col_indices = [46, 75, 104]
+
+    akdemia_emails = set()
+    cedula_map = {}   # {cedula_str: set of lowercase emails}
+    family_map = {}   # {cedula_str: [family_records]}
+
+    # Data starts at row 4 (index 3)
+    for row_idx in range(3, len(all_values)):
+        row = all_values[row_idx]
+
+        # --- emails set ---
+        for col_idx in email_col_indices:
+            if col_idx < len(row):
+                val = row[col_idx].strip().lower()
+                if val and val != 'nan' and '@' in val:
+                    akdemia_emails.add(val)
+
+        # --- student name (needed for family_map) ---
+        student_first = row[2].strip() if len(row) > 2 else ''
+        student_last = row[4].strip() if len(row) > 4 else ''
+        student_name = f"{student_first} {student_last}".strip()
+
+        # --- cedula_map + family_map ---
+        row_parents = []
+        row_cedulas = []
+        for fn_col, ln_col, ced_col, email_col, slot in parent_slots:
+            if ced_col >= len(row):
+                continue
+            ced_val = re.sub(r'[^0-9]', '', str(row[ced_col]))
+            if not ced_val:
+                continue
+            email = row[email_col].strip().lower() if email_col < len(row) else ''
+            if email == 'nan':
+                email = ''
+
+            # cedula_map
+            if email and '@' in email:
+                if ced_val not in cedula_map:
+                    cedula_map[ced_val] = set()
+                cedula_map[ced_val].add(email)
+
+            # family_map
+            fn = row[fn_col].strip() if fn_col < len(row) else ''
+            ln = row[ln_col].strip() if ln_col < len(row) else ''
+            row_parents.append({
+                'name': f"{fn} {ln}".strip(),
+                'cedula': ced_val,
+                'email': email,
+                'slot': slot,
+            })
+            row_cedulas.append(ced_val)
+
+        if student_name and row_parents:
+            family_record = {'student': student_name, 'parents': row_parents}
+            for ced in set(row_cedulas):
+                if ced not in family_map:
+                    family_map[ced] = []
+                family_map[ced].append(family_record)
+
+    logger.info("Akdemia2526 loaded: %d emails, %d cedulas, %d family entries",
+                len(akdemia_emails), len(cedula_map), len(family_map))
+    return akdemia_emails, cedula_map, family_map
 
 
 def load_akdemia_emails(spreadsheet):
@@ -975,76 +1134,56 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
                         bounced_email, real_customer['customer_id'],
                         real_customer['first_name'], real_customer['last_name'])
 
-    # Reassign primary conversation if it's a mailer-daemon DSN
+    # Log customer reassignment intent; actual update folded into API payload below
     fs_customer_email = (fs_conv.get('customer_email') or '').lower()
     if real_customer and fs_customer_email == 'mailer-daemon@googlemail.com':
         print(f"  {prefix}Reassigning primary #{fs_conv['number']} customer: "
               f"mailer-daemon → {real_customer['email']} "
               f"({real_customer['first_name']} {real_customer['last_name']})")
-        if not DRY_RUN:
-            update_conversation_customer(
-                fs_conn, fs_db_id,
-                real_customer['customer_id'], real_customer['email'],
-            )
-            fs_conn.commit()
 
-    # Already processed? Still run related-conversations cleanup, then skip rest
+    # Already processed? Only do work if there's something actionable remaining.
     if primary_already_done:
-        logger.info("  Freescout #%d primary already processed", fs_conv_number)
-        # Build odoo_bl_url for related cleanup
-        odoo_bl_url = f"{ODOO_URL}/web#id={bl_id}&model=mail.bounce.log&view_type=form"
-        any_closed = 0
-        if bounced_email:
-            related_closed = close_related_conversations(
-                fs_conn, admin_id, bounced_email, fs_db_id, partner_name, odoo_bl_url,
-                real_customer=real_customer,
-            )
-            if related_closed:
-                print(f"  {prefix}Closed {related_closed} related conversation(s) (bounced email)")
-                any_closed += related_closed
-        if new_email and new_email.lower() != bounced_email:
-            related_new = close_related_conversations(
-                fs_conn, admin_id, new_email, fs_db_id, partner_name, odoo_bl_url,
-                real_customer=real_customer,
-            )
-            if related_new:
-                print(f"  {prefix}Closed {related_new} related conversation(s) (new email)")
-                any_closed += related_new
-        # Family enrichment runs even for already-processed BLs
+        # Family enrichment: only attempt if the BL has akdemia_family_emails data.
+        # This is the only genuinely incremental work that can happen post-close.
         family_added = []
         if bl.get('akdemia_family_emails'):
             family_added = enrich_family_emails(
                 bl, models, uid, known_bounced, spreadsheet)
             if family_added:
                 print(f"  {prefix}Family emails added: {', '.join(family_added)}")
-                any_closed += 1  # count as "processed" so we don't return 'skipped'
-        # Post audit note for family enrichment on already-processed BLs
-        if family_added and not DRY_RUN:
-            try:
-                # Re-read partner email for accurate audit
-                updated_email = ''
-                if partner_id:
-                    p = odoo_search_read(
-                        models, uid, 'res.partner',
-                        [('id', '=', partner_id)], ['email'])
-                    if p:
-                        updated_email = p[0].get('email', '')
-                items = [
-                    f'<li><b>Emails familiares agregados (Akdemia):</b> '
-                    f'<code>{"; ".join(family_added)}</code></li>',
-                ]
-                if updated_email:
-                    items.append(
-                        f'<li><b>Emails actuales del contacto:</b> '
-                        f'<code>{updated_email}</code></li>')
-                post_body = (
-                    f'<p><b>Enriquecimiento familiar (Resolution Bridge)</b></p>'
-                    f'<ul>{"".join(items)}</ul>'
-                )
-                odoo_post_note(models, uid, 'mail.bounce.log', bl_id, post_body)
-            except Exception as e:
-                logger.warning("  Could not post family enrichment note to BL#%d: %s", bl_id, e)
-        return 'processed' if any_closed else 'skipped'
+                if not DRY_RUN:
+                    try:
+                        updated_email = ''
+                        if partner_id:
+                            p = odoo_search_read(
+                                models, uid, 'res.partner',
+                                [('id', '=', partner_id)], ['email'])
+                            if p:
+                                updated_email = p[0].get('email', '')
+                        items = [
+                            f'<li><b>Emails familiares agregados (Akdemia):</b> '
+                            f'<code>{"; ".join(family_added)}</code></li>',
+                        ]
+                        if updated_email:
+                            items.append(
+                                f'<li><b>Emails actuales del contacto:</b> '
+                                f'<code>{updated_email}</code></li>')
+                        odoo_post_note(
+                            models, uid, 'mail.bounce.log', bl_id,
+                            f'<p><b>Enriquecimiento familiar (Resolution Bridge)</b></p>'
+                            f'<ul>{"".join(items)}</ul>')
+                    except Exception as e:
+                        logger.warning("  Could not post family enrichment note to BL#%d: %s",
+                                       bl_id, e)
+            else:
+                # Nothing to enrich — truly done, skip cheaply
+                logger.debug("  BL#%d: already processed, no new family emails", bl_id)
+                return 'skipped'
+        else:
+            logger.debug("  BL#%d: already processed, no akdemia_family_emails", bl_id)
+            return 'skipped'
+
+        return 'processed' if family_added else 'skipped'
 
     original_subject = fs_conv['subject'] or 'Delivery Status Notification'
 
@@ -1070,20 +1209,15 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
             partner_vat = partner_data[0].get('vat') or ''
             partner_current_email = partner_data[0].get('email') or ''
 
-    # --- Step 4: Update Freescout ---
-    fs_mailbox_id = fs_conv.get('mailbox_id')
+    # --- Step 4: Update Freescout via REST API ---
     if in_akdemia:
         new_subject = '[RESUELTO-AI] Se requiere actualización de correo electrónico en Akdemia'
         new_status = 1  # Keep Active — Alejandra closes after updating Akdemia
         assign_to = ALEJANDRA_USER_ID
-        # Move to Assigned folder (type=40) — shared folder for all assigned convs
-        new_folder_id = get_freescout_folder(fs_conn, fs_mailbox_id, 40)
     else:
         new_subject = f'[RESUELTO-AI] {original_subject}'
         new_status = 3  # Closed
         assign_to = None
-        # Move to Closed folder (type=60)
-        new_folder_id = get_freescout_folder(fs_conn, fs_mailbox_id, 60)
 
     # Build internal note body
     odoo_bl_url = f"{ODOO_URL}/web#id={bl_id}&model=mail.bounce.log&view_type=form"
@@ -1130,75 +1264,21 @@ def process_bounce_log(bl, fs_conn, admin_id, akdemia_emails, spreadsheet, model
     print(f"    Status: {new_status} ({'Active (Alejandra)' if new_status == 1 else 'Closed'})")
     if assign_to:
         print(f"    Assign to: user_id={assign_to} (Alejandra Lopez)")
-    if new_folder_id:
-        print(f"    Folder: {new_folder_id} ({'Assigned' if assign_to else 'Closed'})")
+    print(f"    Folder: auto-managed by API")
     print(f"    Internal note: resolution summary added")
 
     if not DRY_RUN:
         try:
-            with fs_conn.cursor() as cursor:
-                # Update conversation subject + status + assignment + folder
-                # When closing (status=3), set closed_at/closed_by for Freescout UI visibility
-                closed_fields = ", closed_at = NOW(), closed_by_user_id = %s" if new_status == 3 else ""
-                closed_params = [admin_id] if new_status == 3 else []
-
-                if assign_to and new_folder_id:
-                    cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = %s, "
-                        "user_id = %s, folder_id = %s"
-                        + closed_fields +
-                        ", updated_at = NOW(), user_updated_at = NOW() "
-                        "WHERE id = %s",
-                        (new_subject, new_status, assign_to, new_folder_id,
-                         *closed_params, fs_db_id),
-                    )
-                elif new_folder_id:
-                    cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = %s, "
-                        "folder_id = %s"
-                        + closed_fields +
-                        ", updated_at = NOW(), user_updated_at = NOW() "
-                        "WHERE id = %s",
-                        (new_subject, new_status, new_folder_id,
-                         *closed_params, fs_db_id),
-                    )
-                else:
-                    cursor.execute(
-                        "UPDATE conversations SET subject = %s, status = %s"
-                        + closed_fields +
-                        ", updated_at = NOW(), user_updated_at = NOW() "
-                        "WHERE id = %s",
-                        (new_subject, new_status, *closed_params, fs_db_id),
-                    )
-
-                # Add internal note thread
-                cursor.execute("""
-                    INSERT INTO threads
-                        (conversation_id, `type`, body, state, status,
-                         source_via, source_type,
-                         created_by_user_id, user_id,
-                         created_at, updated_at)
-                    VALUES (%s, 3, %s, 2, 6,
-                            2, 2,
-                            %s, %s,
-                            NOW(), NOW())
-                """, (fs_db_id, note_body, admin_id, admin_id))
-
-                # Update threads_count
-                cursor.execute(
-                    "UPDATE conversations SET threads_count = threads_count + 1 "
-                    "WHERE id = %s",
-                    (fs_db_id,),
-                )
-
-            fs_conn.commit()
-            logger.info("  Freescout #%d updated", fs_conv_number)
+            api_payload = {'subject': new_subject, 'status': new_status}
+            if assign_to:
+                api_payload['assignTo'] = assign_to
+            if real_customer and fs_customer_email == 'mailer-daemon@googlemail.com':
+                api_payload['customerId'] = real_customer['customer_id']
+            fs_api_update_conversation(fs_db_id, api_payload)
+            fs_api_add_note(fs_db_id, note_body, user_id=admin_id)
+            logger.info("  Freescout #%d updated via API", fs_conv_number)
         except Exception as e:
-            logger.error("  Error updating Freescout #%d: %s", fs_conv_number, e)
-            try:
-                fs_conn.rollback()
-            except Exception:
-                pass
+            logger.error("  Error updating Freescout #%d via API: %s", fs_conv_number, e)
             return 'error'
 
     # --- Step 5: Close related Freescout conversations ---
@@ -1605,7 +1685,12 @@ def main():
     print(f"  DRY_RUN:   {DRY_RUN}")
     print(f"  Target:    {TARGET_ENV}")
     print(f"  Odoo:      {ODOO_URL} / {ODOO_DB}")
-    print(f"  Freescout: {FREESCOUT_DB_HOST} / {FREESCOUT_DB_NAME}")
+    print(f"  Freescout DB:  {FREESCOUT_DB_HOST} / {FREESCOUT_DB_NAME} (reads + related convs)")
+    try:
+        fs_cfg = _get_fs_api_cfg()
+        print(f"  Freescout API: {fs_cfg['api_url']} (primary writes)")
+    except Exception as _e:
+        print(f"  Freescout API: config not found ({_e})")
     print(f"  Sheets:    {'enabled' if not args.skip_sheets else 'disabled'}")
     if args.id:
         print(f"  Filter:    BL#{args.id} only")
@@ -1626,10 +1711,8 @@ def main():
     if not args.skip_sheets:
         try:
             spreadsheet, _ = connect_sheets()
-            print("\n--- Loading Akdemia2526 data ---")
-            akdemia_emails = load_akdemia_emails(spreadsheet)
-            akdemia_cedula_map = load_akdemia_cedula_map(spreadsheet)
-            akdemia_family_map = load_akdemia_family_map(spreadsheet)
+            print("\n--- Loading Akdemia2526 data (single fetch) ---")
+            akdemia_emails, akdemia_cedula_map, akdemia_family_map = load_akdemia_data(spreadsheet)
         except Exception as e:
             logger.warning("Google Sheets connection failed: %s (continuing without Sheets)", e)
     else:
@@ -1699,14 +1782,37 @@ def main():
         stats[result] = stats.get(result, 0) + 1
 
     # Phase 5: Sync Customers sheet family emails from Akdemia
+    # Rate-limited to once per 30 min — this scan is expensive (N Odoo API calls).
+    PHASE5_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     'resolution_bridge_phase5_state.json')
+    PHASE5_MIN_INTERVAL = 1800  # 30 minutes in seconds
+
+    def _phase5_due():
+        try:
+            if os.path.isfile(PHASE5_STATE_FILE):
+                with open(PHASE5_STATE_FILE) as _f:
+                    _ts = json.load(_f).get('last_run', 0)
+                return (datetime.now().timestamp() - _ts) >= PHASE5_MIN_INTERVAL
+        except Exception:
+            pass
+        return True
+
+    def _phase5_mark_done():
+        with open(PHASE5_STATE_FILE, 'w') as _f:
+            json.dump({'last_run': datetime.now().timestamp()}, _f)
+
     if spreadsheet and akdemia_cedula_map:
-        print("\n--- Phase 5: Sync Customers Family Emails ---")
-        sheets_synced, odoo_synced, checked = sync_customers_family_emails(
-            spreadsheet, akdemia_cedula_map, known_bounced,
-            models=models, uid=uid)
-        print(f"  Checked {checked} Customers rows with Akdemia matches")
-        print(f"  Sheets updated: {sheets_synced}")
-        print(f"  Odoo partners/MC updated: {odoo_synced}")
+        if _phase5_due():
+            print("\n--- Phase 5: Sync Customers Family Emails ---")
+            sheets_synced, odoo_synced, checked = sync_customers_family_emails(
+                spreadsheet, akdemia_cedula_map, known_bounced,
+                models=models, uid=uid)
+            print(f"  Checked {checked} Customers rows with Akdemia matches")
+            print(f"  Sheets updated: {sheets_synced}")
+            print(f"  Odoo partners/MC updated: {odoo_synced}")
+            _phase5_mark_done()
+        else:
+            print("\n--- Phase 5: Sync Customers Family Emails (skipped — ran <30 min ago) ---")
 
     # Summary
     fs_conn.close()

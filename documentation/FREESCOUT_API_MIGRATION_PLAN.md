@@ -1,6 +1,6 @@
 # Freescout API Migration Plan
 
-**Status:** Pending
+**Status:** Phase 2 Complete (2026-05-13) — Phase 1, 3, 4 pending
 **Created:** 2026-02-09
 **Priority:** Medium
 
@@ -14,53 +14,62 @@ All Freescout integrations currently use **direct MySQL** (`pymysql`) to read an
 | Closed conversations not visible in UI | `closed_at` / `closed_by_user_id` not set | 2026-02-09 |
 | `user_updated_at` not set | ORM normally handles this on save | 2026-02-09 |
 
-Freescout offers a REST API via the **API & Webhooks Module** that would handle these automatically through the ORM.
+Freescout offers a REST API via the **API & Webhooks Module** that handles these automatically through the ORM.
 
-## Purchase Required
+## Module
 
-- **Module:** [API & Webhooks](https://freescout.net/module/api-webhooks/)
+- **Module:** API & Webhooks — **installed and active (2026-05-13)**
 - **License:** One-time lifetime (AGPL-3.0)
-- **Requirement:** Freescout >= 1.8.198, PHP `hash` extension
 - **API Reference:** https://api-docs.freescout.net/
-- **Auth:** API key (GET param, Basic Auth, or `X-FreeScout-API-Key` header)
+- **Auth:** `X-FreeScout-API-Key` header
+- **Config:** `/opt/odoo-dev/config/freescout_api.json` (gitignored) — `api_url`, `api_key`, `webhook_secret`
+
+## API Behaviour (discovered 2026-05-13)
+
+| Aspect | Behaviour |
+|--------|-----------|
+| Conversation ID in URL | DB primary key (`conversations.id`) — NOT display number |
+| `GET /api/conversations/{id}` | Returns status as string `"active"` / `"closed"` |
+| `PUT /api/conversations/{id}` — status | Must be string (`"active"`, `"closed"`); `byUser` (int user ID) **required** alongside any status change |
+| `PUT /api/conversations/{id}` — assignTo | Integer user ID — works, auto-moves to Assigned folder |
+| `PUT /api/conversations/{id}` — customerId | Integer customer ID — accepted, not yet confirmed to update `customer_email` |
+| `POST /api/conversations/{id}/threads` — note | `type: "note"`, `text: "<html>"`, `user: <int>` — `user` is **required** (not `userId`) |
+| Folder assignment | Handled automatically by API — no `folder_id` needed |
+| `closed_at` / `closed_by_user_id` | Set automatically on `status=closed` |
+| `user_updated_at` | Updated automatically on any PUT |
+| Success codes | PUT → 204, POST thread → 201 |
 
 ## Migration Strategy: Hybrid
 
 **Migrate writes to API, keep SQL for reads that the API cannot handle.**
 
-### Phase 1 — Escalation Bridge (cleanest candidate)
+### Phase 1 — Escalation Bridge *(Pending)*
 
 **Script:** `scripts/ai_agent_escalation_bridge.py`
 
-All operations have API equivalents:
+Already migrated to email-only (2026-02-19) — no Freescout SQL. Full API migration deferred.
 
-| Current SQL | API Replacement |
-|-------------|----------------|
-| `SELECT MAX(number)+1` for new conv number | Not needed — API auto-assigns |
-| `INSERT INTO customers` | `POST /api/customers` |
-| `INSERT INTO conversations` (5+ fields manually) | `POST /api/conversations` (atomic with first thread) |
-| `INSERT INTO threads` (customer msg + note) | Included in conversation create + `POST /api/conversations/{id}/threads` |
-| `SELECT id FROM conversations WHERE number = %s` | `GET /api/conversations?number=...` |
-
-**Benefits:** Eliminates race condition on `MAX(number)+1`, atomic conversation+thread creation, proper folder assignment.
-
-### Phase 2 — Resolution Bridge (partial)
+### Phase 2 — Resolution Bridge ✅ Complete (2026-05-13)
 
 **Script:** `scripts/ai_agent_resolution_bridge.py`
 
-| Current SQL | API Replacement | Migrate? |
-|-------------|----------------|----------|
-| Get conversation by ID | `GET /api/conversations/{id}` | Yes |
-| Update subject + status + assignTo | `PUT /api/conversations/{id}` | Yes |
-| Add internal note | `POST /api/conversations/{id}/threads` type=note | Yes |
-| Close conversation (status + folder + closed_at) | `PUT /api/conversations/{id}` status=closed, byUser=id | Yes |
-| Update customer_id + customer_email | `PUT /api/conversations/{id}` customerId=N | Yes (test first) |
-| Search `threads.body LIKE '%email%'` | **No API equivalent** | **Keep SQL** |
-| Get folder by type | `GET /api/mailboxes/{id}/folders` | Yes |
+| Operation | Before | After |
+|-----------|--------|-------|
+| Update subject + status + assignTo | SQL `UPDATE conversations` | `PUT /api/conversations/{id}` |
+| Add internal note | SQL `INSERT INTO threads` + `UPDATE threads_count` | `POST /api/conversations/{id}/threads` |
+| Customer reassignment (mailer-daemon) | Separate SQL pre-step | Folded into API payload as `customerId` |
+| Folder assignment | Manual `get_freescout_folder()` SQL lookup | Auto-managed by API |
+| Get conversation (subject check, mailbox_id) | SQL `SELECT` | **Kept SQL** (read-only, no API advantage) |
+| Find customer by email | SQL join on `emails` + `customers` | **Kept SQL** (no API equivalent) |
+| `close_related_conversations()` — search + close | SQL thread body search | **Kept SQL** (thread body search has no API equivalent) |
 
-**Note:** The `close_related_conversations()` function must stay as SQL because it searches thread body content across all active conversations. No API endpoint supports full-text thread search.
+**Helper functions added to script:**
+- `_get_fs_api_cfg()` — lazy-loads `freescout_api.json`
+- `_fs_api_headers()` — returns auth header dict
+- `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` — PUT wrapper, normalizes status to string, injects `byUser`
+- `fs_api_add_note(conv_db_id, html_body, user_id=1)` — POST thread wrapper
 
-### Phase 3 — Email Checker (partial)
+### Phase 3 — Email Checker *(Pending)*
 
 **Script:** `scripts/ai_agent_email_checker.py`
 
@@ -71,7 +80,7 @@ All operations have API equivalents:
 | Close conversation | `PUT /api/conversations/{id}` | Yes |
 | Add internal note | `POST /api/conversations/{id}/threads` | Yes |
 
-### Phase 4 — Bounce Processor (partial)
+### Phase 4 — Bounce Processor *(Pending)*
 
 **Script:** `scripts/daily_bounce_processor.py`
 
@@ -81,7 +90,7 @@ All operations have API equivalents:
 | Update subject prefix | `PUT /api/conversations/{id}` | Yes |
 | Add internal note | `POST /api/conversations/{id}/threads` | Yes |
 
-### Phase 5 — WA Health Monitor (evaluate)
+### Phase 5 — WA Health Monitor *(Evaluate)*
 
 **Script:** `scripts/ai_agent_wa_health_monitor.py`
 
@@ -91,45 +100,20 @@ All operations have API equivalents:
 
 ## API Limitations (hard blockers for full migration)
 
-1. **No thread body search** — `GET /api/conversations` filters by `customerEmail`, `subject`, `tag`, `status`, but NOT by thread content. Our related conversation cleanup and email verification detection depend on `threads.body LIKE '%email%'`.
+1. **No thread body search** — `GET /api/conversations` filters by `customerEmail`, `subject`, `tag`, `status`, but NOT by thread content. `close_related_conversations()` and email verification detection must stay SQL.
 
-2. **No `customer_email` direct field** — API accepts `customerId` on conversation update. Need to verify it auto-updates `customer_email` (not documented explicitly).
+2. **`customer_email` not confirmed** — API accepts `customerId` on PUT but it's unconfirmed whether `customer_email` column updates automatically. Behaviour needs live verification.
 
-3. **Conversation ID vs number** — API uses conversation `number` (display). Our Odoo `freescout_conversation_id` stores the DB `id` (primary key). Options: change Odoo field to store number, or look up number from id first.
+## Shared connection pattern
 
-## Implementation Notes
-
-### Shared connection pattern
-
-After migration, scripts will use both connections:
+Scripts use both connections:
 
 ```python
 # API for writes (proper ORM handling)
 import requests
-FS_API_URL = 'https://soporte.ueipab.edu.ve/api'
-FS_API_KEY = '...'  # from config file
-headers = {'X-FreeScout-API-Key': FS_API_KEY}
+# helpers: fs_api_update_conversation(), fs_api_add_note()
 
 # SQL for reads that API can't do (thread body search)
 import pymysql
 fs_conn = pymysql.connect(...)
 ```
-
-### Config addition needed
-
-Add to `/opt/odoo-dev/config/freescout_api.json` (gitignored):
-```json
-{
-    "api_url": "https://soporte.ueipab.edu.ve/api",
-    "api_key": "GENERATED_AFTER_MODULE_INSTALL"
-}
-```
-
-## Steps to Start
-
-1. Purchase API & Webhooks module from freescout.net
-2. Install module in Freescout (Manage > Modules)
-3. Generate API key (Manage > API & Webhooks)
-4. Add key to config file
-5. Start with Phase 1 (escalation bridge) — smallest scope, full API coverage
-6. Test `customerId` update on conversation via API before Phase 2
