@@ -1,6 +1,6 @@
 # Employee Private Info Request System
 
-**Status:** Production | **Module:** `ueipab_hr_employee` | **Version:** 17.0.1.2.0 | **Deployed:** 2026-05-11
+**Status:** Production | **Module:** `ueipab_hr_employee` | **Version:** 17.0.1.3.0 | **Deployed:** 2026-05-13 (v17.0.1.3.0)
 
 ---
 
@@ -138,6 +138,23 @@ Action available from Employees list view → "Solicitar Actualización de Datos
 - **Note:** Initial 44 emails sent without CC (template fixed after); all reminders will CC `recursoshumanos@ueipab.edu.ve`
 
 **Private address bulk-fill (2026-05-11):** 46/47 active employees had empty `private_city/state_id/zip/country_id`. Bulk-updated to El Tigre / Anzoátegui / 6050 / Venezuela via XML-RPC.
+
+**Day 2 reminders (2026-05-13):** Manual early reminder sent to all 17 still-pending employees (auto-cron fires day 3, but triggered manually on day 2). `action_send_reminder()` called per record via XML-RPC. 27/44 completed by day 2.
+
+---
+
+## Validation (v17.0.1.3.0 — 2026-05-13)
+
+Phone and email convention enforcement added to the public form:
+
+| Layer | Detail |
+|---|---|
+| **Server-side** | `_validate_fields()` — rejects invalid email format and non-Venezuelan phone; re-renders form with red inline error |
+| **Auto-normalize** | `_normalize_ve_phone()` — any valid Venezuelan number saved as `+58XXXXXXXXXX` regardless of input format |
+| **Client-side** | `pattern` + `placeholder` attributes on `private_phone` and `emergency_phone` inputs |
+| **JS normalizer** | Strips spaces/dashes and adds `+58` before submit so browser validation passes |
+
+Venezuelan phone rule: `+58` + 10-digit local number with valid prefix (412, 414, 416, 424, 426, or landline).
 
 ---
 

@@ -1,6 +1,6 @@
 # Glenda Calibration Programme
 
-**Status:** Active | **Module:** `ueipab_ai_agent` v17.0.1.32.0 | **Started:** 2026-05-11
+**Status:** Active | **Module:** `ueipab_ai_agent` v17.0.1.34.0–38.0 | **Started:** 2026-05-11
 
 ## Overview
 
@@ -114,6 +114,19 @@ Inherited in `ueipab_ai_agent` (`hr_notice_ack_calibration.py`):
 
 `scripts/send_calibration_status_report.py` — queries production via XML-RPC, builds an HTML group progress report in Spanish, and queues it to `recursoshumanos@ueipab.edu.ve`. Run any time to send an updated scoreboard to HR (then forward manually to all participants). Includes: KPI chips, scoreboard table per participant (color-coded), and feedback suggestions received.
 
+## UX Tester Suggestions — Implementation Status (Round 1)
+
+All 11 suggestions logged by calibration testers were reviewed and grouped into 4 themes. All implemented 2026-05-13:
+
+| # | Theme | Mentions | Version | Implementation |
+|---|---|---|---|---|
+| 1 | Message conciseness / single farewell | 4 (Mairelys, Gladys, Nidya, Maria) | v17.0.1.34.0 | `REGLAS DE COMUNICACIÓN` block in system prompt |
+| 2 | Audio/voice note support | 2 (Maria Figuera ×2) | v17.0.1.35.0 | OpenAI Whisper transcription — `_transcribe_audio()` |
+| 3 | Cashea payment info | 2 (Jessica, Luisa) | v17.0.1.36.0 | Added to `MEDIOS DE PAGO` + `POLÍTICA DE MORA` block |
+| 4 | Mora/late payment policy | 1 (Luisa) | v17.0.1.36.0 | Empathetic case-by-case response + handoff to pagos@ |
+
+Update email sent manually to all participants 2026-05-13 summarizing all 4 improvements.
+
 ## WA Number Convention
 
 All enrolled employees stored in `+58 XXX XXXXXXX` format (space-separated) on both:
@@ -131,4 +144,9 @@ Phone matching uses digit-only comparison (`re.sub(r'\D', '', phone)`) to handle
 | 2026-05-11 | `ueipab_ai_agent` v17.0.1.32.0 deployed to production |
 | 2026-05-11 | Guide emails sent to 19 employees (YUDELYS BRITO pending) |
 | 2026-05-12 | Day 2 group status report sent to all participants (14/20 started, 3 suggestions) |
+| 2026-05-13 | Day 3 snapshot: 21 enrolled with WA, 14 started, 7 not started, 19 convs, 11 suggestions, 0 eligible |
+| 2026-05-13 | All 4 UX suggestions implemented (v17.0.1.34.0–38.0) — see below |
+| 2026-05-13 | Update email sent manually to all participants summarizing all 4 improvements |
+| 2026-05-13 | Personal nudge sent via WA to top-3 closest to bonus: JOSEFINA RODRIGUEZ, Maria Figuera, NIDYA LIRA |
+| 2026-05-13 | Executive digest sent to perdomo.gustavo@gmail.com |
 | 2026-05-30 | **Bonus deadline** |
