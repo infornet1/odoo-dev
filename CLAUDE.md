@@ -169,7 +169,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.33.0 | **Deployed 2026-05-12** — 2026-2027 tariff knowledge update: promo inscripción $187,51, nueva mensualidad $218,88/$207,93 desde sep 2026 |
+| ueipab_ai_agent | 17.0.1.34.0 | **Deployed 2026-05-13** — UX improvement: `REGLAS DE COMUNICACIÓN` block (single msg/turn, single farewell, no follow-up after goodbye) based on calibration tester feedback |
 
 ---
 

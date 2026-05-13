@@ -4,6 +4,26 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Glenda Message Conciseness Rules (ueipab_ai_agent v17.0.1.34.0)
+
+**Type:** UX improvement | **Status:** Production ✅
+
+Added `REGLAS DE COMUNICACIÓN` block to `general_inquiry` system prompt based on top
+feedback theme from the Calibration Programme (4+ mentions from MAIRELSY MOTTA,
+GLADYS BRITO CALZADILLA, NIDYA LIRA, Maria Figuera).
+
+| Rule | Detail |
+|---|---|
+| **Single message per turn** | Consolidate entire response in one message — no consecutive messages on same topic |
+| **Single farewell line** | On conversation close, reply with one brief closing line — no stacked goodbyes |
+| **No follow-up after goodbye** | If customer says "gracias, hasta luego", respond with a short farewell only — do not add "¿puedo ayudarte en algo más?" |
+
+**Deployment:** `general_inquiry.py` + `__manifest__.py` SCP'd to production, `docker restart ueipab17`.
+
+**Remaining UX tester backlog:** Cashea payment info (needs policy confirmation), mora/impago policy (needs HR text), audio/voice note support (Phase 2, significant dev).
+
+---
+
 ## 2026-05-12 — Glenda 2026-2027 Preliminary Tariff Update (ueipab_ai_agent v17.0.1.33.0)
 
 **Type:** Knowledge update | **Status:** Production ✅

@@ -179,6 +179,14 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 - **Scenario A** — New prospect identifying as PDVSA/Petropiar: informs discontinuation cordially, routes to `billing`.
 - **Scenario B** — Existing 2025-2026 enrolled family expressing economic hardship: responds with maximum empathy, invites Director meeting, fires urgent retention alert via `pdvsa_retention` route. Subject: `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación — {name}`.
 
+**general_inquiry conciseness rules (v17.0.1.34.0, 2026-05-13):**
+`REGLAS DE COMUNICACIÓN` block added to system prompt based on Calibration Programme UX feedback (top theme, 4+ mentions):
+- **Single message per turn** — no consecutive messages on same topic
+- **Single farewell** — one closing line only when customer says goodbye; no stacked goodbyes
+- **No follow-up after goodbye** — if customer explicitly closes, respond with one short farewell and stop
+
+Pending UX backlog: (1) Cashea payment policy info, (2) mora/impago sanctions policy, (3) audio/voice note support (Phase 2).
+
 **general_inquiry tariff knowledge (v17.0.1.33.0, 2026-05-12):**
 `_INSTITUTIONAL_KNOWLEDGE` reflects three tariff periods:
 - **2025-2026 vigente (hasta 31 ago):** Inscripción $197,38 · Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días)
