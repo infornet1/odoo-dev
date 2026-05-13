@@ -365,6 +365,26 @@ class AiAgentConversation(models.Model):
             self.message_post(body=_("Conversacion cerrada: se alcanzo el limite de %d turnos.") % skill.max_turns)
             return
 
+        # Moderation check — reject abusive/inappropriate messages before hitting Claude
+        if message_text:
+            flagged, flag_categories = self._check_moderation(message_text)
+            if flagged:
+                _logger.warning(
+                    "Conversation %d: message flagged by moderation [%s]: %s...",
+                    self.id, ', '.join(flag_categories), message_text[:80]
+                )
+                self.message_post(body=_(
+                    "⚠️ Mensaje bloqueado por moderación: [%s]"
+                ) % ', '.join(flag_categories))
+                if not self._is_dry_run():
+                    wa_service = self.env['ai.agent.whatsapp.service'].sudo()
+                    wa_service.send_message(
+                        self.phone,
+                        "No puedo procesar ese tipo de mensaje. "
+                        "Si tienes una consulta sobre el colegio, con gusto te ayudo."
+                    )
+                return
+
         # Get skill handler
         skill_handler = get_skill(skill.code)
         if not skill_handler:
@@ -589,6 +609,33 @@ class AiAgentConversation(models.Model):
         except Exception as e:
             _logger.warning("Whisper transcription failed: %s", e)
             return None
+
+    def _check_moderation(self, text):
+        """Check message text against OpenAI Moderation API (free endpoint).
+
+        Returns (flagged: bool, categories: list[str]).
+        If no API key or request fails, returns (False, []) — fail open.
+        """
+        icp = self.env['ir.config_parameter'].sudo()
+        api_key = icp.get_param('ai_agent.openai_api_key', '')
+        if not api_key:
+            return False, []
+
+        try:
+            resp = requests.post(
+                'https://api.openai.com/v1/moderations',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={'input': text, 'model': 'omni-moderation-latest'},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            result = resp.json().get('results', [{}])[0]
+            flagged = result.get('flagged', False)
+            categories = [cat for cat, hit in result.get('categories', {}).items() if hit]
+            return flagged, categories
+        except Exception as e:
+            _logger.warning("Moderation check failed (fail-open): %s", e)
+            return False, []
 
     def _send_verification_email(self, recipient_email):
         """Send a verification email to check if the customer's email is working."""

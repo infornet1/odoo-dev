@@ -169,7 +169,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
 | ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.36.0 | **Deployed 2026-05-13** — Cashea payment method (redirect to pagos@) + mora/impago policy (empathetic, case-by-case, no automatic sanctions) |
+| ueipab_ai_agent | 17.0.1.37.0 | **Deployed 2026-05-13** — OpenAI Moderation filter (free): blocks abusive/threatening messages before Claude, fail-open on API error, logs flagged category in Odoo |
 
 ---
 

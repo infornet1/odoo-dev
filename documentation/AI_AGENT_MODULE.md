@@ -182,6 +182,9 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 **Audio/voice note transcription (v17.0.1.35.0, 2026-05-13) — ✅ ACTIVE in production:**
 `_transcribe_audio(url)` in `ai_agent_conversation.py` — downloads WA audio attachment, POSTs to OpenAI Whisper API (`whisper-1`, `language=es`), injects transcription as message body before Claude. Fallback: API fails → Claude asks user to write. Key `ai_agent.openai_api_key` set in production (id=70, `UEIPAB-Glenda-Whisper`), backup at `config/openai_api.json`. Cost ~$0.003/voice note. `MENSAJES DE AUDIO` block in `general_inquiry` system prompt. **Tested 2026-05-13:** 172-char Spanish voice note transcribed with 100% accuracy end-to-end on DB_UEIPAB.
 
+**OpenAI Moderation filter (v17.0.1.37.0, 2026-05-13) — free, zero-config:**
+`_check_moderation(text)` called in `action_process_reply()` before Claude. Uses `omni-moderation-latest` (free endpoint), reuses `ai_agent.openai_api_key`. Flagged → polite WA rejection + Odoo chatter log + Claude skipped. Fail-open on API error. Detects: harassment, threats, hate, violence, sexual content, self-harm. Tested: no false positives on frustrated-but-legitimate parent language.
+
 **Cashea + mora policy knowledge (v17.0.1.36.0, 2026-05-13):**
 - `MEDIOS DE PAGO` updated: Cashea accepted — Glenda confirms and redirects to `pagos@` for process details
 - `POLÍTICA DE MORA E IMPAGO` block: empathetic, case-by-case handling, never threatens automatic sanctions, always routes to `pagos@` + `ACTION:HANDOFF billing`

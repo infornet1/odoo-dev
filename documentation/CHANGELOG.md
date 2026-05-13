@@ -27,6 +27,28 @@ Built in response to UX tester feedback (Maria Figuera ×2 — can't type, alway
 
 ---
 
+## 2026-05-13 — Glenda OpenAI Moderation Filter (ueipab_ai_agent v17.0.1.37.0)
+
+**Type:** Safety feature | **Status:** Production ✅ | **Cost:** Free
+
+Adds OpenAI Moderation API call (`omni-moderation-latest`) before every Claude invocation.
+
+**Behaviour:**
+- Clean message → proceeds normally to Claude (zero latency impact, ~10ms check)
+- Flagged message → Glenda replies "No puedo procesar ese tipo de mensaje..." + logs category in Odoo chatter + skips Claude entirely (saves tokens)
+- API failure → fail-open (message proceeds to Claude, no customer impact)
+
+**Categories detected:** harassment, threats, sexual content, self-harm, hate speech, violence, and more.
+
+**Test results (2026-05-13):**
+- Normal parent inquiry → `flagged=False` ✓
+- Abusive message with insults + threats → `flagged=True, categories=['harassment']` ✓
+- Frustrated but legitimate complaint → `flagged=False` ✓ (no false positives on emotional language)
+
+**Implementation:** `_check_moderation(text)` in `ai_agent_conversation.py`, hooked in `action_process_reply()` after message logging, before skill handler. Reuses `ai_agent.openai_api_key` param.
+
+---
+
 ## 2026-05-13 — Glenda Cashea + Mora Policy Knowledge (ueipab_ai_agent v17.0.1.36.0)
 
 **Type:** Knowledge update | **Status:** Production ✅
