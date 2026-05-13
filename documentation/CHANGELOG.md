@@ -4,6 +4,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Glenda Payment Receipt OCR (ueipab_ai_agent v17.0.1.38.0)
+
+**Type:** Feature | **Status:** Production ✅ | **Cost:** ~$0.001/image
+
+When a customer sends a payment screenshot (transferencia, pago móvil, Zelle, etc.) via WhatsApp, Glenda automatically detects it and extracts structured data via GPT-4o-mini Vision, then emails a formatted notification to `pagos@ueipab.edu.ve`.
+
+**Pipeline:**
+1. Image attachment arrives → `_detect_attachment_type()` → `'image'`
+2. Claude Vision handles the conversation as normal (responds empathetically)
+3. After Claude reply is sent → `_extract_payment_receipt(url)` called
+4. GPT-4o-mini (`detail:high`) extracts: banco, monto, moneda, referencia, fecha, titular_origen, cuenta_destino, tipo_pago
+5. If `is_receipt:true` → `_notify_pagos_payment_receipt()` sends structured HTML email to `pagos@ueipab.edu.ve`
+6. Odoo chatter logged: `🧾 Comprobante detectado y enviado a pagos@`
+7. Non-payment images → `is_receipt:false` → no action, no cost beyond the API call
+
+**Test results (2026-05-13):**
+- Plain blue image → `{"is_receipt":false}` ✓ (no false positive)
+- Synthetic Banco de Venezuela pago móvil → all 8 fields extracted correctly ✓
+  - banco: BANCO DE VENEZUELA · monto: 248760.50 · moneda: VES · referencia: 003847291065
+  - fecha: 13/05/2026 · titular: José García · destino: J0800086171 · tipo: pago_movil
+
+**Email to pagos@:** Subject `[Glenda] Comprobante de Pago — {phone} — {banco} {monto} {moneda}`, navy blue header, structured table, green footer asking to verify and apply payment.
+
+---
+
 ## 2026-05-13 — Glenda Audio/Voice Note Support (ueipab_ai_agent v17.0.1.35.0)
 
 **Type:** Feature | **Status:** Production ✅ — ACTIVE (OpenAI key set 2026-05-13, ir.config_parameter id=70)
