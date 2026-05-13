@@ -160,6 +160,7 @@ config/production.json
 config/whatsapp_massiva.json
 config/anthropic_api.json
 config/google_sheets_credentials.json
+config/openai_api.json
 /root/.odoo_agent_env_prod
 .odoo_agent_env_prod
 
