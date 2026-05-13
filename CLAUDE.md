@@ -357,7 +357,7 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **turn_count fix (v1.27.1):** Dedup-only records (empty body) excluded from turn counter
 - **Flyer support:** `ACTION:SEND_FLYER:key` → `https://dev.ueipab.edu.ve/flyers/` (param: `ai_agent.flyer_base_url`). **⚠️ Suspended** — MassivaMóvil `type=photo` queues but does NOT deliver to end user; awaiting tech support.
 - **Credit Guard fail-threshold:** Kill switch activates after N consecutive failures (param `ai_agent.credits_fail_threshold`, default 2). Prevents false-positives from transient API timeouts.
-- **2026-2027 enrollment + PDVSA policy:** Inscripción $197,38, Seguro $15, Enc.inglés $30, Enc.digital bach. $36, Kurios $10, MOA $25. PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
+- **2026-2027 enrollment + PDVSA policy:** Costos anuales: Seguro $15, Enc.inglés $30, Olimpiadas $10 = $55/alumno (+$36 bach). PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
 - **Farewell message fix:** `resolved` conv allows new conv within 24h (customer farewell ACK); `timeout`/`failed` → blocked.
 - **Quotation engine:** 4-section quote: mensualidad + inscripción + costos anuales ($55/std: seguro $15 + enc.inglés $30 + olimpiadas $10; +$36 bach) + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7% on mensualidad. Glenda asks bach level + # children; presents per-child breakdown, hands off with structured quote.
 - **Tarifas 2025-2026 (hasta 31 ago):** mensualidad $197,38 (regular) / $162,39 (pronto pago, 10 primeros días).

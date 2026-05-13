@@ -179,8 +179,13 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 - **Scenario A** — New prospect identifying as PDVSA/Petropiar: informs discontinuation cordially, routes to `billing`.
 - **Scenario B** — Existing 2025-2026 enrolled family expressing economic hardship: responds with maximum empathy, invites Director meeting, fires urgent retention alert via `pdvsa_retention` route. Subject: `[URGENTE - Glenda] Familia PDVSA — Riesgo de no renovación — {name}`.
 
-**general_inquiry 2026-2027 enrollment knowledge (v1.29.7):**
-Updated `_INSTITUTIONAL_KNOWLEDGE` with current year costs: Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39 · Seguro escolar $15 · Enciclopedia de Inglés $30 · Olimpiadas Recreativas $10 · Enciclopedia digital bachillerato $36 · Competencia Kurios $10 (si seleccionado) · Competencia MOA inglés $25 (si seleccionado). Logística para Regionales/Nacionales a cargo de los padres.
+**general_inquiry tariff knowledge (v17.0.1.33.0, 2026-05-12):**
+`_INSTITUTIONAL_KNOWLEDGE` reflects three tariff periods:
+- **2025-2026 vigente (hasta 31 ago):** Inscripción $197,38 · Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días)
+- **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** Inscripción $187,51 · Mensualidad septiembre $197,38
+- **Nueva mensualidad desde 1 sep 2026 (preliminar):** $218,88 regular · $207,93 pronto pago (5% dto)
+- Annual costs (unchanged): Seguro escolar $15 · Enciclopedia de Inglés $30 · Olimpiadas $10 = $55/alumno · +$36 bachillerato
+- Sibling table recalculated for new Sep 2026 base rates
 
 **general_inquiry flyer support (v1.29.0):**
 When a customer asks about a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Claude appends `ACTION:SEND_FLYER:key` to its response and the skill sends the flyer image via WhatsApp after the text reply.

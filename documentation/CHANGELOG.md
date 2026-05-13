@@ -4,6 +4,25 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-12 — Glenda 2026-2027 Preliminary Tariff Update (ueipab_ai_agent v17.0.1.33.0)
+
+**Type:** Knowledge update | **Status:** Production ✅
+
+Replaced the projected $264,48 Sep 2026 tariffs with the official preliminary pricing
+structure approved by management.
+
+| Item | Details |
+|------|---------|
+| **2025-2026 vigente (hasta 31 ago)** | Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días del mes) |
+| **Promoción inscripción anticipada (hasta 31 jul)** | Inscripción $187,51 · Mensualidad septiembre $197,38 |
+| **Nueva mensualidad desde 1 sep 2026** | $218,88 (regular) · $207,93 (pronto pago, 5% dto) — preliminar, sujeto a aprobación Comité Contraloría |
+| **Sibling table updated** | 1° $218,88/$207,93 · 2° $207,94/$197,54 · 3° $205,55/$195,27 · 4°+ $203,56/$193,38 |
+| **BCV example** | Updated from $197,38 to $218,88 in BCV conversion example in system prompt |
+| **Test result** | Glenda responded correctly with all three tariff periods, promoted pronto pago savings ($10,95/mes), offered sibling discount quote, auto-triggered inscripcion flyer |
+| **Deployment** | Files SCP'd to production, `docker restart ueipab17` |
+
+---
+
 ## 2026-05-11 — Glenda Calibration Programme (ueipab_ai_agent v17.0.1.32.0)
 
 **Type:** Feature | **Status:** Production ✅
@@ -1104,7 +1123,7 @@ Result: Dec Q2 → `workdays=0 absent=0`; Jan Q1 → `holidays=7 workdays=4`.
 | Item | Details |
 |------|---------|
 | **Sibling discounts** | 1st child: full price · 2nd: 5% off mensualidad · 3rd: 6% · 4th+: 7%. Inscripción at full price per child. Discounts stack with pronto pago (applied on already-discounted mensualidad) |
-| **Pre-calculated table** | Per-child amounts embedded in knowledge: 1st $264,48 (PP $241,16) · 2nd $251,26 (PP $229,11) · 3rd $248,61 (PP $226,69) · 4th+ $245,97 (PP $224,28) |
+| **Pre-calculated table** | Per-child amounts embedded in knowledge: 1st $264,48 (PP $241,16) · 2nd $251,26 (PP $229,11) · 3rd $248,61 (PP $226,69) · 4th+ $245,97 (PP $224,28) — **superseded by v17.0.1.33.0** |
 | **Quote flow** | If student count not stated, Glenda asks first. Presents per-child breakdown + total mensual (regular and pronto pago) + total inscripción |
 | **Handoff** | After quote, hands off to `billing` with structured summary: N alumnos, total mensualidad, total PP, total inscripción |
 | **Email subject** | Quotation emails automatically get subject `[Glenda] Cotización solicitada` (detected from summary keyword "cotización") |
@@ -1117,7 +1136,7 @@ Result: Dec Q2 → `workdays=0 absent=0`; Jan Q1 → `holidays=7 workdays=4`.
 
 | Item | Details |
 |------|---------|
-| **New knowledge** | Proyected rates effective September 1, 2026 (start of 2026-2027 school year): Inscripción $264,48 · Mensualidad $264,48 · Pronto pago $241,16 (8,816% discount, first 10 days of month) |
+| **New knowledge** | Proyected rates effective September 1, 2026 (start of 2026-2027 school year): Inscripción $264,48 · Mensualidad $264,48 · Pronto pago $241,16 (8,816% discount, first 10 days of month) — **superseded by official preliminary rates in v17.0.1.33.0** |
 | **Current rates retained** | $197,38 inscripción / mensualidad, pronto pago $162,39 — labeled "vigente hasta agosto 2026" |
 | **Glenda behavior** | Answers correctly for current OR upcoming rates depending on what the customer asks. If asked whether price will increase: confirms Sep 1 adjustment without alarming. Recommends pagos@ to confirm for specific cases |
 | **Version** | `17.0.1.29.9` |
