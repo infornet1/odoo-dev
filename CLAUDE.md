@@ -167,7 +167,7 @@
 | hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
 | ueipab_attendance_report | 17.0.1.5.2 → **17.0.1.6.0 pending 2026-05-15** | Deployed 2026-05-10 (v17.0.1.5.2). **Pending Friday 2026-05-15:** upgrade to v17.0.1.6.0 — `partner.communication.ack` model, `/partner-ack/` routes, PDVSA campaign send. See [deploy runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
-| ueipab_hr_employee | 17.0.1.2.0 | **Deployed 2026-05-11** — Employee Private Info Request (token form, 14 fields, Fase 1 campaign 44 empl, auto-reminders, logo + Fase 1 badge) |
+| ueipab_hr_employee | 17.0.1.3.0 | **Deployed 2026-05-13** — Phone/email validation on private info form: server-side + client-side + auto-normalize +58; DB fix: 504 phone fields normalized on 324 tagged partners |
 | ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
 | ueipab_ai_agent | 17.0.1.38.0 | **Deployed 2026-05-13** — Payment receipt OCR: GPT-4o-mini extracts banco/monto/referencia/fecha from customer payment screenshots → structured email to pagos@ |
 

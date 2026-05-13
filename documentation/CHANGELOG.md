@@ -4,6 +4,25 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Contact Phone Normalization + Employee Form Validation (ueipab_hr_employee v17.0.1.3.0)
+
+**Type:** Data quality + UX hardening | **Status:** Production ✅
+
+**DB fix — 504 phone fields normalized on 324 partners:**
+- Tags filtered: Representante, Representante PDVSA, Empleado (371 partners checked)
+- Patterns fixed: `4XXXXXXXXXX` → `+584XXXXXXXXXX`, `584XXXXXXXXXX` → `+584XXXXXXXXXX`
+- Email records: NOT modified
+- 1 manual case remaining: CHENIANA NOGALES (prefix 422, unknown Venezuelan operator)
+
+**Employee Private Info form (`/employee-info/<token>`) — v17.0.1.3.0:**
+- `_validate_fields()`: server-side validation — Venezuelan phone must be `+58XXXXXXXXXX`, email must match `name@domain.tld`; invalid → form re-rendered with red inline error
+- `_normalize_ve_phone()`: auto-normalizes valid phones on save (spaces/dashes/missing +58 all handled)
+- `inp()` helper: `pattern` + `placeholder` attributes on phone/email inputs for browser-level hint
+- JS auto-normalizer: strips formatting before submit so `04XX...` and `+58 4XX...` both become `+58XXXXXXXXXX`
+- CSS: `.field-error` red border, `.field-error-msg` inline red text
+
+---
+
 ## 2026-05-13 — Glenda Payment Receipt OCR (ueipab_ai_agent v17.0.1.38.0)
 
 **Type:** Feature | **Status:** Production ✅ | **Cost:** ~$0.001/image
