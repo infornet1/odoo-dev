@@ -27,6 +27,7 @@ Usage:
 
 Author: Claude Code Assistant
 Date: 2026-02-18
+Updated: 2026-05-13 — post_freescout_note() migrated to REST API.
 """
 
 import argparse
@@ -34,6 +35,7 @@ import base64
 import json
 import logging
 import os
+import requests
 import sys
 import xmlrpc.client
 from datetime import datetime
@@ -155,6 +157,47 @@ def connect_freescout():
     )
     logger.info("Connected to Freescout MySQL: %s", FREESCOUT_DB['database'])
     return conn
+
+
+# ============================================================================
+# Freescout REST API
+# ============================================================================
+
+_FS_API_CFG = None
+
+
+def _get_fs_api_cfg():
+    global _FS_API_CFG
+    if _FS_API_CFG is not None:
+        return _FS_API_CFG
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.normpath(os.path.join(script_dir, '..', 'config', 'freescout_api.json')),
+        '/home/vision/ueipab17/config/freescout_api.json',
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            with open(path) as f:
+                _FS_API_CFG = json.load(f)
+            logger.info("Freescout API config loaded from %s", path)
+            return _FS_API_CFG
+    raise RuntimeError("freescout_api.json not found in config dirs")
+
+
+def _fs_api_headers():
+    return {'X-FreeScout-API-Key': _get_fs_api_cfg()['api_key']}
+
+
+def fs_api_add_note(conv_db_id, html_body, user_id=1):
+    """POST /api/conversations/{id}/threads — add internal note via REST API."""
+    cfg = _get_fs_api_cfg()
+    resp = requests.post(
+        f"{cfg['api_url']}/conversations/{conv_db_id}/threads",
+        json={'type': 'note', 'text': html_body, 'user': user_id},
+        headers=_fs_api_headers(), timeout=15,
+    )
+    resp.raise_for_status()
+    return resp
 
 
 # ============================================================================
@@ -385,32 +428,18 @@ def update_request_phase(models, uid, config, request_id, doc_type):
 
 
 def post_freescout_note(fs_conn, conv_id, note_body):
-    """Post an internal note on a Freescout conversation confirming attachment receipt."""
-    cur = fs_conn.cursor()
+    """Post an internal note on a Freescout conversation via REST API.
 
-    # Get admin user for note attribution
+    fs_conn used only to look up admin user_id for note authorship.
+    threads_count and user_updated_at are managed automatically by the API.
+    """
+    cur = fs_conn.cursor()
     cur.execute("SELECT id FROM users WHERE role = 2 ORDER BY id LIMIT 1")
     admin_row = cur.fetchone()
     admin_id = admin_row['id'] if admin_row else 1
 
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    cur.execute("""
-        INSERT INTO threads (conversation_id, type, status, state, body,
-                             created_by_user_id, source_via, created_at, updated_at)
-        VALUES (%s, 3, 6, 2, %s, %s, 'user', %s, %s)
-    """, (conv_id, note_body, admin_id, now, now))
-
-    # Update conversation threads_count and timestamp
-    cur.execute("""
-        UPDATE conversations
-        SET threads_count = threads_count + 1,
-            user_updated_at = %s
-        WHERE id = %s
-    """, (now, conv_id))
-
-    fs_conn.commit()
-    logger.info("Posted Freescout note on conversation #%d", conv_id)
+    fs_api_add_note(conv_id, note_body, user_id=admin_id)
+    logger.info("Posted Freescout note on conversation #%d via API", conv_id)
 
 
 def guess_doc_type(filename, mime_type):

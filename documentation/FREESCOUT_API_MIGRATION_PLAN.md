@@ -69,16 +69,16 @@ Already migrated to email-only (2026-02-19) — no Freescout SQL. Full API migra
 - `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` — PUT wrapper, normalizes status to string, injects `byUser`
 - `fs_api_add_note(conv_db_id, html_body, user_id=1)` — POST thread wrapper
 
-### Phase 3 — Email Checker *(Pending)*
+### Phase 3 — Email Checker ✅ Complete (2026-05-13)
 
-**Script:** `scripts/ai_agent_email_checker.py`
+**Scripts:** `scripts/ai_agent_email_checker.py` + `scripts/ai_agent_hr_email_checker.py`
 
-| Current SQL | API Replacement | Migrate? |
-|-------------|----------------|----------|
-| Search threads for verification email replies | **No API equivalent** | **Keep SQL** |
-| Update subject prefix | `PUT /api/conversations/{id}` | Yes |
-| Close conversation | `PUT /api/conversations/{id}` | Yes |
-| Add internal note | `POST /api/conversations/{id}/threads` | Yes |
+| Operation | Before | After |
+|-----------|--------|-------|
+| Update subject + close conversation | SQL `UPDATE conversations` | `PUT /api/conversations/{id}` |
+| Add internal note | SQL `INSERT INTO threads` + `UPDATE threads_count` | `POST /api/conversations/{id}/threads` |
+| Search threads for replies / attachments | SQL `SELECT` on `threads.from` / `attachments` | **Kept SQL** (no API equivalent) |
+| Read current subject (idempotency guard) | SQL `SELECT subject` | **Kept SQL** (already connected for reads) |
 
 ### Phase 4 — Bounce Processor *(Pending)*
 

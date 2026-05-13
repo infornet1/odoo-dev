@@ -26,13 +26,15 @@ Usage:
 
 Author: Claude Code Assistant
 Date: 2026-02-07
-Updated: 2026-02-07 (Freescout post-processing)
+Updated: 2026-05-13 — Freescout writes migrated to REST API (PUT /api/conversations,
+  POST /api/conversations/{id}/threads). SQL kept for thread/from search (no API equivalent).
 """
 
 import json
 import logging
 import os
 import re
+import requests
 import sys
 import xmlrpc.client
 from datetime import datetime
@@ -240,6 +242,64 @@ def find_email_reply(fs_conn, recipient_email, verification_date):
 
 
 # ============================================================================
+# Freescout REST API
+# ============================================================================
+
+_FS_API_CFG = None
+_FS_STATUS_STR = {1: 'active', 2: 'pending', 3: 'closed',
+                  'active': 'active', 'pending': 'pending', 'closed': 'closed'}
+
+
+def _get_fs_api_cfg():
+    global _FS_API_CFG
+    if _FS_API_CFG is not None:
+        return _FS_API_CFG
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.normpath(os.path.join(script_dir, '..', 'config', 'freescout_api.json')),
+        '/home/vision/ueipab17/config/freescout_api.json',
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            with open(path) as f:
+                _FS_API_CFG = json.load(f)
+            logger.info("Freescout API config loaded from %s", path)
+            return _FS_API_CFG
+    raise RuntimeError("freescout_api.json not found in config dirs")
+
+
+def _fs_api_headers():
+    return {'X-FreeScout-API-Key': _get_fs_api_cfg()['api_key']}
+
+
+def fs_api_update_conversation(conv_db_id, payload, by_user_id=1):
+    """PUT /api/conversations/{id} — update subject/status/assignTo via REST API."""
+    cfg = _get_fs_api_cfg()
+    if 'status' in payload:
+        payload = dict(payload)
+        payload['status'] = _FS_STATUS_STR.get(payload['status'], str(payload['status']))
+        payload.setdefault('byUser', by_user_id)
+    resp = requests.put(
+        f"{cfg['api_url']}/conversations/{conv_db_id}",
+        json=payload, headers=_fs_api_headers(), timeout=15,
+    )
+    resp.raise_for_status()
+    return resp
+
+
+def fs_api_add_note(conv_db_id, html_body, user_id=1):
+    """POST /api/conversations/{id}/threads — add internal note via REST API."""
+    cfg = _get_fs_api_cfg()
+    resp = requests.post(
+        f"{cfg['api_url']}/conversations/{conv_db_id}/threads",
+        json={'type': 'note', 'text': html_body, 'user': user_id},
+        headers=_fs_api_headers(), timeout=15,
+    )
+    resp.raise_for_status()
+    return resp
+
+
+# ============================================================================
 # Freescout Post-Processing
 # ============================================================================
 
@@ -284,83 +344,57 @@ def build_freescout_note_html(conv_data, reply_info):
 
 
 def postprocess_freescout(fs_conn, admin_id, fs_conv_id, conv_data, reply_info):
-    """Update Freescout conversation: prefix subject, add note, close.
+    """Update Freescout conversation: prefix subject, add note, close via REST API.
 
-    - Subject: prepend [RESUELTO-AI]
-    - Internal note: HTML with Odoo links (bounce log, contact, conversation)
-    - Status: Closed (3)
+    SQL used only to read current subject (idempotency guard).
+    Writes go through the REST API so folder_id, closed_at, user_updated_at
+    and threads_count are handled automatically by Freescout ORM.
     """
     prefix_tag = '[RESUELTO-AI]'
 
+    # SQL read — get current subject for idempotency check
     try:
         with fs_conn.cursor() as cursor:
-            # Read current subject
             cursor.execute(
                 "SELECT subject FROM conversations WHERE id = %s",
                 (fs_conv_id,))
             row = cursor.fetchone()
-            if not row:
-                logger.warning("  -> Freescout conv #%d NOT FOUND, skipping post-processing",
-                               fs_conv_id)
-                return False
+    except Exception as e:
+        logger.error("  -> Failed to read Freescout conv #%d: %s", fs_conv_id, e)
+        return False
 
-            current_subject = row['subject'] or ''
+    if not row:
+        logger.warning("  -> Freescout conv #%d NOT FOUND, skipping post-processing",
+                       fs_conv_id)
+        return False
 
-            # Skip if already prefixed with any known tag
-            if current_subject.startswith('[RESUELTO-AI]') or \
-               current_subject.startswith('[LIMPIADO]') or \
-               current_subject.startswith('[REVISION]') or \
-               current_subject.startswith('[NO ENCONTRADO]'):
-                new_subject = current_subject
-            else:
-                new_subject = f"{prefix_tag} {current_subject}"
+    current_subject = row['subject'] or ''
 
-            if DRY_RUN:
-                logger.info("  -> DRY_RUN: Would update Freescout conv #%d: "
-                            "subject=\"%s\", status=Closed, + internal note",
-                            fs_conv_id, new_subject[:60])
-                return True
+    known_prefixes = ('[RESUELTO-AI]', '[LIMPIADO]', '[REVISION]', '[NO ENCONTRADO]')
+    if current_subject.startswith(known_prefixes):
+        new_subject = current_subject
+    else:
+        new_subject = f"{prefix_tag} {current_subject}"
 
-            # UPDATE conversation: subject + close
-            cursor.execute("""
-                UPDATE conversations
-                SET subject = %s,
-                    status = 3,
-                    closed_at = NOW(),
-                    closed_by_user_id = %s,
-                    updated_at = NOW(),
-                    user_updated_at = NOW()
-                WHERE id = %s
-            """, (new_subject, admin_id, fs_conv_id))
-
-            # INSERT internal note (type=3=Note, state=2=Published, status=6=NoChange)
-            note_body = build_freescout_note_html(conv_data, reply_info)
-            cursor.execute("""
-                INSERT INTO threads
-                    (conversation_id, type, body, state, status,
-                     source_via, source_type,
-                     created_by_user_id, user_id,
-                     created_at, updated_at)
-                VALUES (%s, 3, %s, 2, 6, 2, 2, %s, %s, NOW(), NOW())
-            """, (fs_conv_id, note_body, admin_id, admin_id))
-
-            # Update threads_count
-            cursor.execute("""
-                UPDATE conversations
-                SET threads_count = threads_count + 1
-                WHERE id = %s
-            """, (fs_conv_id,))
-
-        fs_conn.commit()
-        logger.info("  -> Freescout conv #%d: updated (subject, note, closed)", fs_conv_id)
+    if DRY_RUN:
+        logger.info("  -> DRY_RUN: Would update Freescout conv #%d: "
+                    "subject=\"%s\", status=closed, + internal note",
+                    fs_conv_id, new_subject[:60])
         return True
 
+    try:
+        note_body = build_freescout_note_html(conv_data, reply_info)
+        fs_api_update_conversation(
+            fs_conv_id,
+            {'subject': new_subject, 'status': 'closed'},
+            by_user_id=admin_id,
+        )
+        fs_api_add_note(fs_conv_id, note_body, user_id=admin_id)
+        logger.info("  -> Freescout conv #%d: updated via API (subject, note, closed)",
+                    fs_conv_id)
+        return True
     except Exception as e:
-        logger.error("  -> Failed to update Freescout conv #%d: %s", fs_conv_id, e)
-        try:
-            fs_conn.rollback()
-        except Exception:
-            pass
+        logger.error("  -> Failed to update Freescout conv #%d via API: %s", fs_conv_id, e)
         return False
 
 

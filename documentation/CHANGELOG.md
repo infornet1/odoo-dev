@@ -4,6 +4,25 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-13 — Freescout REST API Migration — Email Checkers Phase 3
+
+**Type:** Infrastructure | **Status:** Production ✅
+
+Migrated Freescout write operations in `scripts/ai_agent_email_checker.py` and `scripts/ai_agent_hr_email_checker.py` to the REST API.
+
+**ai_agent_email_checker.py — `postprocess_freescout()`:**
+- SQL `UPDATE conversations SET subject, status=3, closed_at, ...` → `PUT /api/conversations/{id}` `{subject, status:"closed", byUser}`
+- SQL `INSERT INTO threads` + `UPDATE threads_count` → `POST /api/conversations/{id}/threads`
+- SQL `SELECT subject` (idempotency guard) kept — already connected for `find_email_reply()` reads
+
+**ai_agent_hr_email_checker.py — `post_freescout_note()`:**
+- SQL `INSERT INTO threads` + `UPDATE conversations SET threads_count` → `POST /api/conversations/{id}/threads`
+- SQL admin user lookup kept — used for `user` field in API note payload
+
+Both scripts use the same `fs_api_add_note()` helper pattern. `find_hr_threads_with_attachments()` stays SQL (thread/attachment body search has no API equivalent).
+
+---
+
 ## 2026-05-13 — Freescout REST API Migration — Resolution Bridge Phase 2
 
 **Type:** Infrastructure | **Status:** Production ✅
