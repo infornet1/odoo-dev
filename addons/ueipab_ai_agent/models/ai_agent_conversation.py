@@ -1,4 +1,5 @@
 import logging
+import re as _re
 
 import requests
 
@@ -8,6 +9,58 @@ from odoo.exceptions import UserError
 from ..skills import get_skill
 
 _logger = logging.getLogger(__name__)
+
+# Phrases that signal the customer is ending the conversation.
+# Used by general_inquiry to auto-resolve instead of staying 'waiting'.
+_FAREWELL_PHRASES = frozenset([
+    'gracias', 'muchas gracias', 'mil gracias', 'muchas gracias igual',
+    'hasta luego', 'hasta pronto', 'hasta la próxima', 'hasta la proxima',
+    'nos vemos', 'adiós', 'adios', 'chao', 'ciao', 'bye',
+    'feliz día', 'feliz dia', 'buen día', 'buen dia',
+    'buenas noches', 'buenas tardes', 'buenos días', 'buenos dias',
+    'que tengas', 'que tenga', 'igualmente',
+    'no es todo', 'eso es todo', 'eso seria todo', 'eso sería todo',
+    'ya es todo', 'con eso es todo', 'es todo por ahora',
+    'listo gracias', 'ok gracias', 'okey gracias', 'okay gracias',
+    'perfecto gracias', 'excelente gracias', 'genial gracias',
+    'de nada', 'con gusto', 'entendido gracias', 'claro gracias',
+])
+
+# Words that may accompany a farewell without indicating a new request
+_FAREWELL_FILLER = frozenset([
+    'ok', 'okey', 'okay', 'listo', 'ya', 'si', 'sí', 'bien',
+    'bueno', 'claro', 'y', 'e', 'muy', 'igual',
+])
+
+
+def _is_farewell_message(text):
+    """Return True if the customer message is a farewell with no pending request.
+
+    Strategy: strip all known farewell phrases and filler words from the message.
+    If nothing meaningful remains, it is a farewell. A question mark anywhere
+    always blocks auto-resolve.
+    """
+    if not text:
+        return False
+    clean = text.lower().strip().rstrip('.,!¡¿')
+    if '?' in text:
+        return False
+    # Quick exact match
+    if clean in _FAREWELL_PHRASES:
+        return True
+    # Only analyse short-to-medium messages to avoid false positives
+    if len(clean) > 80:
+        return False
+    # Strip farewell phrases (longest first to avoid partial clobbering)
+    remainder = clean
+    for phrase in sorted(_FAREWELL_PHRASES, key=len, reverse=True):
+        remainder = remainder.replace(phrase, ' ')
+    # Remove punctuation and split into words; discard filler words
+    meaningful = [
+        w for w in _re.sub(r'[^\w\s]', ' ', remainder).split()
+        if w not in _FAREWELL_FILLER and len(w) > 1
+    ]
+    return len(meaningful) == 0
 
 
 class AiAgentConversation(models.Model):
@@ -544,6 +597,17 @@ class AiAgentConversation(models.Model):
                 _logger.info("Balance breakdown sent to %s", self.phone)
             except Exception as e:
                 _logger.warning("Failed to send balance breakdown to %s: %s", self.phone, e)
+
+        # P1: Auto-resolve when customer sent a farewell (general_inquiry only).
+        # Claude already replied with a single closing line per the prompt rules.
+        # Resolving now prevents the 72h timeout and stops reminder messages.
+        if skill.code == 'general_inquiry' and _is_farewell_message(message_text):
+            _logger.info(
+                "Conversation %d: farewell detected in '%s...' — auto-resolving",
+                self.id, (message_text or '')[:40],
+            )
+            self.action_resolve("Conversación concluida por despedida del cliente")
+            return
 
         self.write({
             'state': 'waiting',
