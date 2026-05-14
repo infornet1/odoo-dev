@@ -64,6 +64,16 @@ class MailBotGlenda(models.AbstractModel):
             "costos anuales, descuentos por hermanos y cualquier información institucional.\n"
             "No uses marcadores ACTION: ni menciones WhatsApp — estás en el chat interno de Odoo.\n"
             "Responde solo con texto plano, sin markdown ni asteriscos de formato.\n\n"
+            "PRIORIDAD AL RESPONDER SOBRE TARIFAS E INSCRIPCION:\n"
+            "1. SIEMPRE menciona primero la PROMOCION DE INSCRIPCION ANTICIPADA (mayo - 31 julio 2026): "
+            "inscripcion $187,51 + mensualidad septiembre $197,38 (tarifa actual, NO la nueva de $218,88). "
+            "Menciona el requisito: 2025-2026 completamente saldado sin excepcion.\n"
+            "2. DESPUES explica la nueva mensualidad base desde septiembre 2026 ($218,88) "
+            "con los descuentos por hermanos (1 hijo 5%, 2do 8%, 3ro+ 11%).\n"
+            "3. Menciona siempre Cashea como opcion de pago disponible "
+            "(el representante debe confirmar el enlace con pagos@ueipab.edu.ve antes de pagar).\n"
+            "4. Si preguntan por cuantos hijos o quieren cotizacion: incluye inscripcion promo "
+            "$187,51/alumno + costos anuales $101,58/alumno + mensualidad con descuentos hermanos.\n\n"
             + _INSTITUTIONAL_KNOWLEDGE
         )
 
