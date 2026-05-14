@@ -52,22 +52,23 @@
 | 34 | Adelanto de Prestaciones Sociales Email | Production | `ueipab_payroll_enhancements` | [Changelog](documentation/CHANGELOG.md) |
 | 35 | Payslip Ack Reminder via Glenda (WA) | Production | `ueipab_ai_agent` | [Docs](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md) |
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
-| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) — v17.0.1.5.2: holidays + special schedule + self-service correction + resend buttons + **Notice ACK system** + **Glenda calibration WA-ACK** |
+| 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
-| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily sync teacher activity from control_asistencias MySQL → hr.attendance |
-| 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) — daily WiFi presence sync for admin/maintenance staff, confidence-based |
-| 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) — 4 Instagram stories + email template carousel para empleados; jerarquía Kiosko→Dashboard Odoo→Control Asist.→WiFi |
-| 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) — hr.notice.acknowledgment model, /notice-ack/ public route, ACK button in email, HR tracking view |
-| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `ueipab_ai_agent` | [Docs](documentation/GLENDA_CALIBRATION_PROGRAMME.md) — notice_key=glenda_calibracion_v1; 20 enrolled; guide emails sent 2026-05-11; deadline 2026-05-30; `ai.agent.feedback` model + calibration mode in general_inquiry; bonus ≥3 convs + ≥1 suggestion |
-| 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | — `sync_bcv_to_odoo.py` every 30 min; queries BCV MySQL → `ir.config_parameter` ai_agent.bcv_rate_context; Glenda answers tasa BCV + USD↔VEB conversions |
-| 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | — ACTION:QUERY_BALANCE:FOUND/CEDULA; queries account.move; sends breakdown as separate WA msg; VEB conversion at BCV rate |
-| 46 | Glenda Daily Executive Digest | Production | Script + Cron | — `glenda_daily_digest.py` daily 07:00 VET; 5-section HTML email: KPIs, by-skill, topics, escalations, suspicious activity |
-| 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) — token-based self-service form; 14 private fields; Fase 1 campaign sent to 44 employees 2026-05-11; auto-reminders day 3+7 |
-| 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | — wizard at Nómina→Reports→Pronóstico Liquidación V2; date 2026-07-31; 44 empleados (tag "Empleado" via res.partner.category + work_email fallback); Bono Vac + Utilidades excluidos del NETO (pre-pagados); screen tree + PDF + Excel; v17.0.1.68.2 |
-| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — `partner.communication.ack`; YES/NO links; `/partner-ack/<token>/si\|no`; votacion@; deadline 08-Jun-2026; **Pending:** Cap.2 WA reminders + Cap.3 Glenda stats |
-| 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — same infra as PDVSA; tag id=25; 225 prod partners; script has guard — blocked until 5 TODO constants filled |
-| 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | — v17.0.1.39.0; OpenAI Structured Outputs OCR → `_resolve_journal_for_payment` → `_match_invoice_for_payment` → draft `account.payment`; dedup by last-4 ref (30d); email to pagos@ with Odoo deep link; config: `ai_agent.payment_journal_map` (10 banks) |
-| 52 | Pagos@ Email Receipt Processor | Testing (no cron yet) | Script | — `scripts/pagos_receipt_processor.py`; monitors unassigned Freescout pagos@ convs; 3-strategy extraction: regex (free) → GPT text ($0.0001) → GPT Vision ($0.001); posts FS internal note + Odoo link; marks with [GLENDA] prefix |
+| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) |
+| 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) |
+| 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) |
+| 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) |
+| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `ueipab_ai_agent` | [Docs](documentation/GLENDA_CALIBRATION_PROGRAMME.md) — notice_key=glenda_calibracion_v1; 20 enrolled; deadline 2026-05-30 |
+| 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | param: `ai_agent.bcv_rate_context`; `sync_bcv_to_odoo.py` every 30 min |
+| 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | ACTION:QUERY_BALANCE — see Key Technical Patterns |
+| 46 | Glenda Daily Executive Digest | Production | Script + Cron | `glenda_daily_digest.py` daily 07:00 VET |
+| 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) |
+| 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | Nómina→Reports→Pronóstico Liquidación V2; PDF + Excel |
+| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026; **Pending:** Cap.2 WA + Cap.3 Glenda |
+| 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — blocked until 5 TODO constants filled |
+| 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | OCR → draft `account.payment`; config: `ai_agent.payment_journal_map` |
+| 52 | Pagos@ Email Receipt Processor | Testing (no cron yet) | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs |
+| 53 | WA Invoice Reminder | Ready — first live send 2026-05-15 | Script | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
 
 ---
 
@@ -158,20 +159,20 @@
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.40.0 | 2026-05-13 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
-| ueipab_hr_employee | 17.0.1.2.0 | 2026-05-11 |
+| ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
 ### Production Environment
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.68.2 | **Deployed 2026-05-11** (Liquidación V2 Forecast: wizard + PDF + Excel, 44 empleados via partner tag, Bono Vac + Utilidades excluded as pre-paid) |
+| ueipab_payroll_enhancements | 17.0.1.68.2 | Deployed 2026-05-11 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| hrms_dashboard | 17.0.1.0.2 | Installed (2025-12-21) |
-| ueipab_attendance_report | 17.0.1.6.0 | **Deployed 2026-05-13** — `partner.communication.ack` model, `/partner-ack/` routes live. **Pending:** PDVSA bulk send (71 partners) — run Steps 6–8 of [deploy runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) |
-| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed (2025-12-21) |
-| ueipab_hr_employee | 17.0.1.3.0 | **Deployed 2026-05-13** — Phone/email validation on private info form: server-side + client-side + auto-normalize +58; DB fix: 504 phone fields normalized on 324 tagged partners |
-| ueipab_bounce_log | 17.0.1.4.0 | **Deployed 2026-05-10** — Glenda dependency |
-| ueipab_ai_agent | 17.0.1.40.0 | **Deployed 2026-05-13** — v17.0.1.39.0: Auto draft payment from WA receipt. v17.0.1.40.0: Audio fix — WA auto-transcribed voice notes prefixed `[Audio transcrito]:` so Claude knows it's audio; Glenda confirms she processed the voice note when asked |
+| hrms_dashboard | 17.0.1.0.2 | Installed |
+| ueipab_attendance_report | 17.0.1.6.0 | Deployed 2026-05-13 — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
+| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
+| ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
+| ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
+| ueipab_ai_agent | 17.0.1.40.0 | Deployed 2026-05-13 — voice notes prefixed `[Audio transcrito]:` |
 
 ---
 
@@ -196,18 +197,12 @@
 
 ### Notice Acknowledgment System (hr.notice.acknowledgment)
 
-- **Module:** `ueipab_attendance_report` v17.0.1.5.2 | **Testing attendance_guide id=84**, **Production id=58**
-- **Model:** `hr.notice.acknowledgment` — one record per employee per `notice_key`; fields: `notice_key`, `notice_label`, `employee_id`, `token`, `state`, `sent_date`, `ack_date`, `ack_ip`, `wa_number`
-- **Token:** UUID auto-generated on `create()`, used in public URL
-- **Public route:** `/notice-ack/<token>` — `auth='public'`; for generic keys: one-click ACK; for `_WA_FORM_KEYS` (e.g. `glenda_calibracion_v1`): shows WA-number form first
-- **Glenda calibration flow:** GET `/notice-ack/<token>` → WA form (pre-filled from `employee.mobile_phone`) → POST `/glenda-calibracion/<token>` → saves `wa_number`, updates `employee.mobile_phone` if empty; if number differs from Odoo record → auto-update + HR alert email
-- **WA mismatch alert:** sent to `recursoshumanos@ueipab.edu.ve` with old/new number, employee name, timestamp
-- **Email template model:** `hr.notice.acknowledgment` — `object.employee_id.name`, `object._get_ack_url()` for button; CC `recursoshumanos@ueipab.edu.ve` on every send
-- **ACK button in body:** `<a t-att-href="object._get_ack_url()">` — stored via SQL to bypass ORM sanitizer
-- **Menu:** Payroll → Reports → Notice Acknowledgments (WA Calibración column shows confirmed number)
-- **Future campaigns:** change `notice_key` only — add key to `_WA_FORM_KEYS` in controller if WA capture needed
-- **Infrastructure:** `/notice-ack/` + `/glenda-calibracion/` added to nginx Odoo proxy; `dbfilter=^DB_UEIPAB$` on prod; `web.base.url=https://odoo.ueipab.edu.ve`
-- **Glenda calibration notice_key:** `glenda_calibracion_v1` | Testing mail.template id=86 | Production mail.template id=TBD
+See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_attendance_report`.
+- **Route:** `/notice-ack/<token>` (`auth='public'`); generic keys = one-click ACK; `_WA_FORM_KEYS` (e.g. `glenda_calibracion_v1`) → WA form → POST `/glenda-calibracion/<token>`
+- **ACK button:** `<a t-att-href="object._get_ack_url()">` — stored via **SQL** to bypass ORM sanitizer; CC `recursoshumanos@ueipab.edu.ve` on every send
+- **WA mismatch:** auto-update `employee.mobile_phone` + HR alert to `recursoshumanos@ueipab.edu.ve`
+- **Future campaigns:** change `notice_key` only; add to `_WA_FORM_KEYS` in controller if WA capture needed
+- **IDs:** Testing attendance_guide=84, prod=58; calibration template testing=86
 
 ### Freescout REST API (api_key + hybrid pattern)
 
@@ -234,39 +229,24 @@
 
 ### Glenda BCV Rate Context
 
-- **Param:** `ai_agent.bcv_rate_context` (JSON) — set by `scripts/sync_bcv_to_odoo.py` every 30 min via `/etc/cron.d/sync_bcv_odoo`
-- **Source:** BCV MySQL `exchange_rates_bcv.bcv_rates` (host `127.0.0.1`, user `bcv_script`) — same DB used by `/var/www/dev/bcv/` Flask app (gunicorn on `:5001`)
-- **JSON shape:** `{"current": {"rate": 499.86, "date": "YYYY-MM-DD", "updated_at": "YYYY-MM-DD HH:MM"}, "history": [{"date": ..., "rate": ..., "min_rate": ..., "max_rate": ...}, ...]}`
-- **History:** last 30 days of daily rates (AVG/MIN/MAX per day)
-- **Skill:** `general_inquiry.get_context()` reads param → passes `bcv` key in context dict → `_build_bcv_block()` formats it into the system prompt between `_INSTITUTIONAL_KNOWLEDGE` and `CONTEXTO`
-- **Why host-side sync:** Odoo Docker container cannot reach host `127.0.0.1:5001` (Flask) or `127.0.0.1:3306` (MySQL); XML-RPC push from host is the established pattern
-- **Glenda can answer:** ¿Cuál es la tasa BCV hoy? / ¿Cuánto son $X en bolívares? / ¿Cuál era la tasa el [fecha en historial]? — if date not in history, directs to `bcv.gob.ve`
-- **Fallback:** if param missing/empty, `_build_bcv_block()` returns a "no disponible, consulta bcv.gob.ve" message — Glenda degrades gracefully
+- **Param:** `ai_agent.bcv_rate_context` — set by `scripts/sync_bcv_to_odoo.py` every 30 min (`/etc/cron.d/sync_bcv_odoo`) from BCV MySQL (`exchange_rates_bcv.bcv_rates`, user `bcv_script`)
+- **JSON shape:** `{"current": {"rate": N, "date": "YYYY-MM-DD"}, "history": [{date, rate, min_rate, max_rate}, ...]}` — last 30 days
+- **Skill:** `general_inquiry.get_context()` → `_build_bcv_block()` injected into system prompt; host-side sync required (Docker can't reach host MySQL/Flask)
+- **Fallback:** if param missing → "no disponible, consulta bcv.gob.ve" — degrades gracefully
 
 ### Glenda Invoice Balance Query (ACTION:QUERY_BALANCE)
 
-- **Trigger:** Claude appends `ACTION:QUERY_BALANCE:FOUND` (partner identified by phone) or `ACTION:QUERY_BALANCE:V-XXXXXXXX` (cédula provided by customer) to its response
-- **Handler:** `general_inquiry._handle_balance_action()` → resolves partner → `_query_partner_balance()` → `account.move` ORM query (posted out_invoices, payment_state in not_paid/partial, amount_residual_signed > 0, partner + children)
-- **Output:** `_format_balance_message()` — WA-friendly breakdown with per-invoice bullets (ref, date, residual, description from line_ids, partial flag) + BCV VEB conversion
-- **Delivery:** `ai_agent_conversation.action_process_reply()` checks `action.get('balance_message')` → sends as separate WA message + logs in `ai.agent.message`
-- **Context pre-load:** when partner found by phone, `get_context()` runs `_query_partner_balance()` immediately — total + count injected into system prompt so Claude can answer without waiting for ACTION resolution
-- **Security:** only shows balance for the identified partner — never for a different contact
-- **Fallback:** cédula not found → "no encontré cuenta con esa cédula" message to customer
+- **Trigger:** `ACTION:QUERY_BALANCE:FOUND` (phone match) or `ACTION:QUERY_BALANCE:V-XXXXXXXX` (cédula)
+- **Handler:** `_handle_balance_action()` → `_query_partner_balance()` → posted out_invoices, not_paid/partial, partner + children
+- **Delivery:** `action_process_reply()` sends breakdown as separate WA message; partner balance pre-loaded into system prompt context when partner found by phone
+- **Security:** only shows balance for identified partner; cédula not found → error message to customer
 
 ### Glenda Daily Executive Digest (glenda_daily_digest.py)
 
-- **Script:** `scripts/glenda_daily_digest.py` | **Cron:** `/etc/cron.d/glenda_daily_digest` — daily 07:00 VET (`0 11 * * *` UTC), sources `/root/.odoo_agent_env_prod`
-- **Target:** `gustavo.perdomo@ueipab.edu.ve` | **From:** `recursoshumanos@ueipab.edu.ve`
-- **Data window:** previous calendar day, UTC-adjusted (VET = UTC-4: 04:00 UTC start)
-- **Queries:** `ai.agent.conversation` (created OR last_message in window) + `ai.agent.message` (for token counts) via XML-RPC
-- **5 sections:**
-  1. KPI cards — total, resolved, escalated, timeout, active, resolution rate + WA counts + Claude cost
-  2. By-skill table — total/resolved/escalated/timeout/avg turns/top topics per skill
-  3. Topic frequency — 12-category keyword detection from `resolution_summary` + `escalation_reason`
-  4. Escalations/unresolved — table for future enhancement input (what Glenda couldn't handle)
-  5. Suspicious activity — same phone >3 convs, avg tokens/turn >600 (injection probe), 01:00-05:00 VET activity, turns >18
+- **Cron:** `/etc/cron.d/glenda_daily_digest` daily 07:00 VET (`0 11 * * *` UTC) → `gustavo.perdomo@ueipab.edu.ve`
+- **5 sections:** KPIs, by-skill table, topic frequency (12 categories), escalations, suspicious activity (same phone >3 convs / tokens >600 / 01:00-05:00 VET / turns >18)
 - **Manual run:** `python3 scripts/glenda_daily_digest.py --env production [--date YYYY-MM-DD] [--dry-run]`
-- **Email delivery:** creates `mail.mail` as `state=outgoing`, Odoo scheduler sends within minutes
+- **Delivery:** `mail.mail` state=outgoing — Odoo scheduler sends within minutes
 
 ### mail.template body_html — multilingual JSONB (critical pattern)
 
@@ -368,28 +348,24 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 
 - **Conversation lifecycle:** draft → active → waiting → resolved/timeout/failed
 - **WhatsApp reminders:** 24h interval, 2 max, auto-timeout after 72h
-- **Escalation:** `ACTION:ESCALATE:desc` marker → Freescout ticket via bridge script
-- **Image support (v1.13.0):** Multimodal — Glenda sees customer screenshots via Claude vision
+- **Escalation:** `ACTION:ESCALATE:desc` → Freescout ticket via bridge script
+- **Image support:** Multimodal — Glenda sees customer screenshots via Claude vision
 - **Re-trigger:** `ACTION:ALTERNATIVE_PHONE:04XXX` → pre-fills wizard with new number
 - **Email verification:** `ACTION:VERIFY_EMAIL:email` → sends verification email
 - **Family email context:** Akdemia data prevents duplicate email proposals
-- **Credit Guard:** Kill switch at `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
+- **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min; fail-threshold `ai_agent.credits_fail_threshold` (default 2)
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
-- **Holiday schedule (v1.15.0):** Public holidays use weekend hours (09:30-19:00) via `ai_agent.holidays` param
-- **Per-skill schedule (v1.27.0):** `respect_schedule` field on `ai.agent.skill` — `False` = 24/7. `general_inquiry` is 24/7, all others respect contact window
-- **General Inquiry skill (v1.26.0):** Handles unsolicited inbound WA messages — auto-creates conversation, identifies contact, routes handoff to `pagos@` (billing) or `soporte@` (general) based on inquiry type
-- **Billing routing (v1.28.0):** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `ACTION:HANDOFF:name|summary|support` → `soporte@ueipab.edu.ve`
-- **turn_count fix (v1.27.1):** Dedup-only records (empty body) excluded from turn counter
-- **Flyer support:** `ACTION:SEND_FLYER:key` → `https://dev.ueipab.edu.ve/flyers/` (param: `ai_agent.flyer_base_url`). **⚠️ Suspended** — MassivaMóvil `type=photo` queues but does NOT deliver to end user; awaiting tech support.
-- **Audio delivery (TTS voice responses):** **⚠️ Not supported** — MassivaMóvil `type=audio` and `type=voice` both queue (return 200 + messageId) but do NOT deliver to end user. Confirmed 2026-05-13. Glenda receives and transcribes audio (Whisper) but replies in text only. Same root issue as photo delivery.
-- **Credit Guard fail-threshold:** Kill switch activates after N consecutive failures (param `ai_agent.credits_fail_threshold`, default 2). Prevents false-positives from transient API timeouts.
-- **2026-2027 enrollment + PDVSA policy:** Costos anuales: Seguro $15, Enc.inglés $30, Olimpiadas $10 = $55/alumno (+$36 bach). PDVSA benefit discontinued — new prospect → billing handoff; existing distressed family → empathetic + `pdvsa_retention` alert to `pagos@`.
-- **Farewell message fix:** `resolved` conv allows new conv within 24h (customer farewell ACK); `timeout`/`failed` → blocked.
-- **Quotation engine:** 4-section quote: mensualidad + inscripción + costos anuales ($55/std: seguro $15 + enc.inglés $30 + olimpiadas $10; +$36 bach) + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7% on mensualidad. Glenda asks bach level + # children; presents per-child breakdown, hands off with structured quote.
-- **Tarifas 2025-2026 (hasta 31 ago):** mensualidad $197,38 (regular) / $162,39 (pronto pago, 10 primeros días).
-- **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** inscripción $187,51 / mensualidad septiembre $197,38.
-- **Nueva mensualidad desde 1 sep 2026:** $218,88 (regular) / $207,93 (pronto pago, 5% dto). Tarifas preliminares, sujetas a aprobación Comité Contraloría.
-- **general_inquiry timeout fix (v1.29.8):** Added `get_reminder_message`, per-conv `try/except` in `_cron_check_timeouts`, `max_turns` raised 10→25.
+- **Holiday schedule:** Public holidays use weekend hours (09:30-19:00) via `ai_agent.holidays` param
+- **Per-skill schedule:** `respect_schedule` on `ai.agent.skill` — `False` = 24/7; `general_inquiry` is always 24/7
+- **General Inquiry:** Handles unsolicited inbound WA — auto-creates conversation, identifies contact, routes to `pagos@` (billing) or `soporte@` (general)
+- **Billing routing:** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `|support` → `soporte@ueipab.edu.ve`
+- **Flyer/Audio:** **⚠️ NOT delivered** — MassivaMóvil `type=photo/audio/voice` queues but never delivers to end user. Glenda receives audio (Whisper transcription) but replies text only.
+- **2026-2027 enrollment:** Costos anuales $55/alumno (Seguro $15 + Enc.inglés $30 + Olimpiadas $10; +$36 bach). PDVSA benefit discontinued — new prospect → billing handoff.
+- **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
+- **Quotation engine:** mensualidad + inscripción + costos anuales + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7%. Glenda asks bach level + # children.
+- **Tarifas 2025-2026 (hasta 31 ago):** $197,38 regular / $162,39 pronto pago (10 primeros días)
+- **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38
+- **Nueva mensualidad desde 1 sep 2026:** $218,88 regular / $207,93 pronto pago (5% dto) — preliminar
 
 ### WA Poll Cron — Account Filter Note
 
@@ -430,7 +406,7 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 ### Production Migration Checklist
 
-**COMPLETE as of 2026-05-10.** All gaps resolved. See [Full Checklist](documentation/AI_AGENT_MODULE.md) for history.
+**COMPLETE as of 2026-05-10.** See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md).
 
 ### HR Loan Module Production Migration Checklist
 
@@ -519,22 +495,7 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 
 ### Known Issues
 
-**FIXED** (see [Changelog](documentation/CHANGELOG.md) and linked docs for details):
-- PAY1 Journal Sequence/Date Mismatch — FIXED v1.61.2 (wizard auto-fix button + `action_validate_payslips` sets `slip.date` to sequence month start)
-- Quincena Salary Rule — FIXED 2026-02-25: `period_days/30.0` → `monthly/2.0` for all V2 rules; see [HR Letter](documentation/HR_LETTER_FEBRERO28_CORRECTION.md)
-- Representante Contact Sync — FIXED 2026-02-15: 318/318 contacts fully synced both envs
-- AI Agent Poll Cron Rollback Bug — FIXED v1.19.0 (savepoint isolation + global WA dedup + phone-based conv guard)
-- HR Loan one-loan-per-employee constraint — FIXED v1.66.0 (unlimited concurrent loans via MRO bypass)
-- HR Loan: batch cancel not cancelling draft payslips — FIXED v1.66.1
-- HR Loan: LO inputs auto-add on compute (conservative guard) — FIXED v1.66.4
-- HR Loan email templates out of sync (prod) — FIXED 2026-05-06 via `scripts/sync_lo_to_production.py`
-- HR Loan backdated approval PAY1 mismatch — FIXED v1.66.5 (`today` used when `loan.date` in past month)
-- HR Loan batch total_net_amount missing LIQUID_NET_V2 — FIXED v1.65.0
-- HR Loan `action_paid_amount` double-accounting + name conflict — FIXED v1.64.6 (no-op override on `hr.loan.line`)
-- PAY1 journal sequence contamination (LOAN/ prefix) — FIXED DB-only 2026-04-27 (entries renamed to PAY1/2026/04/0003-0006)
-- HR Loan exchange rate not updating on date change — FIXED v1.64.8 (`for_date` param + `_onchange_date_rate`)
-- **LIQUID_ANTIGUEDAD_V2 Bug — FIXED 2026-04-08** (prod rule id=29, test id=59); ⚠️ **Open HR case:** SLIP/447 JOSEFINA RODRIGUEZ — $420.87 overpayment, Acuerdo drafted 2026-04-24, awaiting signatures. See [Resolution Doc](documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md).
-- Payroll Disbursement + Total Net Payable — FIXED v1.67.1→v1.67.4: use `struct_rule_ids = payslip.struct_id.rule_ids.ids`; V2 detector = `VE_NET_V2` (not `VE_BASIC_V2`); bonus structures need `parent_id=False`
+**FIXED:** See [CHANGELOG.md](documentation/CHANGELOG.md) for full history of resolved issues.
 
 **PENDING:**
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)

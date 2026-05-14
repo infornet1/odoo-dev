@@ -4,6 +4,46 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — WA Invoice Reminder: Phase 0 Complete + Script Built
+
+**Type:** New Feature | **Status:** Ready — first live send 2026-05-15
+**Script:** `scripts/wa_invoice_reminder.py` | **Plan:** [WA_INVOICE_REMINDER_PLAN.md](WA_INVOICE_REMINDER_PLAN.md)
+
+### What was built
+
+Daily WhatsApp balance reminder for customers tagged **Representante** (tag 25) and
+**Representante PDVSA** (tag 26) with outstanding invoices. Sends via MassivaMóvil
+primary account (+584148321989) as plain text. Customers who reply are picked up
+naturally by Glenda's `general_inquiry` skill.
+
+**Segment logic:**
+- Representante: generic balance reminder
+- PDVSA: monthly invoice notice + 35% advance prompt; partners with ANY `fiscal_check=True`
+  outstanding invoice excluded (Option A — hard exclude)
+- Sheet eligibility gate: column C ∈ {ACTIVE, PENDING}, Q=YES, R=YES
+- Minimum balance: $1.00 USD
+- Frequency: daily; idempotent re-runs via state file
+
+**Dry run result (2026-05-14, production data):** 40 partners, $11,012.38 USD total,
+~80–93 min run time. 240 BELOW_THRESHOLD, 35 PDVSA_FISCAL_EXCLUDED, 8 NO_PHONE_IN_SHEET.
+
+### Phase 0 — WA Number Audit + Odoo Sync
+
+New scripts `compare_wa_numbers.py` + `sync_wa_numbers_from_sheet.py`:
+- Audited all Representante/PDVSA Odoo partners against Google Sheets Customers col L
+- Fixed 39 `res.partner.mobile` fields in `DB_UEIPAB`:
+  - 19 SHEET_ONLY (added missing mobile)
+  - 12 format normalisation (spaces stripped)
+  - 7 MISMATCH (sheet replaced Odoo value)
+  - 1 email stored in mobile field (JOYCE MOGOLLON — cleared)
+- Post-sync: 171 MATCH, 0 MISMATCH/SHEET_ONLY/BOTH_EMPTY
+
+### Pending
+- 2026-05-15: first live send (`python3 scripts/wa_invoice_reminder.py --live`)
+- After confirmed delivery: install `/etc/cron.d/wa_invoice_reminder` (daily 11:00 UTC)
+
+---
+
 ## 2026-05-14 — Testing Environment Double-Processing Bug Fix
 
 **Type:** Infrastructure Bug Fix | **Status:** Production ✅
