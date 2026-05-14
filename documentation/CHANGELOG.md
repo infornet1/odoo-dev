@@ -4,6 +4,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Staff Announcement Email: Glenda in OdooBot
+
+**Type:** Communication | **Script:** `scripts/send_glenda_odoobot_announcement.py`
+
+HTML announcement email introducing the OdooBot/Glenda integration to all 52 internal Odoo users.
+
+| Item | Details |
+|------|---------|
+| **Recipients** | 52 active internal users with valid email (auto-filtered, excludes system accounts) |
+| **Subject** | "Glenda ya está en Odoo — tu asistente virtual ahora también responde en el chat interno" |
+| **Content** | 3-step usage guide · what Glenda knows table · live chat example bubble · plain-text note |
+| **Branding** | Navy blue #1a2c5b / #2471a3 / #f0f4fa — no red |
+| **How to send** | Set `DRY_RUN = False` in script, then run via production Odoo shell |
+| **Frontend roadmap** | Next: install `im_livechat` → extend bridge to `channel_type='livechat'` → customers on website |
+
+---
+
 ## 2026-05-14 — Glenda Promotion-First Priority + Cashea Reminder (ueipab_ai_agent v17.0.1.40.3)
 
 **Type:** Behaviour fix | **Status:** Production ✅

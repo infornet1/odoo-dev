@@ -69,6 +69,7 @@
 | 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | OCR → draft `account.payment`; config: `ai_agent.payment_journal_map` |
 | 52 | Pagos@ Email Receipt Processor | Testing (no cron yet) | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs |
 | 53 | WA Invoice Reminder | Ready — first live send 2026-05-15 | Script | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
+| 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | `models/mail_bot_glenda.py` — internal staff chat Glenda via Odoo Discuss OdooBot; zero WA credits; dry_run guarded |
 
 ---
 
@@ -214,6 +215,17 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **Hybrid pattern:** API for writes (proper ORM handling), SQL kept for reads and `threads.body` search (no API equivalent)
 - **Helper functions** in `ai_agent_resolution_bridge.py`: `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` and `fs_api_add_note(conv_db_id, html_body, user_id=1)` — config loaded lazily from `freescout_api.json`
 - **Phase 2 complete (2026-05-13):** Resolution bridge primary writes migrated; `close_related_conversations()` stays SQL (thread body search)
+
+### Glenda OdooBot Bridge (Discuss)
+
+- **File:** `addons/ueipab_ai_agent/models/mail_bot_glenda.py` — `_inherit = 'mail.bot'`
+- **Hook:** overrides `_get_answer()` — fires only on `channel_type == 'chat'` (private OdooBot DM)
+- **Guards:** `ai_agent.dry_run = True` → skips; `credits_ok = False` → blocked; any exception → falls back to default OdooBot silently
+- **Knowledge:** imports `_INSTITUTIONAL_KNOWLEDGE` from `general_inquiry.py` at call time — same pricing/policies as WA Glenda
+- **History:** fetches last 10 `mail.message` records from channel; builds alternating user/assistant list; merges consecutive same-role turns
+- **Cost:** zero MassivaMóvil credits — never touches `whatsapp_service.py`; Claude Haiku only (~$0.001–0.003/conv)
+- **Frontend next step:** install `im_livechat` (Odoo Community module, free) + extend `_get_answer` to also handle `channel_type == 'livechat'` → floating chat bubble on school website for customers
+- **Announcement script:** `scripts/send_glenda_odoobot_announcement.py` — sends HTML email to all 52 internal users (set `DRY_RUN = False` to send)
 
 ### Glenda Auto Draft Payment — Payment Journal Map
 
