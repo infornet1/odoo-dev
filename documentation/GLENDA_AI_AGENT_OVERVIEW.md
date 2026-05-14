@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.40.1 | **Status:** Production ✅ | **Date:** 2026-05-14
+**Version:** 17.0.1.41.1 | **Status:** Production ✅ | **Date:** 2026-05-14
 
 ## What Is Glenda
 
@@ -53,6 +53,9 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 | **Timeout follow-up** | After 24h of silence Glenda sends a gentle follow-up ("¿Pude ayudarte?"). After 48h a final courtesy closing. After 72h conversation auto-closes. `max_turns` for general_inquiry raised to 25 | v1.29.8 |
 | **Multi-student quotation** | Asks for number of children. Applies sibling discounts (1st 5%, 2nd 8%, 3rd+ 11% on mensualidad). 4-section quote: mensualidad per child + inscripción promo $187,51 total + costos anuales $101,58/student + TOTAL PRIMER MES (regular and pronto pago). Example 2 alumnos: mens $409,31 (PP $388,84) · insc $375,02 · extras $203,16 · primer mes $987,49. Optional costs excluded. Hands off to billing with full quote | v1.30.0–v17.0.1.40.1 |
 | **Verification email** | Can trigger a real verification email to any address and wait for customer confirmation | v1.8.0 |
+| **Farewell auto-resolve** | When customer sends a farewell phrase ("gracias", "hasta luego", "no es todo", etc.) with no pending question, Glenda responds with a single closing line then auto-resolves (`action_resolve()`). Stops 72h timeout and reminder messages. 30-phrase dictionary + strip-and-check algorithm (question mark always blocks; >80 chars never triggers). `general_inquiry` only. | v17.0.1.41.0 |
+| **Cashea proactive on payment difficulty** | When customer mentions payment difficulty, mora, or asks about financing → Glenda proactively mentions Cashea as an available payment option before redirecting to pagos@ueipab.edu.ve | v17.0.1.41.0 |
+| **Bachillerato Ciencias y Tecnología** | Knows the school graduates **Bachilleres en Ciencias y Tecnología** (MPPE official diploma, 5 years, 10 subject areas). Explains IB vs Venezuelan national diploma when parents ask about "Bachillerato Internacional". Bachillerato Virtual via Dawere also mentioned. | v17.0.1.41.1 |
 
 ---
 

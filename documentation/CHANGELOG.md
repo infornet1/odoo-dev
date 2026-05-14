@@ -4,6 +4,50 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Glenda Bachillerato Knowledge (ueipab_ai_agent v17.0.1.41.1)
+
+**Type:** Knowledge update | **Status:** Production ✅ | **Source:** MPPE official document BachilleTIC.pdf — *Propuesta Juntos por la educación del futuro*
+**Resolves:** Calibration suggestion #21 (AUDREY GARCIA — P2C)
+
+| Item | Details |
+|------|---------|
+| **Diploma** | Bachiller en Ciencias y Tecnología — official MPPE title, replaces old Ciencias/Humanidades |
+| **Duration** | 5 years (1° a 5° año Educación Media General) |
+| **Componente General** | 8 areas: Lengua/Lit, Idiomas, Matemáticas, Ed.Física, Biología/Amb/Tec, Física, Química, Geo/Hist/Ciudadanía |
+| **Componente Productivo** | 2 areas: Orientación Vocacional (2 h/sem) + Innovación Tecnológica y Productiva (6 h/sem — every year) |
+| **Total hours** | 36 h/sem (1°-2°) → 40 h/sem (3°-5°) |
+| **Career access** | All university careers + direct workforce entry (no restrictions like old Humanidades) |
+| **Virtual track** | Bachillerato Virtual via Dawere (online/flexible) — details at soporte@ |
+| **IB clarification** | School does NOT offer International Baccalaureate (IB Geneva). Glenda explains the difference when parents ask. |
+| **Deployment** | Pure Python — `docker restart ueipab17`, no DB upgrade |
+
+---
+
+## 2026-05-14 — Glenda P1 Farewell Auto-Resolve + P3 Cashea Proactive (ueipab_ai_agent v17.0.1.41.0)
+
+**Type:** UX fix + knowledge | **Status:** Production ✅
+**Resolves:** Calibration suggestions #1, 4, 5, 6, 7, 8, 13, 14 (P1 — 8/8 testers), #2, 9 (P3 — 2 testers)
+
+### P1 — Farewell Auto-Resolve
+
+| Item | Details |
+|------|---------|
+| **Problem** | 8/8 calibration testers complained Glenda sends multiple closing messages and keeps asking "¿Hay algo más?" after goodbye |
+| **`_FAREWELL_PHRASES`** | 30 Venezuelan Spanish farewell expressions (frozenset) in `ai_agent_conversation.py` |
+| **`_is_farewell_message()`** | Strips farewell phrases + filler words from message; True only if no meaningful remainder; `?` anywhere always blocks; >80 chars never triggers |
+| **Auto-resolve logic** | After sending Claude reply: if `skill.code == 'general_inquiry'` and `_is_farewell_message(customer_msg)` → `action_resolve()`. State becomes `resolved`, not `waiting` |
+| **Prompt hardening** | Explicit trigger list + PROHIBIDO block + two ❌/✅ examples added to `REGLAS DE COMUNICACIÓN` |
+| **Unit tests** | 16/16 cases passing (correct and incorrect farewells) |
+
+### P3 — Cashea Proactive
+
+| Item | Details |
+|------|---------|
+| **Problem** | Cashea was known but only mentioned reactively; 2 testers wanted it offered proactively on payment difficulty |
+| **Fix** | `POLÍTICA DE MORA` updated: payment difficulty / mora / financing question → proactively mention Cashea + pagos@ confirm link |
+
+---
+
 ## 2026-05-14 — Staff Announcement Email: Glenda in OdooBot
 
 **Type:** Communication | **Script:** `scripts/send_glenda_odoobot_announcement.py`

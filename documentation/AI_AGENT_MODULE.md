@@ -199,7 +199,24 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 - **Single farewell** — one closing line only when customer says goodbye; no stacked goodbyes
 - **No follow-up after goodbye** — if customer explicitly closes, respond with one short farewell and stop
 
-Pending UX backlog: (1) Cashea payment policy info, (2) mora/impago sanctions policy, (3) audio/voice note support (Phase 2).
+Pending UX backlog: (1) mora/impago sanctions policy — awaiting admin confirmation.
+
+**Farewell auto-resolve + Cashea proactive (v17.0.1.41.0, 2026-05-14):**
+Resolves 10/10 calibration suggestions on conversation closure (8 testers) and Cashea visibility (2 testers).
+- `_FAREWELL_PHRASES` frozenset (30 Venezuelan farewell expressions) + `_is_farewell_message()` helper in `ai_agent_conversation.py`
+- Strategy: strip farewell phrases + filler words; True only if no meaningful remainder; `?` anywhere always blocks; >80 chars never resolves
+- `action_process_reply()`: after sending AI reply, if `skill.code == 'general_inquiry'` and farewell detected → `action_resolve()` immediately. Prevents 72h timeout + reminder messages.
+- Prompt rule hardened: explicit trigger list, PROHIBIDO block, two ❌/✅ examples for Claude
+- Cashea: when customer mentions payment difficulty or asks about financing → proactively mention Cashea + pagos@ before empathy redirect
+
+**Bachillerato Ciencias y Tecnología knowledge (v17.0.1.41.1, 2026-05-14):**
+Source: official MPPE document *Propuesta Juntos por la educación del futuro* (BachilleTIC.pdf).
+Added `PROGRAMA ACADÉMICO — BACHILLERATO` + `ACLARACIÓN BACHILLERATO INTERNACIONAL` blocks:
+- Diploma: **Bachiller en Ciencias y Tecnología** (replaces old Ciencias/Humanidades); 5 years; 10 areas; max 40 h/week
+- Componente General (8): Lengua/Lit, Idiomas, Matemáticas, Ed.Física, Biología/Amb/Tec, Física, Química, Geo/Hist/Ciudadanía
+- Componente Productivo (2): Orientación Vocacional + Innovación Tecnológica y Productiva (6 h/sem every year)
+- Opens all university careers + direct workforce entry
+- IB clarification: school does NOT offer IB Geneva — offers Venezuelan national diploma only
 
 **OdooBot bridge — Glenda in Odoo Discuss (v17.0.1.40.2, 2026-05-14):**
 `models/mail_bot_glenda.py` — inherits `mail.bot`, overrides `_get_answer()`:
