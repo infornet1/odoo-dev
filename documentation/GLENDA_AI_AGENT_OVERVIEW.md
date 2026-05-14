@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.41.2 | **Status:** Production ✅ | **Date:** 2026-05-14
+**Version:** 17.0.1.41.3 | **Status:** Production ✅ | **Date:** 2026-05-14
 
 ## What Is Glenda
 
@@ -56,7 +56,8 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 | **Farewell auto-resolve** | When customer sends a farewell phrase ("gracias", "hasta luego", "no es todo", etc.) with no pending question, Glenda responds with a single closing line then auto-resolves (`action_resolve()`). Stops 72h timeout and reminder messages. 30-phrase dictionary + strip-and-check algorithm (question mark always blocks; >80 chars never triggers). `general_inquiry` only. | v17.0.1.41.0 |
 | **Cashea proactive on payment difficulty** | When customer mentions payment difficulty, mora, or asks about financing → Glenda proactively mentions Cashea as an available payment option before redirecting to pagos@ueipab.edu.ve | v17.0.1.41.0 |
 | **Bachillerato Ciencias y Tecnología** | Knows the school graduates **Bachilleres en Ciencias y Tecnología** (MPPE official diploma, 5 years, 10 subject areas). Explains IB vs Venezuelan national diploma when parents ask about "Bachillerato Internacional". Bachillerato Virtual via Dawere also mentioned. | v17.0.1.41.1 |
-| **Enrollment process (Akdemia)** | When anyone asks about enrollment documents, steps or how to inscribe → provides direct link: https://edge.akdemia.com/admissions/09f8190d36eef4ea/start. Akdemia guides applicants step by step. | v17.0.1.41.2 |
+| **Enrollment process (Akdemia)** | Two distinct links: **Solicitar Cupo** (new applicants) → https://edge.akdemia.com/enrollments/b87d60bc6ba93746 · **Inscripción** (current students) → https://edge.akdemia.com/admissions/09f8190d36eef4ea/start. Glenda identifies which applies. | v17.0.1.41.2–41.3 |
+| **Mora/sanctions policy** | Full 4-step process (Convenio → Segundo Llamado → Tercer Llamado → Notificación). Payment due first 10 days. Incumplimiento = 1 month unpaid. Student always attends during process. Links to https://dev.ueipab.edu.ve/mora-policy/ with 8 official infographics. | v17.0.1.41.3 |
 
 ---
 

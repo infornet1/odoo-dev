@@ -4,6 +4,45 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Glenda P2A Mora Policy + Webpage + Enrollment URL Split (ueipab_ai_agent v17.0.1.41.3)
+
+**Type:** Knowledge update + new public page | **Status:** Production ✅
+**Resolves:** Calibration suggestions #3, #15, #16 (LUISA ELENA ABREU × 3 — P2A)
+
+### Mora Policy Knowledge
+
+Full 4-step process from *Manual de Acuerdos de Convivencia Escolar* added to `_INSTITUTIONAL_KNOWLEDGE`:
+
+| Step | Trigger | Who's involved | Goal |
+|------|---------|---------------|------|
+| Fechas de pago | — | — | Payment due within first 10 days of month |
+| Incumplimiento | 1 month without payment | — | Administrative procedure activated |
+| **Primer Llamado** | After 1 month default | Representante + Admin | Convenio de pago: review, set amounts, set dates |
+| **Segundo Llamado** | Convenio not met | Dirección + Admin + Legal | Resolve responsibly |
+| **Tercer Llamado** | Reincidence | + CDCE Municipal | Due process guaranteed |
+| **Notificación** | Persists | Defensoría + CDCE + Consejo Protección | Gestionar cupo en institución pública |
+
+Key: **student always continues attending during entire process**. Institution always protects right to education.
+Glenda: empathetic response, mentions Cashea, explains process without alarming, links to policy page.
+
+### Mora Policy Webpage
+
+URL: **https://dev.ueipab.edu.ve/mora-policy/**
+- Standalone HTML/CSS — school colors (#1a2c5b/#2471a3/#f0c400), Poppins font
+- Sticky nav with school logo, hero, 4 summary cards, 4-step timeline with institutions
+- 8 story images (864×1080 JPEG) in responsive grid with lightbox (keyboard nav ← →, Esc)
+- CTA: pagos@ueipab.edu.ve
+- nginx location `/mora-policy/` → `/var/www/dev/mora/` added to `dev.ueipab.edu.ve` config
+
+### Enrollment URL Split
+
+Two distinct Akdemia links now in Glenda's knowledge:
+- **Solicitar Cupo** (new applicants, not yet enrolled): https://edge.akdemia.com/enrollments/b87d60bc6ba93746
+- **Inscripción** (current students, re-enrolling): https://edge.akdemia.com/admissions/09f8190d36eef4ea/start
+- Glenda identifies which applies before sending the link.
+
+---
+
 ## 2026-05-14 — Glenda P2B Enrollment Process → Akdemia Link (ueipab_ai_agent v17.0.1.41.2)
 
 **Type:** Knowledge update | **Status:** Production ✅

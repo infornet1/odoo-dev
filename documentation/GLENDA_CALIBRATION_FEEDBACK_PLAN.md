@@ -70,21 +70,19 @@ if any(t in last_customer_msg.lower() for t in FAREWELL_TRIGGERS):
 
 ## Priority 2 — Knowledge Gaps (conocimiento)
 
-### 2A — Mora & Sanctions Policy
+### 2A — Mora & Sanctions Policy ✅ DONE (v17.0.1.41.3, 2026-05-14)
 
-**Testers:** LUISA ELENA ABREU (#3, #15, #16), AUDREY GARCIA (#18)  
+**Testers:** LUISA ELENA ABREU (#3, #15, #16)
 
-Glenda currently responds to mora questions with empathy + redirect to pagos@,
-but has NO information about what actually happens when a family doesn't pay for
-3+ months. Staff and families ask this.
-
-**What to add to `_INSTITUTIONAL_KNOWLEDGE`:**
-- After how many months does a student risk suspension?
-- Is there a formal payment plan process?
-- What is the reinstatement process after falling behind?
-- Are there any grace period policies?
-
-> **⚠ Action required:** Confirm the official policy with Dirección/Pagos before adding.
+**Implemented** from official *Manual de Acuerdos de Convivencia Escolar* (8 story images):
+- Payment due: first 10 days of month
+- Incumplimiento: 1 month without payment → activates administrative procedure
+- Step 1: Primer Llamado — Convenio de pago (meeting, review, set amounts + dates)
+- Step 2: Segundo Llamado — if convenio broken → Dirección + Administración + Departamento Legal
+- Step 3: Tercer Llamado — reincidence → adds CDCE Municipal representative
+- Step 4: Notificación — persistent default → Defensoría Escolar + CDCE + Consejo de Protección → gestionar cupo en institución pública cercana
+- **Student always continues attending during entire process**
+- Public page with all 8 infographics: https://dev.ueipab.edu.ve/mora-policy/
 > Once confirmed, add a `POLÍTICA DE MORA Y CONSECUENCIAS` block to the knowledge.
 
 ### 2B — Enrollment Documentation (inscripción) ✅ DONE (v17.0.1.41.2, 2026-05-14)
@@ -173,6 +171,7 @@ Request: a thumbs-up/thumbs-down rating after each conversation for improvement 
 | 2, 9 | Luisa Abreu, Jessica Bolivar | Cashea proactive mention on payment difficulty | v17.0.1.41.0 |
 | 21 | AUDREY GARCIA | Bachillerato tracks/menciones + IB clarification | v17.0.1.41.1 |
 | 18 | AUDREY GARCIA | Enrollment docs → Akdemia online admissions link | v17.0.1.41.2 |
+| 3, 15, 16 | LUISA ELENA ABREU | Mora/sanctions policy (4-step process + mora webpage) | v17.0.1.41.3 |
 
 ---
 
