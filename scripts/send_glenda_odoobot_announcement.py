@@ -7,6 +7,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 DRY_RUN = True   # Set to False to actually send
+TEST_EMAIL = ''  # Set to a single email to test before full send (e.g. 'gustavo.perdomo@ueipab.edu.ve')
 
 # ── Email content ─────────────────────────────────────────────────────────────
 
@@ -162,8 +163,11 @@ for name, email in sorted(recipients, key=lambda x: x[0]):
     print(f"  {name:<35} {email}")
 
 if not DRY_RUN:
+    # If TEST_EMAIL is set, send only to that address regardless of the full list
+    send_list = [(TEST_EMAIL.split('@')[0].upper(), TEST_EMAIL)] \
+        if TEST_EMAIL else recipients
     sent = 0
-    for name, email in recipients:
+    for name, email in send_list:
         mail = env['mail.mail'].create({
             'subject': SUBJECT,
             'body_html': BODY_HTML,
@@ -173,8 +177,8 @@ if not DRY_RUN:
         })
         mail.send()
         sent += 1
-        print(f"  ✓ Sent to {name} <{email}>")
+        print(f"  ✓ Queued → {name} <{email}>")
     env.cr.commit()
-    print(f"\nDone. {sent} emails queued.")
+    print(f"\nDone. {sent} email(s) queued for sending.")
 else:
     print(f"\n[DRY RUN] No emails sent. Set DRY_RUN = False to send.")
