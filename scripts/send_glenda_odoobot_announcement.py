@@ -30,7 +30,7 @@ BODY_HTML = (
     '<p style="color:#1a2c5b;font-size:15px;line-height:1.6;">Hola equipo,</p>'
     '<p style="color:#333;font-size:15px;line-height:1.6;">'
     'A partir de hoy, <strong style="color:#1a2c5b;">Glenda</strong> — la misma asistente de inteligencia artificial '
-    'que atiende a los representantes por WhatsApp — está disponible directamente dentro de '
+    'que atiende a nuestras/os trabajadoras/es y próximamente a las/os representantes por WhatsApp — está disponible directamente dentro de '
     '<strong>Odoo Discuss</strong>, conectada al <strong>OdooBot</strong>.'
     '</p>'
     '<p style="color:#333;font-size:15px;line-height:1.6;">'
