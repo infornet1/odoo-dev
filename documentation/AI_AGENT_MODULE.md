@@ -209,6 +209,9 @@ Resolves 10/10 calibration suggestions on conversation closure (8 testers) and C
 - Prompt rule hardened: explicit trigger list, PROHIBIDO block, two ❌/✅ examples for Claude
 - Cashea: when customer mentions payment difficulty or asks about financing → proactively mention Cashea + pagos@ before empathy redirect
 
+**Enrollment process → Akdemia online admissions (v17.0.1.41.2, 2026-05-14):**
+Added `PROCESO DE INSCRIPCIÓN` block: when anyone asks about enrollment documents, steps or how to inscribe, Glenda provides the direct Akdemia admissions link: https://edge.akdemia.com/admissions/09f8190d36eef4ea/start — the platform guides applicants step by step.
+
 **Bachillerato Ciencias y Tecnología knowledge (v17.0.1.41.1, 2026-05-14):**
 Source: official MPPE document *Propuesta Juntos por la educación del futuro* (BachilleTIC.pdf).
 Added `PROGRAMA ACADÉMICO — BACHILLERATO` + `ACLARACIÓN BACHILLERATO INTERNACIONAL` blocks:

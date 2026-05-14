@@ -4,6 +4,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Glenda P2B Enrollment Process → Akdemia Link (ueipab_ai_agent v17.0.1.41.2)
+
+**Type:** Knowledge update | **Status:** Production ✅
+**Resolves:** Calibration suggestion #18 (AUDREY GARCIA — P2B)
+
+Enrollment documentation process is fully online via Akdemia — no static document checklist needed.
+
+| Item | Details |
+|------|---------|
+| **Trigger** | Any question about: enrollment documents, how to inscribe, what is needed, steps to follow |
+| **Glenda response** | Provides direct link: https://edge.akdemia.com/admissions/09f8190d36eef4ea/start |
+| **Rationale** | Akdemia guides applicants step by step — simpler and always up to date vs a static checklist |
+| **Fallback** | soporte@ueipab.edu.ve for additional questions |
+| **Deployment** | Pure Python — `docker restart ueipab17`, no DB upgrade |
+
+---
+
 ## 2026-05-14 — Glenda Bachillerato Knowledge (ueipab_ai_agent v17.0.1.41.1)
 
 **Type:** Knowledge update | **Status:** Production ✅ | **Source:** MPPE official document BachilleTIC.pdf — *Propuesta Juntos por la educación del futuro*
