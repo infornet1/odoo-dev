@@ -65,7 +65,8 @@ PAGOS_MAILBOX_ID = 2
 PROCESSED_SUBJECT_PREFIX = '[GLENDA]'
 INTERNAL_DOMAINS = {'ueipab.edu.ve'}     # skip internal senders
 INTERNAL_EMAILS  = {'finanzas@ueipab.edu.ve', 'recursoshumanos@ueipab.edu.ve',
-                    'compras@ueipab.edu.ve', 'pagos@ueipab.edu.ve'}
+                    'compras@ueipab.edu.ve', 'pagos@ueipab.edu.ve',
+                    'mailer-daemon@googlemail.com'}
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(SCRIPT_DIR, 'pagos_processor_state.json')
@@ -136,7 +137,7 @@ def fs_get_unassigned_conversations():
         if not page_convs:
             break
         for c in page_convs:
-            if c.get('assignee') is None:
+            if c.get('assignee') is None and c.get('state') == 'published':
                 convs.append(c)
         # Stop if we got fewer than a full page (no more pages)
         if len(page_convs) < 25:
@@ -310,7 +311,7 @@ def odoo_check_duplicate(partner_id, referencia):
     return rows[0]['name'] if rows else None
 
 
-def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice):
+def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice, conv_subject=''):
     """Create a draft account.payment. Returns (payment_id, odoo_url) or (None, None)."""
     db, uid, pwd, m = odoo()
     monto  = receipt.get('monto') or 0.0
@@ -322,19 +323,20 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice):
 
     currency_id = 2 if moneda in ('VES', 'VEB') else 1
 
+    fecha_str = (fecha or '').split()[0].strip()
     payment_date = datetime.now().strftime('%Y-%m-%d')
-    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d'):
+    for fmt in ('%Y-%m-%d', '%d/%m/%y', '%d-%m-%y', '%d/%m/%Y', '%d-%m-%Y'):
         try:
-            payment_date = datetime.strptime((fecha or '')[:10], fmt).strftime('%Y-%m-%d')
-            break
+            parsed = datetime.strptime(fecha_str, fmt)
+            if parsed.year >= 2020:
+                payment_date = parsed.strftime('%Y-%m-%d')
+                break
         except (ValueError, TypeError):
             continue
 
-    parts = [ref] if ref else []
-    parts += [p for p in [banco, tipo, 'Freescout pagos@'] if p]
-    if matched_invoice:
-        parts.append(f"Factura {matched_invoice['name']}")
-    ref_field = ' | '.join(parts)[:190]
+    # bank_reference = raw bank ref number; ref (communication) = customer subject
+    bank_reference_val = ref[:64] if ref else ''
+    communication_val  = (conv_subject or ref or 'Freescout pagos@')[:190]
 
     # Get inbound payment method line from journal
     journals = odoo_search_read('account.journal',
@@ -344,21 +346,23 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice):
         method_line_id = journals[0]['inbound_payment_method_line_ids'][0]
 
     vals = {
-        'payment_type': 'inbound',
-        'partner_type': 'customer',
-        'partner_id':   partner_id,
-        'amount':       float(monto),
-        'currency_id':  currency_id,
-        'journal_id':   journal_id,
-        'date':         payment_date,
-        'ref':          ref_field,
+        'payment_type':   'inbound',
+        'partner_type':   'customer',
+        'partner_id':     partner_id,
+        'amount':         float(monto),
+        'currency_id':    currency_id,
+        'journal_id':     journal_id,
+        'date':           payment_date,
+        'effective_date': payment_date,
+        'ref':            communication_val,
+        'bank_reference': bank_reference_val,
     }
     if method_line_id:
         vals['payment_method_line_id'] = method_line_id
 
     if DRY_RUN:
-        logger.info("  [DRY] Would create draft payment: %s %s journal=%d ref=%s",
-                    monto, moneda, journal_id, ref_field[:60])
+        logger.info("  [DRY] Would create draft payment: %s %s journal=%d date=%s bank_ref=%s comm=%s",
+                    monto, moneda, journal_id, payment_date, bank_reference_val, communication_val[:40])
         return -1, 'https://odoo.ueipab.edu.ve/web#dry-run'
 
     try:
@@ -674,7 +678,7 @@ def build_note_duplicate(partner_name, existing_payment_name, receipt, conv_numb
     )
 
 def build_note_success(partner_name, receipt, payment_id, odoo_url,
-                        matched_invoice, bcv_rate, conv_number):
+                        matched_invoice, bcv_rate, conv_number, base_url='https://odoo.ueipab.edu.ve'):
     banco  = receipt.get('banco') or '—'
     monto  = receipt.get('monto')
     moneda = (receipt.get('moneda') or 'VES').upper()
@@ -694,8 +698,9 @@ def build_note_success(partner_name, receipt, payment_id, odoo_url,
     if matched_invoice:
         mtype = {'exact': 'Coincidencia exacta', 'partial': 'Pago parcial'}.get(
             matched_invoice['match_type'], matched_invoice['match_type'])
+        inv_url = f"{base_url}/web#id={matched_invoice['id']}&model=account.move&view_type=form"
         inv_line = (
-            f'<p>Factura: <b>{matched_invoice["name"]}</b> · '
+            f'<p>Factura: <a href="{inv_url}"><b>{matched_invoice["name"]}</b></a> · '
             f'Pendiente: <b>${matched_invoice["residual"]:,.2f}</b> · {mtype}</p>'
         )
 
@@ -822,15 +827,16 @@ def process_conversation(conv, processed_ids, api_key):
         partner['id'], child_ids,
         receipt.get('monto'), receipt.get('moneda'), bcv_rate)
     payment_id, odoo_url = odoo_create_draft_payment(
-        partner['id'], receipt, journal_id, matched)
+        partner['id'], receipt, journal_id, matched, conv_subject=subject)
 
     logger.info("  payment_id=%s journal=%d matched=%s",
                 payment_id, journal_id,
                 matched['name'] if matched else 'none')
 
+    base_url = (odoo_url or '').split('/web#')[0] or 'https://odoo.ueipab.edu.ve'
     note = build_note_success(
         partner['name'], receipt, payment_id, odoo_url,
-        matched, bcv_rate, conv_number)
+        matched, bcv_rate, conv_number, base_url)
 
     try:
         fs_post_note(conv_id, note)

@@ -67,7 +67,7 @@
 | 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026; **Pending:** Cap.2 WA + Cap.3 Glenda |
 | 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — blocked until 5 TODO constants filled |
 | 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | OCR → draft `account.payment`; config: `ai_agent.payment_journal_map` |
-| 52 | Pagos@ Email Receipt Processor | Testing (no cron yet) | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs |
+| 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs; cron every 15 min |
 | 53 | WA Invoice Reminder | Ready — first live send 2026-05-15 | Script | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
 | 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | `models/mail_bot_glenda.py` — internal staff chat Glenda via Odoo Discuss OdooBot; zero WA credits; dry_run guarded |
 
@@ -237,7 +237,7 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **Dedup:** last-4 digits of referencia, 30-day window, same partner — blocks draft creation entirely
 - **Draft creation:** `account.payment` state=draft, never auto-posts; `payment_method_line_id` from journal's first inbound line
 - **pagos@ email:** Odoo deep link + BCV conversion line + invoice match info + duplicate/no-match warning block
-- **`pagos_receipt_processor.py`:** standalone script for Freescout unassigned convs; same pipeline via XML-RPC; image from `_embedded.attachments[].fileUrl` or body `<img>` regex; Freescout API `POST /conversations/{id}/threads` for note; subject prefix `[GLENDA]`
+- **`pagos_receipt_processor.py`:** standalone script for Freescout unassigned convs; same pipeline via XML-RPC; image from `_embedded.attachments[].fileUrl` or body `<img>` regex; Freescout API `POST /conversations/{id}/threads` for note; subject prefix `[GLENDA]`; cron `/etc/cron.d/pagos_receipt_processor` every 15 min, production LIVE; sets `bank_reference` (bank ref number), `ref` (FS subject/communication), `date`+`effective_date` (from receipt, 2-digit year safe); only `state=published` convs processed; `ai_agent.openai_api_key` prod param id=71, testing param id=88
 
 ### Glenda BCV Rate Context
 
