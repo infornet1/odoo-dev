@@ -209,8 +209,8 @@ Resolves 10/10 calibration suggestions on conversation closure (8 testers) and C
 - Prompt rule hardened: explicit trigger list, PROHIBIDO block, two ❌/✅ examples for Claude
 - Cashea: when customer mentions payment difficulty or asks about financing → proactively mention Cashea + pagos@ before empathy redirect
 
-**Mora policy + webpage + enrollment URL split (v17.0.1.41.3, 2026-05-14):**
-- `POLÍTICA DE MORA E INCUMPLIMIENTO` block: full 4-step process from Manual de Acuerdos de Convivencia Escolar. Payment due first 10 days; incumplimiento = 1 month unpaid → Convenio → Segundo Llamado (Dirección+Admin+Legal) → Tercer Llamado (+CDCE Municipal) → Notificación (Defensoría/CDCE/Consejo). Student always continues attending. Glenda links to `https://dev.ueipab.edu.ve/mora-policy/`.
+**Mora policy + webpage + enrollment URL split (v17.0.1.41.3→41.4, 2026-05-14):**
+- `POLÍTICA DE MORA E INCUMPLIMIENTO` block: full 4-step process from Manual de Acuerdos de Convivencia Escolar. Payment due first 10 days; incumplimiento = 1 month unpaid → Convenio → Segundo Llamado (Dirección+Admin+Legal) → Tercer Llamado (+CDCE Municipal) → Notificación (Defensoría/CDCE/Consejo). Student always continues attending. Glenda links to `https://odoo.ueipab.edu.ve/mora-policy/` (production domain, v17.0.1.41.4).
 - Enrollment split: **Solicitar Cupo** (new applicants) `edge.akdemia.com/enrollments/b87d60bc6ba93746` vs **Inscripción** (current students) `edge.akdemia.com/admissions/09f8190d36eef4ea/start`.
 - Mora webpage: `/var/www/dev/mora/index.html` — school colors, sticky nav with logo, 4-card summary, 4-step timeline, 8-image grid with lightbox. nginx `/mora-policy/` location added.
 

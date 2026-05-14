@@ -4,6 +4,21 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Mora Policy Page Moved to Production Domain (ueipab_ai_agent v17.0.1.41.4)
+
+**Type:** Infrastructure fix | **Status:** Production ✅
+
+| Item | Details |
+|------|---------|
+| **Canonical URL** | **https://odoo.ueipab.edu.ve/mora-policy/** |
+| **Dev URL** | https://dev.ueipab.edu.ve/mora-policy/ (still works) |
+| **nginx** | `/mora-policy/` location added to `/etc/nginx/sites-available/odoo.ueipab.edu.ve` on `10.124.0.3` |
+| **Files** | `/var/www/mora/` on production server — 8 JPEGs + `index.html` |
+| **Logo** | Uses relative path `/web/image/res.company/1/logo` (served by Odoo, no external dep) |
+| **Glenda** | Knowledge updated to reference `odoo.ueipab.edu.ve/mora-policy/` |
+
+---
+
 ## 2026-05-14 — Glenda P2A Mora Policy + Webpage + Enrollment URL Split (ueipab_ai_agent v17.0.1.41.3)
 
 **Type:** Knowledge update + new public page | **Status:** Production ✅
@@ -27,7 +42,7 @@ Glenda: empathetic response, mentions Cashea, explains process without alarming,
 
 ### Mora Policy Webpage
 
-URL: **https://dev.ueipab.edu.ve/mora-policy/**
+URL: **https://odoo.ueipab.edu.ve/mora-policy/** (also at https://dev.ueipab.edu.ve/mora-policy/)
 - Standalone HTML/CSS — school colors (#1a2c5b/#2471a3/#f0c400), Poppins font
 - Sticky nav with school logo, hero, 4 summary cards, 4-step timeline with institutions
 - 8 story images (864×1080 JPEG) in responsive grid with lightbox (keyboard nav ← →, Esc)
