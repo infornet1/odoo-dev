@@ -100,19 +100,18 @@ Glenda cannot answer "¿Qué documentos necesito para inscribir a mi hijo?"
 
 > **⚠ Action required:** Get the official document checklist from Secretaría.
 
-### 2C — Bachillerato Tracks & Mentions
+### 2C — Bachillerato Tracks & Mentions ✅ DONE (v17.0.1.41.1, 2026-05-14)
 
 **Tester:** AUDREY GARCIA (#21)
 
-Glenda knows about Bachillerato presencial and virtual (Dawere), but doesn't know
-the specific academic tracks (menciones):
-
-**What to add:**
-- Mention options: Ciencias y Tecnología, Humanidades y Artes, etc.
-- Which mention the school offers
-- Bachillerato Internacional: does the school offer this formally? (user asked #21)
-
-> **⚠ Action required:** Confirm available menciones with Sub-directora Norka La Rosa.
+**Implemented** from official MPPE document "Propuesta Juntos por la educación del futuro" (BachilleTIC.pdf):
+- Diploma: **Bachiller en Ciencias y Tecnología** (replaces old Ciencias/Humanidades)
+- 5 years, 10 subject areas, max 40 h/week
+- Componente General: Lengua/Lit, Idiomas, Matemáticas, Ed. Física, Biología/Amb/Tec, Física, Química, Geo/Hist/Ciudadanía
+- Componente Productivo: Orientación Vocacional + Innovación Tecnológica y Productiva (6 h/sem)
+- Enables university access (all careers) AND direct workforce entry
+- Bachillerato Virtual via Dawere (flexible/online) — details via soporte@
+- **IB clarification added**: school does NOT offer IB Geneva — offers Venezuelan national diploma only
 
 ### 2D — Diagnostic Exam for Foreign Students
 
@@ -174,6 +173,9 @@ Request: a thumbs-up/thumbs-down rating after each conversation for improvement 
 |---|--------|---------|---------|
 | 10, 11, 12 | Maria Figuera | Audio transcription / voice note support | v17.0.1.40.0 |
 | 19 | Gustavo Perdomo | Audio transcription | v17.0.1.40.0 |
+| 1, 4, 5, 6, 7, 8, 13, 14 | Multiple (8/8) | Farewell auto-close + single closing message | v17.0.1.41.0 |
+| 2, 9 | Luisa Abreu, Jessica Bolivar | Cashea proactive mention on payment difficulty | v17.0.1.41.0 |
+| 21 | AUDREY GARCIA | Bachillerato tracks/menciones + IB clarification | v17.0.1.41.1 |
 
 ---
 
