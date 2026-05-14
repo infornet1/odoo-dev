@@ -9,3 +9,4 @@ from . import hr_data_collection_request
 from . import hr_employee
 from . import ai_agent_feedback
 from . import hr_notice_ack_calibration
+from . import mail_bot_glenda
