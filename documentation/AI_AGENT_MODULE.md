@@ -201,13 +201,14 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 
 Pending UX backlog: (1) Cashea payment policy info, (2) mora/impago sanctions policy, (3) audio/voice note support (Phase 2).
 
-**general_inquiry tariff knowledge (v17.0.1.33.0, 2026-05-12):**
+**general_inquiry tariff knowledge (v17.0.1.40.1, 2026-05-14):**
 `_INSTITUTIONAL_KNOWLEDGE` reflects three tariff periods:
 - **2025-2026 vigente (hasta 31 ago):** Inscripción $197,38 · Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días)
-- **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** Inscripción $187,51 · Mensualidad septiembre $197,38
-- **Nueva mensualidad desde 1 sep 2026 (preliminar):** $218,88 regular · $207,93 pronto pago (5% dto)
-- Annual costs (unchanged): Seguro escolar $15 · Enciclopedia de Inglés $30 · Olimpiadas $10 = $55/alumno · +$36 bachillerato
-- Sibling table recalculated for new Sep 2026 base rates
+- **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** Inscripción $187,51 · Mensualidad septiembre $197,38 · Mensualidades adicionales prepagables a $197,38 c/u con descuentos hermanos · Requisito: 2025-2026 completamente saldado
+- **Nueva mensualidad base desde 1 sep 2026 (preliminar):** $218,88 (antes de descuentos hermanos)
+- **Costos anuales únicos** (acuerdo especial may-jul): Seguro $30,58 · Guía inglés $25 · Olimpiadas $10 · Enciclopedia $36 (todos los niveles) = **$101,58/alumno**
+- **Descuentos hermanos:** 1° 5% · 2° 8% · 3°+ 11% sobre mensualidad · Pronto pago: 5% adicional sobre mensualidad ya descontada (10 primeros días)
+- **Tabla sep 2026:** 1° $207,94 (PP $197,54) · 2° $201,37 (PP $191,30) · 3°+ $194,80 (PP $185,06)
 
 **general_inquiry flyer support (v1.29.0):**
 When a customer asks about a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Claude appends `ACTION:SEND_FLYER:key` to its response and the skill sends the flyer image via WhatsApp after the text reply.

@@ -4,6 +4,32 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Glenda Pricing & Discount Full Revision (ueipab_ai_agent v17.0.1.40.1)
+
+**Type:** Knowledge update | **Status:** Production ✅ | **Source:** Proyecto Educativo 2026-2027 (Google Slides, parent approval vote May 22)
+
+Corrected annual one-time costs, replaced sibling discount tiers, added enrollment eligibility gate and advance-mensualidad option.
+
+| Item | Old | New |
+|------|-----|-----|
+| **Seguro Escolar** | $15 | **$30,58** |
+| **Guía de Inglés** | Enciclopedia de Inglés $30 | **$25** |
+| **Olimpiadas** | $10 | $10 (sin cambio) |
+| **Enciclopedia** | $36 solo bachillerato | **$36 todos los niveles (Inicial, Primaria, Bachillerato)** |
+| **Total costos anuales** | $55 estándar + $36 bach | **$101,58/alumno (todos)** |
+| **Forma de pago costos anuales** | No especificada | **Acuerdo especial, mayo–julio 2026** |
+| **Descuento hermanos** | 1° tarifa completa · 2° 5% · 3° 6% · 4°+ 7% | **1° 5% · 2° 8% · 3°+ 11%** |
+| **Tabla mensualidad sep 2026** | $218,88/$207,94/$205,55/$203,56 | **$207,94/$201,37/$194,80** |
+| **Tabla pronto pago sep 2026** | $207,93/$197,54/$195,27/$193,38 | **$197,54/$191,30/$185,06** |
+| **Inscripción en cotización** | $264,48 (precio proyectado) | **$187,51 (precio promo confirmado)** |
+| **Ejemplo total primer mes (2 alumnos)** | $1.154,70 / PP $1.109,23 | **$987,49 / PP $967,02** |
+| **Requisito inscripción anticipada** | No existía | **2025-2026 completamente saldado — sin excepciones** |
+| **Mensualidades en avance** | No mencionado | **Puede prepagar tantos meses como desee a $197,38 + descuentos hermanos** |
+
+**Deployment:** SCP → `docker restart ueipab17` · No DB upgrade required (pure Python skill change)
+
+---
+
 ## 2026-05-14 — WA Invoice Reminder: Phase 0 Complete + Script Built
 
 **Type:** New Feature | **Status:** Ready — first live send 2026-05-15

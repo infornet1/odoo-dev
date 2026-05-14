@@ -1,6 +1,6 @@
 # Glenda — AI Agent Overview
 
-**Version:** 17.0.1.31.0 | **Status:** Testing (Live with real customers) | **Date:** 2026-04-19
+**Version:** 17.0.1.40.1 | **Status:** Production ✅ | **Date:** 2026-05-14
 
 ## What Is Glenda
 
@@ -48,10 +48,10 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 | **Family context** | All Akdemia-registered parents for this family — names, cedulas, emails, role (Representante/Representante.1). Warns if customer proposes an email already used by another parent | v1.12.0 |
 | **Message batching** | Reads ALL customer messages before responding (customers send multiple short WhatsApp messages in rapid succession) | v1.11.0 |
 | **Image/screenshot support** | Can see images customers send (screenshots, photos). Uses Claude vision to interpret content. Images archived locally before MassivaMóvil URL expiry | v1.13.0 |
-| **2026-2027 enrollment knowledge** | Current rates (until Aug 2026): Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39. Projected from Sep 1, 2026: Inscripción $264,48 · Mensualidad $264,48 · Pronto pago $241,16 (8,816% discount). Additional costs: Seguro $15 · Enc. inglés $30 · Olimpiadas $10 · Enc. digital bach. $36 · Competencia Kurios $10 · MOA inglés $25 (si seleccionado) | v1.29.7–v1.29.9 |
+| **2026-2027 enrollment knowledge** | Current rates (until Aug 2026): Inscripción $197,38 · Mensualidad $197,38 · Pronto pago $162,39. From Sep 1, 2026: mensualidad base $218,88 (antes descuentos hermanos). Promo inscripción anticipada (hasta 31 jul): $187,51. Annual one-time costs (acuerdo especial may-jul): Seguro $30,58 · Guía inglés $25 · Olimpiadas $10 · Enciclopedia $36 (todos los niveles) = **$101,58/alumno**. Optional: Competencia Kurios $10 · MOA $25 (solo si seleccionado). Requisito: 2025-2026 completamente saldado para inscribir | v1.29.7–v17.0.1.40.1 |
 | **PDVSA/Petropiar policy** | Knows 2026-2027 policy: benefit discontinued. Scenario A (new prospect) → informs change, billing handoff. Scenario B (existing distressed family) → empathetic calm, invites Director meeting, fires urgent retention alert to pagos@ | v1.29.7 |
 | **Timeout follow-up** | After 24h of silence Glenda sends a gentle follow-up ("¿Pude ayudarte?"). After 48h a final courtesy closing. After 72h conversation auto-closes. `max_turns` for general_inquiry raised to 25 | v1.29.8 |
-| **Multi-student quotation** | Asks for number of children (and bachillerato level if applicable). Applies sibling discounts (2nd 5%, 3rd 6%, 4th+ 7% on mensualidad). 4-section quote: mensualidad per child + inscripción total + costos anuales ($55/student: seguro $15, enc. inglés $30, olimpiadas $10; +$36 bachillerato) + TOTAL PRIMER MES (regular and pronto pago). Optional costs excluded. Hands off to billing with full quote | v1.30.0–v1.30.1 |
+| **Multi-student quotation** | Asks for number of children. Applies sibling discounts (1st 5%, 2nd 8%, 3rd+ 11% on mensualidad). 4-section quote: mensualidad per child + inscripción promo $187,51 total + costos anuales $101,58/student + TOTAL PRIMER MES (regular and pronto pago). Example 2 alumnos: mens $409,31 (PP $388,84) · insc $375,02 · extras $203,16 · primer mes $987,49. Optional costs excluded. Hands off to billing with full quote | v1.30.0–v17.0.1.40.1 |
 | **Verification email** | Can trigger a real verification email to any address and wait for customer confirmation | v1.8.0 |
 
 ---

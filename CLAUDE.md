@@ -157,7 +157,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.40.0 | 2026-05-13 |
+| ueipab_ai_agent | 17.0.1.40.1 | 2026-05-14 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -172,7 +172,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.40.0 | Deployed 2026-05-13 — voice notes prefixed `[Audio transcrito]:` |
+| ueipab_ai_agent | 17.0.1.40.1 | Deployed 2026-05-14 — pricing revision: annual costs $101,58, sibling discounts 5/8/11%, eligibility gate |
 
 ---
 
@@ -360,11 +360,11 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **General Inquiry:** Handles unsolicited inbound WA — auto-creates conversation, identifies contact, routes to `pagos@` (billing) or `soporte@` (general)
 - **Billing routing:** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `|support` → `soporte@ueipab.edu.ve`
 - **Flyer/Audio:** **⚠️ NOT delivered** — MassivaMóvil `type=photo/audio/voice` queues but never delivers to end user. Glenda receives audio (Whisper transcription) but replies text only.
-- **2026-2027 enrollment:** Costos anuales $55/alumno (Seguro $15 + Enc.inglés $30 + Olimpiadas $10; +$36 bach). PDVSA benefit discontinued — new prospect → billing handoff.
+- **2026-2027 enrollment:** Costos anuales $101,58/alumno (Seguro $30,58 + Guía Inglés $25 + Olimpiadas $10 + Enciclopedia $36 — aplica a todos los niveles). Pago vía acuerdo especial may-jul. REQUISITO: 2025-2026 completamente saldado — no puede inscribir con deuda. PDVSA benefit discontinued — new prospect → billing handoff.
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
-- **Quotation engine:** mensualidad + inscripción + costos anuales + TOTAL PRIMER MES. Sibling discounts: 2nd 5%, 3rd 6%, 4th+ 7%. Glenda asks bach level + # children.
+- **Quotation engine:** mensualidad + inscripción + costos anuales ($101,58/alumno) + TOTAL PRIMER MES. Sibling discounts: 1st 5%, 2nd 8%, 3rd+ 11%. Enciclopedia $36 aplica a todos los niveles (ya incluida en $101,58).
 - **Tarifas 2025-2026 (hasta 31 ago):** $197,38 regular / $162,39 pronto pago (10 primeros días)
-- **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38
+- **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38; puede prepagar meses adicionales a $197,38 c/u con descuentos hermanos
 - **Nueva mensualidad desde 1 sep 2026:** $218,88 regular / $207,93 pronto pago (5% dto) — preliminar
 
 ### WA Poll Cron — Account Filter Note
