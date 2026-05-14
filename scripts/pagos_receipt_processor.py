@@ -361,18 +361,19 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice, 
         vals['payment_method_line_id'] = method_line_id
 
     if DRY_RUN:
-        logger.info("  [DRY] Would create draft payment: %s %s journal=%d date=%s bank_ref=%s comm=%s",
+        logger.info("  [DRY] Would create+confirm payment: %s %s journal=%d date=%s bank_ref=%s comm=%s",
                     monto, moneda, journal_id, payment_date, bank_reference_val, communication_val[:40])
         return -1, 'https://odoo.ueipab.edu.ve/web#dry-run'
 
     try:
         payment_id = m.execute_kw(db, uid, pwd, 'account.payment', 'create', [vals])
+        m.execute_kw(db, uid, pwd, 'account.payment', 'action_post', [[payment_id]])
         base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
         odoo_url = f"{base_url}/web#id={payment_id}&model=account.payment&view_type=form"
-        logger.info("  Draft payment #%d created (journal=%d, %s %s)", payment_id, journal_id, monto, moneda)
+        logger.info("  Payment #%d confirmed (journal=%d, %s %s)", payment_id, journal_id, monto, moneda)
         return payment_id, odoo_url
     except Exception as e:
-        logger.error("  Failed to create draft payment: %s", e)
+        logger.error("  Failed to create/confirm payment: %s", e)
         return None, None
 
 # ============================================================================
@@ -704,10 +705,10 @@ def build_note_success(partner_name, receipt, payment_id, odoo_url,
             f'Pendiente: <b>${matched_invoice["residual"]:,.2f}</b> · {mtype}</p>'
         )
 
-    draft_label = f'Borrador #{payment_id}' if payment_id and payment_id > 0 else 'Borrador (dry run)'
+    pay_label = f'Pago #{payment_id} confirmado' if payment_id and payment_id > 0 else 'Pago (dry run)'
 
     return (
-        f'<p><b>🤖 Glenda — {draft_label} creado automáticamente</b></p>'
+        f'<p><b>🤖 Glenda — {pay_label} automáticamente</b></p>'
         f'<p>Cliente: <b>{partner_name}</b></p>'
         f'<p>Banco: {banco} | Tipo: {tipo} | Monto: <b>{monto_str} {moneda}</b> | '
         f'Ref: {ref} | Fecha: {fecha}</p>'
