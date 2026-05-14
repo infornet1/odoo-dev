@@ -201,7 +201,16 @@ The 35% credit advance benefit for PDVSA/Petropiar employees was discontinued fo
 
 Pending UX backlog: (1) Cashea payment policy info, (2) mora/impago sanctions policy, (3) audio/voice note support (Phase 2).
 
-**general_inquiry tariff knowledge (v17.0.1.40.1, 2026-05-14):**
+**OdooBot bridge — Glenda in Odoo Discuss (v17.0.1.40.2, 2026-05-14):**
+`models/mail_bot_glenda.py` — inherits `mail.bot`, overrides `_get_answer()`:
+- Fires only on `channel_type == 'chat'` (private OdooBot direct message)
+- Skips if `ai_agent.dry_run = True`; falls back to default OdooBot on any error
+- Reuses `_INSTITUTIONAL_KNOWLEDGE` from `general_inquiry.py` — same pricing, same policies
+- Builds conversation history from `mail.message` records; handles role alternation required by Claude API
+- **Zero MassivaMóvil credits consumed** — code path never touches `whatsapp_service.py`; only Claude API tokens (~$0.001–0.003/conversation at Haiku rates)
+- No new models, no DB changes, no new menus — just override + restart
+
+**general_inquiry tariff knowledge (v17.0.1.40.1→40.3, 2026-05-14):**
 `_INSTITUTIONAL_KNOWLEDGE` reflects three tariff periods:
 - **2025-2026 vigente (hasta 31 ago):** Inscripción $197,38 · Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días)
 - **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** Inscripción $187,51 · Mensualidad septiembre $197,38 · Mensualidades adicionales prepagables a $197,38 c/u con descuentos hermanos · Requisito: 2025-2026 completamente saldado
@@ -209,6 +218,7 @@ Pending UX backlog: (1) Cashea payment policy info, (2) mora/impago sanctions po
 - **Costos anuales únicos** (acuerdo especial may-jul): Seguro $30,58 · Guía inglés $25 · Olimpiadas $10 · Enciclopedia $36 (todos los niveles) = **$101,58/alumno**
 - **Descuentos hermanos:** 1° 5% · 2° 8% · 3°+ 11% sobre mensualidad · Pronto pago: 5% adicional sobre mensualidad ya descontada (10 primeros días)
 - **Tabla sep 2026:** 1° $207,94 (PP $197,54) · 2° $201,37 (PP $191,30) · 3°+ $194,80 (PP $185,06)
+- **Response priority (v17.0.1.40.3):** Always lead with promotion anticipada ($187,51 inscripción + $197,38 sep) before Sep base rate; always mention Cashea as payment option
 
 **general_inquiry flyer support (v1.29.0):**
 When a customer asks about a topic covered by a promotional flyer (inscriptions, tuition, extracurricular courses, payment methods), Claude appends `ACTION:SEND_FLYER:key` to its response and the skill sends the flyer image via WhatsApp after the text reply.

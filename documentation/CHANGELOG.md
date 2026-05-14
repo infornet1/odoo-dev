@@ -4,6 +4,41 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Glenda Promotion-First Priority + Cashea Reminder (ueipab_ai_agent v17.0.1.40.3)
+
+**Type:** Behaviour fix | **Status:** Production ✅
+
+Glenda was answering pricing questions correctly but leading with the September base rate ($218,88) instead of the inscription promotion. Added explicit `PRIORIDAD AL RESPONDER` block to both the WA skill (`general_inquiry.py`) and the OdooBot bridge (`mail_bot_glenda.py`).
+
+| Item | Details |
+|------|---------|
+| **Promotion first** | Always lead with promo anticipada: inscripción $187,51 + mensualidad sep $197,38 (current rate, not $218,88) + eligibility requirement |
+| **Sep rate second** | After promotion: explain $218,88 base with sibling discounts table |
+| **Cashea** | Always mention Cashea as payment option (confirm link with pagos@) |
+| **Applies to** | Both WA (general_inquiry) and OdooBot Discuss (mail_bot_glenda) |
+
+---
+
+## 2026-05-14 — Glenda OdooBot Bridge — Glenda in Odoo Discuss (ueipab_ai_agent v17.0.1.40.2)
+
+**Type:** New feature | **Status:** Production ✅
+
+Internal staff can now chat with Glenda directly inside Odoo Discuss via the OdooBot private chat. No WhatsApp or external access required.
+
+| Item | Details |
+|------|---------|
+| **File** | `models/mail_bot_glenda.py` — `AbstractModel` inheriting `mail.bot` |
+| **Hook** | Overrides `_get_answer()` — the officially sanctioned extension point (same as `im_livechat_mail_bot` in Odoo core) |
+| **Trigger** | `channel_type == 'chat'` only (private OdooBot DM). Group channels / @mentions not intercepted |
+| **Knowledge** | Reuses `_INSTITUTIONAL_KNOWLEDGE` from `general_inquiry.py` — same pricing, policies, PDVSA, Cashea, payment methods |
+| **History** | Reads last 10 `mail.message` records from the channel; maps author → user/assistant; merges consecutive same-role turns |
+| **Guards** | `dry_run=True` → skips (falls back to default OdooBot); `credits_ok=False` → blocked by `claude_service`; any exception → falls back silently |
+| **Cost** | Zero MassivaMóvil credits — never touches `whatsapp_service.py`. Only Claude Haiku tokens (~$0.001–0.003/conversation) |
+| **DB changes** | None — no new models, no migrations |
+| **Deployment** | `-u ueipab_ai_agent` + `docker restart ueipab17`. Verified: `_glenda_system_prompt` and `_glenda_history` present on `mail.bot` in both envs |
+
+---
+
 ## 2026-05-14 — Glenda Pricing & Discount Full Revision (ueipab_ai_agent v17.0.1.40.1)
 
 **Type:** Knowledge update | **Status:** Production ✅ | **Source:** Proyecto Educativo 2026-2027 (Google Slides, parent approval vote May 22)

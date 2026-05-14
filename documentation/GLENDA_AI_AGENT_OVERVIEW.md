@@ -77,6 +77,21 @@ Customer-initiated replies to business-hours skills are also processed anytime (
 
 ---
 
+## OdooBot Bridge — Glenda in Odoo Discuss (v17.0.1.40.2+)
+
+Internal staff can chat with Glenda directly inside **Odoo Discuss** via the OdooBot private chat — no WhatsApp needed.
+
+| Item | Details |
+|------|---------|
+| **How to use** | Open Discuss → click OdooBot in sidebar → type your question |
+| **Knowledge** | Same institutional knowledge as WhatsApp Glenda (pricing, policies, discounts, payment methods) |
+| **Cost** | Zero MassivaMóvil credits. Only Claude Haiku API tokens (~$0.001–0.003/conversation) |
+| **Who can use** | Any internal Odoo user (staff with login) |
+| **Limitations** | Text only (no flyers/media). No balance lookups. No external contact routing |
+| **Fallback** | Any error → default OdooBot response. `dry_run=True` → default OdooBot |
+
+---
+
 ## General Inquiry Skill (v1.26.0+)
 
 Glenda now handles **unsolicited inbound messages** — when an unknown phone sends a WhatsApp to the Glenda number with no active conversation. This uses the `general_inquiry` skill which operates 24/7 (no schedule restriction).

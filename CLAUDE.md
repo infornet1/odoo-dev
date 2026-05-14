@@ -157,7 +157,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.40.1 | 2026-05-14 |
+| ueipab_ai_agent | 17.0.1.40.3 | 2026-05-14 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -172,7 +172,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.40.1 | Deployed 2026-05-14 — pricing revision: annual costs $101,58, sibling discounts 5/8/11%, eligibility gate |
+| ueipab_ai_agent | 17.0.1.40.3 | Deployed 2026-05-14 — pricing revision + OdooBot bridge (Glenda in Discuss) + promotion-first priority |
 
 ---
 
