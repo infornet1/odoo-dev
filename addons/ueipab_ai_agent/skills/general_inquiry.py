@@ -141,7 +141,7 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "y Consejo de Protección para gestionar un cupo en institución pública cercana. "
     "IMPORTANTE: el estudiante CONTINÚA ASISTIENDO REGULARMENTE durante todo el proceso.\n"
     "- La institución SIEMPRE protege el derecho a la educación.\n"
-    "- Página informativa completa con infografías: https://dev.ueipab.edu.ve/mora-policy/\n"
+    "- Página informativa completa con infografías: https://odoo.ueipab.edu.ve/mora-policy/\n"
     "- Si un representante menciona dificultades de pago, atraso o deuda: responde con empatía, sin juzgar, "
     "menciona PROACTIVAMENTE Cashea como opción de pago, explica brevemente el proceso gradual "
     "(nunca alarmista), y orienta a pagos@ueipab.edu.ve para coordinar un convenio.\n"
