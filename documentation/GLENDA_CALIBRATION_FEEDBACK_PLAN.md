@@ -87,18 +87,14 @@ but has NO information about what actually happens when a family doesn't pay for
 > **⚠ Action required:** Confirm the official policy with Dirección/Pagos before adding.
 > Once confirmed, add a `POLÍTICA DE MORA Y CONSECUENCIAS` block to the knowledge.
 
-### 2B — Enrollment Documentation (inscripción)
+### 2B — Enrollment Documentation (inscripción) ✅ DONE (v17.0.1.41.2, 2026-05-14)
 
 **Tester:** AUDREY GARCIA (#18)
 
-Glenda cannot answer "¿Qué documentos necesito para inscribir a mi hijo?"
-
-**What to add:**
-- Document checklist for new students (partida de nacimiento, cédula escolar, etc.)
-- Document checklist for continuing students (re-enrollment)
-- Steps in the inscription process
-
-> **⚠ Action required:** Get the official document checklist from Secretaría.
+**Implemented:** Enrollment process is fully online via Akdemia. Glenda now provides the direct link when anyone asks about documents, steps, or how to enroll:
+- Link: https://edge.akdemia.com/admissions/09f8190d36eef4ea/start
+- The Akdemia platform guides applicants step by step — no need for a static document checklist.
+- For additional questions: soporte@ueipab.edu.ve
 
 ### 2C — Bachillerato Tracks & Mentions ✅ DONE (v17.0.1.41.1, 2026-05-14)
 
@@ -176,6 +172,7 @@ Request: a thumbs-up/thumbs-down rating after each conversation for improvement 
 | 1, 4, 5, 6, 7, 8, 13, 14 | Multiple (8/8) | Farewell auto-close + single closing message | v17.0.1.41.0 |
 | 2, 9 | Luisa Abreu, Jessica Bolivar | Cashea proactive mention on payment difficulty | v17.0.1.41.0 |
 | 21 | AUDREY GARCIA | Bachillerato tracks/menciones + IB clarification | v17.0.1.41.1 |
+| 18 | AUDREY GARCIA | Enrollment docs → Akdemia online admissions link | v17.0.1.41.2 |
 
 ---
 
