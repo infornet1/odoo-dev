@@ -413,18 +413,20 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 **System crons (host-level, all targeting production via `/root/.odoo_agent_env_prod`):** escalation (5 min), resolution (5 min), email checker (15 min), bounce processor (daily 05:00), WA health (15 min), Akdemia pipeline (daily 06:00, via `/var/www/dev/.odoo_agent_env_prod`). All switched to production 2026-05-10.
 
-**Testing lockout:** `ai_agent.active_db=''` on testing Odoo — all AI agent crons self-skip.
+**Testing lockout:** `ai_agent.active_db='DB_UEIPAB'` on testing Odoo — crons see `DB_UEIPAB ≠ testing` and self-skip. ⚠️ Empty string `''` does NOT lock (code treats it as "unconfigured = allow"). Must be set to the production DB name.
 
 **Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
 
 **WhatsApp accounts:** Primary +584148321989 (dedicated), Backup +584248944898, Tertiary +584148321963 (manual only).
 
-### Testing Environment Status (2026-05-10)
+### Testing Environment Status (2026-05-14)
 
 | Setting | Value |
 |---------|-------|
 | `ai_agent.dry_run` | `False` |
-| `ai_agent.active_db` | `''` (locked — crons self-skip) |
+| `ai_agent.active_db` | `'DB_UEIPAB'` (locked — crons see DB_UEIPAB≠testing → self-skip) |
+
+> **Fixed 2026-05-14:** Previously set to `''` which the code treats as "allow" — testing was double-processing all live WA messages with stale code. See [Changelog](documentation/CHANGELOG.md).
 
 ### Production Migration Checklist
 

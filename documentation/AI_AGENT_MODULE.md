@@ -572,11 +572,13 @@ Both testing and production share the same WhatsApp account (+584148321963). To 
 
 **When going live in production:**
 1. Set `ai_agent.active_db = 'DB_UEIPAB'` on production Odoo
-2. Set `ai_agent.active_db = ''` (empty) or leave as `'testing'` on testing Odoo — crons will self-skip
+2. Set `ai_agent.active_db = 'DB_UEIPAB'` on testing Odoo — crons see `DB_UEIPAB ≠ testing` and self-skip
 3. Set `ai_agent.dry_run = 'False'` on production only
 4. Update scripts: `TARGET_ENV=production` in crontab
 
-**To return to testing:** reverse the `active_db` values.
+> ⚠️ **Do NOT use `active_db = ''` (empty string) to lock testing.** The code treats empty as "not configured → allow processing" (`if not active_db: return True`). An empty value lets both environments race for the same WA messages. After changing the param via SQL, **restart the Odoo container** to flush the `@ormcache` on `get_param`.
+
+**To return to testing:** set `ai_agent.active_db = 'testing'` on the testing instance and restart.
 
 ### Production Migration Checklist
 

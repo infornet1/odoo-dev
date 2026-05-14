@@ -4,6 +4,35 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-14 — Testing Environment Double-Processing Bug Fix
+
+**Type:** Infrastructure Bug Fix | **Status:** Production ✅
+
+### Root cause
+
+The testing Odoo was silently racing production on every inbound WhatsApp message. Both environments share the same MassivaMóvil credentials, so every audio Glenda received triggered two Claude calls and two WA sends — one correct (production, with the v17.0.1.40.0 audio fix), one wrong (testing, with old pre-fix code that replied "no puedo procesar audios").
+
+The bug was the `active_db` lockout being misconfigured as `''` (empty string). The code in `_is_active_environment()` treats empty as "not configured → allow processing":
+
+```python
+if not active_db:
+    return True  # Not configured = allow processing
+```
+
+The CLAUDE.md and AI_AGENT_MODULE.md documentation incorrectly stated that `''` locked testing — it did the opposite.
+
+### Fix
+
+- Set `ai_agent.active_db = 'DB_UEIPAB'` in the **testing** Odoo DB (via SQL + `docker restart odoo-dev-web` to flush `@ormcache`)
+- Testing crons now see `DB_UEIPAB ≠ testing` → self-skip
+- Updated CLAUDE.md and AI_AGENT_MODULE.md to document the correct lockout value and restart requirement
+
+### Detection method
+
+Symptoms appeared as two WA responses per customer message with contradictory content. The wrong messages had `api: true` in MassivaMóvil's `GET /api/get/wa.sent` log but were absent from the production Odoo DB — confirmed by checking the testing `ai_agent_message` table which held all the wrong responses.
+
+---
+
 ## 2026-05-13 — Glenda Audio Fix: WA Voice Notes Now Transparently Transcribed (ueipab_ai_agent v17.0.1.40.0)
 
 **Type:** Bug Fix | **Status:** Production ✅ | **Deployed:** 2026-05-13
