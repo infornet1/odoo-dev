@@ -248,7 +248,8 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
             ('move_type',  'in', ['out_invoice', 'out_receipt']),
             ('state',      '=',  'posted'),
         ]],
-        {'fields': ['partner_id', 'fiscal_check', 'invoice_date'], 'limit': 0})
+        {'fields': ['partner_id', 'fiscal_check', 'invoice_date',
+                    'amount_total', 'amount_residual', 'payment_state'], 'limit': 0})
 
     # Aggregate unpaid balance per partner
     balance_map = defaultdict(float)
@@ -256,12 +257,18 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
         balance_map[inv['partner_id'][0]] += inv['amount_residual_signed']
 
     # Find latest posted invoice per partner → determines fiscal exclusion + month context
-    latest_inv_map = {}   # pid -> {invoice_date, fiscal_check}
+    latest_inv_map = {}   # pid -> {invoice_date, fiscal_check, amount_total, amount_residual, payment_state}
     for inv in all_posted:
         pid = inv['partner_id'][0]
         d   = inv.get('invoice_date') or ''
         if d > latest_inv_map.get(pid, {}).get('invoice_date', ''):
-            latest_inv_map[pid] = {'invoice_date': d, 'fiscal_check': inv.get('fiscal_check', False)}
+            latest_inv_map[pid] = {
+                'invoice_date':    d,
+                'fiscal_check':    inv.get('fiscal_check', False),
+                'amount_total':    inv.get('amount_total') or 0.0,
+                'amount_residual': inv.get('amount_residual') or 0.0,
+                'payment_state':   inv.get('payment_state', ''),
+            }
 
     results = []
     for p in partners:
@@ -271,15 +278,29 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
         is_pdvsa = TAG_REPRESENTANTE_PDVSA in tags
         balance  = balance_map.get(pid, 0.0)
 
-        # PDVSA exclusion: skip only if the LATEST invoice is fiscal_check=True
-        # (means PDVSA is currently covering this partner's invoice — no reminder needed)
-        if is_pdvsa and latest_inv_map.get(pid, {}).get('fiscal_check', False):
-            results.append({
-                'id': pid, 'name': p['name'], 'vat': vat,
-                'is_pdvsa': is_pdvsa, 'balance': balance,
-                'skip_reason': 'PDVSA_FISCAL_EXCLUDED',
-            })
-            continue
+        # PDVSA exclusion rules (check latest posted invoice):
+        #   1. fiscal_check=True → PDVSA company covering this invoice
+        #   2. payment_state=partial AND paid ≥ 30% of invoice → customer already advanced ~35%
+        if is_pdvsa:
+            latest = latest_inv_map.get(pid, {})
+            excl_reason = None
+
+            if latest.get('fiscal_check', False):
+                excl_reason = 'PDVSA_FISCAL_EXCLUDED'
+            elif latest.get('payment_state') == 'partial':
+                total = latest.get('amount_total') or 0.0
+                residual = latest.get('amount_residual') or 0.0
+                paid_pct = ((total - residual) / total * 100) if total > 0 else 0
+                if paid_pct >= 30.0:
+                    excl_reason = 'PDVSA_ADVANCE_PAID'
+
+            if excl_reason:
+                results.append({
+                    'id': pid, 'name': p['name'], 'vat': vat,
+                    'is_pdvsa': is_pdvsa, 'balance': balance,
+                    'skip_reason': excl_reason,
+                })
+                continue
 
         if balance < MIN_BALANCE_USD:
             results.append({
