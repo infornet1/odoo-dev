@@ -231,7 +231,7 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
     partner_ids  = [p['id'] for p in partners]
     partner_map  = {p['id']: p for p in partners}
 
-    # All unpaid posted invoices for these partners
+    # All unpaid posted invoices — for balance aggregation
     invoices = models.execute_kw(db, uid, pw, 'account.move', 'search_read',
         [[
             ('partner_id',    'in', partner_ids),
@@ -239,17 +239,29 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
             ('state',         '=',  'posted'),
             ('payment_state', 'not in', ['paid', 'reversed']),
         ]],
-        {'fields': ['partner_id', 'amount_residual_signed', 'fiscal_check'], 'limit': 0})
+        {'fields': ['partner_id', 'amount_residual_signed', 'invoice_date'], 'limit': 0})
 
-    # Aggregate per partner
-    balance_map      = defaultdict(float)
-    has_fiscal_map   = defaultdict(bool)   # True if ANY invoice is fiscal_check=True
+    # All posted invoices (paid or not) — to find the latest invoice per PDVSA partner
+    all_posted = models.execute_kw(db, uid, pw, 'account.move', 'search_read',
+        [[
+            ('partner_id', 'in', partner_ids),
+            ('move_type',  'in', ['out_invoice', 'out_receipt']),
+            ('state',      '=',  'posted'),
+        ]],
+        {'fields': ['partner_id', 'fiscal_check', 'invoice_date'], 'limit': 0})
 
+    # Aggregate unpaid balance per partner
+    balance_map = defaultdict(float)
     for inv in invoices:
+        balance_map[inv['partner_id'][0]] += inv['amount_residual_signed']
+
+    # Find latest posted invoice per partner → determines fiscal exclusion + month context
+    latest_inv_map = {}   # pid -> {invoice_date, fiscal_check}
+    for inv in all_posted:
         pid = inv['partner_id'][0]
-        balance_map[pid]    += inv['amount_residual_signed']
-        if inv.get('fiscal_check'):
-            has_fiscal_map[pid] = True
+        d   = inv.get('invoice_date') or ''
+        if d > latest_inv_map.get(pid, {}).get('invoice_date', ''):
+            latest_inv_map[pid] = {'invoice_date': d, 'fiscal_check': inv.get('fiscal_check', False)}
 
     results = []
     for p in partners:
@@ -259,8 +271,9 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
         is_pdvsa = TAG_REPRESENTANTE_PDVSA in tags
         balance  = balance_map.get(pid, 0.0)
 
-        # Option A: hard exclude PDVSA partners with any fiscal invoice
-        if is_pdvsa and has_fiscal_map.get(pid):
+        # PDVSA exclusion: skip only if the LATEST invoice is fiscal_check=True
+        # (means PDVSA is currently covering this partner's invoice — no reminder needed)
+        if is_pdvsa and latest_inv_map.get(pid, {}).get('fiscal_check', False):
             results.append({
                 'id': pid, 'name': p['name'], 'vat': vat,
                 'is_pdvsa': is_pdvsa, 'balance': balance,
@@ -276,9 +289,23 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
             })
             continue
 
+        # For PDVSA: use the latest invoice's month for the message context
+        if is_pdvsa:
+            latest = latest_inv_map.get(pid, {})
+            inv_date_str = latest.get('invoice_date') or ''
+            if inv_date_str:
+                inv_month = int(inv_date_str[5:7])
+            else:
+                first_of_this_month = date.today().replace(day=1)
+                inv_month = (first_of_this_month - timedelta(days=1)).month
+            invoice_month_es = MONTHS_ES[inv_month]
+        else:
+            invoice_month_es = None
+
         results.append({
             'id': pid, 'name': p['name'], 'vat': vat,
             'is_pdvsa': is_pdvsa, 'balance': balance,
+            'invoice_month_es': invoice_month_es,
             'skip_reason': None,
         })
 
@@ -317,10 +344,10 @@ def build_send_list(partners, sheet_phones, state):
 # Step 5 — Build message
 # ============================================================================
 
-def build_message(partner, month_es):
+def build_message(partner):
     deuda = fmt_usd(partner['balance'])
     if partner['is_pdvsa']:
-        return TEMPLATE_PDVSA.format(last_month_es=month_es, deuda=deuda)
+        return TEMPLATE_PDVSA.format(last_month_es=partner['invoice_month_es'], deuda=deuda)
     return TEMPLATE_REP.format(deuda=deuda)
 
 # ============================================================================
@@ -366,11 +393,9 @@ def main():
 
     print("=" * 80)
     print(f"  WA INVOICE REMINDER")
-    print(f"  Date:  {date.today()}  |  Month context: {last_month_es()}")
+    print(f"  Date:  {date.today()}")
     print(f"  Mode:  {'*** DRY RUN ***' if dry_run else '*** LIVE — sending via MassivaMóvil ***'}")
     print("=" * 80)
-
-    month_es = last_month_es()
 
     log.info("Loading WA config...")
     wa_cfg = load_wa_config()
@@ -433,7 +458,7 @@ def main():
     sent = errors = 0
 
     for i, p in enumerate(to_send, 1):
-        message = build_message(p, month_es)
+        message = build_message(p)
         success = send_whatsapp(wa_cfg, p['phone'], message, dry_run)
 
         if success:
