@@ -185,6 +185,17 @@
 # ALLOWED: Direct arithmetic, try/except
 ```
 
+**`payslip` in salary rule context is a `Payslips(BrowsableObject)` wrapper — NOT the ORM record.**
+- `payslip.dict` → actual `hr.payslip` record (use this to access One2many fields)
+- `payslip.input_line_ids` → goes through `BrowsableObject.__getattr__` → returns `0.0` (WRONG)
+- Always use `payslip.dict.input_line_ids` to iterate input lines in salary rules
+
+**Conditional salary rules referenced in NET formulas must use `condition_select='none'`.**
+- If condition is `python` and evaluates to `False`, the rule is skipped and its code is never added to `localdict`
+- Any NET/GROSS formula that references that code by name will raise `NameError` → "Wrong python code defined"
+- Fix: set `condition_select='none'` + let the amount formula return `0.0` when the rule shouldn't fire
+- The payslip report template already filters `total_in_ves > 0`, so zero-amount lines are invisible
+
 ### Odoo 17 View Syntax
 ```xml
 <!-- OLD --> <div attrs="{'invisible': [('field', '=', 0)]}">

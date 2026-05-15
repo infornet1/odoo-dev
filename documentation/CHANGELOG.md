@@ -4,6 +4,45 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-15 — Fix BONO_CALIBRACION Salary Rule Crashing Payslip Generation
+
+**Type:** Bug fix | **Status:** Production ✅ Testing ✅
+
+### Symptom
+Clicking "Generate Payslips" on any V2 batch (e.g. MAYO15) raised:
+> "Invalid Operation — Wrong python condition/code defined for salary rule Bono Calibracion Glenda (BONO_CALIBRACION)"
+
+### Root Cause (two compounding bugs)
+
+**Bug 1 — Skipped-rule NameError in VE_NET_V2:**
+`BONO_CALIBRACION` had `condition_select='python'`. When an employee has no `CALIBRACION_GLENDA` input line, the condition evaluates to `False`, the rule is skipped, and its code is never added to `localdict`. `VE_NET_V2`'s formula `result = VE_GROSS_V2 + VE_TOTAL_DED_V2 + BONO_CALIBRACION` then raises `NameError` — re-wrapped as the misleading "Wrong python condition defined" error.
+
+**Bug 2 — Wrong `payslip` object access in production formula:**
+The production `amount_python_compute` used `payslip.input_line_ids` directly. In salary rule context, `payslip` is a `Payslips(BrowsableObject)` wrapper — accessing `.input_line_ids` on it returns `0.0` (BrowsableObject fallback). Iterating `for i in 0.0` raises `TypeError` → "Wrong python code defined".
+
+### Fixes Applied (XML-RPC to production, Odoo shell to testing)
+
+| Fix | Field | Change |
+|-----|-------|--------|
+| 1 | `condition_select` | `'python'` → `'none'` (rule always runs, always seeds localdict) |
+| 2 | `amount_python_compute` | Replace with `payslip.dict.input_line_ids` pattern |
+
+**Correct amount formula (both envs):**
+```python
+slip = payslip.dict
+sessions = sum(l.amount for l in slip.input_line_ids if l.code == 'CALIBRACION_GLENDA')
+monthly = contract.wage or 0.0
+result = sessions * (monthly / 21.75)
+```
+
+For employees without calibration inputs `result = 0.0`; report template filters `total_in_ves > 0` so the line is invisible.
+
+### Key Pattern (documented in CLAUDE.md Key Technical Patterns)
+- Always use `payslip.dict.input_line_ids` — never `payslip.input_line_ids`
+- Any rule referenced by name in a NET/GROSS formula must use `condition_select='none'`; return `0.0` in the amount formula for the "don't apply" case
+
+---
+
 ## 2026-05-14 — Mora Policy Page Moved to Production Domain (ueipab_ai_agent v17.0.1.41.4)
 
 **Type:** Infrastructure fix | **Status:** Production ✅

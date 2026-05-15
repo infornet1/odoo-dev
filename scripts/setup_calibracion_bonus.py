@@ -165,6 +165,10 @@ RULE_SEQUENCE = 4  # Before VE_GROSS_V2 (seq=5); ties with VE_CESTA_TICKET_V2 ar
 # Condition: only fires when a CALIBRACION_GLENDA input exists with amount > 0
 # Using payslip.dict to access the actual hr.payslip record and its input_line_ids.
 # This mirrors the pattern used in VE_LOAN_DED_V2.
+# NOTE: condition_select must be 'none' (not 'python') so the rule always runs and always
+# seeds localdict with BONO_CALIBRACION = 0.  If condition_select='python' and an employee
+# has no CALIBRACION_GLENDA input, the rule is skipped → BONO_CALIBRACION absent from
+# localdict → VE_NET_V2 raises NameError → "Wrong python code defined" error.
 CONDITION_PYTHON = (
     "slip = payslip.dict\n"
     "result = sum(l.amount for l in slip.input_line_ids if l.code == 'CALIBRACION_GLENDA') > 0"
@@ -186,7 +190,7 @@ rule_vals = {
     'code': 'BONO_CALIBRACION',
     'category_id': cat_alw.id,
     'sequence': RULE_SEQUENCE,
-    'condition_select': 'python',
+    'condition_select': 'none',   # must be 'none' — see comment above CONDITION_PYTHON
     'condition_python': CONDITION_PYTHON,
     'amount_select': 'code',
     'amount_python_compute': AMOUNT_PYTHON,
