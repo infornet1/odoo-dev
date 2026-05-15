@@ -57,6 +57,7 @@ SHEET_TAB      = 'Customers'
 
 TAG_REPRESENTANTE       = 25
 TAG_REPRESENTANTE_PDVSA = 26
+TAG_VIP                 = 30   # VIP customers — excluded from automated sends
 
 MIN_BALANCE_USD  = 1.00   # skip near-zero rounding residuals
 ANTI_SPAM_MIN    = 120    # seconds
@@ -283,6 +284,15 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
         tags = p.get('category_id') or []
         is_pdvsa = TAG_REPRESENTANTE_PDVSA in tags
         balance  = balance_map.get(pid, 0.0)
+
+        # Exclude VIP customers — handled manually, not via automated blast
+        if TAG_VIP in tags:
+            results.append({
+                'id': pid, 'name': p['name'], 'vat': vat,
+                'is_pdvsa': is_pdvsa, 'balance': balance,
+                'skip_reason': 'VIP_EXCLUDED',
+            })
+            continue
 
         # Exclude partners who are also active employees (match by VAT = identification_id)
         if vat and vat in employee_vats:

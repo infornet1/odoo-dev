@@ -8,6 +8,7 @@ _logger = logging.getLogger(__name__)
 
 TAG_REP   = 25
 TAG_PDVSA = 26
+TAG_VIP   = 30
 MIN_BALANCE = 1.00
 LOGO_URL  = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RATE_URL  = 'https://odoo.ueipab.edu.ve/tasas-de-cambios'
@@ -34,6 +35,13 @@ class InvoiceReminderWizard(models.TransientModel):
         ('rep',   'Representante Only'),
         ('pdvsa', 'PDVSA Only'),
     ], string='Segment', default='both', required=True)
+
+    include_vip = fields.Boolean(
+        string='Include VIP Customers',
+        default=False,
+        help='VIP customers are excluded from automated sends. '
+             'Enable this to include them in a manual send.',
+    )
 
     line_ids = fields.One2many(
         'account.invoice.reminder.line', 'wizard_id',
@@ -71,14 +79,15 @@ class InvoiceReminderWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        res['line_ids'] = self._compute_lines('both')
+        res['line_ids'] = self._compute_lines('both', include_vip=False)
         return res
 
-    @api.onchange('tag_filter')
+    @api.onchange('tag_filter', 'include_vip')
     def _onchange_tag_filter(self):
-        self.line_ids = [(5, 0, 0)] + self._compute_lines(self.tag_filter)
+        self.line_ids = [(5, 0, 0)] + self._compute_lines(
+            self.tag_filter, include_vip=self.include_vip)
 
-    def _compute_lines(self, tag_filter):
+    def _compute_lines(self, tag_filter, include_vip=False):
         tags = {
             'both':  [TAG_REP, TAG_PDVSA],
             'rep':   [TAG_REP],
@@ -139,8 +148,11 @@ class InvoiceReminderWizard(models.TransientModel):
             latest  = latest_map.get(pid, {})
 
             skip_reason = False
+            is_vip = TAG_VIP in p.category_id.ids
 
-            if vat and vat in employee_vats:
+            if is_vip and not include_vip:
+                skip_reason = 'VIP_EXCLUDED'
+            elif vat and vat in employee_vats:
                 skip_reason = 'IS_EMPLOYEE'
             elif is_pdvsa and latest.get('fiscal_check'):
                 skip_reason = 'PDVSA_FISCAL_EXCLUDED'
@@ -173,7 +185,8 @@ class InvoiceReminderWizard(models.TransientModel):
     # ── Actions ───────────────────────────────────────────────────────────
 
     def action_refresh(self):
-        self.line_ids = [(5, 0, 0)] + self._compute_lines(self.tag_filter)
+        self.line_ids = [(5, 0, 0)] + self._compute_lines(
+            self.tag_filter, include_vip=self.include_vip)
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
 

@@ -13,6 +13,7 @@
         <group invisible="state == 'done'">
           <group string="Configuración">
             <field name="tag_filter" widget="radio" options="{'horizontal': true}"/>
+            <field name="include_vip" widget="boolean_toggle"/>
           </group>
           <group string="Resumen">
             <field name="partner_count" string="Enviarán email"/>
