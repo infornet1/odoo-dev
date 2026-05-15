@@ -387,7 +387,29 @@ def build_message(partner):
     return TEMPLATE_REP.format(deuda=deuda)
 
 # ============================================================================
-# Step 6 — Send
+# Step 6 — Chatter logging
+# ============================================================================
+
+def log_chatter(db, uid, pw, models, partner_id, partner, dry_run):
+    """Post an internal note on the partner's chatter after a successful WA send."""
+    if dry_run:
+        return
+    tag_label = 'Representante PDVSA' if partner['is_pdvsa'] else 'Representante'
+    body = (
+        f'<p>📨 <b>WA reminder sent</b> — '
+        f'Balance <b>{fmt_usd(partner["balance"])}</b> '
+        f'({tag_label}) via Glenda (+584148321989)</p>'
+    )
+    try:
+        models.execute_kw(db, uid, pw, 'res.partner', 'message_post',
+            [[partner_id]],
+            {'body': body, 'message_type': 'comment', 'subtype_xmlid': 'mail.mt_note'})
+    except Exception as e:
+        log.warning("Chatter log failed for %s: %s", partner['name'], e)
+
+
+# ============================================================================
+# Step 7 — Send
 # ============================================================================
 
 def send_whatsapp(wa_cfg, phone, message, dry_run):
@@ -499,6 +521,7 @@ def main():
 
         if success:
             mark_sent(state, p['id'], p['balance'])
+            log_chatter(db, uid, pw, models, p['id'], p, dry_run)
             sent += 1
             tag = 'PDVSA' if p['is_pdvsa'] else 'REP '
             log.info("[%d/%d] SENT  [%s] %s  %s  %s",
