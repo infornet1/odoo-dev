@@ -16,8 +16,7 @@
           </group>
           <group string="Resumen">
             <field name="partner_count" string="Enviarán email"/>
-            <field name="total_balance" string="Balance total (USD)" widget="monetary"
-                   options="{'currency_field': false}"/>
+            <field name="total_balance" string="Balance total (USD)"/>
             <field name="skipped_count" string="Excluidos / sin email"/>
           </group>
         </group>
