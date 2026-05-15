@@ -231,6 +231,12 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
     partner_ids  = [p['id'] for p in partners]
     partner_map  = {p['id']: p for p in partners}
 
+    # Employee VATs — partners whose cedula matches an active employee are excluded
+    employees = models.execute_kw(db, uid, pw, 'hr.employee', 'search_read',
+        [[('active', '=', True), ('identification_id', '!=', False)]],
+        {'fields': ['identification_id'], 'limit': 0})
+    employee_vats = {(e['identification_id'] or '').strip().upper() for e in employees}
+
     # All unpaid posted invoices — for balance aggregation
     invoices = models.execute_kw(db, uid, pw, 'account.move', 'search_read',
         [[
@@ -277,6 +283,15 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
         tags = p.get('category_id') or []
         is_pdvsa = TAG_REPRESENTANTE_PDVSA in tags
         balance  = balance_map.get(pid, 0.0)
+
+        # Exclude partners who are also active employees (match by VAT = identification_id)
+        if vat and vat in employee_vats:
+            results.append({
+                'id': pid, 'name': p['name'], 'vat': vat,
+                'is_pdvsa': is_pdvsa, 'balance': balance,
+                'skip_reason': 'IS_EMPLOYEE',
+            })
+            continue
 
         # PDVSA exclusion rules (check latest posted invoice):
         #   1. fiscal_check=True → PDVSA company covering this invoice
