@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Payroll Enhancements',
-    'version': '17.0.1.68.2',
+    'version': '17.0.1.69.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Enhanced payroll batch with total net, disbursement reports, advance payments, and custom reports menu',
     'description': """
@@ -101,6 +101,7 @@ Advance Payment System (Pago Adelanto):
         'wizard/payroll_requisition_wizard_view.xml',
         'wizard/calibracion_bonus_wizard_view.xml',
         'wizard/liquidacion_v2_forecast_wizard_view.xml',
+        'wizard/invoice_reminder_wizard_view.xml',
 
         # 3. Report Templates & Actions
         'reports/disbursement_list_report.xml',

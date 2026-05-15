@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ── Wizard Form View ── -->
+  <record id="view_invoice_reminder_wizard_form" model="ir.ui.view">
+    <field name="name">account.invoice.reminder.wizard.form</field>
+    <field name="model">account.invoice.reminder.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Recordatorio de Saldo — Envío por Email">
+        <field name="state" invisible="1"/>
+
+        <!-- PREVIEW STATE -->
+        <group invisible="state == 'done'">
+          <group string="Configuración">
+            <field name="tag_filter" widget="radio" options="{'horizontal': true}"/>
+          </group>
+          <group string="Resumen">
+            <field name="partner_count" string="Enviarán email"/>
+            <field name="total_balance" string="Balance total (USD)" widget="monetary"
+                   options="{'currency_field': false}"/>
+            <field name="skipped_count" string="Excluidos / sin email"/>
+          </group>
+        </group>
+
+        <!-- DONE STATE -->
+        <group invisible="state != 'done'" string="Resultado">
+          <field name="sent_count"     string="✓ Enviados"/>
+          <field name="failed_count"   string="✗ Fallidos"/>
+          <field name="no_email_count" string="Sin email"/>
+        </group>
+
+        <!-- PARTNER TABLE -->
+        <notebook>
+          <page string="Partners">
+            <field name="line_ids" nolabel="1">
+              <tree string="Partners"
+                    decoration-success="status == 'sent'"
+                    decoration-danger="status == 'failed'"
+                    decoration-muted="not will_send">
+                <field name="selected" widget="boolean_toggle"/>
+                <field name="partner_id" readonly="1"/>
+                <field name="tag" readonly="1"/>
+                <field name="balance" readonly="1" string="Saldo (USD)"/>
+                <field name="email" readonly="1"/>
+                <field name="will_send" readonly="1" string="Elegible"/>
+                <field name="skip_reason" readonly="1" string="Motivo exclusión" optional="show"/>
+                <field name="status" readonly="1" widget="badge"
+                       decoration-success="status == 'sent'"
+                       decoration-danger="status == 'failed'"
+                       decoration-warning="status == 'no_email'"/>
+                <field name="error_msg" readonly="1" optional="hide"/>
+              </tree>
+            </field>
+          </page>
+        </notebook>
+
+        <footer>
+          <!-- Preview state buttons -->
+          <button name="action_send" string="Enviar Emails"
+                  type="object" class="btn-primary"
+                  invisible="state == 'done'"
+                  confirm="¿Confirma el envío del recordatorio a los clientes seleccionados?"/>
+          <button name="action_refresh" string="Actualizar Lista"
+                  type="object" class="btn-secondary"
+                  invisible="state == 'done'"/>
+          <button name="action_select_all" string="Seleccionar Todo"
+                  type="object" class="btn-secondary"
+                  invisible="state == 'done'"/>
+          <button name="action_deselect_all" string="Deseleccionar Todo"
+                  type="object" class="btn-secondary"
+                  invisible="state == 'done'"/>
+          <!-- Done state buttons -->
+          <button string="Cerrar" class="btn-primary"
+                  special="cancel"
+                  invisible="state != 'done'"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <!-- ── Action ── -->
+  <record id="action_invoice_reminder_wizard" model="ir.actions.act_window">
+    <field name="name">Recordatorio de Saldo por Email</field>
+    <field name="res_model">account.invoice.reminder.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <!-- ── Menu: Accounting > Customers > Send Balance Reminder ── -->
+  <menuitem id="menu_invoice_reminder_wizard"
+            name="Recordatorio de Saldo (Email)"
+            parent="account.menu_finance_receivables"
+            action="action_invoice_reminder_wizard"
+            sequence="99"/>
+
+</odoo>
