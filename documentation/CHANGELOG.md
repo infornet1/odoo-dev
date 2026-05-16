@@ -4,6 +4,42 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-16 — Pagos Processor: Venezuelan Bank Code Detection
+
+**Type:** Enhancement | **Script:** `scripts/pagos_receipt_processor.py`
+
+### Problem
+When a payment receipt contained a Venezuelan bank account number (e.g. `"0174 **** **** 74138559"`), the bank was not detected. The `0174` prefix identifies **Banplus**, but the extractor only matched text keywords like `"banplus"`, `"venezuela"`, etc. — not numeric bank codes. The processor fell back to `fallback_veb` (Banco Venezuela journal 162) instead of the correct Banplus journal (164).
+
+**Triggered on:** Maria Nieto's receipt (Freescout conv #44779, 2026-05-16) — payment PBDV/2026/00897 was created on wrong journal; manually corrected to PBPLUS/2026/00021.
+
+### Fix
+Added `_BANK_CODE_MAP` dict with 18 Venezuelan bank code prefixes. Three extraction paths updated:
+
+| Path | Change |
+|------|--------|
+| Strategy A (regex) | After keyword scan fails, searches for `\b0NNN\b` pattern and maps via `_BANK_CODE_MAP` |
+| Strategy B (GPT text) | Prompt now lists bank code → name mappings explicitly |
+| Strategy C (GPT vision) | Same bank code hints added to image analysis prompt |
+
+**Key codes mapped:**
+
+| Code | Bank | Journal keyword |
+|------|------|----------------|
+| 0102 | Banco de Venezuela | venezuela |
+| 0105 | Mercantil | mercantil |
+| 0108 | Provincial/BBVA | provincial |
+| 0134 | Banesco | banesco |
+| 0166 | Banplus | banplus |
+| 0172 | Bancamiga | bancamiga |
+| 0174 | Banplus | banplus |
+| 0175 | Bicentenario | bicentenario |
+
+### Sync status
+Both `testing` and `production` `ai_agent.payment_journal_map` are identical — no config changes needed. Script change takes effect on next cron run (15 min).
+
+---
+
 ## 2026-05-15 — Fix BONO_CALIBRACION Salary Rule Crashing Payslip Generation
 
 **Type:** Bug fix | **Status:** Production ✅ Testing ✅

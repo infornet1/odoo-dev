@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-11 (v3)
+**Last Updated:** 2026-05-16 (v4)
 
 ## Core Instructions
 
@@ -251,6 +251,7 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **`pagos_receipt_processor.py`:** standalone script for Freescout unassigned convs; same pipeline via XML-RPC; image from `_embedded.attachments[].fileUrl` or body `<img>` regex; Freescout API `POST /conversations/{id}/threads` for note; subject prefix `[GLENDA]`; cron `/etc/cron.d/pagos_receipt_processor` every 15 min, production LIVE; sets `bank_reference` (bank ref number), `ref` (FS subject/communication), `date`+`effective_date` (from receipt, 2-digit year safe); only `state=published` convs processed; payment auto-confirmed via `action_post()` (not left as draft); `ai_agent.openai_api_key` prod param id=71, testing param id=88
 - **Sender filter (2-tier):** `SYSTEM_EMAILS` hard-blocks automation accounts (`finanzas@`, `pagos@`, `mailer-daemon`, etc.) unconditionally; other `ueipab.edu.ve` senders (employees) get an early Odoo `customer_rank > 0` lookup — processed if they are also a parent/customer (e.g. employee with child enrolled), skipped silently otherwise; pre-fetched partner reused downstream (no double XML-RPC call)
 - **`action_post()` None marshal quirk:** Odoo 17 XML-RPC server marshals `action_post` return value with `allow_none=False` — raises `Fault("cannot marshal None")` even when the post succeeded; script catches this specific Fault, re-reads payment `state`, treats as success if `state == 'posted'`
+- **Bank code detection:** `_BANK_CODE_MAP` maps Venezuelan 4-digit account prefixes to bank keywords (e.g. `0174`/`0166` → `banplus`, `0102` → `venezuela`, `0105` → `mercantil`, `0172` → `bancamiga`). Strategy A regex scans `\b0NNN\b` as fallback after text keywords fail. GPT B/C prompts also include explicit code→name hints. Prevents wrong-journal fallback when receipt shows account number but no bank name text.
 
 ### Glenda BCV Rate Context
 

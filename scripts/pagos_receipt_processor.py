@@ -407,6 +407,29 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice, 
 
 # --- Strategy A: Regex for Venezuelan bank auto-notifications ---
 
+# Venezuelan bank code prefixes (first 4 digits of account/phone numbers)
+_BANK_CODE_MAP = {
+    '0102': 'venezuela',
+    '0104': 'venezolano',
+    '0105': 'mercantil',
+    '0108': 'provincial',
+    '0114': 'bancaribe',
+    '0115': 'exterior',
+    '0116': 'occidental',
+    '0128': 'caroni',
+    '0134': 'banesco',
+    '0137': 'sofitasa',
+    '0146': 'bangente',
+    '0151': 'bfc',
+    '0156': '100%banco',
+    '0163': 'tesoro',
+    '0166': 'banplus',
+    '0172': 'bancamiga',
+    '0174': 'banplus',
+    '0175': 'bicentenario',
+    '0191': 'bnc',
+}
+
 _BANK_PATTERNS = [
     # BBVA Provinet / similar structured notifications
     (re.compile(r'Monto[:\s]+(?:Bs\.?\s*)?([\d.,]+)', re.I), 'monto_ves'),
@@ -464,6 +487,13 @@ def regex_extract(text):
                         'plaza', 'provincial', 'bbva', 'cashea', 'zelle'):
             if keyword in text_lower:
                 banco = keyword.capitalize()
+                break
+    # Detect bank from 4-digit account code (e.g. "0174 **** **** 74138559" → banplus)
+    if not banco:
+        for code_match in re.finditer(r'\b(0\d{3})\b', text):
+            mapped = _BANK_CODE_MAP.get(code_match.group(1))
+            if mapped:
+                banco = mapped
                 break
 
     # Detect tipo_pago
@@ -525,7 +555,10 @@ def gpt_extract_text(text, api_key):
         "Analiza este texto de correo electrónico venezolano. "
         "Si contiene datos de un comprobante de pago (monto, banco, referencia), extráelos. "
         "El campo 'monto' debe ser número decimal. Si el texto NO es un comprobante de pago "
-        "responde con is_receipt=false y el resto en null."
+        "responde con is_receipt=false y el resto en null. "
+        "Para el campo 'banco': si ves un número de cuenta con prefijo 0174 o 0166 → 'banplus'; "
+        "0102 → 'venezuela'; 0105 → 'mercantil'; 0108 o 0177 → 'provincial'; "
+        "0172 → 'bancamiga'; 0175 → 'bicentenario'; 0134 → 'banesco'."
     )
     try:
         resp = requests.post(
@@ -590,7 +623,10 @@ def gpt_extract_image(image_url, api_key):
         "Analiza esta imagen venezolana. Si es comprobante de pago (transferencia, "
         "pago móvil, Zelle, biopago, Cashea, app bancaria), extrae los datos. "
         "El campo 'monto' debe ser número decimal puro. "
-        "Si NO es comprobante, responde con is_receipt=false y el resto en null."
+        "Si NO es comprobante, responde con is_receipt=false y el resto en null. "
+        "Para el campo 'banco': si ves un número de cuenta con prefijo 0174 o 0166 → 'banplus'; "
+        "0102 → 'venezuela'; 0105 → 'mercantil'; 0108 o 0177 → 'provincial'; "
+        "0172 → 'bancamiga'; 0175 → 'bicentenario'; 0134 → 'banesco'."
     )
     try:
         resp = requests.post(
