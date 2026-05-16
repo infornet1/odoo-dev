@@ -48,11 +48,31 @@ python3 customer_matching_daily.py --skip-odoo     # skip Odoo bounce log sync
 ## Akdemia2526 Sheet Structure
 
 - **Spreadsheet:** `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA` (Customer Database Odoo)
-- **Tab:** `Akdemia2526` (227 rows, headers in row 3)
-- **Key email columns:** AU = `Correo electronico de Representante` (parent 1), BX = same (parent 2)
-- **Key name columns:** AB/AE = parent 1 name/surname, BE/BH = parent 2 name/surname
-- **Key cedula columns:** AH = parent 1 cedula, BK = parent 2 cedula
+- **Tab:** `Akdemia2526` (230 rows, headers in row 3)
+- **Key cedula columns (API format):** AJ = parent 1, BO = parent 2, CT = parent 3
+- **Key email columns (API format):** AY = parent 1, CD = parent 2, DI = parent 3
+- **Cedula format in sheet:** `V-XXXXXXXX` (with dash) — differs from Customers!A which uses `VXXXXXXXX` (no dash)
 - **Data starts:** Row 4 (rows 1-2 are school name/year)
+
+> **⚠️ Column layout changed when migrating from XLS scraper to `akdemia_api_sync.py` (API).**
+> Old XLS positions (AH/BK cedula, AU/BX email) are now "Código postal" and "Profesión" — do not use them.
+> **TODO:** `ai_agent_resolution_bridge.py` still uses stale indices (`email_col_indices=[46,75,104]`, `paired_columns=[(33,46),(62,75),(91,104)]`) — needs update to `[50,81,112]` / `[(35,50),(66,81),(97,112)]` before Phase 5 email sync will read correct columns.
+
+## Customers Sheet Structure
+
+- **Tab:** `Customers` (199 data rows, headers in rows 1-2, data from row 3)
+- **Column A:** VAT (`VXXXXXXXX` format — no dash)
+- **Column B:** Parent name
+- **Column C:** Status
+- **Column D:** Student name(s) (text list)
+- **Column E:** Student count per parent — COUNTIF formula across all 3 parent cedula slots in Akdemia2526
+- **Column J:** Email(s) (semicolon-separated, managed by resolution bridge)
+
+**Column E formula (applied to all data rows):**
+```
+=COUNTIF(Akdemia2526!AJ:AJ,"V-"&MID(A3,2,99))+COUNTIF(Akdemia2526!BO:BO,"V-"&MID(A3,2,99))+COUNTIF(Akdemia2526!CT:CT,"V-"&MID(A3,2,99))
+```
+The `"V-"&MID(A3,2,99)` converts `V14641877` → `V-14641877` to match Akdemia's storage format.
 
 ## Akdemia Email Sync Script (Implemented 2026-02-08)
 
