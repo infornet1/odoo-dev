@@ -63,10 +63,13 @@ ODOO_CONFIGS = {
 
 PAGOS_MAILBOX_ID = 2
 PROCESSED_SUBJECT_PREFIX = '[GLENDA]'
-INTERNAL_DOMAINS = {'ueipab.edu.ve'}     # skip internal senders
-INTERNAL_EMAILS  = {'finanzas@ueipab.edu.ve', 'recursoshumanos@ueipab.edu.ve',
-                    'compras@ueipab.edu.ve', 'pagos@ueipab.edu.ve',
-                    'mailer-daemon@googlemail.com'}
+INTERNAL_DOMAIN = 'ueipab.edu.ve'
+# Hard-blocked system/automation accounts — never touch these regardless of content
+SYSTEM_EMAILS = {
+    'finanzas@ueipab.edu.ve', 'recursoshumanos@ueipab.edu.ve',
+    'compras@ueipab.edu.ve', 'pagos@ueipab.edu.ve',
+    'mailer-daemon@googlemail.com',
+}
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(SCRIPT_DIR, 'pagos_processor_state.json')
@@ -323,7 +326,8 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice, 
 
     currency_id = 2 if moneda in ('VES', 'VEB') else 1
 
-    fecha_str = (fecha or '').split()[0].strip()
+    _fecha_parts = (fecha or '').split()
+    fecha_str = _fecha_parts[0].strip() if _fecha_parts else ''
     payment_date = datetime.now().strftime('%Y-%m-%d')
     for fmt in ('%Y-%m-%d', '%d/%m/%y', '%d-%m-%y', '%d/%m/%Y', '%d-%m-%Y'):
         try:
@@ -367,14 +371,35 @@ def odoo_create_draft_payment(partner_id, receipt, journal_id, matched_invoice, 
 
     try:
         payment_id = m.execute_kw(db, uid, pwd, 'account.payment', 'create', [vals])
-        m.execute_kw(db, uid, pwd, 'account.payment', 'action_post', [[payment_id]])
-        base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
-        odoo_url = f"{base_url}/web#id={payment_id}&model=account.payment&view_type=form"
-        logger.info("  Payment #%d confirmed (journal=%d, %s %s)", payment_id, journal_id, monto, moneda)
-        return payment_id, odoo_url
     except Exception as e:
-        logger.error("  Failed to create/confirm payment: %s", e)
+        logger.error("  Failed to create payment: %s", e)
         return None, None
+
+    try:
+        m.execute_kw(db, uid, pwd, 'account.payment', 'action_post', [[payment_id]])
+    except xmlrpc.client.Fault as e:
+        # action_post() may return a dict with None values that Odoo's XML-RPC
+        # server can't serialize (allow_none=False server-side). The post itself
+        # usually succeeds — verify state before treating as failure.
+        if 'cannot marshal None' in str(e):
+            rows = m.execute_kw(db, uid, pwd, 'account.payment', 'read',
+                                [[payment_id]], {'fields': ['state']})
+            if rows and rows[0].get('state') == 'posted':
+                logger.info("  action_post serialization warning (payment IS posted)")
+            else:
+                logger.error("  action_post failed and payment not posted: %s", e)
+                return payment_id, None
+        else:
+            logger.error("  action_post failed: %s", e)
+            return payment_id, None
+    except Exception as e:
+        logger.error("  action_post failed: %s", e)
+        return payment_id, None
+
+    base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
+    odoo_url = f"{base_url}/web#id={payment_id}&model=account.payment&view_type=form"
+    logger.info("  Payment #%d confirmed (journal=%d, %s %s)", payment_id, journal_id, monto, moneda)
+    return payment_id, odoo_url
 
 # ============================================================================
 # Receipt extraction — 3 strategies
@@ -722,14 +747,15 @@ def build_note_success(partner_name, receipt, payment_id, odoo_url,
 # Main conversation processor
 # ============================================================================
 
-def is_internal_sender(email):
-    if not email:
+def is_system_sender(email):
+    """Hard-block: automated system accounts that must never be processed."""
+    return bool(email) and email.lower() in SYSTEM_EMAILS
+
+def is_internal_domain(email):
+    """True if sender is from the school's internal domain (but not a system account)."""
+    if not email or '@' not in email:
         return False
-    email_lower = email.lower()
-    if email_lower in INTERNAL_EMAILS:
-        return True
-    domain = email_lower.split('@')[-1] if '@' in email_lower else ''
-    return domain in INTERNAL_DOMAINS
+    return email.lower().split('@')[-1] == INTERNAL_DOMAIN
 
 
 def process_conversation(conv, processed_ids, api_key):
@@ -753,10 +779,21 @@ def process_conversation(conv, processed_ids, api_key):
         logger.info("  Already in state file, skipping")
         return 'skipped'
 
-    # Skip internal senders
-    if is_internal_sender(customer_email):
-        logger.info("  Internal sender — skipping")
+    # Hard-block automated system accounts
+    if is_system_sender(customer_email):
+        logger.info("  System sender — skipping")
         return 'skipped'
+
+    # For internal-domain senders (employees): only proceed if they are also a
+    # customer in Odoo (employee who is a parent with a child enrolled).
+    # Pre-fetch the partner here to avoid a duplicate lookup later.
+    pre_fetched_partner = None
+    if is_internal_domain(customer_email):
+        pre_fetched_partner = odoo_find_partner_by_email(customer_email)
+        if not pre_fetched_partner:
+            logger.info("  Internal sender with no customer record — skipping")
+            return 'skipped'
+        logger.info("  Internal sender IS a customer (%s) — proceeding", pre_fetched_partner['name'])
 
     # Get full conversation with threads
     try:
@@ -795,7 +832,7 @@ def process_conversation(conv, processed_ids, api_key):
                 receipt.get('_source'))
 
     # --- Partner lookup ---
-    partner = odoo_find_partner_by_email(customer_email)
+    partner = pre_fetched_partner or odoo_find_partner_by_email(customer_email)
     if not partner:
         logger.info("  Partner not found for %s", customer_email)
         note = build_note_no_partner(customer_email, conv_number)
