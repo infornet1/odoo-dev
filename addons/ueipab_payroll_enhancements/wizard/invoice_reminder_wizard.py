@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import subprocess
 from collections import defaultdict
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -12,6 +13,8 @@ TAG_VIP   = 30
 MIN_BALANCE = 1.00
 LOGO_URL  = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RATE_URL  = 'https://odoo.ueipab.edu.ve/tasas-de-cambios'
+WA_SCRIPT = '/opt/odoo-dev/scripts/wa_invoice_reminder.py'
+WA_LOG    = '/var/log/wa_invoice_reminder.log'
 MONTHS_ES = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',6:'junio',
              7:'julio',8:'agosto',9:'septiembre',10:'octubre',11:'noviembre',12:'diciembre'}
 
@@ -64,15 +67,19 @@ class InvoiceReminderWizard(models.TransientModel):
     failed_count  = fields.Integer(string='Failed',  default=0)
     no_email_count = fields.Integer(string='No Email', default=0)
 
+    wa_queued_at  = fields.Datetime(string='WA en cola desde', readonly=True)
+    wa_count      = fields.Integer(string='WA: enviarán', compute='_compute_stats')
+
     # ── Computed ──────────────────────────────────────────────────────────
 
-    @api.depends('line_ids.will_send', 'line_ids.balance', 'line_ids.selected')
+    @api.depends('line_ids.will_send', 'line_ids.wa_will_send', 'line_ids.balance', 'line_ids.selected')
     def _compute_stats(self):
         for wiz in self:
             sendable = wiz.line_ids.filtered(lambda l: l.will_send and l.selected)
             wiz.partner_count = len(sendable)
             wiz.total_balance = sum(sendable.mapped('balance'))
             wiz.skipped_count = len(wiz.line_ids) - len(sendable)
+            wiz.wa_count = len(wiz.line_ids.filtered(lambda l: l.wa_will_send and l.selected))
 
     # ── Default / onchange ────────────────────────────────────────────────
 
@@ -140,44 +147,54 @@ class InvoiceReminderWizard(models.TransientModel):
 
         lines = []
         for p in partners:
-            pid     = p.id
-            vat     = (p.vat or '').strip().upper()
-            balance = balance_map.get(pid, 0.0)
+            pid      = p.id
+            vat      = (p.vat or '').strip().upper()
+            balance  = balance_map.get(pid, 0.0)
             is_pdvsa = TAG_PDVSA in p.category_id.ids
             tag_label = 'PDVSA' if is_pdvsa else 'REP'
-            latest  = latest_map.get(pid, {})
+            latest   = latest_map.get(pid, {})
+            is_vip   = TAG_VIP in p.category_id.ids
 
-            skip_reason = False
-            is_vip = TAG_VIP in p.category_id.ids
-
+            # Business logic exclusions — apply to both email and WA
+            biz_skip = False
             if is_vip and not include_vip:
-                skip_reason = 'VIP_EXCLUDED'
+                biz_skip = 'VIP_EXCLUDED'
             elif vat and vat in employee_vats:
-                skip_reason = 'IS_EMPLOYEE'
+                biz_skip = 'IS_EMPLOYEE'
             elif is_pdvsa and latest.get('fiscal_check'):
-                skip_reason = 'PDVSA_FISCAL_EXCLUDED'
+                biz_skip = 'PDVSA_FISCAL_EXCLUDED'
             elif is_pdvsa and latest.get('payment_state') == 'partial':
-                total = latest.get('amount_total') or 0.0
+                total    = latest.get('amount_total') or 0.0
                 residual = latest.get('amount_residual') or 0.0
                 if total > 0 and ((total - residual) / total * 100) >= 30.0:
-                    skip_reason = 'PDVSA_ADVANCE_PAID'
+                    biz_skip = 'PDVSA_ADVANCE_PAID'
+            if not biz_skip and balance < MIN_BALANCE:
+                biz_skip = 'BELOW_THRESHOLD'
 
-            if not skip_reason and balance < MIN_BALANCE:
-                skip_reason = 'BELOW_THRESHOLD'
+            # Channel eligibility (independent)
+            will_send    = not biz_skip and bool(p.email)
+            wa_will_send = not biz_skip and bool(p.mobile)
 
-            will_send = not skip_reason and bool(p.email)
-            if not skip_reason and not p.email:
+            # Display skip reason: business reason takes priority
+            skip_reason = biz_skip
+            if not biz_skip and not p.email and not p.mobile:
+                skip_reason = 'NO_CONTACT'
+            elif not biz_skip and not p.email:
                 skip_reason = 'NO_EMAIL'
+            elif not biz_skip and not p.mobile:
+                skip_reason = 'NO_MOBILE'
 
             lines.append((0, 0, {
-                'partner_id':   pid,
-                'tag':          tag_label,
-                'balance':      balance,
-                'email':        p.email or '',
-                'will_send':    will_send,
-                'skip_reason':  skip_reason or '',
-                'selected':     will_send,
-                'status':       'pending',
+                'partner_id':    pid,
+                'tag':           tag_label,
+                'balance':       balance,
+                'email':         p.email or '',
+                'mobile':        p.mobile or '',
+                'will_send':     will_send,
+                'wa_will_send':  wa_will_send,
+                'skip_reason':   skip_reason or '',
+                'selected':      will_send or wa_will_send,
+                'status':        'pending',
             }))
 
         return lines
@@ -232,6 +249,26 @@ class InvoiceReminderWizard(models.TransientModel):
             'failed_count':  failed,
             'no_email_count': no_email,
         })
+        return {'type': 'ir.actions.act_window', 'res_model': self._name,
+                'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
+
+    def action_send_wa(self):
+        self.ensure_one()
+        wa_eligible = self.line_ids.filtered(lambda l: l.wa_will_send and l.selected)
+        if not wa_eligible:
+            raise UserError(_('No hay partners con número móvil elegibles para WA.'))
+        try:
+            log_fh = open(WA_LOG, 'a')
+            subprocess.Popen(
+                ['python3', WA_SCRIPT, '--live'],
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+            log_fh.close()
+        except Exception as e:
+            raise UserError(_('Error al iniciar el envío WA: %s') % str(e))
+        self.wa_queued_at = fields.Datetime.now()
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
 
@@ -373,19 +410,21 @@ class InvoiceReminderLine(models.TransientModel):
     _description = 'Invoice Reminder Wizard Line'
     _order = 'tag, partner_name'
 
-    wizard_id   = fields.Many2one('account.invoice.reminder.wizard', ondelete='cascade')
-    partner_id  = fields.Many2one('res.partner', string='Partner')
+    wizard_id    = fields.Many2one('account.invoice.reminder.wizard', ondelete='cascade')
+    partner_id   = fields.Many2one('res.partner', string='Partner')
     partner_name = fields.Char(related='partner_id.name', string='Name', store=True)
-    tag         = fields.Char(string='Tag')
-    balance     = fields.Float(string='Balance Due', digits=(16, 2))
-    email       = fields.Char(string='Email')
-    will_send   = fields.Boolean(string='Eligible')
-    skip_reason = fields.Char(string='Skip Reason')
-    selected    = fields.Boolean(string='Send', default=True)
-    status      = fields.Selection([
+    tag          = fields.Char(string='Tag')
+    balance      = fields.Float(string='Balance Due', digits=(16, 2))
+    email        = fields.Char(string='Email')
+    mobile       = fields.Char(string='Móvil')
+    will_send    = fields.Boolean(string='Email Elegible')
+    wa_will_send = fields.Boolean(string='WA Elegible')
+    skip_reason  = fields.Char(string='Skip Reason')
+    selected     = fields.Boolean(string='Send', default=True)
+    status       = fields.Selection([
         ('pending',  'Pending'),
         ('sent',     'Sent'),
         ('failed',   'Failed'),
         ('no_email', 'No Email'),
-    ], default='pending', string='Status')
-    error_msg   = fields.Char(string='Error')
+    ], default='pending', string='Estado Email')
+    error_msg    = fields.Char(string='Error')

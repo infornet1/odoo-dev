@@ -16,9 +16,10 @@
             <field name="include_vip" widget="boolean_toggle"/>
           </group>
           <group string="Resumen">
-            <field name="partner_count" string="Enviarán email"/>
+            <field name="partner_count" string="Email: enviarán"/>
+            <field name="wa_count"      string="WA: enviarán"/>
             <field name="total_balance" string="Balance total (USD)"/>
-            <field name="skipped_count" string="Excluidos / sin email"/>
+            <field name="skipped_count" string="Excluidos / sin contacto"/>
           </group>
         </group>
 
@@ -36,13 +37,15 @@
               <tree string="Partners"
                     decoration-success="status == 'sent'"
                     decoration-danger="status == 'failed'"
-                    decoration-muted="not will_send">
+                    decoration-muted="not will_send and not wa_will_send">
                 <field name="selected" widget="boolean_toggle"/>
                 <field name="partner_id" readonly="1"/>
                 <field name="tag" readonly="1"/>
                 <field name="balance" readonly="1" string="Saldo (USD)"/>
                 <field name="email" readonly="1"/>
-                <field name="will_send" readonly="1" string="Elegible"/>
+                <field name="mobile" readonly="1" string="Móvil" optional="show"/>
+                <field name="will_send" readonly="1" string="✉ Email" widget="boolean"/>
+                <field name="wa_will_send" readonly="1" string="📱 WA" widget="boolean"/>
                 <field name="skip_reason" readonly="1" string="Motivo exclusión" optional="show"/>
                 <field name="status" readonly="1" widget="badge"
                        decoration-success="status == 'sent'"
@@ -59,7 +62,14 @@
           <button name="action_send" string="Enviar Emails"
                   type="object" class="btn-primary"
                   invisible="state == 'done'"
-                  confirm="¿Confirma el envío del recordatorio a los clientes seleccionados?"/>
+                  confirm="¿Confirma el envío del recordatorio por email a los clientes seleccionados?"/>
+          <button name="action_send_wa" string="Enviar WA (en segundo plano)"
+                  type="object" class="btn-success"
+                  invisible="state == 'done' or wa_queued_at"
+                  confirm="¿Confirma el envío WA? El script se ejecutará en segundo plano (~50 min por el retraso anti-spam). Revisar log: /var/log/wa_invoice_reminder.log"/>
+          <field name="wa_queued_at" string="✅ WA en cola desde" readonly="1"
+                 invisible="not wa_queued_at" widget="datetime"
+                 nolabel="0"/>
           <button name="action_refresh" string="Actualizar Lista"
                   type="object" class="btn-secondary"
                   invisible="state == 'done'"/>
