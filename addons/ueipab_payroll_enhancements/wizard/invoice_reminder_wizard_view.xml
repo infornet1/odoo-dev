@@ -20,6 +20,8 @@
             <field name="wa_count"      string="WA: enviarán"/>
             <field name="total_balance" string="Balance total (USD)"/>
             <field name="skipped_count" string="Excluidos / sin contacto"/>
+            <field name="wa_queued_at"  string="✅ WA en cola desde" readonly="1"
+                   invisible="not wa_queued_at"/>
           </group>
         </group>
 
@@ -67,9 +69,6 @@
                   type="object" class="btn-success"
                   invisible="state == 'done' or wa_queued_at"
                   confirm="¿Confirma el envío WA? El script se ejecutará en segundo plano (~50 min por el retraso anti-spam). Revisar log: /var/log/wa_invoice_reminder.log"/>
-          <field name="wa_queued_at" string="✅ WA en cola desde" readonly="1"
-                 invisible="not wa_queued_at" widget="datetime"
-                 nolabel="0"/>
           <button name="action_refresh" string="Actualizar Lista"
                   type="object" class="btn-secondary"
                   invisible="state == 'done'"/>
