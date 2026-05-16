@@ -68,7 +68,7 @@
 | 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — blocked until 5 TODO constants filled |
 | 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | OCR → draft `account.payment`; config: `ai_agent.payment_journal_map` |
 | 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs; cron every 15 min |
-| 53 | WA Invoice Reminder | Ready — first live send 2026-05-15 | Script | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
+| 53 | WA Invoice Reminder | Production | Script + Wizard | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; cron weekdays 07:00 VET `/etc/cron.d/wa_invoice_reminder`; wizard UI trigger: Accounting→Customers→Recordatorio de Saldo→"Enviar WA (en segundo plano)"; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
 | 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | `models/mail_bot_glenda.py` — internal staff chat Glenda via Odoo Discuss OdooBot; zero WA credits; dry_run guarded |
 
 ---
@@ -154,7 +154,7 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.69.1 | 2026-05-16 |
+| ueipab_payroll_enhancements | 17.0.1.70.0 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
@@ -166,7 +166,7 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.69.1 | Deployed 2026-05-16 |
+| ueipab_payroll_enhancements | 17.0.1.70.0 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed |
 | ueipab_attendance_report | 17.0.1.6.0 | Deployed 2026-05-13 — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
@@ -266,6 +266,17 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **Handler:** `_handle_balance_action()` → `_query_partner_balance()` → posted out_invoices, not_paid/partial, partner + children
 - **Delivery:** `action_process_reply()` sends breakdown as separate WA message; partner balance pre-loaded into system prompt context when partner found by phone
 - **Security:** only shows balance for identified partner; cédula not found → error message to customer
+
+### WA & Email Invoice Reminder (account.invoice.reminder.wizard)
+
+- **Wizard:** `ueipab_payroll_enhancements` — Accounting → Customers → Recordatorio de Saldo (Email)
+- **WA cron:** `/etc/cron.d/wa_invoice_reminder` — weekdays 07:00 VET (`0 11 * * 1-5`), runs `scripts/wa_invoice_reminder.py --live`
+- **Segments:** TAG_REP=25 (Representante), TAG_PDVSA=26 (PDVSA), TAG_VIP=30 (excluded by default, override via `include_vip` toggle)
+- **Exclusions (both channels):** VIP, active employees (VAT match), PDVSA fiscal_check on latest invoice, PDVSA ≥30% advance paid, balance < $1.00
+- **Email channel:** `res.partner.email`; sends `mail.mail` From=`finanzas@` Reply-To/CC=`pagos@`; per-partner HTML with invoice table newest→oldest, payment options, BCV rate link
+- **WA channel:** wizard shows `res.partner.mobile`; "Enviar WA (en segundo plano)" spawns `wa_invoice_reminder.py --live` as detached subprocess (anti-spam: 120–140s/send); button hides after queueing (`wa_queued_at` shown); WA script itself uses Sheets col L for phone and state-file dedup
+- **State file:** `scripts/wa_invoice_reminder_state.json` — per-partner `last_sent` date; idempotent same-day re-runs
+- **First live send:** 2026-05-15 — 26 partners (REP + PDVSA); follow-up emails sent same day
 
 ### Glenda Daily Executive Digest (glenda_daily_digest.py)
 
