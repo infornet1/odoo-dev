@@ -54,10 +54,26 @@ class AiAgentFeedback(models.Model):
 
     @api.model
     def log_from_conversation(self, conversation, category, suggestion):
-        """Create a feedback record from a calibration conversation."""
-        employee = self._get_employee_by_phone(conversation.phone)
+        """Create a feedback record from a calibration conversation (WA or Telegram)."""
+        employee = None
+        contact_ref = conversation.phone or ''
+
+        if conversation.phone:
+            # WA path: match by phone
+            employee = self._get_employee_by_phone(conversation.phone)
+        elif conversation.channel == 'telegram' and conversation.partner_id:
+            # Telegram path: find employee via partner_id
+            partner = conversation.partner_id
+            emp = self.env['hr.employee'].sudo().search([
+                '|',
+                ('user_id.partner_id', '=', partner.id),
+                ('address_home_id', '=', partner.id),
+            ], limit=1)
+            employee = emp or None
+            contact_ref = f'telegram:{conversation.telegram_chat_id}'
+
         vals = {
-            'wa_number':       conversation.phone,
+            'wa_number':       contact_ref,
             'conversation_id': conversation.id,
             'category':        category if category in dict(CATEGORIES) else 'otro',
             'suggestion':      suggestion,

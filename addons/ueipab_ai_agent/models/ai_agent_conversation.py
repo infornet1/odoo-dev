@@ -901,17 +901,18 @@ class AiAgentConversation(models.Model):
         first = emp.name.split()[0].title()
         _logger.info("Telegram /start EMP_%s → employee=%s chat_id=%s", emp_id, emp.name, chat_id)
 
-        # Silent CEO alert — employee identified on Telegram
+        # Silent CEO alert — savepoint so a SQL failure doesn't abort the cursor
         try:
             icp = self.env['ir.config_parameter'].sudo()
             ceo_email = icp.get_param('wa_monitor.ceo_email', '')
             if ceo_email and not dry_run:
-                self._notify_ceo_discuss(
-                    f"📱 [Telegram] {emp.name} abrió @GlendaUeipabBot (identificado/a automáticamente)",
-                    ceo_email,
-                )
-        except Exception:
-            pass
+                with self.env.cr.savepoint():
+                    self._notify_ceo_discuss(
+                        f"📱 [Telegram] {emp.name} abrió @GlendaUeipabBot (identificado/a automáticamente)",
+                        ceo_email,
+                    )
+        except Exception as exc:
+            _logger.debug("Telegram employee CEO notify skipped: %s", exc)
 
         if dry_run:
             _logger.info("DRY_RUN: Would send welcome to %s (chat_id=%s)", emp.name, chat_id)
@@ -987,13 +988,15 @@ class AiAgentConversation(models.Model):
             conv.id, chat_id, partner.name,
         )
 
-        # CEO alert if partner has outstanding balance (same as WA general_inquiry)
+        # CEO alert — wrapped in savepoint so a SQL failure inside _notify_ceo
+        # does NOT abort the PostgreSQL cursor and kill the subsequent reply flow.
         try:
-            conv._notify_ceo(
-                f"📱 [Telegram] {partner.name} inició chat — @GlendaUeipabBot"
-            )
-        except Exception:
-            pass
+            with self.env.cr.savepoint():
+                conv._notify_ceo(
+                    f"📱 [Telegram] {partner.name} inició chat — @GlendaUeipabBot"
+                )
+        except Exception as exc:
+            _logger.debug("Telegram CEO notify skipped: %s", exc)
 
         return conv
 
@@ -1018,7 +1021,8 @@ class AiAgentConversation(models.Model):
             )
             if detail:
                 msg += f"📝 {detail[:150]}"
-            self._notify_ceo_discuss(msg, ceo_email)
+            with self.env.cr.savepoint():
+                self._notify_ceo_discuss(msg, ceo_email)
         except Exception as exc:
             _logger.debug("_notify_ceo_telegram_event failed: %s", exc)
 

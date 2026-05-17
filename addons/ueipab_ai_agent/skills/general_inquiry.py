@@ -336,17 +336,40 @@ class GeneralInquirySkill:
             return None
 
     def _get_calibration_tester(self, conversation):
-        """Return (employee, ack) if this phone belongs to a calibration programme participant."""
-        digits = re.sub(r'\D', '', conversation.phone or '')
-        if not digits:
-            return None, None
-        acks = conversation.env['hr.notice.acknowledgment'].sudo().search([
-            ('notice_key', '=', 'glenda_calibracion_v1'),
-            ('state', '=', 'acknowledged'),
-        ])
-        for ack in acks:
-            if re.sub(r'\D', '', ack.wa_number or '') == digits:
-                return ack.employee_id, ack
+        """Return (employee, ack) if this conversation belongs to a calibration participant.
+
+        Supports both WA (matched by phone digits) and Telegram (matched by partner → employee).
+        """
+        env = conversation.env
+
+        # ── WA path: match enrolled wa_number by phone digits ────────────────
+        if conversation.phone:
+            digits = re.sub(r'\D', '', conversation.phone)
+            acks = env['hr.notice.acknowledgment'].sudo().search([
+                ('notice_key', '=', 'glenda_calibracion_v1'),
+                ('state', '=', 'acknowledged'),
+            ])
+            for ack in acks:
+                if re.sub(r'\D', '', ack.wa_number or '') == digits:
+                    return ack.employee_id, ack
+
+        # ── Telegram path: match via partner_id → hr.employee ───────────────
+        if conversation.channel == 'telegram' and conversation.partner_id:
+            partner = conversation.partner_id
+            emp = env['hr.employee'].sudo().search([
+                '|',
+                ('user_id.partner_id', '=', partner.id),
+                ('address_home_id', '=', partner.id),
+            ], limit=1)
+            if emp:
+                ack = env['hr.notice.acknowledgment'].sudo().search([
+                    ('notice_key', '=', 'glenda_calibracion_v1'),
+                    ('state', '=', 'acknowledged'),
+                    ('employee_id', '=', emp.id),
+                ], limit=1)
+                if ack:
+                    return emp, ack
+
         return None, None
 
     def get_context(self, conversation):

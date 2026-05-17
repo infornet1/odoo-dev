@@ -28,14 +28,31 @@ class HrNoticeAcknowledgmentCalibration(models.Model):
                 continue
 
             digits = re.sub(r'\D', '', rec.wa_number)
-            # Match conversations by phone digits
+
+            # WA conversations: match by phone digits
             all_convs = Conversation.search([
                 ('skill_id.code', '=', 'general_inquiry'),
+                ('channel', '=', 'whatsapp'),
             ])
             conv_count = sum(
                 1 for c in all_convs
                 if re.sub(r'\D', '', c.phone or '') == digits
             )
+
+            # Telegram conversations: match by employee's linked partner(s)
+            emp = rec.employee_id
+            if emp:
+                partner_ids = list(filter(None, [
+                    emp.user_id.partner_id.id if emp.user_id else None,
+                    emp.address_home_id.id if emp.address_home_id else None,
+                ]))
+                if partner_ids:
+                    tg_count = Conversation.search_count([
+                        ('skill_id.code', '=', 'general_inquiry'),
+                        ('channel', '=', 'telegram'),
+                        ('partner_id', 'in', partner_ids),
+                    ])
+                    conv_count += tg_count
             fb_count = Feedback.search_count([
                 ('wa_number', '!=', False),
                 ('employee_id', '=', rec.employee_id.id),
