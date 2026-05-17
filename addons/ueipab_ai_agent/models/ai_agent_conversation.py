@@ -844,9 +844,12 @@ class AiAgentConversation(models.Model):
         if not conv:
             return
 
-        # Show typing indicator while Claude thinks
+        # Show typing indicator while Claude thinks — cosmetic, must never block reply
         if not dry_run:
-            self.env['ai.agent.telegram.service'].send_chat_action(chat_id)
+            try:
+                self.env['ai.agent.telegram.service'].send_chat_action(chat_id)
+            except Exception:
+                pass
 
         conv.action_process_reply(
             message_text=text or ('[foto]' if photos else '[documento]'),

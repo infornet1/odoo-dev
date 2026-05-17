@@ -16,8 +16,20 @@ class AiAgentTelegramService(models.AbstractModel):
     # ── Internal ────────────────────────────────────────────────────────────
 
     def _token(self):
-        return self.env['ir.config_parameter'].sudo().get_param(
-            'ai_agent.telegram_bot_token', '')
+        try:
+            return self.env['ir.config_parameter'].sudo().get_param(
+                'ai_agent.telegram_bot_token', '')
+        except Exception:
+            # ORM cache can crash mid-transaction in webhook contexts (cursor state).
+            # Fall back to a direct SQL read — always safe.
+            try:
+                self.env.cr.execute(
+                    "SELECT value FROM ir_config_parameter WHERE key = %s",
+                    ['ai_agent.telegram_bot_token'])
+                row = self.env.cr.fetchone()
+                return row[0] if row else ''
+            except Exception:
+                return ''
 
     def _api(self, method, payload=None, timeout=15):
         token = self._token()
