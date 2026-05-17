@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v10)
+**Last Updated:** 2026-05-17 (v11)
 
 ## Core Instructions
 
@@ -78,6 +78,7 @@
 | 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + Script | Glenda FAQ LIVE (v47.4) — **price gate active** (no new prices until committee approval); pagos@ email FAQ checker LIVE every 30min; 178 ACTIVE families; email vote campaign pending 19-May meeting; vote deadline ~23-May; results 26-May |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
 | 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules knowledge + PDF link; dates Jun 1 (Primaria) / Jun 2 (Media General); 4 levels + Say-Spell-Say protocol |
+| 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 emails sent 2026-05-17; banner `/flyers/glenda_banner.png`; Active+Pipeline families; `--live` to resend |
 
 ---
 
@@ -421,6 +422,17 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number. **TODO:** restore `account_id=primary_account_id` once pre-switch conversations drain.
 
+**⚠️ Backup number flood (2026-05-17):** After Telegram announcement email sent to 279 parents, many wrote to backup number +584248944898 which the cron ignores ("received on non-primary account"). If backup number traffic persists, consider temporarily enabling `account_id=None` to serve those parents.
+
+### Competitor/Suspicious Contact Pattern
+
+**Known risk:** Competitors may contact Glenda via Telegram or WA to probe pricing.
+- **Price gate** is the primary defence — Glenda only quotes $197.38 / $162.39, never proposed budget amounts
+- **Detection signal:** immediately asks about next-year costs with no child/grade context
+- **Glenda response (price gate active):** confirms current prices + deflects "próximo año" with "información oficial se comunicará oportunamente"
+- **Action:** Let Glenda handle within guardrails (safe). Escalate via `action_process_reply` from Odoo shell if conversation needs manual override
+- **Re-trigger stuck conv via shell:** `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
+
 ### Environment Status
 
 **Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v47.4. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
@@ -503,7 +515,8 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 ### School Operations
 - **Absence Notification System** — `scripts/absence_processor.py` + `/etc/cron.d/absence_processor`; soporte@ + Glenda WA/TG; Josefina Rodriguez; teacher lookup `control_asistencias`; CC soporte@+Arcides+David/Norka
 - **School Account Help** — `ACTION:SCHOOL_ACCOUNT_HELP`; Google Directory cache (`sync_google_directory.py`, cron daily 07:00 VET); 224 active students (46 suspended deleted 2026-05-17); Akdemia reset link `https://edge.akdemia.com/login#resetPasswordModal`
-- **Budget Consultation 2026-2027** — Glenda FAQ + price gate; pagos@ email checker; 178 ACTIVE families; vote email campaign pending; results 26-May. Presentation: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+- **Budget Consultation 2026-2027** — Glenda FAQ + price gate ($197.38/$162.39 only); pagos@ email checker; 178 ACTIVE families; vote email campaign pending trigger after 19-May meeting; results 26-May. Presentation: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+- **Glenda Telegram Announcement** — `scripts/send_glenda_telegram_email.py --live` sent 2026-05-17 to 279 emails (274 delivered, 5 failed on @ueipab.edu.ve internal). Banner: `/var/www/dev/flyers/glenda_banner.png` (IMG_6669.PNG). Greeting: "Estimad@ Representante,"
 - **Kurios Robotics Regional** — Glenda shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request
 - **MOA Spelling Bee 2026** — Glenda knows full rules (4 levels, Say-Spell-Say protocol, rounds); dates Jun 1 Primaria / Jun 2 Media General; PDF: `https://drive.google.com/file/d/11LG9BRDOMjbiJC-kjU4OysnjIDAhP29V/view`
 
