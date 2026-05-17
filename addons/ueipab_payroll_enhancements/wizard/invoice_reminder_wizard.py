@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-import subprocess
 from collections import defaultdict
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -13,8 +12,7 @@ TAG_VIP   = 30
 MIN_BALANCE = 1.00
 LOGO_URL  = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RATE_URL  = 'https://odoo.ueipab.edu.ve/tasas-de-cambios'
-WA_SCRIPT = '/opt/odoo-dev/scripts/wa_invoice_reminder.py'
-WA_LOG    = '/var/log/wa_invoice_reminder.log'
+WA_TRIGGER_PARAM = 'wa_invoice_reminder.trigger_at'
 MONTHS_ES = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',6:'junio',
              7:'julio',8:'agosto',9:'septiembre',10:'octubre',11:'noviembre',12:'diciembre'}
 
@@ -257,17 +255,11 @@ class InvoiceReminderWizard(models.TransientModel):
         wa_eligible = self.line_ids.filtered(lambda l: l.wa_will_send and l.selected)
         if not wa_eligible:
             raise UserError(_('No hay partners con número móvil elegibles para WA.'))
-        try:
-            log_fh = open(WA_LOG, 'a')
-            subprocess.Popen(
-                ['python3', WA_SCRIPT, '--live'],
-                stdout=log_fh,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-            )
-            log_fh.close()
-        except Exception as e:
-            raise UserError(_('Error al iniciar el envío WA: %s') % str(e))
+        # Write trigger param — dev server poller picks this up within 5 min and runs the script
+        self.env['ir.config_parameter'].sudo().set_param(
+            WA_TRIGGER_PARAM,
+            fields.Datetime.now().isoformat(),
+        )
         self.wa_queued_at = fields.Datetime.now()
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
