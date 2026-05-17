@@ -299,6 +299,27 @@ class AiAgentConversation(models.Model):
             reason, current_time, start, end)
         return False
 
+    @api.model
+    def _in_proactive_quiet_hours(self):
+        """Return True during the proactive quiet window (20:30–07:30 VET by default).
+
+        Only blocks CRON-initiated proactive WA sends (reminders). Reactive replies
+        to incoming customer messages are always allowed and not gated here.
+        Configurable via ir.config_parameter:
+          ai_agent.proactive_quiet_start  (default '20:30')
+          ai_agent.proactive_quiet_end    (default '07:30')
+        """
+        from datetime import datetime, timezone, timedelta
+        VE_TZ = timezone(timedelta(hours=-4))
+        t = datetime.now(VE_TZ).strftime('%H:%M')
+        icp = self.env['ir.config_parameter'].sudo()
+        q_start = icp.get_param('ai_agent.proactive_quiet_start', '20:30')
+        q_end = icp.get_param('ai_agent.proactive_quiet_end', '07:30')
+        # Overnight range: start > end means the window wraps midnight
+        if q_start > q_end:
+            return t >= q_start or t < q_end
+        return q_start <= t < q_end
+
     def action_start(self):
         """Send greeting message and activate conversation."""
         self.ensure_one()
@@ -1661,6 +1682,13 @@ class AiAgentConversation(models.Model):
         primary_phone = wa_service._normalize_phone(
             icp.get_param('ai_agent.whatsapp_primary_phone', '')
         )
+        backup_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_backup_phone', '')
+        )
+        tertiary_phone = wa_service._normalize_phone(
+            icp.get_param('ai_agent.whatsapp_tertiary_phone', '')
+        )
+        own_phones = {p for p in (primary_phone, backup_phone, tertiary_phone) if p}
 
         try:
             messages = wa_service.fetch_received(limit=50, account_id=primary_account_id or None)
@@ -1782,19 +1810,19 @@ class AiAgentConversation(models.Model):
         """Cron: check waiting conversations for reminders or timeout.
 
         Logic per conversation:
-        1. If last_message_date + reminder_interval < now AND reminder_count < max_reminders
-           → send a reminder
-        2. If reminder_count >= max_reminders AND last_message_date + reminder_interval < now
-           → timeout
+        1. If skill.send_reminders is False → close silently after one interval (no WA).
+        2. If currently in proactive quiet hours (20:30–07:30 VET) → defer reminder
+           send until the window ends; silent timeouts (no WA) still proceed.
+        3. If reminder_count < max_reminders → send reminder WA.
+        4. If reminder_count >= max_reminders → timeout silently.
         """
         if not self._is_active_environment():
             return
 
         from datetime import timedelta
         within_schedule = self._is_within_schedule()
-        conversations = self.search([
-            ('state', '=', 'waiting'),
-        ])
+        in_quiet = self._in_proactive_quiet_hours()
+        conversations = self.search([('state', '=', 'waiting')])
 
         now = fields.Datetime.now()
         for conv in conversations:
@@ -1814,7 +1842,15 @@ class AiAgentConversation(models.Model):
 
             try:
                 with self.env.cr.savepoint():
-                    if conv.reminder_count < max_reminders:
+                    if not skill.send_reminders:
+                        # Silent mode: no reminder WA — close after first interval
+                        conv.action_timeout()
+                    elif in_quiet and conv.reminder_count < max_reminders:
+                        # Proactive quiet hours: defer WA reminder, check again later
+                        _logger.info(
+                            "Timeout cron: quiet hours — deferring reminder for conv %d (%s)",
+                            conv.id, conv.partner_id.name or conv.phone)
+                    elif conv.reminder_count < max_reminders:
                         conv._send_reminder()
                     else:
                         conv.action_timeout()

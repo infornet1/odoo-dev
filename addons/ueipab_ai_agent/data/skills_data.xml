@@ -68,6 +68,7 @@
             <field name="name">Consulta General</field>
             <field name="code">general_inquiry</field>
             <field name="respect_schedule" eval="False"/>
+            <field name="send_reminders" eval="False"/>
             <field name="description">Atender mensajes entrantes no solicitados. Glenda responde preguntas generales con conocimiento institucional y transfiere al equipo de soporte cuando la consulta requiere atención personalizada.</field>
             <field name="source_model"></field>
             <field name="model_name">claude-haiku-4-5-20251001</field>

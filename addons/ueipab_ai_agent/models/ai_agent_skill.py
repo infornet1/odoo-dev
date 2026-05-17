@@ -32,6 +32,12 @@ class AiAgentSkill(models.Model):
         help='Si está activo, Glenda solo responde este skill dentro del horario de '
              'contacto configurado. Desactívalo para skills que deben atender 24/7 '
              '(ej. Consulta General).')
+    send_reminders = fields.Boolean(
+        'Enviar Recordatorios', default=True,
+        help='Si está desactivado, Glenda cierra la conversación silenciosamente cuando '
+             'el cliente no responde, sin enviar mensajes de recordatorio por WhatsApp. '
+             'Recomendado para Consulta General (inbound) donde los recordatorios no '
+             'aportan valor y consumen créditos.')
 
     # Link to source model
     source_model = fields.Char('Modelo Origen')
