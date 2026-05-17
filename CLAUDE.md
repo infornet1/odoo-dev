@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v7)
+**Last Updated:** 2026-05-17 (v8)
 
 ## Core Instructions
 
@@ -74,6 +74,7 @@
 | 56 | DMARC Report Processor | Production | Script + Cron | `scripts/dmarc_report_processor.py` — [CEO](documentation/CEO_COMMAND_CENTER.md) |
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
+| 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP:cedula\|student_name\|grade` — 3-factor verify → reveal student email from Google Directory cache + Akdemia reset link; UNASSIGNED soporte@ FS ticket; cron `sync_google_directory.py` daily 07:00 VET |
 
 ---
 
@@ -162,7 +163,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.45.1 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.46.0 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -177,7 +178,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.45.1 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE |
+| ueipab_ai_agent | 17.0.1.46.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE, school account help ACTION:SCHOOL_ACCOUNT_HELP |
 
 ---
 
@@ -244,6 +245,23 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 **Detection:** keyword pre-filter on subject+body → Claude Haiku extracts student/grade/level/section/reason/teacher. Fail-safe: Claude failure → skip conv (no false positives).
 
 **Processed marker:** subject prefixed `[AUSENCIA]` via FreeScout API → prevents reprocessing. State file: `scripts/absence_processor_state.json`.
+
+### Glenda School Account Help (Feature #59)
+
+**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` — emitted by Claude when parent forgets student email or needs Akdemia access.
+
+**3-factor verification (in `_handle_school_account_help()`):**
+1. Conversation partner identified (phone/Telegram already proves account ownership)
+2. Cédula provided by parent must match `res.partner.vat` — mismatch → deny + redirect to soporte@
+3. Student name fuzzy-matched against Google Directory cache (`school.student_directory_json` param)
+
+**Google Directory cache:** `scripts/sync_google_directory.py --live` populates `school.student_directory_json` in `ir.config_parameter` → `{'students': [{email, name, grade, ou}...], 'synced_at': ISO}`. Cron: `/etc/cron.d/sync_google_directory` daily 07:00 VET weekdays. Targets `https://odoo.ueipab.edu.ve` (production).
+
+**Akdemia reset link:** `https://edge.akdemia.com/login#resetPasswordModal` — always provided for password issues. For email-only recovery (no password problem), no ACTION needed — just provide the link directly.
+
+**FreeScout ticket:** UNASSIGNED in soporte@ (mailbox_id=3). Subject `[Glenda/WA] [RESUELTO|PENDIENTE] Cuenta escolar — {student_name}`. Created even when email is found, so support team has a record.
+
+**Name matching:** exact → word-overlap (≥2 matching words). Non-match → PENDIENTE ticket + "no encontré" message. Cédula strip: removes `-`, `V/E/J/G/P` prefix before numeric comparison.
 
 ### Telegram Channel (ai.agent.telegram.service)
 
@@ -389,6 +407,8 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
 - **General Inquiry:** Handles unsolicited inbound (WA + Telegram) — identifies contact, routes to `pagos@` or `soporte@`
+- **School Account Help:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` → 3-factor verify → student email from Google Directory + Akdemia reset link; UNASSIGNED FS soporte@ ticket
+- **Absence notification:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Glenda creates Freescout soporte@ conv → `absence_processor.py` cron picks it up within 10 min
 - **Flyer/Audio:** **⚠️ WA only** — skipped on Telegram (`channel != 'whatsapp'` guard in `_send_flyer()`)
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
 - **Calibration:** WA + Telegram conversations both count toward bonus; feedback linked via `user_id.partner_id`

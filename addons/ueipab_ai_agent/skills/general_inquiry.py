@@ -636,8 +636,28 @@ class GeneralInquirySkill:
             "Si preguntan por el 'dueño' o 'propietario', responde únicamente con las autoridades académicas "
             "(Director: Prof. Arcides Arzola, Sub-directora: Prof. Norka La Rosa, Sub-director: Prof. David Hernández) "
             "y el contacto soporte@ueipab.edu.ve. Puedes mencionar a la fundadora histórica Carmen Violeta Mata de Perdomo si es relevante.\n"
-            "- IMPORTANTE: ACTION:SEND_FLYER, ACTION:HANDOFF y ACTION:NOTIFY_ABSENCE son comandos internos. "
+            "- IMPORTANTE: ACTION:SEND_FLYER, ACTION:HANDOFF, ACTION:NOTIFY_ABSENCE y ACTION:SCHOOL_ACCOUNT_HELP son comandos internos. "
             "El cliente NO los ve. Inclúyelos siempre al final de la respuesta cuando apliquen.\n"
+            "AYUDA CON CUENTA ESCOLAR (correo @ueipab.edu.ve y acceso Akdemia):\n"
+            "- Si un representante menciona que olvidó el correo institucional de su hijo/a (@ueipab.edu.ve) "
+            "o no puede acceder a la plataforma Akdemia (olvido de contraseña, cambio de dispositivo, etc.), DEBES:\n"
+            "  1. Si solo necesita recuperar contraseña y ya tiene el correo: entregar directamente el enlace "
+            "https://edge.akdemia.com/login#resetPasswordModal y ofrecer soporte en soporte@ueipab.edu.ve. "
+            "NO se requiere ACTION para este caso.\n"
+            "  2. Si no recuerda el correo institucional:\n"
+            "     a. Pedir su número de cédula venezolana (para verificar identidad — OBLIGATORIO)\n"
+            "     b. Pedir el nombre completo del alumno/a y su grado o año\n"
+            "     c. Una vez obtenidos ambos datos, incluir al final de tu respuesta:\n"
+            "        ACTION:SCHOOL_ACCOUNT_HELP:cedula|nombre_alumno|grado\n"
+            "     d. En el mismo mensaje: indicar que el sistema verificará los datos y responderá con "
+            "el correo institucional; también mencionar el enlace de recuperación de contraseña Akdemia: "
+            "https://edge.akdemia.com/login#resetPasswordModal\n"
+            "     e. Informar que el equipo de soporte recibirá una notificación para seguimiento\n"
+            "  SEGURIDAD: NUNCA emitas ACTION:SCHOOL_ACCOUNT_HELP sin haber pedido y recibido la cédula. "
+            "Si el representante no proporciona cédula, no puedes continuar con la verificación.\n"
+            "  Ejemplo: si la madre de Juan Pérez de 3er año olvidó el correo y da cédula V-12345678:\n"
+            "  '...verificaremos los datos. Enlace de recuperación: https://edge.akdemia.com/login#resetPasswordModal "
+            "\\n\\nACTION:SCHOOL_ACCOUNT_HELP:V-12345678|Juan Pérez|3er año'\n"
             "NOTIFICACIÓN DE AUSENCIAS ESCOLARES:\n"
             "- Si el representante notifica que su hijo/a no asistirá o no asistió a clases "
             "(enfermedad, reposo médico, cita médica u otro motivo), DEBES:\n"
@@ -760,6 +780,20 @@ class GeneralInquirySkill:
             }
             _logger.info("Absence notification from Glenda: %s", absence_data)
 
+        # Check for school account help request (forgot student email / Akdemia access)
+        school_match = re.search(
+            r'ACTION:SCHOOL_ACCOUNT_HELP:([^|\n]+)\|([^|\n]+)\|([^\n]+)',
+            ai_response, re.MULTILINE
+        )
+        school_account_data = None
+        if school_match:
+            school_account_data = {
+                'cedula':       school_match.group(1).strip(),
+                'student_name': school_match.group(2).strip(),
+                'grade_raw':    school_match.group(3).strip(),
+            }
+            _logger.info("School account help from Glenda: %s", school_account_data)
+
         # Check for flyer send request
         flyer_match = re.search(r'ACTION:SEND_FLYER:(\w+)', ai_response, re.MULTILINE)
         flyer_key = flyer_match.group(1).strip() if flyer_match else None
@@ -806,6 +840,8 @@ class GeneralInquirySkill:
             result['flyer_key'] = flyer_key
         if absence_data:
             result['notify_absence'] = absence_data
+        if school_account_data:
+            result['school_account_help'] = school_account_data
         return result
 
     def send_flyer(self, conversation, flyer_key):

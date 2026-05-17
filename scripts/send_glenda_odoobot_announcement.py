@@ -129,7 +129,7 @@ BODY_HTML = (
     '<div style="background:#f0f4fa;border-radius:8px;padding:24px;margin-top:28px;">'
     '<p style="color:#1a2c5b;font-size:15px;font-weight:700;margin:0 0 6px;">Gracias al Programa de Calibración</p>'
     '<p style="color:#555;font-size:13px;margin:0 0 18px;line-height:1.5;">'
-    'Quienes participaron en el programa de pruebas internas enviaron <strong>23 sugerencias</strong>. '
+    'Quienes participaron en el programa de pruebas internas enviaron <strong>26 sugerencias</strong>. '
     'La mayoría ya están implementadas en Glenda. Gracias por su retroalimentación — cada sugerencia cuenta.'
     '</p>'
 
@@ -192,9 +192,19 @@ BODY_HTML = (
     '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#e67e22;font-weight:600;">Planificado</td>'
     '</tr>'
     '<tr style="background:#fff;">'
-    '<td style="padding:7px 10px;color:#333;">Resumen automático de circulares en 3 puntos clave</td>'
-    '<td style="padding:7px 10px;color:#555;">Jessica B.</td>'
-    '<td style="padding:7px 10px;color:#e67e22;font-weight:600;">Planificado</td>'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#333;">Resumen automático de circulares en 3 puntos clave</td>'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#555;">Jessica B.</td>'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#e67e22;font-weight:600;">Planificado</td>'
+    '</tr>'
+    '<tr style="background:#f8fafd;">'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#333;">Mejora en tiempos de respuesta percibidos (latencia)</td>'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#555;">Maria F.</td>'
+    '<td style="padding:7px 10px;border-bottom:1px solid #e0e8f0;color:#e67e22;font-weight:600;">En evaluación</td>'
+    '</tr>'
+    '<tr style="background:#fff;">'
+    '<td style="padding:7px 10px;color:#333;">Prueba diagnóstica para alumnos procedentes del extranjero</td>'
+    '<td style="padding:7px 10px;color:#555;">Luisa A.</td>'
+    '<td style="padding:7px 10px;color:#e67e22;font-weight:600;">En consideración</td>'
     '</tr>'
     '</table>'
     '</div>'
@@ -216,44 +226,77 @@ BODY_HTML = (
     '</div>'
 )
 
-# Recipients
-EXCLUDE_LOGINS = {'tdv.devs@gmail.com', '__system__'}
-EXCLUDE_NAMES  = {'Asistencia', 'odoo_api_bridge'}
+CC_ADDRESS   = 'recursoshumanos@ueipab.edu.ve'
+REPLY_TO     = 'recursoshumanos@ueipab.edu.ve'
 
-users = env['res.users'].search([('share', '=', False), ('active', '=', True)])
-recipients = []
-seen_emails = set()
-for u in users:
-    email = (u.email or '').strip()
-    if not email or '@' not in email:
-        continue
-    if u.login in EXCLUDE_LOGINS or u.name in EXCLUDE_NAMES:
-        continue
-    primary_email = email.split(';')[0].strip()
-    if primary_email in seen_emails:
-        continue
-    seen_emails.add(primary_email)
-    recipients.append((u.name, primary_email))
+RECIPIENT_EMAILS = [
+    'alejandra.lopez@ueipab.edu.ve',
+    'andres.morales@ueipab.edu.ve',
+    'arcides.arzola@ueipab.edu.ve',
+    'audrey.garcia@ueipab.edu.ve',
+    'camila.rossato@ueipab.edu.ve',
+    'david.hernandez@ueipab.edu.ve',
+    'dixia.bellorin@ueipab.edu.ve',
+    'daniel.bongianni@ueipab.edu.ve',
+    'elis.mejias@ueipab.edu.ve',
+    'emilio.isea@ueipab.edu.ve',
+    'flormar.hernandez@ueipab.edu.ve',
+    'gabriel.espana@ueipab.edu.ve',
+    'gabriela.uray@ueipab.edu.ve',
+    'gladys.brito@ueipab.edu.ve',
+    'giovanni.vezza@ueipab.edu.ve',
+    'heydi.ron@ueipab.edu.ve',
+    'ismary.arcila@ueipab.edu.ve',
+    'jesus.dicesare@ueipab.edu.ve',
+    'josefina.rodriguez@ueipab.edu.ve',
+    'jose.hernandez@ueipab.edu.ve',
+    'jessica.bolivar@ueipab.edu.ve',
+    'laray@ueipab.edu.ve',
+    'luis.rodriguez@ueipab.edu.ve',
+    'luisa.abreu@ueipab.edu.ve',
+    'lorena.reyes@ueipab.edu.ve',
+    'magyelis.mata@ueipab.edu.ve',
+    'mairelsy.motta@ueipab.edu.ve',
+    'maria.nieto@ueipab.edu.ve',
+    'mariela.prado@ueipab.edu.ve',
+    'mirian.hernandez@ueipab.edu.ve',
+    'maria.figuera@ueipab.edu.ve',
+    'nelci.brito@ueipab.edu.ve',
+    'nidya.lira@ueipab.edu.ve',
+    'norka.larosa@ueipab.edu.ve',
+    'pablo.navarro@ueipab.edu.ve',
+    'ramon.bello@ueipab.edu.ve',
+    'robert.quijada@ueipab.edu.ve',
+    'rafael.perez@ueipab.edu.ve',
+    'sergio.maneiro@ueipab.edu.ve',
+    'teresa.marin@ueipab.edu.ve',
+    'virginia.verde@ueipab.edu.ve',
+    'yaritza.bruces@ueipab.edu.ve',
+    'yudelys.brito@ueipab.edu.ve',
+    'zareth.farias@ueipab.edu.ve',
+]
 
 label = '[DRY RUN] ' if DRY_RUN else ''
-print(f"\n{label}Sending to {len(recipients)} recipients\n")
-for name, email in sorted(recipients, key=lambda x: x[0]):
-    print(f"  {name:<35} {email}")
+send_list = [TEST_EMAIL] if TEST_EMAIL else RECIPIENT_EMAILS
+print(f"\n{label}Sending to {len(send_list)} recipient(s)  |  CC: {CC_ADDRESS}  |  Reply-To: {REPLY_TO}\n")
+for e in send_list:
+    print(f"  {e}")
 
 if not DRY_RUN:
-    send_list = [(TEST_EMAIL.split('@')[0].upper(), TEST_EMAIL)] if TEST_EMAIL else recipients
     sent = 0
-    for name, email in send_list:
+    for email in send_list:
         mail = env['mail.mail'].create({
             'subject': SUBJECT,
             'body_html': BODY_HTML,
             'email_from': 'Glenda — Colegio Andrés Bello <soporte@ueipab.edu.ve>',
             'email_to': email,
+            'email_cc': CC_ADDRESS,
+            'reply_to': REPLY_TO,
             'auto_delete': True,
         })
         mail.send()
         sent += 1
-        print(f"  ✓ Queued → {name} <{email}>")
+        print(f"  ✓ Queued → {email}")
     env.cr.commit()
     print(f"\nDone. {sent} email(s) queued.")
 else:

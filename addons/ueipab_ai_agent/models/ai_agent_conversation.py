@@ -567,6 +567,16 @@ class AiAgentConversation(models.Model):
             except Exception as exc:
                 _logger.warning("Absence notification failed: %s", exc)
 
+        # Handle school account help (forgot student email / Akdemia access)
+        if action.get('school_account_help') and not dry_run:
+            try:
+                with self.env.cr.savepoint():
+                    followup = self._handle_school_account_help(action['school_account_help'])
+                    if followup:
+                        action['_school_followup'] = followup
+            except Exception as exc:
+                _logger.warning("School account help failed: %s", exc)
+
         # Send AI response via configured channel
         response_text = action.get('message', ai_content)
 
@@ -631,6 +641,19 @@ class AiAgentConversation(models.Model):
                     "🧾 Comprobante: %s %s %s%s%s"
                 ) % (receipt.get('banco', ''), receipt.get('monto', ''),
                      receipt.get('moneda', ''), draft_tag, dup_tag))
+
+        # Send school account help follow-up (student email found / not found)
+        school_followup = action.get('_school_followup')
+        if school_followup:
+            try:
+                self._send_to_user(school_followup)
+                self.env['ai.agent.message'].sudo().create({
+                    'conversation_id': self.id,
+                    'direction':       'outbound',
+                    'body':            school_followup,
+                })
+            except Exception as exc:
+                _logger.warning("School account follow-up send failed: %s", exc)
 
         # Send balance breakdown as a separate WA message if present
         balance_msg = action.get('balance_message')
@@ -898,6 +921,172 @@ class AiAgentConversation(models.Model):
             )
         else:
             _logger.warning("Absence FreeScout creation failed: %s %s", r.status_code, r.text[:200])
+
+    def _handle_school_account_help(self, data):
+        """Look up a student email from the Google Directory cache and create a FS support ticket.
+
+        Returns a follow-up message string to send to the customer, or None on failure.
+        The ticket is created UNASSIGNED so the support team can follow up.
+        """
+        import json as _json
+        import unicodedata
+        import requests as _req
+
+        cedula       = data.get('cedula', '').strip()
+        student_name = data.get('student_name', '').strip()
+        grade_raw    = data.get('grade_raw', '').strip()
+
+        def _norm(s):
+            """Lowercase, strip accents, collapse whitespace."""
+            s = unicodedata.normalize('NFD', s)
+            s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+            return ' '.join(s.lower().split())
+
+        # --- 1. Verify cédula matches the identified partner ---
+        partner = self.partner_id
+        partner_identified = partner and not partner.name.startswith('Consulta WhatsApp')
+        if partner_identified and cedula:
+            partner_vat = _norm(partner.vat or '').replace('-', '').replace(' ', '')
+            given_vat   = _norm(cedula).replace('-', '').replace(' ', '').lstrip('vejgp')
+            stored_vat  = partner_vat.lstrip('vejgp')
+            if stored_vat and given_vat and stored_vat != given_vat:
+                _logger.warning(
+                    "School account help: cédula mismatch conv=%d partner=%s given=%s stored=%s",
+                    self.id, partner.name, cedula, partner.vat,
+                )
+                return (
+                    "No pude verificar tu identidad con la cédula proporcionada. "
+                    "Por favor, escribe a soporte@ueipab.edu.ve para que el equipo te ayude directamente."
+                )
+
+        # --- 2. Load Google Directory cache ---
+        icp = self.env['ir.config_parameter'].sudo()
+        directory_json = icp.get_param('school.student_directory_json', '')
+        if not directory_json:
+            _logger.warning("School account help: school.student_directory_json param not set")
+            self._create_school_account_fs_ticket(cedula, student_name, grade_raw, email_found=None)
+            return (
+                "Nuestro directorio estudiantil no está disponible en este momento. "
+                "He notificado al equipo de soporte (soporte@ueipab.edu.ve) para que te "
+                "asistan con los datos de acceso de tu hijo/a."
+            )
+
+        try:
+            directory = _json.loads(directory_json)
+            students  = directory.get('students', [])
+        except Exception:
+            students = []
+
+        # --- 3. Fuzzy name match ---
+        target = _norm(student_name)
+        # Split target into words for partial matching
+        target_words = set(target.split())
+        best_match = None
+        best_score = 0
+
+        for s in students:
+            sname = _norm(s.get('name', ''))
+            # Exact match wins immediately
+            if sname == target:
+                best_match = s
+                break
+            # Word-overlap score
+            swords = set(sname.split())
+            overlap = len(target_words & swords)
+            if overlap > best_score and overlap >= min(2, len(target_words)):
+                best_score = overlap
+                best_match = s
+
+        # --- 4. Build response and create FS ticket ---
+        if best_match:
+            email = best_match.get('email', '')
+            grade = best_match.get('grade', grade_raw)
+            _logger.info(
+                "School account help: found student=%s email=%s grade=%s conv=%d",
+                best_match.get('name'), email, grade, self.id,
+            )
+            self._create_school_account_fs_ticket(cedula, student_name, grade_raw, email_found=email)
+            return (
+                f"Encontré la cuenta institucional:\n"
+                f"Alumno/a: {best_match.get('name')}\n"
+                f"Nivel: {grade}\n"
+                f"Correo institucional: {email}\n\n"
+                f"Para recuperar la contraseña de Akdemia, usa este enlace:\n"
+                f"https://edge.akdemia.com/login#resetPasswordModal\n\n"
+                f"El equipo de soporte también ha sido notificado para seguimiento."
+            )
+        else:
+            _logger.warning(
+                "School account help: no match for '%s' in directory (conv=%d)",
+                student_name, self.id,
+            )
+            self._create_school_account_fs_ticket(cedula, student_name, grade_raw, email_found=None)
+            return (
+                f"No encontré un alumno registrado con el nombre '{student_name}' "
+                f"en nuestro directorio. He notificado al equipo de soporte "
+                f"(soporte@ueipab.edu.ve) para que te asistan personalmente. "
+                f"Puedes también escribirles directamente con el nombre completo del alumno/a."
+            )
+
+    def _create_school_account_fs_ticket(self, cedula, student_name, grade_raw, email_found=None):
+        """Create an UNASSIGNED FreeScout soporte@ ticket for school account help follow-up."""
+        import json as _json
+        import requests as _req
+        from datetime import datetime as _dt
+
+        try:
+            fs_config = _json.load(open('/opt/odoo-dev/config/freescout_api.json'))
+        except Exception:
+            _logger.error("School account FS ticket: cannot read freescout_api.json")
+            return
+
+        fs_api_url = fs_config['api_url']
+        headers    = {'X-FreeScout-API-Key': fs_config['api_key'], 'Content-Type': 'application/json'}
+
+        partner = self.partner_id
+        parent_name  = (partner.name if partner and not partner.name.startswith('Consulta WhatsApp')
+                        else 'Representante desconocido')
+        parent_email = (partner.email or '') if partner else ''
+        channel_lbl  = 'WhatsApp' if self.channel == 'whatsapp' else 'Telegram'
+        contact_ref  = self.phone or self.telegram_chat_id or ''
+        today        = _dt.now().strftime('%d/%m/%Y %H:%M')
+
+        if email_found:
+            status_line = f'<p><strong>Correo encontrado:</strong> {email_found}</p>'
+            subject_tag = '[RESUELTO]'
+        else:
+            status_line = '<p><strong>Estado:</strong> Alumno/a NO encontrado en directorio — requiere verificación manual</p>'
+            subject_tag = '[PENDIENTE]'
+
+        subject   = f'[Glenda/{channel_lbl}] {subject_tag} Cuenta escolar — {student_name}'
+        body_html = (
+            f'<p><strong>Solicitud de ayuda con cuenta escolar recibida vía {channel_lbl}</strong></p>'
+            f'<p><strong>Representante:</strong> {parent_name}<br/>'
+            f'<strong>Contacto:</strong> {contact_ref}<br/>'
+            f'<strong>Cédula proporcionada:</strong> {cedula}</p>'
+            f'<p><strong>Alumno/a:</strong> {student_name}<br/>'
+            f'<strong>Nivel/Año:</strong> {grade_raw}</p>'
+            f'{status_line}'
+            f'<p><em>Registrado automáticamente por Glenda AI — {today}</em></p>'
+        )
+
+        payload = {
+            'type':      1,
+            'mailboxId': 3,  # soporte@ueipab.edu.ve
+            'subject':   subject,
+            'status':    'active',
+            'customer':  {
+                'email':     parent_email or 'glenda-noreply@ueipab.edu.ve',
+                'firstName': parent_name.split()[0] if parent_name else '',
+            },
+            'threads': [{'type': 'customer', 'text': body_html}],
+        }
+
+        r = _req.post(f'{fs_api_url}/conversations', json=payload, headers=headers, timeout=15)
+        if r.ok:
+            _logger.info("School account FS ticket created: id=%s student=%s", r.json().get('id'), student_name)
+        else:
+            _logger.warning("School account FS ticket failed: %s %s", r.status_code, r.text[:200])
 
     @api.model
     def _handle_telegram_inbound(self, chat_id, text, first_name='', photos=None, document=None):
