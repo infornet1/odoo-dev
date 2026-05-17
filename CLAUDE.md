@@ -255,7 +255,7 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 2. Cédula provided by parent must match `res.partner.vat` — mismatch → deny + redirect to soporte@
 3. Student name fuzzy-matched against Google Directory cache (`school.student_directory_json` param)
 
-**Google Directory cache:** `scripts/sync_google_directory.py --live` populates `school.student_directory_json` in `ir.config_parameter` → `{'students': [{email, name, grade, ou}...], 'synced_at': ISO}`. Cron: `/etc/cron.d/sync_google_directory` daily 07:00 VET weekdays. Targets `https://odoo.ueipab.edu.ve` (production).
+**Google Directory cache:** `scripts/sync_google_directory.py --live` populates `school.student_directory_json` in `ir.config_parameter` → `{'students': [{email, name, grade, ou}...], 'synced_at': ISO}`. Cron: `/etc/cron.d/sync_google_directory` daily 07:00 VET weekdays. Targets `https://odoo.ueipab.edu.ve` (production). **Suspended accounts are filtered out** — only `suspended=False` accounts cached. As of 2026-05-17: 224 active accounts (46 suspended accounts manually deleted from Google Workspace by admin).
 
 **Akdemia reset link:** `https://edge.akdemia.com/login#resetPasswordModal` — always provided for password issues. For email-only recovery (no password problem), no ACTION needed — just provide the link directly.
 
