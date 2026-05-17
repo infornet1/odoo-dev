@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v8)
+**Last Updated:** 2026-05-17 (v9)
 
 ## Core Instructions
 
@@ -75,6 +75,7 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP:cedula\|student_name\|grade` — 3-factor verify → reveal student email from Google Directory cache + Akdemia reset link; UNASSIGNED soporte@ FS ticket; cron `sync_google_directory.py` daily 07:00 VET |
+| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + `ueipab_attendance_report` + Script | Glenda FAQ (Part 1 LIVE v47.0); email vote campaign (Part 2 — pending trigger after 19-May meeting); 178 ACTIVE families; Opción A $218,88 / Opción B $236,58; vote deadline ~23-May; results 26-May |
 
 ---
 
@@ -163,7 +164,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.46.0 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.47.0 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -178,7 +179,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.46.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE, school account help ACTION:SCHOOL_ACCOUNT_HELP |
+| ueipab_ai_agent | 17.0.1.47.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE, school account help ACTION:SCHOOL_ACCOUNT_HELP, budget FAQ 2026-2027 (Opción A/B + presentation link + Telegram invite) |
 
 ---
 
