@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-16 (v4)
+**Last Updated:** 2026-05-17 (v5)
 
 ## Core Instructions
 
@@ -54,7 +54,7 @@
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
-| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) |
+| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CONTROL_ASISTENCIA_BRIDGE.md) — **Pending enhancements:** non-submitters section, submission KPI, zero-submission guard |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) |
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) |
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) |
@@ -158,7 +158,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.41.4 | 2026-05-14 |
+| ueipab_ai_agent | 17.0.1.42.3 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -173,7 +173,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.41.4 | Deployed 2026-05-14 — mora-policy moved to odoo.ueipab.edu.ve (production domain) |
+| ueipab_ai_agent | 17.0.1.42.3 | Deployed 2026-05-17 — CEO command center (OdooBot Discuss + WA alerts), tertiary monitoring, IDENTIFICACION DEL INTERLOCUTOR fix |
 
 ---
 
@@ -277,6 +277,33 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **WA channel:** wizard shows `res.partner.mobile`; "Enviar WA (en segundo plano)" spawns `wa_invoice_reminder.py --live` as detached subprocess (anti-spam: 120–140s/send); button hides after queueing (`wa_queued_at` shown); WA script itself uses Sheets col L for phone and state-file dedup
 - **State file:** `scripts/wa_invoice_reminder_state.json` — per-partner `last_sent` date; idempotent same-day re-runs
 - **First live send:** 2026-05-15 — 26 partners (REP + PDVSA); follow-up emails sent same day
+
+### CEO Command Center (wa_monitor)
+
+Real-time monitoring alerts to CEO via two channels:
+- **Odoo Discuss** (OdooBot DM) — primary, instant, no throttle; via `wa_monitor.ceo_email`
+- **WA +584248944898** — secondary, subject to 120s anti-spam throttle; via `wa_monitor.ceo_phone`
+
+**Config params (ir.config_parameter):**
+- `wa_monitor.ceo_email` = `gustavo.perdomo@ueipab.edu.ve`
+- `wa_monitor.ceo_phone` = `+584248944898`
+- `wa_monitor.tertiary_notified_ids` = JSON list of already-notified tertiary WA message IDs (dedup, rolling 500)
+
+**Events that trigger CEO alert (in `ai_agent_conversation.py`):**
+| Event | Method | Trigger point |
+|---|---|---|
+| Customer with balance contacts Glenda | `_notify_ceo` | `_get_or_create_general_inquiry_conversation` after creation |
+| Glenda escalation | `_notify_ceo` | `_handle_escalation` |
+| Handoff to Pagos/Soporte | `_notify_ceo` | `action_process_reply` resolve block |
+| Message received on tertiary (+58 414-832-1963) | `_notify_ceo_tertiary` | `_cron_poll_messages` non-primary guard |
+
+**Script-level alerts (in standalone scripts):**
+- WA blast start + end summary → `wa_invoice_reminder.py` reads `wa_monitor.ceo_phone` via XML-RPC
+- Payment confirmed → `pagos_receipt_processor.py` via MassivaMóvil API direct call
+
+**OdooBot Discuss method:** `_notify_ceo_discuss(message, ceo_email)` — SQL lookup of CEO's OdooBot DM channel, creates channel if missing, posts as `base.partner_root`.
+
+**Tertiary dedup:** `_notify_ceo_tertiary` checks `wa_monitor.tertiary_notified_ids` before notifying; saves wa_id after notifying to prevent repeated alerts on same message across poll cycles.
 
 ### Glenda Daily Executive Digest (glenda_daily_digest.py)
 

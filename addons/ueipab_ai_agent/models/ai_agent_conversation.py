@@ -793,6 +793,36 @@ class AiAgentConversation(models.Model):
             except Exception as exc:
                 _logger.warning("CEO WA notify failed: %s", exc)
 
+    def _notify_ceo_tertiary(self, phone, body, wa_id):
+        """Notify CEO once per message received on the tertiary WA number (+584148321963)."""
+        import json as _json
+        icp = self.env['ir.config_parameter'].sudo()
+
+        # Dedup: track already-notified wa_ids in a rolling set (last 500)
+        try:
+            notified = set(_json.loads(icp.get_param('wa_monitor.tertiary_notified_ids', '[]')))
+        except Exception:
+            notified = set()
+
+        if wa_id in notified:
+            return
+
+        notified.add(wa_id)
+        if len(notified) > 500:
+            notified = set(list(notified)[-500:])
+        icp.set_param('wa_monitor.tertiary_notified_ids', _json.dumps(list(notified)))
+
+        # Look up partner name
+        partner = self.env['res.partner'].sudo().search([('mobile', '=', phone)], limit=1)
+        name = partner.name if partner else phone
+
+        self._notify_ceo(
+            f"📞 Msg en terciario (+58 414-832-1963)\n"
+            f"👤 {name}\n"
+            f"📱 {phone}\n"
+            f"💬 {body[:120]}"
+        )
+
     def _notify_ceo_discuss(self, message, ceo_email):
         """Post message to CEO's OdooBot Discuss DM channel."""
         ceo_user = self.env['res.users'].sudo().search(
@@ -1666,6 +1696,9 @@ class AiAgentConversation(models.Model):
             if sender_account:
                 normalized_sa = wa_service._normalize_phone(sender_account)
                 if normalized_sa != primary_phone and sender_account != primary_account_id:
+                    # CEO monitoring: alert on messages received on the tertiary number
+                    if normalized_sa == tertiary_phone and wa_id and phone not in own_phones:
+                        self._notify_ceo_tertiary(phone, body or '[imagen/audio]', wa_id)
                     _logger.info(
                         "Ignoring message from %s: received on non-primary account (%s)",
                         phone, sender_account)
