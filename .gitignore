@@ -167,3 +167,4 @@ config/openai_api.json
 # Bounce processor auto-generated files
 scripts/bounce_state.json
 scripts/bounce_logs/
+config/telegram_bot.json

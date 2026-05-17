@@ -133,3 +133,29 @@ UPDATE mail_template SET body_html = (SELECT pg_read_file('/tmp/template.json'):
 **Design:** Matches existing template style (same as reminder template but green instead of orange).
 
 **Error Handling:** Wrapped in try/except — email failure never blocks the acknowledgment success page.
+
+---
+
+## mail.template body_html — Multilingual JSONB (Critical Pattern)
+
+`body_html` uses `render_engine='qweb'` and stores as JSONB with per-language keys.
+
+**Rules:**
+- Always write via **direct SQL** updating **both** `en_US` and `es_VE` keys — ORM write only updates the current lang key; if `es_VE` is stale, the ORM reads the wrong version
+- SQL pattern: `UPDATE mail_template SET body_html = %s::jsonb WHERE id = %s` with `json.dumps({'en_US': body, 'es_VE': body})`
+- Subject field is also JSONB — same pattern required
+- Use `<t t-out="object.field"/>` or `<t t-att-href="object.method()"/>` (QWeb syntax, stored via SQL)
+- `{{ object.field }}` Jinja2 syntax does NOT work — `render_engine='qweb'` ignores it
+- For multilingual fix via XML-RPC (no direct DB access): call `write({'body_html': body}, context={'lang': 'es_VE'})` then again with `'en_US'`
+
+---
+
+## Adelanto de Prestaciones Sociales Email Template
+
+- **Testing:** `mail_template` id=71 | **Production:** id=50
+- Body managed via **direct SQL only** — ORM `Html` field sanitizer strips custom QWeb method calls (`object.get_liq_veb(...)`) on every `tmpl.write({'body_html': ...})`
+- Always use: `env.cr.execute("UPDATE mail_template SET body_html = jsonb_set(body_html, '{en_US}', %s::jsonb) WHERE id=?", [json.dumps(body)])`
+- Subject field is also `jsonb` — same SQL pattern required
+- After SQL update, **restart Odoo** to flush ORM cache before sending test emails
+- Production sync via psycopg2 inside Odoo container: `psycopg2.connect(host='postgres', dbname='DB_UEIPAB', user='odoo', password='odoo8069')`
+- Color scheme: navy blue only — `#1a2c5b` (dark) / `#2471a3` (medium) / `#f0f4fa` (light bg). No red (`#c0392b`, `#7b1a1a`)

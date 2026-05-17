@@ -301,3 +301,16 @@ python3 scripts/wa_invoice_reminder.py   # dry run, production data
 - [AKDEMIA_DATA_PIPELINE.md](AKDEMIA_DATA_PIPELINE.md) — gspread pattern reused here
 - `scripts/pagos_receipt_processor.py` — reference script architecture
 - `scripts/ai_agent_escalation_bridge.py` — reference MassivaMóvil send function
+
+---
+
+## Technical Reference (CLAUDE.md extract)
+
+- **Wizard:** `ueipab_payroll_enhancements` — Accounting → Customers → Recordatorio de Saldo (Email)
+- **WA cron:** `/etc/cron.d/wa_invoice_reminder` — weekdays 07:00 VET (`0 11 * * 1-5`), runs `scripts/wa_invoice_reminder.py --live`
+- **Segments:** TAG_REP=25 (Representante), TAG_PDVSA=26 (PDVSA), TAG_VIP=30 (excluded by default, override via `include_vip` toggle)
+- **Exclusions (both channels):** VIP, active employees (VAT match), PDVSA fiscal_check on latest invoice, PDVSA ≥30% advance paid, balance < $1.00
+- **Email channel:** `res.partner.email`; sends `mail.mail` From=`finanzas@` Reply-To/CC=`pagos@`; per-partner HTML with invoice table newest→oldest, payment options, BCV rate link
+- **WA channel:** wizard shows `res.partner.mobile`; "Enviar WA (en segundo plano)" spawns `wa_invoice_reminder.py --live` as detached subprocess (anti-spam: 120–140s/send); button hides after queueing (`wa_queued_at` shown); WA script itself uses Sheets col L for phone and state-file dedup
+- **State file:** `scripts/wa_invoice_reminder_state.json` — per-partner `last_sent` date; idempotent same-day re-runs
+- **First live send:** 2026-05-15 — 26 partners (REP + PDVSA); follow-up emails sent same day

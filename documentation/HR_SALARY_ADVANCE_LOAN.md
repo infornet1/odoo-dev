@@ -392,3 +392,22 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.9 | 2026-04-28 | Recovery type messaging across all 3 surfaces: notification email, ack landing page, and ack confirmation email all display recovery-type-specific badge, table title, legal declaration, and confirmation note for `quincena` (blue) vs `liquidacion` (amber). Prevents confusion for liquidacion employees who see no quincena deductions. |
 | 17.0.1.65.0 | 2026-05-04 | `total_net_amount` on `hr.payslip.run` now includes `LIQUID_NET_V2` code — batch totals were showing 0 for liquidation-only batches. Relación de Liquidación: loan deduction `amount_formatted` sign fix — was using `abs()` causing positive display inconsistent with other deductions. |
 | 17.0.1.66.0 | 2026-05-04 | **Multiple loans per employee (Option A).** `HrLoan.create()` bypasses ohrms_loan one-loan constraint via MRO. `get_inputs()` rewritten: one LO input per active loan (date ≤ payslip end — handles skipped periods), removes last-wins bug. `action_payslip_done()` rewritten: uses `loan_line_id` directly, reverts paid=True for LO inputs HR zeroed out (skip). Salary rules `VE_LOAN_DED_V2`/`LIQUID_LOAN_DED_V2` updated to `sum all LO inputs` via `payslip.dict.input_line_ids`. Relación de Liquidación: removed `limit=1`, shows all active liquidación loans. |
+
+---
+
+## Production Migration Checklist
+
+**Status:** Ready for deployment | **Scripts:** `setup_loan_rules.py` + `deploy_loan_templates_prod.py`
+
+| Step | Action | Script/Method |
+|---|---|---|
+| A | Backup DB_UEIPAB | `pg_dump` |
+| B | Copy `ohrms_loan` + `ohrms_loan_accounting` to prod addons | `scp` |
+| C | Copy `ueipab_payroll_enhancements` v1.65.0 to prod | `scp` |
+| D | Install ohrms_loan + ohrms_loan_accounting | Odoo `-i` |
+| E | Upgrade ueipab_payroll_enhancements | Odoo `-u` |
+| F | Create loan salary rules + patch NET formulas | `setup_loan_rules.py` via Odoo shell |
+| G | Deploy email templates (create id=75 equiv, patch id=37+50) | `deploy_loan_templates_prod.py` |
+| H | Restart + smoke test | `docker restart ueipab17` |
+
+**Production template IDs:** Payslip Email=37, Adelanto Prestaciones=50, Adelanto Salario=52

@@ -4,7 +4,7 @@ import re as _re
 import requests
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 from ..skills import get_skill
 
@@ -72,7 +72,12 @@ class AiAgentConversation(models.Model):
     name = fields.Char('Referencia', compute='_compute_name', store=True)
     skill_id = fields.Many2one('ai.agent.skill', required=True, string='Skill', ondelete='restrict')
     partner_id = fields.Many2one('res.partner', string='Contacto', required=True)
-    phone = fields.Char('Telefono WhatsApp', required=True)
+    phone = fields.Char('Telefono WhatsApp')
+    channel = fields.Selection([
+        ('whatsapp', 'WhatsApp'),
+        ('telegram', 'Telegram'),
+    ], default='whatsapp', required=True, string='Canal')
+    telegram_chat_id = fields.Char('Telegram Chat ID', index=True)
 
     state = fields.Selection([
         ('draft', 'Borrador'),
@@ -334,16 +339,9 @@ class AiAgentConversation(models.Model):
         context = skill_handler.get_context(self)
         greeting = skill_handler.get_greeting(self, context)
 
-        # Send via WhatsApp
-        wa_service = self.env['ai.agent.whatsapp.service']
+        # Send via configured channel
         dry_run = self._is_dry_run()
-
-        if dry_run:
-            _logger.info("DRY_RUN: Would send WhatsApp to %s: %s", self.phone, greeting[:100])
-            wa_msg_id = 0
-        else:
-            result = wa_service.send_message(self.phone, greeting)
-            wa_msg_id = result.get('message_id', 0)
+        wa_msg_id = self._send_to_user(greeting)
 
         # Log message
         self.env['ai.agent.message'].create({
@@ -457,9 +455,7 @@ class AiAgentConversation(models.Model):
                     "⚠️ Mensaje bloqueado por moderación: [%s]"
                 ) % ', '.join(flag_categories))
                 if not self._is_dry_run():
-                    wa_service = self.env['ai.agent.whatsapp.service'].sudo()
-                    wa_service.send_message(
-                        self.phone,
+                    self._send_to_user(
                         "No puedo procesar ese tipo de mensaje. "
                         "Si tienes una consulta sobre el colegio, con gusto te ayudo."
                     )
@@ -502,14 +498,7 @@ class AiAgentConversation(models.Model):
             # Send farewell message before resolving
             farewell = action.get('farewell_message')
             if farewell:
-                if dry_run:
-                    _logger.info("DRY_RUN: Would send farewell WhatsApp to %s: %s",
-                                 self.phone, farewell[:100])
-                    wa_msg_id = 0
-                else:
-                    wa_service = self.env['ai.agent.whatsapp.service']
-                    result = wa_service.send_message(self.phone, farewell)
-                    wa_msg_id = result.get('message_id', 0)
+                wa_msg_id = self._send_to_user(farewell)
 
                 self.env['ai.agent.message'].create({
                     'conversation_id': self.id,
@@ -558,16 +547,24 @@ class AiAgentConversation(models.Model):
         if action.get('alternative_phone'):
             self.write({'alternative_phone': action['alternative_phone']})
 
-        # Send AI response via WhatsApp
+        # Send AI response via configured channel
         response_text = action.get('message', ai_content)
 
-        if dry_run:
-            _logger.info("DRY_RUN: Would send WhatsApp to %s: %s", self.phone, response_text[:100])
-            wa_msg_id = 0
-        else:
-            wa_service = self.env['ai.agent.whatsapp.service']
-            result = wa_service.send_message(self.phone, response_text)
-            wa_msg_id = result.get('message_id', 0)
+        # Telegram cross-channel invite — appended once on the very first WA reply
+        # for general_inquiry only. If the customer ignores it, WA conversation continues normally.
+        icp = self.env['ir.config_parameter'].sudo()
+        if (self.channel == 'whatsapp'
+                and self.skill_id.code == 'general_inquiry'
+                and not self.agent_message_ids
+                and icp.get_param('ai_agent.telegram_invite_enabled', 'True') == 'True'):
+            bot_username = icp.get_param('ai_agent.telegram_bot_username', 'GlendaUeipabBot')
+            response_text += (
+                f"\n\n📲 Por cierto, también puede escribirme por Telegram "
+                f"(@{bot_username}) — respondo al instante y sin límites de tiempo. "
+                f"Si prefiere seguir por WhatsApp, con gusto le atiendo aquí también."
+            )
+
+        wa_msg_id = self._send_to_user(response_text)
 
         # Log outbound message
         self.env['ai.agent.message'].create({
@@ -619,8 +616,7 @@ class AiAgentConversation(models.Model):
         balance_msg = action.get('balance_message')
         if balance_msg:
             try:
-                wa_service = self.env['ai.agent.whatsapp.service'].sudo()
-                wa_service.send_message(self.phone, balance_msg)
+                self._send_to_user(balance_msg)
                 self.env['ai.agent.message'].sudo().create({
                     'conversation_id': self.id,
                     'direction':       'outbound',
@@ -780,6 +776,198 @@ class AiAgentConversation(models.Model):
         except Exception as e:
             _logger.warning("Receipt OCR structured extraction failed: %s", e)
             return None
+
+    # ── Channel dispatch ────────────────────────────────────────────────────
+
+    def _send_to_user(self, text):
+        """Send text to the user via their channel (WhatsApp or Telegram).
+
+        Handles dry_run internally. Returns WA message_id (int) or 0.
+        """
+        if self._is_dry_run():
+            _logger.info(
+                "DRY_RUN [%s → %s]: %s",
+                self.channel, self.telegram_chat_id or self.phone, text[:80],
+            )
+            return 0
+        if self.channel == 'telegram':
+            self.env['ai.agent.telegram.service'].send_message(
+                self.telegram_chat_id, text)
+            return 0
+        result = self.env['ai.agent.whatsapp.service'].send_message(self.phone, text)
+        return result.get('message_id', 0)
+
+    # ── Telegram inbound entry point ────────────────────────────────────────
+
+    @api.model
+    def _handle_telegram_inbound(self, chat_id, text, first_name='', photos=None, document=None):
+        """Webhook entry point for Telegram messages. Analogous to _cron_poll_messages for WA."""
+        icp = self.env['ir.config_parameter'].sudo()
+        if icp.get_param('ai_agent.telegram_enabled', 'False').lower() != 'true':
+            _logger.info("Telegram: disabled via ai_agent.telegram_enabled param")
+            return
+        dry_run = icp.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+        if dry_run:
+            _logger.info("DRY_RUN: Telegram inbound chat_id=%s text=%r", chat_id, text[:60])
+
+        # Handle /start command — may carry employee deep-link token (EMP_123)
+        if text.startswith('/start'):
+            payload = text[len('/start'):].strip()
+            if payload.startswith('EMP_'):
+                self._handle_telegram_employee_start(chat_id, payload, first_name, dry_run)
+                return
+            # Plain /start (no token) — send welcome and fall through to normal conversation
+
+        # Build attachment if user sent a photo (e.g. payment receipt)
+        extra_attachments = []
+        if photos:
+            tg = self.env['ai.agent.telegram.service']
+            file_id = photos[-1]['file_id']   # Telegram sorts smallest→largest
+            url = tg.get_file_url(file_id)
+            if url:
+                extra_attachments.append({'url': url, 'wa_id': 0})
+
+        conv = self._get_or_create_telegram_conversation(chat_id, first_name)
+        if not conv:
+            return
+
+        # Show typing indicator while Claude thinks
+        if not dry_run:
+            self.env['ai.agent.telegram.service'].send_chat_action(chat_id)
+
+        conv.action_process_reply(
+            message_text=text or ('[foto]' if photos else '[documento]'),
+            wa_message_id=0,
+            extra_attachments=extra_attachments or None,
+        )
+
+    @api.model
+    def _handle_telegram_employee_start(self, chat_id, payload, first_name, dry_run=False):
+        """Handle /start EMP_123 deep-link — identify employee and send personalised welcome."""
+        tg = self.env['ai.agent.telegram.service']
+        try:
+            emp_id = int(payload[4:])   # strip 'EMP_'
+        except ValueError:
+            tg.send_message(chat_id, "¡Hola! Puedes escribirme cualquier consulta sobre el colegio.")
+            return
+
+        emp = self.env['hr.employee'].sudo().browse(emp_id)
+        if not emp.exists() or not emp.active:
+            _logger.warning("Telegram /start EMP_%s: employee not found", emp_id)
+            tg.send_message(chat_id,
+                "¡Hola! No pude identificarte automáticamente. "
+                "Escríbeme tu número de cédula para continuar.")
+            return
+
+        # Resolve partner — prefer the Odoo user's partner, fall back to address_home_id
+        partner = None
+        if emp.user_id:
+            partner = emp.user_id.partner_id
+        elif emp.address_home_id:
+            partner = emp.address_home_id
+        else:
+            partner = self.env['res.partner'].sudo().search(
+                [('email', '=', emp.work_email)], limit=1)
+
+        if partner:
+            # Link any existing placeholder conversations for this chat_id to the real partner
+            placeholders = self.search([
+                ('telegram_chat_id', '=', chat_id),
+                ('partner_id.comment', 'like', f'telegram_chat_id:{chat_id}'),
+            ])
+            if placeholders:
+                placeholders.sudo().write({'partner_id': partner.id})
+                _logger.info(
+                    "Telegram /start EMP_%s: linked %d conversations to partner %s",
+                    emp_id, len(placeholders), partner.name,
+                )
+
+        first = emp.name.split()[0].title()
+        _logger.info("Telegram /start EMP_%s → employee=%s chat_id=%s", emp_id, emp.name, chat_id)
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would send welcome to %s (chat_id=%s)", emp.name, chat_id)
+            return
+
+        tg.send_message(chat_id,
+            f"¡Hola, {first}! 👋\n\n"
+            f"Soy <b>Glenda</b>, tu asistente virtual del Instituto Privado Andrés Bello. "
+            f"Te identifiqué correctamente en el sistema.\n\n"
+            f"Puedo ayudarte con:\n"
+            f"• Tarifas e inscripciones 2026-2027\n"
+            f"• Costos anuales y descuentos por hermanos\n"
+            f"• Medios de pago\n"
+            f"• Políticas del colegio\n"
+            f"• Y cualquier consulta institucional\n\n"
+            f"¿En qué te puedo ayudar hoy?"
+        )
+
+    @api.model
+    def _get_or_create_telegram_conversation(self, chat_id, first_name=''):
+        """Find or create a general_inquiry conversation for a Telegram chat_id."""
+        from datetime import timedelta
+
+        # Reuse an active conversation for this chat_id in the last 24 h
+        cutoff = fields.Datetime.now() - timedelta(hours=24)
+        existing = self.search([
+            ('telegram_chat_id', '=', chat_id),
+            ('skill_id.code', '=', 'general_inquiry'),
+            ('create_date', '>=', cutoff),
+        ], limit=1, order='create_date desc')
+
+        if existing:
+            if existing.state in ('active', 'waiting'):
+                return existing
+            if existing.state in ('timeout', 'failed'):
+                return None   # unresponsive — don't re-open within 24 h
+            # resolved: allow a new conversation
+
+        skill = self.env['ai.agent.skill'].search(
+            [('code', '=', 'general_inquiry')], limit=1)
+        if not skill:
+            _logger.error("Telegram: general_inquiry skill not found")
+            return None
+
+        # Re-use partner from a previous Telegram conversation for this chat_id
+        prev = self.search([('telegram_chat_id', '=', chat_id)],
+                           limit=1, order='create_date desc')
+        if prev and prev.partner_id:
+            partner = prev.partner_id
+        else:
+            # Create a placeholder partner; the skill will identify them during the conversation
+            name = first_name or f'Telegram {chat_id}'
+            partner = self.env['res.partner'].sudo().create({
+                'name':          name,
+                'customer_rank': 1,
+                'comment':       f'telegram_chat_id:{chat_id}',
+            })
+            _logger.info(
+                "Telegram: new placeholder partner %d (%s) for chat_id=%s",
+                partner.id, name, chat_id,
+            )
+
+        conv = self.sudo().create({
+            'skill_id':         skill.id,
+            'partner_id':       partner.id,
+            'channel':          'telegram',
+            'telegram_chat_id': chat_id,
+            'phone':            '',
+            'state':            'active',
+        })
+        _logger.info(
+            "Telegram: created conversation %d for chat_id=%s partner=%s",
+            conv.id, chat_id, partner.name,
+        )
+
+        # CEO alert if partner has outstanding balance (same as WA general_inquiry)
+        try:
+            conv._notify_ceo(
+                f"📱 [Telegram] {partner.name} inició chat — @GlendaUeipabBot"
+            )
+        except Exception:
+            pass
+
+        return conv
 
     def _notify_ceo(self, message):
         """Send CEO monitoring alert via Odoo Discuss (OdooBot DM) + WA.
@@ -1409,16 +1597,7 @@ class AiAgentConversation(models.Model):
         context = skill_handler.get_context(self)
         reminder_text = skill_handler.get_reminder_message(self, context, self.reminder_count)
 
-        dry_run = self._is_dry_run()
-        wa_service = self.env['ai.agent.whatsapp.service']
-
-        if dry_run:
-            _logger.info("DRY_RUN: Would send reminder WhatsApp to %s: %s",
-                         self.phone, reminder_text[:100])
-            wa_msg_id = 0
-        else:
-            result = wa_service.send_message(self.phone, reminder_text)
-            wa_msg_id = result.get('message_id', 0)
+        wa_msg_id = self._send_to_user(reminder_text)
 
         self.env['ai.agent.message'].create({
             'conversation_id': self.id,
@@ -1461,16 +1640,7 @@ class AiAgentConversation(models.Model):
             f"Gracias por su colaboracion. Saludos desde {institution}."
         )
 
-        dry_run = self._is_dry_run()
-        wa_service = self.env['ai.agent.whatsapp.service']
-
-        if dry_run:
-            _logger.info("DRY_RUN: Would send farewell WhatsApp to %s: %s",
-                         self.phone, farewell[:100])
-            wa_msg_id = 0
-        else:
-            result = wa_service.send_message(self.phone, farewell)
-            wa_msg_id = result.get('message_id', 0)
+        wa_msg_id = self._send_to_user(farewell)
 
         self.env['ai.agent.message'].create({
             'conversation_id': self.id,
