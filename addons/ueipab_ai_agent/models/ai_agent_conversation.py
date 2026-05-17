@@ -875,13 +875,11 @@ class AiAgentConversation(models.Model):
                 "Escríbeme tu número de cédula para continuar.")
             return
 
-        # Resolve partner — prefer the Odoo user's partner, fall back to address_home_id
+        # Resolve partner — use Odoo user's partner (most reliable)
         partner = None
         if emp.user_id:
             partner = emp.user_id.partner_id
-        elif emp.address_home_id:
-            partner = emp.address_home_id
-        else:
+        if not partner:
             partner = self.env['res.partner'].sudo().search(
                 [('email', '=', emp.work_email)], limit=1)
 
@@ -1105,22 +1103,23 @@ class AiAgentConversation(models.Model):
         bot_partner_id = odoobot.id
 
         # Find existing DM channel between CEO and OdooBot
+        # Odoo 17: tables renamed mail_channel→discuss_channel, mail_channel_member→discuss_channel_member
         self.env.cr.execute("""
-            SELECT c.id FROM mail_channel c
-            JOIN mail_channel_member m1 ON m1.channel_id = c.id AND m1.partner_id = %s
-            JOIN mail_channel_member m2 ON m2.channel_id = c.id AND m2.partner_id = %s
+            SELECT c.id FROM discuss_channel c
+            JOIN discuss_channel_member m1 ON m1.channel_id = c.id AND m1.partner_id = %s
+            JOIN discuss_channel_member m2 ON m2.channel_id = c.id AND m2.partner_id = %s
             WHERE c.channel_type = 'chat'
             LIMIT 1
         """, [ceo_partner_id, bot_partner_id])
         row = self.env.cr.fetchone()
 
         if not row:
-            # Channel doesn't exist yet — create it
-            channel = self.env['mail.channel'].sudo().create({
+            # Channel doesn't exist yet — create it (Odoo 17: discuss.channel)
+            channel = self.env['discuss.channel'].sudo().create({
                 'channel_type': 'chat',
                 'name': '',
             })
-            self.env['mail.channel.member'].sudo().create([
+            self.env['discuss.channel.member'].sudo().create([
                 {'channel_id': channel.id, 'partner_id': ceo_partner_id},
                 {'channel_id': channel.id, 'partner_id': bot_partner_id},
             ])
@@ -1129,7 +1128,7 @@ class AiAgentConversation(models.Model):
         else:
             channel_id = row[0]
 
-        channel = self.env['mail.channel'].sudo().browse(channel_id)
+        channel = self.env['discuss.channel'].sudo().browse(channel_id)
         html_body = message.replace('\n', '<br/>')
         channel.message_post(
             body=html_body,

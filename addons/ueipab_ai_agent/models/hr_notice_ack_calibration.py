@@ -44,7 +44,6 @@ class HrNoticeAcknowledgmentCalibration(models.Model):
             if emp:
                 partner_ids = list(filter(None, [
                     emp.user_id.partner_id.id if emp.user_id else None,
-                    emp.address_home_id.id if emp.address_home_id else None,
                 ]))
                 if partner_ids:
                     tg_count = Conversation.search_count([

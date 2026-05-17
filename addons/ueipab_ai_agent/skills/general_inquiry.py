@@ -357,9 +357,7 @@ class GeneralInquirySkill:
         if conversation.channel == 'telegram' and conversation.partner_id:
             partner = conversation.partner_id
             emp = env['hr.employee'].sudo().search([
-                '|',
                 ('user_id.partner_id', '=', partner.id),
-                ('address_home_id', '=', partner.id),
             ], limit=1)
             if emp:
                 ack = env['hr.notice.acknowledgment'].sudo().search([
@@ -784,8 +782,11 @@ class GeneralInquirySkill:
         return result
 
     def send_flyer(self, conversation, flyer_key):
-        """Send a flyer image via WhatsApp for the given key."""
+        """Send a flyer image via WhatsApp for the given key. Skipped on Telegram."""
         if flyer_key not in _FLYERS:
+            return
+        if conversation.channel != 'whatsapp':
+            _logger.info("Flyer '%s' skipped — channel=%s (WA only)", flyer_key, conversation.channel)
             return
         filename, description = _FLYERS[flyer_key]
         base_url = self._get_base_url(conversation)

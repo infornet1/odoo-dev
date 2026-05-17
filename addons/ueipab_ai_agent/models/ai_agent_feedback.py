@@ -65,9 +65,7 @@ class AiAgentFeedback(models.Model):
             # Telegram path: find employee via partner_id
             partner = conversation.partner_id
             emp = self.env['hr.employee'].sudo().search([
-                '|',
                 ('user_id.partner_id', '=', partner.id),
-                ('address_home_id', '=', partner.id),
             ], limit=1)
             employee = emp or None
             contact_ref = f'telegram:{conversation.telegram_chat_id}'
