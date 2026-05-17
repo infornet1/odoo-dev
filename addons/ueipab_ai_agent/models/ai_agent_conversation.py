@@ -791,8 +791,21 @@ class AiAgentConversation(models.Model):
             )
             return 0
         if self.channel == 'telegram':
-            self.env['ai.agent.telegram.service'].send_message(
+            resp = self.env['ai.agent.telegram.service'].send_message(
                 self.telegram_chat_id, text)
+            if not resp.get('ok'):
+                err = resp.get('description', 'unknown error')
+                _logger.warning("Telegram send failed chat_id=%s: %s", self.telegram_chat_id, err)
+                try:
+                    partner = self.partner_id.name or f"chat {self.telegram_chat_id}"
+                    self._notify_ceo_discuss(
+                        f"⚠️ [Telegram] Error al enviar mensaje a {partner}\n"
+                        f"chat_id: {self.telegram_chat_id} | Error: {err}",
+                        self.env['ir.config_parameter'].sudo().get_param(
+                            'wa_monitor.ceo_email', ''),
+                    )
+                except Exception:
+                    pass
             return 0
         result = self.env['ai.agent.whatsapp.service'].send_message(self.phone, text)
         return result.get('message_id', 0)
@@ -885,6 +898,18 @@ class AiAgentConversation(models.Model):
         first = emp.name.split()[0].title()
         _logger.info("Telegram /start EMP_%s → employee=%s chat_id=%s", emp_id, emp.name, chat_id)
 
+        # Silent CEO alert — employee identified on Telegram
+        try:
+            icp = self.env['ir.config_parameter'].sudo()
+            ceo_email = icp.get_param('wa_monitor.ceo_email', '')
+            if ceo_email and not dry_run:
+                self._notify_ceo_discuss(
+                    f"📱 [Telegram] {emp.name} abrió @GlendaUeipabBot (identificado/a automáticamente)",
+                    ceo_email,
+                )
+        except Exception:
+            pass
+
         if dry_run:
             _logger.info("DRY_RUN: Would send welcome to %s (chat_id=%s)", emp.name, chat_id)
             return
@@ -968,6 +993,31 @@ class AiAgentConversation(models.Model):
             pass
 
         return conv
+
+    def _notify_ceo_telegram_event(self, event_label, detail=''):
+        """Post a silent OdooBot DM to the CEO for Telegram conversation events.
+
+        Only fires for channel='telegram'. No WA credit used.
+        event_label examples: '✅ Resuelta', '⏱️ Timeout', '⚠️ Error'.
+        """
+        if self.channel != 'telegram':
+            return
+        try:
+            icp = self.env['ir.config_parameter'].sudo()
+            ceo_email = icp.get_param('wa_monitor.ceo_email', '')
+            if not ceo_email:
+                return
+            partner = self.partner_id.name or f"Telegram {self.telegram_chat_id}"
+            skill = self.skill_id.name or 'general_inquiry'
+            msg = (
+                f"📱 [Telegram] {event_label}\n"
+                f"👤 {partner} | 🔧 {skill} | 💬 {self.turn_count} turnos\n"
+            )
+            if detail:
+                msg += f"📝 {detail[:150]}"
+            self._notify_ceo_discuss(msg, ceo_email)
+        except Exception as exc:
+            _logger.debug("_notify_ceo_telegram_event failed: %s", exc)
 
     def _notify_ceo(self, message):
         """Send CEO monitoring alert via Odoo Discuss (OdooBot DM) + WA.
@@ -1566,12 +1616,14 @@ class AiAgentConversation(models.Model):
                 _logger.error("Skill on_resolve error for conversation %s: %s", self.id, e)
 
         self.message_post(body=_("Conversacion resuelta: %s") % (summary or 'Sin resumen'))
+        self._notify_ceo_telegram_event('✅ Resuelta', summary)
 
     def action_timeout(self):
         """Mark conversation as timed out."""
         self.ensure_one()
         self.write({'state': 'timeout'})
         self.message_post(body=_("Conversacion cerrada por timeout (sin respuesta del cliente)."))
+        self._notify_ceo_telegram_event('⏱️ Timeout', 'Sin respuesta del empleado')
 
     def action_force_resolve(self):
         """Manual resolve button for managers."""

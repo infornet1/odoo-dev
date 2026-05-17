@@ -123,6 +123,7 @@ def fetch_data(env_name, day):
         'id', 'name', 'skill_id', 'partner_id', 'phone', 'state',
         'turn_count', 'resolution_summary', 'escalation_reason',
         'create_date', 'last_message_date', 'resolved_date',
+        'channel', 'telegram_chat_id',
     ]
     convs = rpc(models, db, uid, pw, 'ai.agent.conversation', 'search_read',
                 [conv_domain], {'fields': conv_fields, 'limit': 500})
@@ -178,11 +179,13 @@ def analyse(convs, msgs, day):
     unresolved_log = []
     suspicious     = []
     phone_convs    = defaultdict(list)
+    telegram_convs = []   # per-conv detail for the Telegram section
 
     total_in_tokens  = 0
     total_out_tokens = 0
     total_wa_sent    = 0
     total_wa_recv    = 0
+    total_tg_sent    = 0
 
     for conv in convs:
         skill = conv['skill_id'][1] if conv.get('skill_id') else 'Unknown'
@@ -233,10 +236,30 @@ def analyse(convs, msgs, day):
         conv_out = sum(m.get('ai_output_tokens', 0) or 0 for m in conv_msgs)
         total_in_tokens  += conv_in
         total_out_tokens += conv_out
-        wa_out = sum(1 for m in conv_msgs if m.get('direction') == 'outbound')
-        wa_in  = sum(1 for m in conv_msgs if m.get('direction') == 'inbound')
-        total_wa_sent += wa_out
-        total_wa_recv += wa_in
+        msg_out = sum(1 for m in conv_msgs if m.get('direction') == 'outbound')
+        msg_in  = sum(1 for m in conv_msgs if m.get('direction') == 'inbound')
+
+        channel = conv.get('channel', 'whatsapp')
+        if channel == 'telegram':
+            total_tg_sent += msg_out
+            # Build first inbound message snippet for topic preview
+            first_in = next(
+                (m.get('body', '') for m in sorted(conv_msgs, key=lambda x: x.get('create_date',''))
+                 if m.get('direction') == 'inbound'), '')
+            topic_snippet = (first_in or '')[:120].replace('<br>', ' ').replace('\n', ' ')
+            telegram_convs.append({
+                'partner': conv['partner_id'][1] if conv.get('partner_id') else '?',
+                'chat_id': conv.get('telegram_chat_id', ''),
+                'state':   state,
+                'turns':   conv.get('turn_count', 0),
+                'topics':  topics,
+                'snippet': topic_snippet,
+                'create':  conv.get('create_date', '')[:16],
+                'identified': not (conv['partner_id'][1] if conv.get('partner_id') else '').startswith('Telegram '),
+            })
+        else:
+            total_wa_sent += msg_out
+            total_wa_recv += msg_in
 
         # Suspicious: very long conversation
         turns = conv.get('turn_count', 0)
@@ -301,21 +324,23 @@ def analyse(convs, msgs, day):
     active_ct    = sum(1 for c in convs if c['state'] in ('waiting', 'active', 'draft'))
 
     return {
-        'day':           day,
-        'total_convs':   total_convs,
-        'resolved':      resolved_ct,
-        'escalated':     escalated_ct,
-        'timeout':       timeout_ct,
-        'active':        active_ct,
-        'wa_sent':       total_wa_sent,
-        'wa_recv':       total_wa_recv,
-        'in_tokens':     total_in_tokens,
-        'out_tokens':    total_out_tokens,
-        'claude_cost':   claude_cost,
-        'skill_stats':   dict(skill_stats),
-        'topics':        topic_counter.most_common(12),
-        'unresolved':    unresolved_log,
-        'suspicious':    suspicious,
+        'day':            day,
+        'total_convs':    total_convs,
+        'resolved':       resolved_ct,
+        'escalated':      escalated_ct,
+        'timeout':        timeout_ct,
+        'active':         active_ct,
+        'wa_sent':        total_wa_sent,
+        'wa_recv':        total_wa_recv,
+        'tg_sent':        total_tg_sent,
+        'in_tokens':      total_in_tokens,
+        'out_tokens':     total_out_tokens,
+        'claude_cost':    claude_cost,
+        'skill_stats':    dict(skill_stats),
+        'topics':         topic_counter.most_common(12),
+        'unresolved':     unresolved_log,
+        'suspicious':     suspicious,
+        'telegram_convs': telegram_convs,
     }
 
 
@@ -486,6 +511,63 @@ def build_html(data, env_name, calib=None):
             '</div>'
         )
 
+    # ── Telegram section ─────────────────────────────────────────────────────
+    tg_convs = data.get('telegram_convs', [])
+    if tg_convs:
+        state_badge = {
+            'resolved': ('<span style="background:#2e7d32;color:#fff;font-size:10px;'
+                         'padding:2px 6px;border-radius:4px;">RESUELTA</span>'),
+            'timeout':  ('<span style="background:#795548;color:#fff;font-size:10px;'
+                         'padding:2px 6px;border-radius:4px;">TIMEOUT</span>'),
+            'failed':   ('<span style="background:#c62828;color:#fff;font-size:10px;'
+                         'padding:2px 6px;border-radius:4px;">FALLIDA</span>'),
+            'active':   ('<span style="background:#1565c0;color:#fff;font-size:10px;'
+                         'padding:2px 6px;border-radius:4px;">ACTIVA</span>'),
+            'waiting':  ('<span style="background:#f57f17;color:#fff;font-size:10px;'
+                         'padding:2px 6px;border-radius:4px;">ESPERANDO</span>'),
+        }
+        tg_rows = ''
+        for tc in tg_convs:
+            badge = state_badge.get(tc['state'],
+                f'<span style="background:#888;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">{tc["state"].upper()}</span>')
+            id_icon = '✅' if tc['identified'] else '❓'
+            topics_str = ', '.join(tc['topics'][:3]) if tc['topics'] else '—'
+            snippet = (tc['snippet'] or '—')[:100]
+            tg_rows += (
+                f'<tr style="border-bottom:1px solid #e0eeff;vertical-align:top;">'
+                f'<td style="padding:7px 10px;font-size:13px;">{id_icon} {tc["partner"]}</td>'
+                f'<td style="padding:7px 10px;font-size:12px;color:#555;">{tc["create"][11:16]} VET</td>'
+                f'<td style="padding:7px 10px;text-align:center;">{tc["turns"]}</td>'
+                f'<td style="padding:7px 10px;">{badge}</td>'
+                f'<td style="padding:7px 10px;font-size:11px;color:#555;">{topics_str}</td>'
+                f'<td style="padding:7px 10px;font-size:11px;color:#888;font-style:italic;">{snippet}</td>'
+                f'</tr>'
+            )
+        identified_n = sum(1 for tc in tg_convs if tc['identified'])
+        tg_section = (
+            f'<div style="background:#e8f4fd;border:1px solid #bbdefb;border-radius:8px;padding:16px;">'
+            f'<p style="margin:0 0 10px;font-size:13px;color:#1565c0;font-weight:bold;">'
+            f'📱 {len(tg_convs)} conversación{"es" if len(tg_convs)!=1 else ""} · '
+            f'{identified_n} identificado{"s" if identified_n!=1 else ""} · '
+            f'{data["tg_sent"]} mensajes enviados</p>'
+            f'<table style="width:100%;border-collapse:collapse;">'
+            f'<tr style="background:#bbdefb;">'
+            f'<th style="padding:6px 10px;text-align:left;font-size:12px;">Empleado</th>'
+            f'<th style="padding:6px 10px;text-align:left;font-size:12px;">Hora</th>'
+            f'<th style="padding:6px 10px;text-align:center;font-size:12px;">Turnos</th>'
+            f'<th style="padding:6px 10px;text-align:left;font-size:12px;">Estado</th>'
+            f'<th style="padding:6px 10px;text-align:left;font-size:12px;">Temas</th>'
+            f'<th style="padding:6px 10px;text-align:left;font-size:12px;">Primer mensaje</th>'
+            f'</tr>'
+            + tg_rows + '</table></div>'
+        )
+    else:
+        tg_section = (
+            '<div style="background:#f5f5f5;border-radius:8px;padding:12px 16px;">'
+            '<p style="margin:0;color:#888;font-size:13px;">Sin conversaciones de Telegram en este período.</p>'
+            '</div>'
+        )
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -561,6 +643,15 @@ def build_html(data, env_name, calib=None):
     <!-- Suspicious -->
     <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">🔍 Actividad sospechosa</h2>
     {sus_section}
+
+    <div style="border-top:2px solid #d4af37;margin:22px 0;"></div>
+
+    <!-- Telegram activity -->
+    <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">
+      📱 Actividad en Telegram (@GlendaUeipabBot)
+      <span style="font-size:13px;font-weight:normal;color:#555;">— conversaciones de empleados</span>
+    </h2>
+    {tg_section}
 
     <div style="border-top:2px solid #d4af37;margin:22px 0;"></div>
 
