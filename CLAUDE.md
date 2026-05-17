@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v6)
+**Last Updated:** 2026-05-17 (v7)
 
 ## Core Instructions
 
@@ -54,23 +54,24 @@
 | 36 | HR Salary Advance / Loan System | Testing | `ueipab_payroll_enhancements` + `ohrms_loan` + `ohrms_loan_accounting` | [Docs](documentation/HR_SALARY_ADVANCE_LOAN.md) |
 | 37 | Attendance Biweekly Email Report | Production | `ueipab_attendance_report` | [Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) |
 | 38 | Bono Día de las Madres 2026 | Production | `ueipab_payroll_enhancements` | [Docs](documentation/BONO_MADRES_2026.md) |
-| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CONTROL_ASISTENCIA_BRIDGE.md) — **Pending enhancements:** non-submitters section, submission KPI, zero-submission guard |
+| 39 | Control Asistencia → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CONTROL_ASISTENCIA_BRIDGE.md) |
 | 40 | Mikrotik Hotspot → Odoo Bridge | Production | Script + Cron | [Docs](documentation/CHANGELOG.md) |
 | 41 | Gestión Control Asistencia — Guía Visual | Production | `mail.template` + Stories PNG | [Docs](documentation/CHANGELOG.md) |
 | 42 | Notice Acknowledgment System | Production | `ueipab_attendance_report` | [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) |
-| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `ueipab_ai_agent` | [Docs](documentation/GLENDA_CALIBRATION_PROGRAMME.md) — notice_key=glenda_calibracion_v1; 20 enrolled; deadline 2026-05-30 |
-| 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | param: `ai_agent.bcv_rate_context`; `sync_bcv_to_odoo.py` every 30 min |
-| 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | ACTION:QUERY_BALANCE — see Key Technical Patterns |
-| 46 | Glenda Daily Executive Digest | Production | Script + Cron | `glenda_daily_digest.py` daily 07:00 VET |
+| 43 | Glenda Calibration Programme | Production | `ueipab_attendance_report` + `ueipab_ai_agent` | [Docs](documentation/GLENDA_CALIBRATION_PROGRAMME.md) |
+| 44 | Glenda BCV Rate Context | Production | `ueipab_ai_agent` + Script + Cron | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 45 | Glenda Invoice Balance Query | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 46 | Glenda Daily Executive Digest | Production | Script + Cron | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) |
 | 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | Nómina→Reports→Pronóstico Liquidación V2; PDF + Excel |
-| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026; **Pending:** Cap.2 WA + Cap.3 Glenda |
-| 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — blocked until 5 TODO constants filled |
-| 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | OCR → draft `account.payment`; config: `ai_agent.payment_journal_map` |
-| 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs; cron every 15 min |
-| 53 | WA Invoice Reminder | Production | Script + Wizard | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; cron weekdays 07:00 VET `/etc/cron.d/wa_invoice_reminder`; wizard UI trigger: Accounting→Customers→Recordatorio de Saldo→"Enviar WA (en segundo plano)"; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
-| 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | `models/mail_bot_glenda.py` — internal staff chat Glenda via Odoo Discuss OdooBot; zero WA credits; dry_run guarded |
-| 55 | Glenda Silent Timeout + Quiet Hours | Production | `ueipab_ai_agent` | `general_inquiry` send_reminders=False (silent close, no WA farewell); proactive quiet 20:30–07:30 VET (`ai_agent.proactive_quiet_start/end`); reactive replies always OK |
+| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026 |
+| 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) |
+| 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 53 | WA Invoice Reminder | Production | Script + Wizard | [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
+| 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 55 | Glenda Silent Timeout + Quiet Hours | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 56 | DMARC Report Processor | Production | Script + Cron | `scripts/dmarc_report_processor.py` |
 
 ---
 
@@ -212,135 +213,52 @@
 
 See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_attendance_report`.
 - **Route:** `/notice-ack/<token>` (`auth='public'`); generic keys = one-click ACK; `_WA_FORM_KEYS` (e.g. `glenda_calibracion_v1`) → WA form → POST `/glenda-calibracion/<token>`
-- **ACK button:** `<a t-att-href="object._get_ack_url()">` — stored via **SQL** to bypass ORM sanitizer; CC `recursoshumanos@ueipab.edu.ve` on every send
-- **WA mismatch:** auto-update `employee.mobile_phone` + HR alert to `recursoshumanos@ueipab.edu.ve`
-- **Future campaigns:** change `notice_key` only; add to `_WA_FORM_KEYS` in controller if WA capture needed
+- **ACK button:** stored via **SQL** to bypass ORM sanitizer; CC `recursoshumanos@ueipab.edu.ve` on every send
 - **IDs:** Testing attendance_guide=84, prod=58; calibration template testing=86
 
 ### Freescout REST API (api_key + hybrid pattern)
 
-- **Config:** `/opt/odoo-dev/config/freescout_api.json` (gitignored) — `api_url`, `api_key`, `webhook_secret`
-- **Auth:** `X-FreeScout-API-Key` header — no OAuth, single static key
-- **Conversation ID in URL:** DB primary key (`conversations.id`) — NOT the display number (`conversations.number`)
-- **`PUT /api/conversations/{id}`** — updates subject/status/assignTo/customerId; status must be **string** (`"active"`, `"closed"`); `byUser` (int user_id) **required** alongside any status change; API auto-manages `folder_id`, `closed_at`, `user_updated_at`
-- **`POST /api/conversations/{id}/threads`** — add note: `{"type":"note","text":"<html>","user":<int>}`; `user` is **required** (field name, not `userId`); returns 201
-- **Hybrid pattern:** API for writes (proper ORM handling), SQL kept for reads and `threads.body` search (no API equivalent)
-- **Helper functions** in `ai_agent_resolution_bridge.py`: `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` and `fs_api_add_note(conv_db_id, html_body, user_id=1)` — config loaded lazily from `freescout_api.json`
-- **Phase 2 complete (2026-05-13):** Resolution bridge primary writes migrated; `close_related_conversations()` stays SQL (thread body search)
+See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN.md) for full reference.
+- **Config:** `/opt/odoo-dev/config/freescout_api.json` — `api_url`, `api_key`, `webhook_secret`
+- **Auth:** `X-FreeScout-API-Key` header; Conversation ID = DB primary key, NOT display number
+- **`PUT /api/conversations/{id}`** — status must be **string**; `byUser` (int) **required** on status changes
+- **`POST /api/conversations/{id}/threads`** — note: `{"type":"note","text":"<html>","user":<int>}`; `user` required
+- **Hybrid:** API for writes; SQL for reads + `threads.body` search
 
-### Glenda Silent Timeout + Proactive Quiet Hours
+### Glenda Technical Patterns
 
-- **`send_reminders` field on `ai.agent.skill`** (Boolean, default True) — if False, `_cron_check_timeouts` skips all `_send_reminder()` calls and closes the conversation silently via `action_timeout()` after one `reminder_interval_hours` window (24h for general_inquiry). No WA messages sent.
-- **`general_inquiry` skill** has `send_reminders=False` — no "Te escribo por última vez…" farewell WA; conversations just expire silently.
-- **`_in_proactive_quiet_hours()`** — returns True during 20:30–07:30 VET (overnight). Configurable via `ai_agent.proactive_quiet_start` / `ai_agent.proactive_quiet_end` params. Applied in `_cron_check_timeouts` to defer reminder WA sends during the window (silent timeouts still proceed — no WA cost).
-- **Reactive replies are always allowed** — `_cron_poll_messages` (customer-triggered) is NOT gated by quiet hours; only `_cron_check_timeouts` (proactive) is blocked.
-- **NameError fix** — `tertiary_phone` and `own_phones` are now defined in `_cron_poll_messages` alongside `primary_phone` (previously only defined inside `_get_or_create_general_inquiry_conversation`, causing NameError on non-primary account messages).
+See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) for full reference on: Silent Timeout/Quiet Hours, OdooBot Bridge (Discuss), Auto Draft Payment / Journal Map, BCV Rate Context, Invoice Balance Query, Daily Executive Digest, Quotation Engine & Enrollment info.
 
-### Glenda OdooBot Bridge (Discuss)
+### WA & Email Invoice Reminder
 
-- **File:** `addons/ueipab_ai_agent/models/mail_bot_glenda.py` — `_inherit = 'mail.bot'`
-- **Hook:** overrides `_get_answer()` — fires only on `channel_type == 'chat'` (private OdooBot DM)
-- **Guards:** `ai_agent.dry_run = True` → skips; `credits_ok = False` → blocked; any exception → falls back to default OdooBot silently
-- **Knowledge:** imports `_INSTITUTIONAL_KNOWLEDGE` from `general_inquiry.py` at call time — same pricing/policies as WA Glenda
-- **History:** fetches last 10 `mail.message` records from channel; builds alternating user/assistant list; merges consecutive same-role turns
-- **Cost:** zero MassivaMóvil credits — never touches `whatsapp_service.py`; Claude Haiku only (~$0.001–0.003/conv)
-- **Frontend next step:** install `im_livechat` (Odoo Community module, free) + extend `_get_answer` to also handle `channel_type == 'livechat'` → floating chat bubble on school website for customers
-- **Announcement script:** `scripts/send_glenda_odoobot_announcement.py` — sends HTML email to all 52 internal users (set `DRY_RUN = False` to send)
-
-### Glenda Auto Draft Payment — Payment Journal Map
-
-- **Config key:** `ai_agent.payment_journal_map` (JSON `ir.config_parameter`) — set in prod param id=71, testing param id=87
-- **Schema:** `{"keywords": {"venezuela": {"VES": 162, "USD": 159}, ...}, "fallback_veb": 162, "fallback_usd": 158}`
-- **10 banks mapped:** venezuela, mercantil, plaza, banplus, provincial/bbva (→ Banplus journal id=164), bancamiga, cashea, zelle, bicentenario
-- **Currency ids:** USD=1, VEB=2 (used in all VEB journals); VES from OCR normalised to VEB
-- **Matching:** VES amounts converted via BCV rate → USD for invoice comparison; exact ±2% tolerance; partial fallback (oldest-first)
-- **Dedup:** last-4 digits of referencia, 30-day window, same partner — blocks draft creation entirely
-- **Draft creation:** `account.payment` state=draft, never auto-posts; `payment_method_line_id` from journal's first inbound line
-- **pagos@ email:** Odoo deep link + BCV conversion line + invoice match info + duplicate/no-match warning block
-- **`pagos_receipt_processor.py`:** standalone script for Freescout unassigned convs; same pipeline via XML-RPC; image from `_embedded.attachments[].fileUrl` or body `<img>` regex; Freescout API `POST /conversations/{id}/threads` for note; subject prefix `[GLENDA]`; cron `/etc/cron.d/pagos_receipt_processor` every 15 min, production LIVE; sets `bank_reference` (bank ref number), `ref` (FS subject/communication), `date`+`effective_date` (from receipt, 2-digit year safe); only `state=published` convs processed; payment auto-confirmed via `action_post()` (not left as draft); `ai_agent.openai_api_key` prod param id=71, testing param id=88
-- **Sender filter (2-tier):** `SYSTEM_EMAILS` hard-blocks automation accounts (`finanzas@`, `pagos@`, `mailer-daemon`, etc.) unconditionally; other `ueipab.edu.ve` senders (employees) get an early Odoo `customer_rank > 0` lookup — processed if they are also a parent/customer (e.g. employee with child enrolled), skipped silently otherwise; pre-fetched partner reused downstream (no double XML-RPC call)
-- **`action_post()` None marshal quirk:** Odoo 17 XML-RPC server marshals `action_post` return value with `allow_none=False` — raises `Fault("cannot marshal None")` even when the post succeeded; script catches this specific Fault, re-reads payment `state`, treats as success if `state == 'posted'`
-- **Bank code detection:** `_BANK_CODE_MAP` maps Venezuelan 4-digit account prefixes to bank keywords (e.g. `0174`/`0166` → `banplus`, `0102` → `venezuela`, `0105` → `mercantil`, `0172` → `bancamiga`). Strategy A regex scans `\b0NNN\b` as fallback after text keywords fail. GPT B/C prompts also include explicit code→name hints. Prevents wrong-journal fallback when receipt shows account number but no bank name text.
-
-### Glenda BCV Rate Context
-
-- **Param:** `ai_agent.bcv_rate_context` — set by `scripts/sync_bcv_to_odoo.py` every 30 min (`/etc/cron.d/sync_bcv_odoo`) from BCV MySQL (`exchange_rates_bcv.bcv_rates`, user `bcv_script`)
-- **JSON shape:** `{"current": {"rate": N, "date": "YYYY-MM-DD"}, "history": [{date, rate, min_rate, max_rate}, ...]}` — last 30 days
-- **Skill:** `general_inquiry.get_context()` → `_build_bcv_block()` injected into system prompt; host-side sync required (Docker can't reach host MySQL/Flask)
-- **Fallback:** if param missing → "no disponible, consulta bcv.gob.ve" — degrades gracefully
-
-### Glenda Invoice Balance Query (ACTION:QUERY_BALANCE)
-
-- **Trigger:** `ACTION:QUERY_BALANCE:FOUND` (phone match) or `ACTION:QUERY_BALANCE:V-XXXXXXXX` (cédula)
-- **Handler:** `_handle_balance_action()` → `_query_partner_balance()` → posted out_invoices, not_paid/partial, partner + children
-- **Delivery:** `action_process_reply()` sends breakdown as separate WA message; partner balance pre-loaded into system prompt context when partner found by phone
-- **Security:** only shows balance for identified partner; cédula not found → error message to customer
-
-### WA & Email Invoice Reminder (account.invoice.reminder.wizard)
-
-- **Wizard:** `ueipab_payroll_enhancements` — Accounting → Customers → Recordatorio de Saldo (Email)
-- **WA cron:** `/etc/cron.d/wa_invoice_reminder` — weekdays 07:00 VET (`0 11 * * 1-5`), runs `scripts/wa_invoice_reminder.py --live`
-- **Segments:** TAG_REP=25 (Representante), TAG_PDVSA=26 (PDVSA), TAG_VIP=30 (excluded by default, override via `include_vip` toggle)
-- **Exclusions (both channels):** VIP, active employees (VAT match), PDVSA fiscal_check on latest invoice, PDVSA ≥30% advance paid, balance < $1.00
-- **Email channel:** `res.partner.email`; sends `mail.mail` From=`finanzas@` Reply-To/CC=`pagos@`; per-partner HTML with invoice table newest→oldest, payment options, BCV rate link
-- **WA channel:** wizard shows `res.partner.mobile`; "Enviar WA (en segundo plano)" spawns `wa_invoice_reminder.py --live` as detached subprocess (anti-spam: 120–140s/send); button hides after queueing (`wa_queued_at` shown); WA script itself uses Sheets col L for phone and state-file dedup
-- **State file:** `scripts/wa_invoice_reminder_state.json` — per-partner `last_sent` date; idempotent same-day re-runs
-- **First live send:** 2026-05-15 — 26 partners (REP + PDVSA); follow-up emails sent same day
+See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md) for full technical reference.
+- **Wizard:** Accounting → Customers → Recordatorio de Saldo; Tags REP=25 / PDVSA=26 / VIP=30 (excluded)
+- **WA cron:** weekdays 07:00 VET; state file `scripts/wa_invoice_reminder_state.json`
 
 ### CEO Command Center (wa_monitor)
 
-Real-time monitoring alerts to CEO via two channels:
-- **Odoo Discuss** (OdooBot DM) — primary, instant, no throttle; via `wa_monitor.ceo_email`
-- **WA +584248944898** — secondary, subject to 120s anti-spam throttle; via `wa_monitor.ceo_phone`
+See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full reference.
+- Params: `wa_monitor.ceo_email` / `wa_monitor.ceo_phone` / `wa_monitor.tertiary_notified_ids`
+- **OdooBot DM** = primary (no throttle); **WA backup** = 120s anti-spam throttle
 
-**Config params (ir.config_parameter):**
-- `wa_monitor.ceo_email` = `gustavo.perdomo@ueipab.edu.ve`
-- `wa_monitor.ceo_phone` = `+584248944898`
-- `wa_monitor.tertiary_notified_ids` = JSON list of already-notified tertiary WA message IDs (dedup, rolling 500)
+### DMARC Report Processor
 
-**Events that trigger CEO alert (in `ai_agent_conversation.py`):**
-| Event | Method | Trigger point |
-|---|---|---|
-| Customer with balance contacts Glenda | `_notify_ceo` | `_get_or_create_general_inquiry_conversation` after creation |
-| Glenda escalation | `_notify_ceo` | `_handle_escalation` |
-| Handoff to Pagos/Soporte | `_notify_ceo` | `action_process_reply` resolve block |
-| Message received on tertiary (+58 414-832-1963) | `_notify_ceo_tertiary` | `_cron_poll_messages` non-primary guard |
+- **Script:** `scripts/dmarc_report_processor.py` — runs live daily
+- **Cron:** `/etc/cron.d/dmarc_processor` — 10:30 UTC daily
+- **Source:** FreeScout `finanzas@` mailbox (mailbox_id=5); finds active conversations whose subject matches `Report domain: ueipab.edu.ve*`
+- **Flow:** parse ZIP/GZ XML attachments → classify IPs → post HTML note to each conversation → close conversation → send digest email → OdooBot DM alert (critical only)
+- **IP classes:** `good` (Google Workspace + UEIPAB server) / `third_party` (known misaligned senders, e.g. Akdemia SendGrid `50.31.44.87`) / `unknown`
+- **Alert threshold:** only `unknown` IPs where `dkim=pass OR spf=pass` trigger `⚠️` alert + OdooBot DM. Unknown IPs that failed auth but were delivered anyway by the receiving MTA (disposition=none override) show as `🔍` — informational, not alarming.
+- **DKIM:** only `google` selector published for `ueipab.edu.ve` (Google Workspace). No other authorized signers.
+- **Akdemia note:** `em.akdemia.com` (SendGrid subdomain, PTR `o1.em.akdemia.com`) sends with `From: *@ueipab.edu.ve` but MAIL FROM `em.akdemia.com` → DMARC misalign, blocked. Expected and classified as `third_party`.
+- **SPF:** currently `~all` (softfail); planned upgrade to `-all` ~2026-05-27 once delivery confirmed stable.
 
-**Script-level alerts (in standalone scripts):**
-- WA blast start + end summary → `wa_invoice_reminder.py` reads `wa_monitor.ceo_phone` via XML-RPC
-- Payment confirmed → `pagos_receipt_processor.py` via MassivaMóvil API direct call
+### mail.template body_html — multilingual JSONB (critical)
 
-**OdooBot Discuss method:** `_notify_ceo_discuss(message, ceo_email)` — SQL lookup of CEO's OdooBot DM channel, creates channel if missing, posts as `base.partner_root`.
-
-**Tertiary dedup:** `_notify_ceo_tertiary` checks `wa_monitor.tertiary_notified_ids` before notifying; saves wa_id after notifying to prevent repeated alerts on same message across poll cycles.
-
-### Glenda Daily Executive Digest (glenda_daily_digest.py)
-
-- **Cron:** `/etc/cron.d/glenda_daily_digest` daily 07:00 VET (`0 11 * * *` UTC) → `gustavo.perdomo@ueipab.edu.ve`
-- **5 sections:** KPIs, by-skill table, topic frequency (12 categories), escalations, suspicious activity (same phone >3 convs / tokens >600 / 01:00-05:00 VET / turns >18)
-- **Manual run:** `python3 scripts/glenda_daily_digest.py --env production [--date YYYY-MM-DD] [--dry-run]`
-- **Delivery:** `mail.mail` state=outgoing — Odoo scheduler sends within minutes
-
-### mail.template body_html — multilingual JSONB (critical pattern)
-
-`body_html` uses `render_engine='qweb'` and stores as JSONB with per-language keys.
-
-**Rules:**
-- Always write via **direct SQL** updating **both** `en_US` and `es_VE` keys — ORM write only updates the current lang key; if `es_VE` is stale, the ORM reads the wrong version
-- SQL pattern: `UPDATE mail_template SET body_html = %s::jsonb WHERE id = %s` with `json.dumps({'en_US': body, 'es_VE': body})`
-- Subject field is also JSONB — same pattern required
-- Use `<t t-out="object.field"/>` or `<t t-att-href="object.method()"/>` (QWeb syntax, stored via SQL)
-- `{{ object.field }}` Jinja2 syntax does NOT work — `render_engine='qweb'` ignores it
-- For multilingual fix via XML-RPC (no direct DB access): call `write({'body_html': body}, context={'lang': 'es_VE'})` then again with `'en_US'`
-
-### Adelanto de Prestaciones Sociales Email Template
-- **Testing:** `mail_template` id=71 | **Production:** id=50
-- Body managed via **direct SQL only** — ORM `Html` field sanitizer strips custom QWeb method calls (`object.get_liq_veb(...)`) on every `tmpl.write({'body_html': ...})`
-- Always use: `env.cr.execute("UPDATE mail_template SET body_html = jsonb_set(body_html, '{en_US}', %s::jsonb) WHERE id=?", [json.dumps(body)])`
-- Subject field is also `jsonb` — same SQL pattern required
-- After SQL update, **restart Odoo** to flush ORM cache before sending test emails
-- Production sync via psycopg2 inside Odoo container: `psycopg2.connect(host='postgres', dbname='DB_UEIPAB', user='odoo', password='odoo8069')`
-- Color scheme: navy blue only — `#1a2c5b` (dark) / `#2471a3` (medium) / `#f0f4fa` (light bg). No red (`#c0392b`, `#7b1a1a`)
+See [EMAIL_TEMPLATES.md](documentation/EMAIL_TEMPLATES.md) for full details and Adelanto template IDs.
+- Always write via **direct SQL** updating **both** `en_US` and `es_VE` keys — ORM only updates current lang
+- `UPDATE mail_template SET body_html = %s::jsonb WHERE id = %s` with `json.dumps({'en_US': body, 'es_VE': body})`
+- Use QWeb `<t t-out="..."/>` syntax — Jinja2 `{{ }}` does NOT work with `render_engine='qweb'`
 
 ---
 
@@ -371,14 +289,8 @@ docker restart odoo-dev-web
 
 ## Email Bounce Processor
 
-**Status:** Testing | **Type:** Phase 1 (Script) + Phase 2 (Odoo Module)
-
-Automated detection and cleanup of bounced emails from Freescout (READ-ONLY source). See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
-
-**Key components:**
+See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Script:** `scripts/daily_bounce_processor.py` (DRY_RUN default, `--live` to apply)
-- **Module:** `ueipab_bounce_log` v17.0.1.4.0 — `Contacts > Bounce Log`
-- **3-Tier Logic:** CLEAN (permanent failure → auto-remove), FLAG (temporary → review), NOT FOUND (log only)
 - **Cron:** `/etc/cron.d/ai_agent_bounce_processor` — daily 05:00 VET, LIVE, TARGET_ENV=testing
 
 ### WhatsApp API (MassivaMóvil)
@@ -401,9 +313,7 @@ Automated detection and cleanup of bounced emails from Freescout (READ-ONLY sour
 
 ## AI Agent Module (ueipab_ai_agent)
 
-**Status:** Testing | **Version:** 17.0.1.28.0 | **Installed:** 2026-02-07
-
-Centralized AI-powered WhatsApp agent for automated customer interactions. Uses MassivaMóvil WhatsApp API + Anthropic Claude AI with pluggable "skills". See [Full Documentation](documentation/AI_AGENT_MODULE.md).
+See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md).
 
 ### Architecture & Skills
 
@@ -425,97 +335,36 @@ Centralized AI-powered WhatsApp agent for automated customer interactions. Uses 
 - **Image support:** Multimodal — Glenda sees customer screenshots via Claude vision
 - **Re-trigger:** `ACTION:ALTERNATIVE_PHONE:04XXX` → pre-fills wizard with new number
 - **Email verification:** `ACTION:VERIFY_EMAIL:email` → sends verification email
-- **Family email context:** Akdemia data prevents duplicate email proposals
-- **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min; fail-threshold `ai_agent.credits_fail_threshold` (default 2)
+- **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
 - **Holiday schedule:** Public holidays use weekend hours (09:30-19:00) via `ai_agent.holidays` param
 - **Per-skill schedule:** `respect_schedule` on `ai.agent.skill` — `False` = 24/7; `general_inquiry` is always 24/7
-- **General Inquiry:** Handles unsolicited inbound WA — auto-creates conversation, identifies contact, routes to `pagos@` (billing) or `soporte@` (general)
-- **Billing routing:** `ACTION:HANDOFF:name|summary|billing` → `pagos@ueipab.edu.ve`; `|support` → `soporte@ueipab.edu.ve`
-- **Flyer/Audio:** **⚠️ NOT delivered** — MassivaMóvil `type=photo/audio/voice` queues but never delivers to end user. Glenda receives audio (Whisper transcription) but replies text only.
-- **2026-2027 enrollment:** Costos anuales $101,58/alumno (Seguro $30,58 + Guía Inglés $25 + Olimpiadas $10 + Enciclopedia $36 — aplica a todos los niveles). Pago vía acuerdo especial may-jul. REQUISITO: 2025-2026 completamente saldado — no puede inscribir con deuda. PDVSA benefit discontinued — new prospect → billing handoff.
+- **General Inquiry:** Handles unsolicited inbound WA — identifies contact, routes to `pagos@` (billing) or `soporte@`
+- **Flyer/Audio:** **⚠️ NOT delivered** — MassivaMóvil `type=photo/audio/voice` queues but never delivers
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
-- **Quotation engine:** mensualidad + inscripción + costos anuales ($101,58/alumno) + TOTAL PRIMER MES. Sibling discounts: 1st 5%, 2nd 8%, 3rd+ 11%. Enciclopedia $36 aplica a todos los niveles (ya incluida en $101,58).
-- **Tarifas 2025-2026 (hasta 31 ago):** $197,38 regular / $162,39 pronto pago (10 primeros días)
-- **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38; puede prepagar meses adicionales a $197,38 c/u con descuentos hermanos
-- **Nueva mensualidad desde 1 sep 2026:** $218,88 regular / $207,93 pronto pago (5% dto) — preliminar
 
 ### WA Poll Cron — Account Filter Note
 
 As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number from pre-switch waiting conversations. **TODO:** restore `account_id=primary_account_id` filter once pre-switch conversations drain.
 
-### Production Environment Status (2026-05-10)
+### Environment Status
 
-| Setting | Value |
-|---------|-------|
-| `ai_agent.dry_run` | `False` (LIVE) |
-| `ai_agent.active_db` | `DB_UEIPAB` |
-| `ai_agent.credits_ok` | `True` |
-| `ai_agent.claude_spend_limit_usd` | `4.15` (~$4.61 remaining after testing usage) |
-| Poll cron | active, 5 min |
-| Timeout cron | **inactive** — enable after 48h stable |
-| Credit Guard | active, 30 min |
-| Archive Attachments | active, 2 hours |
-| Stagger Payslip Ack Reminders | active, 30 min |
-| Auto-Resolve Ack Reminders | active, 30 min |
-| Stagger HR Data Collection | **inactive** — Phase 2 |
+**Production (2026-05-10):** `dry_run=False`, `active_db=DB_UEIPAB`, poll 5min active, timeout cron OFF (enable after 48h stable). Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
 
-**System crons (host-level, all targeting production via `/root/.odoo_agent_env_prod`):** escalation (5 min), resolution (5 min), email checker (15 min), bounce processor (daily 05:00), WA health (15 min), Akdemia pipeline (daily 06:00, via `/var/www/dev/.odoo_agent_env_prod`). All switched to production 2026-05-10.
+**Testing (2026-05-14):** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). ⚠️ Empty string `''` does NOT lock (code treats as "allow"). Must be set to the production DB name.
 
-**Testing lockout:** `ai_agent.active_db='DB_UEIPAB'` on testing Odoo — crons see `DB_UEIPAB ≠ testing` and self-skip. ⚠️ Empty string `''` does NOT lock (code treats it as "unconfigured = allow"). Must be set to the production DB name.
+**Production Migration:** COMPLETE as of 2026-05-10. See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md).
 
-**Contact schedule (VET):** Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
-
-**WhatsApp accounts:** Primary +584148321989 (dedicated), Backup +584248944898, Tertiary +584148321963 (manual only).
-
-### Testing Environment Status (2026-05-14)
-
-| Setting | Value |
-|---------|-------|
-| `ai_agent.dry_run` | `False` |
-| `ai_agent.active_db` | `'DB_UEIPAB'` (locked — crons see DB_UEIPAB≠testing → self-skip) |
-
-> **Fixed 2026-05-14:** Previously set to `''` which the code treats as "allow" — testing was double-processing all live WA messages with stale code. See [Changelog](documentation/CHANGELOG.md).
-
-### Production Migration Checklist
-
-**COMPLETE as of 2026-05-10.** See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md).
-
-### HR Loan Module Production Migration Checklist
-
-**Status:** Ready for deployment | **Scripts:** `setup_loan_rules.py` + `deploy_loan_templates_prod.py`
-
-| Step | Action | Script/Method |
-|---|---|---|
-| A | Backup DB_UEIPAB | `pg_dump` |
-| B | Copy `ohrms_loan` + `ohrms_loan_accounting` to prod addons | `scp` |
-| C | Copy `ueipab_payroll_enhancements` v1.65.0 to prod | `scp` |
-| D | Install ohrms_loan + ohrms_loan_accounting | Odoo `-i` |
-| E | Upgrade ueipab_payroll_enhancements | Odoo `-u` |
-| F | Create loan salary rules + patch NET formulas | `setup_loan_rules.py` via Odoo shell |
-| G | Deploy email templates (create id=75 equiv, patch id=37+50) | `deploy_loan_templates_prod.py` |
-| H | Restart + smoke test | `docker restart ueipab17` |
-
-**Production template IDs:** Payslip Email=37, Adelanto Prestaciones=50, Adelanto Salario=52
+**HR Loan Migration:** Ready — checklist in [HR_SALARY_ADVANCE_LOAN.md](documentation/HR_SALARY_ADVANCE_LOAN.md).
 
 ---
 
 ## Akdemia Data Pipeline
 
-**Status:** Testing | **Revived:** 2026-02-11
-
-Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
-
-**Key components:**
+See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 - **Scraper:** `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` (Playwright)
-- **Orchestrator:** `/var/www/dev/odoo_api_bridge/scripts/customer_matching_daily.py`
-- **Email sync:** `scripts/akdemia_email_sync.py` (DRY_RUN default, `--live` to apply)
 - **Cron:** `/etc/cron.d/customer_matching` — daily 06:00 VET
-- **Sheet:** `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`, tab `Akdemia2526`
-
-**6 bounce resolution paths:** A=Glenda WhatsApp, B=Email verification, C=Akdemia sync, D=Manual, E=Escalation, F=Akdemia auto-resolve.
-
-**Resolution Bridge phases:** 1=Connect, 2a=Refresh in_akdemia, 2b=Auto-confirm akdemia_pending, 2c=Auto-resolve from Akdemia (PATH F), 3=Query resolved BLs, 4=Process BLs (Freescout + Sheets), **5=Sync Customers family emails** (Akdemia → Sheet col J + Odoo partner + MC).
+- **Resolution Bridge phases:** 2a=refresh in_akdemia, 2b=auto-confirm akdemia_pending, 2c=auto-resolve (PATH F), 3=query, 4=process (Freescout + Sheets), 5=sync Customers family emails
 
 ---
 
@@ -533,15 +382,15 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Finiquito Report](documentation/FINIQUITO_REPORT.md)
 
 ### Ad-hoc Queries
-- [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag, with quantity and amount due
-- [Decreto Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) — Impact analysis vs $240 decree: LUIS RODRIGUEZ & NIDYA LIRA below threshold, cestaticket $40 unchanged, monthly adjustment $59.96
+- [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag
+- [Decreto Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) — LUIS RODRIGUEZ & NIDYA LIRA below $240 threshold
 
 ### Planned / Testing Reports
-- [Payroll Requisition Estimation Report](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md) — Preliminary payroll cost estimate from active contracts (no payslips needed), single currency per run, auto-populated BCV rate
+- [Payroll Requisition Estimation Report](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md)
 
 ### Features
 - [Advance Payment System](documentation/ADVANCE_PAYMENT_SYSTEM.md)
-- [Adelanto Prestaciones Payment Receipt Ack](documentation/ADELANTO_PRESTACIONES_PAYMENT_RECEIPT_ACK.md) — Deferred: two-phase ack design for LIQUID_VE_V2 (consent + payment receipt), pending bank integration
+- [Adelanto Prestaciones Payment Receipt Ack](documentation/ADELANTO_PRESTACIONES_PAYMENT_RECEIPT_ACK.md)
 - [Comprobante de Pago](documentation/COMPROBANTE_DE_PAGO.md)
 - [Payslip Acknowledgment System](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md)
 - [Payslip Ack Status Report](documentation/PAYSLIP_ACK_STATUS_REPORT.md)
@@ -549,16 +398,22 @@ Daily Akdemia scrape → email sync → auto-resolve bounce logs. See [Full Docu
 - [Email Templates](documentation/EMAIL_TEMPLATES.md)
 - [Cybrosys Module Modifications](documentation/CYBROSYS_MODULE_MODIFICATIONS.md)
 
-### AI Agent & Bounce Processing
+### AI Agent & Glenda
 - [AI Agent Module](documentation/AI_AGENT_MODULE.md)
-- [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
-- [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
+- [Glenda Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md)
 - [Glenda Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md)
 - [HR Data Collection (Glenda)](documentation/GLENDA_HR_DATA_COLLECTION.md)
+- [CEO Command Center](documentation/CEO_COMMAND_CENTER.md)
+- [WA Invoice Reminder Plan](documentation/WA_INVOICE_REMINDER_PLAN.md)
+
+### Bounce Processing & Pipelines
+- [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
+- [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
+- [Freescout API Migration Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
-- [Finanzas Email Spoofing Fix](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) — SPF/DMARC added 2026-05-13; backscatter from gosportrotaryclub.org spoofing finanzas@; DKIM was already present
+- [Finanzas Email Spoofing Fix](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md)
 - [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
 - [WebSocket/Nginx Fix](documentation/WEBSOCKET_NGINX_FIX.md)
 
