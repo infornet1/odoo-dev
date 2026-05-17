@@ -38,10 +38,14 @@ def fetch_students():
     api = GoogleDirectoryAPI()
     if not api.connect():
         raise RuntimeError("Failed to connect to Google Directory API")
-    students = api.get_students(max_results=500)
-    # Normalise to minimal fields for the param cache
+    all_students = api.get_students(max_results=500)
+    # Only cache active (non-suspended) accounts — suspended = former students who withdrew
     result = []
-    for s in students:
+    skipped = 0
+    for s in all_students:
+        if s.get('suspended'):
+            skipped += 1
+            continue
         ou = s.get('orgUnitPath', '')
         # Extract grade label from OU: /Estudiantes/5to Año → "5to Año"
         grade_label = ou.split('/')[-1] if '/' in ou else ou
@@ -51,6 +55,7 @@ def fetch_students():
             'grade': grade_label,
             'ou':    ou,
         })
+    print(f"  (skipped {skipped} suspended accounts)")
     return result
 
 
