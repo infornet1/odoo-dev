@@ -73,6 +73,7 @@
 | 55 | Glenda Silent Timeout + Quiet Hours | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 56 | DMARC Report Processor | Production | Script + Cron | `scripts/dmarc_report_processor.py` — [CEO](documentation/CEO_COMMAND_CENTER.md) |
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
+| 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
 
 ---
 
@@ -161,7 +162,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.45.0 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.45.1 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -176,7 +177,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.45.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell detection fix |
+| ueipab_ai_agent | 17.0.1.45.1 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE |
 
 ---
 
@@ -225,6 +226,24 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 - **`PUT /api/conversations/{id}`** — status must be **string**; `byUser` (int) **required** on status changes
 - **`POST /api/conversations/{id}/threads`** — note: `{"type":"note","text":"<html>","user":<int>}`; `user` required
 - **Hybrid:** API for writes; SQL for reads + `threads.body` search
+
+### Absence Notification System (Feature #58)
+
+**Script:** `scripts/absence_processor.py` | **Cron:** `/etc/cron.d/absence_processor` — weekdays 06:00–17:00 VET
+
+**Two front doors, one backend:**
+- Email → parent emails soporte@ueipab.edu.ve → picked up by cron
+- WA/Telegram → parent tells Glenda → `ACTION:NOTIFY_ABSENCE:name|grade|reason` → `_handle_glenda_absence_notification()` creates Freescout conv via API → cron picks up
+
+**Per-conversation actions:** FreeScout assign→Josefina Rodriguez (user_id=8) + auto-reply→parent + internal note with teacher list + email To=josefina CC=soporte@+Arcides+David/Norka+section-teachers + OdooBot DM→Josefina + 24h follow-up DM if still open.
+
+**Teacher lookup:** `control_asistencias` DB (`profesor_seccion` JOIN `usuario` JOIN `seccion` JOIN `grado`). Credentials in `sync_control_asistencia.py`. Grade text → `id_grado` via `_GRADE_PATTERNS` regex. Section specified → CC teachers directly. Section unknown → list in note only, subdirector coordinates.
+
+**CC routing:** `soporte@` always (CEO oversight) + `arcides.arzola@` always + `norka.larosa@` (media/bachillerato) or `david.hernandez@` (preescolar/primaria) + section teachers if known.
+
+**Detection:** keyword pre-filter on subject+body → Claude Haiku extracts student/grade/level/section/reason/teacher. Fail-safe: Claude failure → skip conv (no false positives).
+
+**Processed marker:** subject prefixed `[AUSENCIA]` via FreeScout API → prevents reprocessing. State file: `scripts/absence_processor_state.json`.
 
 ### Telegram Channel (ai.agent.telegram.service)
 
@@ -373,6 +392,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Flyer/Audio:** **⚠️ WA only** — skipped on Telegram (`channel != 'whatsapp'` guard in `_send_flyer()`)
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
 - **Calibration:** WA + Telegram conversations both count toward bonus; feedback linked via `user_id.partner_id`
+- **Absence notification:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Glenda creates Freescout soporte@ conv → `absence_processor.py` cron picks it up within 10 min
 
 ### WA Poll Cron — Account Filter Note
 
@@ -380,7 +400,7 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 ### Environment Status
 
-**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v44.9. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
+**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v45.1. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
 
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook on `dev.ueipab.edu.ve` (switches if you re-run `set_webhook`).
 
@@ -442,6 +462,9 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 - [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
 - [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
 - [Freescout API Migration Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
+
+### School Operations
+- **Absence Notification System** — `scripts/absence_processor.py` + `/etc/cron.d/absence_processor`; soporte@ + Glenda WA/TG; Josefina Rodriguez; teacher lookup `control_asistencias`; CC soporte@+Arcides+David/Norka
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
