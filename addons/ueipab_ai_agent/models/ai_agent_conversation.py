@@ -761,19 +761,87 @@ class AiAgentConversation(models.Model):
             return None
 
     def _notify_ceo(self, message):
-        """Send a WA monitoring alert to the CEO. Silently no-ops if param not set or dry_run."""
+        """Send CEO monitoring alert via Odoo Discuss (OdooBot DM) + WA.
+
+        Discuss is the primary channel (instant, no throttle).
+        WA is secondary (may be delayed 120s by anti-spam throttle).
+        Both channels are optional — controlled by ir.config_parameter:
+          wa_monitor.ceo_email  → Discuss delivery
+          wa_monitor.ceo_phone  → WA delivery
+        """
         icp = self.env['ir.config_parameter'].sudo()
-        ceo_phone = icp.get_param('wa_monitor.ceo_phone', '')
-        if not ceo_phone:
-            return
         dry_run = icp.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+
         if dry_run:
             _logger.info("[CEO_NOTIFY dry_run] %s", message[:120])
             return
-        try:
-            self.env['ai.agent.whatsapp.service'].send_message(ceo_phone, message)
-        except Exception as exc:
-            _logger.warning("CEO WA notify failed: %s", exc)
+
+        # 1. Discuss (OdooBot DM) — primary, immediate
+        ceo_email = icp.get_param('wa_monitor.ceo_email', '')
+        if ceo_email:
+            try:
+                self._notify_ceo_discuss(message, ceo_email)
+            except Exception as exc:
+                _logger.warning("CEO Discuss notify failed: %s", exc)
+
+        # 2. WA — secondary, subject to 120s anti-spam throttle
+        ceo_phone = icp.get_param('wa_monitor.ceo_phone', '')
+        if ceo_phone:
+            try:
+                self.env['ai.agent.whatsapp.service'].send_message(ceo_phone, message)
+                _logger.info("CEO WA notify sent to %s", ceo_phone)
+            except Exception as exc:
+                _logger.warning("CEO WA notify failed: %s", exc)
+
+    def _notify_ceo_discuss(self, message, ceo_email):
+        """Post message to CEO's OdooBot Discuss DM channel."""
+        ceo_user = self.env['res.users'].sudo().search(
+            [('email', '=', ceo_email)], limit=1)
+        if not ceo_user:
+            _logger.warning("CEO Discuss: user not found for email %s", ceo_email)
+            return
+
+        odoobot = self.env.ref('base.partner_root', raise_if_not_found=False)
+        if not odoobot:
+            return
+
+        ceo_partner_id = ceo_user.partner_id.id
+        bot_partner_id = odoobot.id
+
+        # Find existing DM channel between CEO and OdooBot
+        self.env.cr.execute("""
+            SELECT c.id FROM mail_channel c
+            JOIN mail_channel_member m1 ON m1.channel_id = c.id AND m1.partner_id = %s
+            JOIN mail_channel_member m2 ON m2.channel_id = c.id AND m2.partner_id = %s
+            WHERE c.channel_type = 'chat'
+            LIMIT 1
+        """, [ceo_partner_id, bot_partner_id])
+        row = self.env.cr.fetchone()
+
+        if not row:
+            # Channel doesn't exist yet — create it
+            channel = self.env['mail.channel'].sudo().create({
+                'channel_type': 'chat',
+                'name': '',
+            })
+            self.env['mail.channel.member'].sudo().create([
+                {'channel_id': channel.id, 'partner_id': ceo_partner_id},
+                {'channel_id': channel.id, 'partner_id': bot_partner_id},
+            ])
+            channel_id = channel.id
+            _logger.info("CEO Discuss: created new OdooBot DM channel %d for %s", channel_id, ceo_email)
+        else:
+            channel_id = row[0]
+
+        channel = self.env['mail.channel'].sudo().browse(channel_id)
+        html_body = message.replace('\n', '<br/>')
+        channel.message_post(
+            body=html_body,
+            author_id=bot_partner_id,
+            message_type='comment',
+            subtype_xmlid='mail.mt_comment',
+        )
+        _logger.info("CEO Discuss notify sent to channel #%d (%s)", channel_id, ceo_email)
 
     def _notify_pagos_payment_receipt(self, receipt, partner, phone,
                                        payment_id=None, odoo_url=None,
