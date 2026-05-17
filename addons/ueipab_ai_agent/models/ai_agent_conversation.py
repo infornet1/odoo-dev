@@ -24,12 +24,24 @@ _FAREWELL_PHRASES = frozenset([
     'listo gracias', 'ok gracias', 'okey gracias', 'okay gracias',
     'perfecto gracias', 'excelente gracias', 'genial gracias',
     'de nada', 'con gusto', 'entendido gracias', 'claro gracias',
+    # "I'm done / no more questions" patterns
+    'no tengo más preguntas', 'no tengo preguntas',
+    'no tengo más dudas', 'no tengo dudas',
+    'no tengo nada más', 'no tengo nada mas',
+    'no hay más preguntas', 'no hay nada más',
+    'nada más', 'nada mas', 'por ahora nada más', 'por ahora nada mas',
+    'era todo', 'era lo que necesitaba', 'con eso me basta',
+    'sin más preguntas', 'sin preguntas', 'sin dudas',
+    'es todo lo que necesitaba', 'es lo que necesitaba',
+    'ya entendí', 'ya entendi', 'ya quedó claro', 'ya quedo claro',
 ])
 
 # Words that may accompany a farewell without indicating a new request
 _FAREWELL_FILLER = frozenset([
     'ok', 'okey', 'okay', 'listo', 'ya', 'si', 'sí', 'bien',
     'bueno', 'claro', 'y', 'e', 'muy', 'igual',
+    'más', 'mas', 'nada', 'ninguna', 'ningún', 'ningun',
+    'todo', 'por', 'perfecto', 'excelente', 'genial', 'fantástico', 'fantastico',
 ])
 
 
