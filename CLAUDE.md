@@ -75,7 +75,7 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP:cedula\|student_name\|grade` — 3-factor verify → reveal student email from Google Directory cache + Akdemia reset link; UNASSIGNED soporte@ FS ticket; cron `sync_google_directory.py` daily 07:00 VET |
-| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + `ueipab_attendance_report` + Script | Glenda FAQ (Part 1 LIVE v47.0); email vote campaign (Part 2 — pending trigger after 19-May meeting); 178 ACTIVE families; Opción A $218,88 / Opción B $236,58; vote deadline ~23-May; results 26-May |
+| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + `ueipab_attendance_report` + Script | Glenda FAQ (Part 1 LIVE v47.1); pagos@ email FAQ checker LIVE (`pagos_faq_email_checker.py`, every 30min); 178 ACTIVE families; Opción A $218,88 / Opción B $236,58; email vote campaign pending trigger after 19-May meeting |
 
 ---
 
