@@ -13,7 +13,12 @@
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="skill_id"/>
-                <field name="phone"/>
+                <field name="channel" widget="badge"
+                       decoration-success="channel == 'whatsapp'"
+                       decoration-info="channel == 'telegram'"
+                       string="Canal"/>
+                <field name="phone" optional="hide"/>
+                <field name="telegram_chat_id" optional="hide" string="Telegram ID"/>
                 <field name="state" widget="badge"
                        decoration-danger="state == 'failed'"
                        decoration-warning="state in ('waiting', 'timeout')"
@@ -56,7 +61,12 @@
                         <group string="Conversacion">
                             <field name="skill_id"/>
                             <field name="partner_id"/>
-                            <field name="phone"/>
+                            <field name="channel" widget="badge"
+                                   decoration-success="channel == 'whatsapp'"
+                                   decoration-info="channel == 'telegram'"/>
+                            <field name="phone" invisible="channel == 'telegram'"/>
+                            <field name="telegram_chat_id" invisible="channel == 'whatsapp'"
+                                   string="Telegram Chat ID"/>
                             <field name="turn_count"/>
                         </group>
                         <group string="Seguimiento">
@@ -132,8 +142,16 @@
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="phone"/>
+                <field name="telegram_chat_id" string="Telegram ID"/>
                 <field name="skill_id"/>
                 <separator/>
+                <!-- Canal filters -->
+                <filter name="filter_whatsapp" string="📱 WhatsApp"
+                        domain="[('channel', '=', 'whatsapp')]"/>
+                <filter name="filter_telegram" string="✈️ Telegram"
+                        domain="[('channel', '=', 'telegram')]"/>
+                <separator/>
+                <!-- Estado filters -->
                 <filter name="filter_draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
                 <filter name="filter_active" string="Activa" domain="[('state', 'in', ('active', 'waiting'))]"/>
                 <filter name="filter_resolved" string="Resuelta" domain="[('state', '=', 'resolved')]"/>
@@ -142,6 +160,7 @@
                 <filter name="filter_escalated" string="Escaladas" domain="[('escalation_date', '!=', False)]"/>
                 <separator/>
                 <group expand="0" string="Agrupar Por">
+                    <filter name="group_channel" string="Canal" context="{'group_by': 'channel'}"/>
                     <filter name="group_skill" string="Skill" context="{'group_by': 'skill_id'}"/>
                     <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
                     <filter name="group_partner" string="Contacto" context="{'group_by': 'partner_id'}"/>
