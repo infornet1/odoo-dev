@@ -559,6 +559,14 @@ class AiAgentConversation(models.Model):
         if action.get('alternative_phone'):
             self.write({'alternative_phone': action['alternative_phone']})
 
+        # Handle absence notification (WA/Telegram → create Freescout soporte@ conversation)
+        if action.get('notify_absence') and not dry_run:
+            try:
+                with self.env.cr.savepoint():
+                    self._handle_glenda_absence_notification(action['notify_absence'])
+            except Exception as exc:
+                _logger.warning("Absence notification failed: %s", exc)
+
         # Send AI response via configured channel
         response_text = action.get('message', ai_content)
 
@@ -823,6 +831,73 @@ class AiAgentConversation(models.Model):
         return result.get('message_id', 0)
 
     # ── Telegram inbound entry point ────────────────────────────────────────
+
+    @api.model
+    def _handle_glenda_absence_notification(self, absence_data):
+        """Create a FreeScout soporte@ conversation when a parent reports absence via WA/Telegram.
+
+        The absence_processor.py cron picks it up in the next 10-min cycle and handles
+        Josefina assignment, director/subdirector email, and OdooBot DM.
+        """
+        import requests as _req
+        import json as _json
+        from datetime import datetime as _dt
+
+        student = absence_data.get('student_name', 'Alumno/a')
+        grade   = absence_data.get('grade_raw', '—')
+        reason  = absence_data.get('reason', '—')
+        today   = _dt.now().strftime('%d/%m/%Y')
+        channel = self.channel
+
+        # Get parent contact info from conversation partner
+        partner = self.partner_id
+        parent_email = (partner.email or '') if partner else ''
+        parent_name  = (partner.name or 'Representante') if partner else 'Representante'
+        phone_or_id  = self.phone or self.telegram_chat_id or ''
+
+        icp = self.env['ir.config_parameter'].sudo()
+        try:
+            fs_config = _json.load(open('/opt/odoo-dev/config/freescout_api.json'))
+        except Exception:
+            _logger.error("Absence notify: cannot read freescout_api.json")
+            return
+
+        fs_api_url = fs_config['api_url']
+        fs_api_key = fs_config['api_key']
+        headers = {'X-FreeScout-API-Key': fs_api_key, 'Content-Type': 'application/json'}
+
+        channel_label = 'WhatsApp' if channel == 'whatsapp' else 'Telegram'
+        subject = f'[{channel_label}] Ausencia {student} — {grade} — {today}'
+
+        body_html = (
+            f'<p><strong>Notificación de ausencia recibida vía {channel_label}</strong></p>'
+            f'<p><strong>Alumno/a:</strong> {student}<br/>'
+            f'<strong>Nivel/Año:</strong> {grade}<br/>'
+            f'<strong>Motivo:</strong> {reason}</p>'
+            f'<p><strong>Representante:</strong> {parent_name}<br/>'
+            f'<strong>Contacto:</strong> {phone_or_id}</p>'
+            f'<p><em>Registrado automáticamente por Glenda AI — {today}</em></p>'
+        )
+
+        payload = {
+            'type':      1,
+            'mailboxId': 3,  # soporte@ueipab.edu.ve
+            'subject':   subject,
+            'status':    'active',
+            'customer':  {'email': parent_email or 'glenda-noreply@ueipab.edu.ve',
+                          'firstName': parent_name.split()[0] if parent_name else ''},
+            'threads':   [{'type': 'customer', 'text': body_html}],
+        }
+
+        r = _req.post(f'{fs_api_url}/conversations', json=payload, headers=headers, timeout=15)
+        if r.ok:
+            conv_id = r.json().get('id')
+            _logger.info(
+                "Absence FreeScout conversation created: id=%s student=%s grade=%s",
+                conv_id, student, grade
+            )
+        else:
+            _logger.warning("Absence FreeScout creation failed: %s %s", r.status_code, r.text[:200])
 
     @api.model
     def _handle_telegram_inbound(self, chat_id, text, first_name='', photos=None, document=None):

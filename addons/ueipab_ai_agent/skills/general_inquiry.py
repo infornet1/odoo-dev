@@ -636,8 +636,19 @@ class GeneralInquirySkill:
             "Si preguntan por el 'dueño' o 'propietario', responde únicamente con las autoridades académicas "
             "(Director: Prof. Arcides Arzola, Sub-directora: Prof. Norka La Rosa, Sub-director: Prof. David Hernández) "
             "y el contacto soporte@ueipab.edu.ve. Puedes mencionar a la fundadora histórica Carmen Violeta Mata de Perdomo si es relevante.\n"
-            "- IMPORTANTE: ACTION:SEND_FLYER y ACTION:HANDOFF son comandos internos. El cliente NO los ve. "
-            "Inclúyelos siempre al final de la respuesta cuando apliquen.\n"
+            "- IMPORTANTE: ACTION:SEND_FLYER, ACTION:HANDOFF y ACTION:NOTIFY_ABSENCE son comandos internos. "
+            "El cliente NO los ve. Inclúyelos siempre al final de la respuesta cuando apliquen.\n"
+            "NOTIFICACIÓN DE AUSENCIAS ESCOLARES:\n"
+            "- Si el representante notifica que su hijo/a no asistirá o no asistió a clases "
+            "(enfermedad, reposo médico, cita médica u otro motivo), DEBES:\n"
+            "  1. Confirmar que tienes: nombre del alumno, año/grado (y sección si la sabe), motivo\n"
+            "  2. Si falta información esencial, pregunta de forma natural antes de registrar\n"
+            "  3. Una vez confirmados los datos, incluir al final:\n"
+            "     ACTION:NOTIFY_ABSENCE:nombre_alumno|grado_raw|motivo\n"
+            "  4. Informar al representante que la ausencia quedó registrada y será coordinada con el equipo docente\n"
+            "- Ejemplo de respuesta: 'Recibido ✅ Hemos registrado la ausencia de Pedro Martínez de 2do año "
+            "por fiebre. Coordinaremos con el personal docente para el manejo de sus actividades. "
+            "¡Que se mejore pronto! 🙏\\n\\nACTION:NOTIFY_ABSENCE:Pedro Martínez|2do año|fiebre'\n"
         )
 
     def get_reminder_message(self, conversation, context, reminder_count):
@@ -726,13 +737,28 @@ class GeneralInquirySkill:
             _logger.error("Failed to log calibration feedback: %s", e)
 
     def process_ai_response(self, conversation, ai_response, context):
-        """Parse AI response for ACTION:SEND_FLYER, ACTION:QUERY_BALANCE, ACTION:LOG_FEEDBACK and ACTION:HANDOFF markers."""
+        """Parse AI response for ACTION:SEND_FLYER, ACTION:QUERY_BALANCE, ACTION:LOG_FEEDBACK,
+        ACTION:HANDOFF and ACTION:NOTIFY_ABSENCE markers."""
         # Log calibration feedback if present (before stripping markers)
         if context.get('is_calibration_tester'):
             self._handle_log_feedback(conversation, ai_response, context)
 
         # Check for balance query — resolve and append to visible text before other actions
         balance_msg = self._handle_balance_action(conversation, ai_response, context)
+
+        # Check for absence notification
+        absence_match = re.search(
+            r'ACTION:NOTIFY_ABSENCE:([^|\n]+)\|([^|\n]+)\|(.+?)(?:\n|ACTION:|$)',
+            ai_response, re.MULTILINE
+        )
+        absence_data = None
+        if absence_match:
+            absence_data = {
+                'student_name': absence_match.group(1).strip(),
+                'grade_raw':    absence_match.group(2).strip(),
+                'reason':       absence_match.group(3).strip(),
+            }
+            _logger.info("Absence notification from Glenda: %s", absence_data)
 
         # Check for flyer send request
         flyer_match = re.search(r'ACTION:SEND_FLYER:(\w+)', ai_response, re.MULTILINE)
@@ -772,13 +798,14 @@ class GeneralInquirySkill:
         visible_text = self._extract_visible_text(ai_response)
         # If balance query resolved, append the breakdown as a second message
         if balance_msg:
-            # Strip ACTION:QUERY_BALANCE from visible text (already extracted above)
             final_text = visible_text or ai_response
             result = {'message': final_text, 'balance_message': balance_msg}
         else:
             result = {'message': visible_text or ai_response}
         if flyer_key:
             result['flyer_key'] = flyer_key
+        if absence_data:
+            result['notify_absence'] = absence_data
         return result
 
     def send_flyer(self, conversation, flyer_key):
