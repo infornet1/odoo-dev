@@ -81,6 +81,49 @@ ABSENCE_KEYWORDS = re.compile(
 
 DRY_RUN = '--dry-run' in sys.argv
 
+# control_asistencias credentials (same as sync_control_asistencia.py)
+CA_MYSQL = dict(
+    host='localhost', port=3306,
+    user='control_asist', password='y3deTsi92HrQgj0wgvVx',
+    database='control_asistencias', charset='utf8mb4',
+    cursorclass=pymysql.cursors.DictCursor,
+)
+
+# Grade text → control_asistencias id_grado
+# Ordered longest-match first to avoid "1er" matching "primer nivel de preescolar 1er grupo"
+_GRADE_PATTERNS = [
+    # Maternales / Preescolar (id_grado 1-3)
+    (r'(primer|1er?).{0,15}(nivel|grupo).{0,15}(maternal|preescolar|kinder|inicial)', 1),
+    (r'(segundo|2do?).{0,15}(nivel|grupo).{0,15}(maternal|preescolar|kinder|inicial)', 2),
+    (r'(tercer|3er?).{0,15}(nivel|grupo).{0,15}(maternal|preescolar|kinder|inicial)', 3),
+    (r'preescolar|maternal|inicial|kinder', 1),   # unspecified preescolar → nivel 1 (fallback)
+    # Primaria (id_grado 4-9)
+    (r'(primer|1er?)\s*(grado)',    4),
+    (r'(segundo|2do?)\s*(grado)',   5),
+    (r'(tercer|3er?)\s*(grado)',    6),
+    (r'(cuarto|4to?)\s*(grado)',    7),
+    (r'(quinto|5to?)\s*(grado)',    8),
+    (r'(sexto|6to?)\s*(grado)',     9),
+    # Secundaria / Media / Bachillerato (id_grado 10-14)
+    (r'(primer|1er?)\s*(a[ñn]o)',  10),
+    (r'(segundo|2do?)\s*(a[ñn]o)', 11),
+    (r'(tercer|3er?)\s*(a[ñn]o)',  12),
+    (r'(cuarto|4to?)\s*(a[ñn]o)',  13),
+    (r'(quinto|5to?)\s*(a[ñn]o)',  14),
+]
+
+_GRADE_NAMES = {
+    1: 'Nivel 1 maternal', 2: 'Nivel 2 maternal', 3: 'Nivel 3 maternal',
+    4: '1er grado', 5: '2do grado', 6: '3er grado',
+    7: '4to grado', 8: '5to grado', 9: '6to grado',
+    10: '1er año', 11: '2do año', 12: '3er año',
+    13: '4to año', 14: '5to año',
+}
+
+# Max teachers to CC directly when section IS specified (all are relevant)
+# When section is NOT specified, we never CC teachers — subdirector coordinates
+MAX_TEACHERS_TO_CC = 12
+
 
 # ── State management ──────────────────────────────────────────────────────────
 
@@ -159,14 +202,16 @@ def fetch_inbox_convs():
                 SELECT c.id, c.number, c.subject, c.created_at, c.user_id,
                        cu.first_name, cu.last_name,
                        e.email as customer_email,
-                       t.body
+                       (SELECT t.body FROM threads t
+                        WHERE t.conversation_id = c.id AND t.type = 1 AND t.state = 2
+                        ORDER BY t.id ASC LIMIT 1) as body
                 FROM conversations c
                 LEFT JOIN customers cu ON cu.id = c.customer_id
-                LEFT JOIN emails e ON e.customer_id = cu.id AND e.type = 'customer'
-                LEFT JOIN threads t ON t.conversation_id = c.id AND t.type = 1 AND t.state = 2
+                LEFT JOIN emails e ON e.customer_id = cu.id
                 WHERE c.mailbox_id = %s
                   AND c.status = 1
                   AND c.subject NOT LIKE %s
+                GROUP BY c.id
                 ORDER BY c.created_at ASC
             """, (FS_MAILBOX_SOPORTE, f'{PROCESSED_TAG}%'))
             return cur.fetchall()
@@ -245,6 +290,123 @@ def get_cc_emails(level, teacher_email=None):
     return list(dict.fromkeys(cc))  # deduplicate, preserve order
 
 
+def normalize_grade_to_id(grade_raw):
+    """Map Claude's grade_raw text to control_asistencias id_grado. Returns None if unrecognised."""
+    if not grade_raw:
+        return None
+    text = grade_raw.lower()
+    for pattern, grade_id in _GRADE_PATTERNS:
+        if re.search(pattern, text):
+            return grade_id
+    return None
+
+
+def extract_section_letter(grade_raw):
+    """Extract section letter from grade text, e.g. '3er año Sec A' → 'A'."""
+    if not grade_raw:
+        return None
+    m = re.search(r'secc?i[oó]n\s*([A-Za-z])|sec\.?\s+([A-Za-z])\b|\bsec\.?\s*([A-Za-z])',
+                  grade_raw, re.IGNORECASE)
+    if m:
+        return (m.group(1) or m.group(2) or m.group(3)).upper()
+    return None
+
+
+def lookup_teachers_from_ca(grade_raw, section=None, named_teacher=None):
+    """Query control_asistencias for teachers assigned to the given grade/section.
+
+    Returns:
+        dict with:
+          grade_id       — matched id_grado or None
+          grade_name     — human-readable grade name
+          section        — section letter used for lookup
+          cc_teachers    — [(name, email)] to add to email CC
+          all_teachers   — [(name, email)] all teachers for this grade (for note reference)
+          logic          — short explanation of what was done
+    """
+    result = {
+        'grade_id': None, 'grade_name': '—', 'section': section,
+        'cc_teachers': [], 'all_teachers': [], 'logic': '',
+    }
+
+    grade_id = normalize_grade_to_id(grade_raw)
+    result['grade_id'] = grade_id
+    result['grade_name'] = _GRADE_NAMES.get(grade_id, grade_raw) if grade_id else grade_raw
+
+    # Try to extract section from grade_raw if not already passed in
+    if not section:
+        section = extract_section_letter(grade_raw)
+        result['section'] = section
+
+    if not grade_id:
+        result['logic'] = f'Grade "{grade_raw}" not mapped to id_grado — no teacher lookup'
+        return result
+
+    try:
+        conn = pymysql.connect(**CA_MYSQL)
+        try:
+            with conn.cursor() as cur:
+                # All teachers for this grade (for reference in the internal note)
+                cur.execute("""
+                    SELECT DISTINCT
+                        CONCAT(u.nombre, ' ', u.apellido) AS name,
+                        u.email,
+                        s.nombre_seccion
+                    FROM profesor_seccion ps
+                    JOIN usuario u ON u.id_usuario = ps.id_profesor
+                    JOIN seccion s ON s.id_seccion = ps.id_seccion
+                    WHERE s.id_grado = %s
+                      AND u.activo = 1
+                      AND u.email IS NOT NULL AND u.email != ''
+                    ORDER BY s.nombre_seccion, u.nombre
+                """, (grade_id,))
+                all_rows = cur.fetchall()
+                result['all_teachers'] = [(r['name'], r['email']) for r in all_rows]
+
+                if section:
+                    # Section-specific teachers → CC them directly
+                    cur.execute("""
+                        SELECT DISTINCT
+                            CONCAT(u.nombre, ' ', u.apellido) AS name,
+                            u.email
+                        FROM profesor_seccion ps
+                        JOIN usuario u ON u.id_usuario = ps.id_profesor
+                        JOIN seccion s ON s.id_seccion = ps.id_seccion
+                        WHERE s.id_grado = %s
+                          AND LOWER(s.nombre_seccion) LIKE %s
+                          AND u.activo = 1
+                          AND u.email IS NOT NULL AND u.email != ''
+                        ORDER BY u.nombre
+                    """, (grade_id, f'%{section.lower()}%'))
+                    sec_rows = cur.fetchall()
+                    result['cc_teachers'] = [(r['name'], r['email']) for r in sec_rows]
+                    result['logic'] = (
+                        f'Section {section} specified → {len(result["cc_teachers"])} teachers CC\'d directly'
+                    )
+                else:
+                    # No section → do not CC teachers; subdirector coordinates
+                    # (listing all_teachers in the note is enough)
+                    result['cc_teachers'] = []
+                    result['logic'] = (
+                        f'No section specified → {len(result["all_teachers"])} teachers for '
+                        f'{result["grade_name"]} listed in note; subdirector coordinates'
+                    )
+        finally:
+            conn.close()
+
+    except Exception as e:
+        result['logic'] = f'control_asistencias lookup failed: {e}'
+
+    # If a specific teacher was named by the parent, always add them
+    if named_teacher:
+        named_email = find_teacher_email(named_teacher)
+        if named_email and (named_teacher, named_email) not in result['cc_teachers']:
+            result['cc_teachers'].insert(0, (named_teacher, named_email))
+            result['logic'] += f'; named teacher ({named_teacher}) added'
+
+    return result
+
+
 def find_teacher_email(teacher_name):
     """Look up teacher's work email in Odoo hr.employee."""
     if not teacher_name:
@@ -268,7 +430,7 @@ def find_teacher_email(teacher_name):
 
 # ── Odoo email ────────────────────────────────────────────────────────────────
 
-def send_alert_email(info, conv_id, conv_number, parent_name, cc_emails):
+def send_alert_email(info, conv_id, conv_number, parent_name, cc_emails, teacher_lookup=None):
     """Queue absence alert email via Odoo mail.mail."""
     today = datetime.now().strftime('%d/%m/%Y')
     student  = info.get('student_name') or 'Alumno/a'
@@ -287,6 +449,43 @@ def send_alert_email(info, conv_id, conv_number, parent_name, cc_emails):
 
     cc_str = ', '.join(cc_emails)
     subject = f'[Ausencia] {student} — {grade}{section} — {today}'
+
+    # Teacher section for email body
+    teacher_section_html = ''
+    if teacher_lookup:
+        cc_t  = teacher_lookup.get('cc_teachers', [])
+        all_t = teacher_lookup.get('all_teachers', [])
+        if cc_t:
+            rows = ''.join(
+                f'<tr style="background:{"#f8fafd" if i%2==0 else "#fff"};">'
+                f'<td style="padding:6px 10px;font-size:12px;">{n}</td>'
+                f'<td style="padding:6px 10px;font-size:12px;color:#555;">{e}</td>'
+                f'</tr>'
+                for i, (n, e) in enumerate(cc_t)
+            )
+            teacher_section_html = f"""
+    <div style="margin-top:16px;">
+      <p style="font-weight:700;color:#1a2c5b;margin:0 0 8px;font-size:13px;">
+        👩‍🏫 Docentes de {grade}{section} notificados (CC en este correo):
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#1a2c5b;color:#fff;">
+          <th style="padding:5px 10px;text-align:left;">Docente</th>
+          <th style="padding:5px 10px;text-align:left;">Correo</th>
+        </tr>
+        {rows}
+      </table>
+    </div>"""
+        elif all_t:
+            names = ', '.join(n for n, _ in all_t[:6])
+            more  = f' y {len(all_t)-6} más' if len(all_t) > 6 else ''
+            teacher_section_html = f"""
+    <div style="margin-top:16px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">
+      <p style="margin:0;font-size:12px;color:#555;">
+        <strong>Docentes de {grade}:</strong> {names}{more}<br/>
+        <em>Sección no especificada — coordinar notificación vía {subdirector}</em>
+      </p>
+    </div>"""
 
     body = f"""
 <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;">
@@ -336,6 +535,8 @@ def send_alert_email(info, conv_id, conv_number, parent_name, cc_emails):
       </p>
     </div>
 
+    {teacher_section_html}
+
     <p style="text-align:center;margin:20px 0 0;">
       <a href="{conv_url}"
          style="background:#1a2c5b;color:#fff;padding:10px 24px;border-radius:6px;
@@ -375,7 +576,7 @@ def send_alert_email(info, conv_id, conv_number, parent_name, cc_emails):
 
 # ── OdooBot DM → Josefina ─────────────────────────────────────────────────────
 
-def notify_josefina_discuss(info, conv_id, conv_number, is_followup=False):
+def notify_josefina_discuss(info, conv_id, conv_number, teacher_lookup=None, is_followup=False):
     """Post OdooBot DM to Josefina with action checklist."""
     student  = info.get('student_name') or 'Alumno/a'
     grade    = info.get('grade_raw') or '—'
@@ -390,6 +591,18 @@ def notify_josefina_discuss(info, conv_id, conv_number, is_followup=False):
     }.get(level, 'Norka La Rosa / David Hernández')
 
     today = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+    # Teacher line for DM
+    teacher_dm_line = ''
+    if teacher_lookup:
+        cc_t = teacher_lookup.get('cc_teachers', [])
+        all_t = teacher_lookup.get('all_teachers', [])
+        if cc_t:
+            names = ', '.join(n.split()[0].title() for n, _ in cc_t[:4])
+            more  = f' +{len(cc_t)-4}' if len(cc_t) > 4 else ''
+            teacher_dm_line = f'👩‍🏫 Docentes CC\'d: {names}{more}<br/>'
+        elif all_t:
+            teacher_dm_line = f'👩‍🏫 {len(all_t)} docentes en {teacher_lookup.get("grade_name","?")} — coordinar vía {subdirector}<br/>'
 
     if is_followup:
         msg = (
@@ -409,12 +622,12 @@ def notify_josefina_discuss(info, conv_id, conv_number, is_followup=False):
             f'<br/>'
             f'👤 <strong>{student}</strong> — {grade}<br/>'
             f'📝 Motivo: {reason}<br/>'
-            f'👩‍🏫 Docente: {teacher}<br/>'
+            f'{teacher_dm_line}'
             f'<br/>'
             f'Coordinar con: <strong>{subdirector}</strong><br/>'
             f'<br/>'
-            f'☐ Informar a {subdirector} sobre actividades/evaluaciones perdidas<br/>'
-            f'☐ Confirmar plan de recuperación con el docente<br/>'
+            f'☐ Confirmar con {subdirector} actividades/evaluaciones perdidas<br/>'
+            f'☐ Verificar plan de recuperación con docentes del aula<br/>'
             f'☐ Notificar al representante cuando esté definido<br/>'
             f'☐ Cerrar conversación en FreeScout al completar<br/>'
             f'<br/>'
@@ -469,13 +682,47 @@ def notify_josefina_discuss(info, conv_id, conv_number, is_followup=False):
 
 # ── Internal note (FreeScout) ─────────────────────────────────────────────────
 
-def build_internal_note(info, subdirector):
+def build_internal_note(info, subdirector, teacher_lookup=None):
     student  = info.get('student_name') or '—'
     grade    = info.get('grade_raw') or '—'
     section  = f" Sec. {info['section']}" if info.get('section') else ''
     reason   = info.get('reason') or '—'
     ret_date = info.get('return_date') or 'No indicada'
     teacher  = info.get('teacher_mentioned') or 'No mencionado'
+
+    # Teacher section from control_asistencias
+    teacher_html = ''
+    if teacher_lookup:
+        all_t = teacher_lookup.get('all_teachers', [])
+        cc_t  = teacher_lookup.get('cc_teachers', [])
+        logic = teacher_lookup.get('logic', '')
+        sec_used = teacher_lookup.get('section')
+
+        if cc_t:
+            rows = ''.join(
+                f'<tr><td style="padding:3px 8px;">✉️ CC enviado</td>'
+                f'<td style="padding:3px 8px;">{n}</td>'
+                f'<td style="padding:3px 8px;color:#555;">{e}</td></tr>'
+                for n, e in cc_t
+            )
+            teacher_html = (
+                f'<p style="margin-top:12px;"><strong>Docentes de {grade}{section} '
+                f'notificados (CC en email):</strong></p>'
+                f'<table style="font-size:12px;border-collapse:collapse;">{rows}</table>'
+            )
+        elif all_t:
+            rows = ''.join(
+                f'<tr><td style="padding:3px 8px;color:#888;">—</td>'
+                f'<td style="padding:3px 8px;">{n}</td>'
+                f'<td style="padding:3px 8px;color:#555;">{e}</td></tr>'
+                for n, e in all_t
+            )
+            teacher_html = (
+                f'<p style="margin-top:12px;"><strong>Docentes de {grade} '
+                f'(sección no especificada — coordinar vía {subdirector}):</strong></p>'
+                f'<table style="font-size:12px;border-collapse:collapse;">{rows}</table>'
+                f'<p style="font-size:11px;color:#888;">ℹ️ {logic}</p>'
+            )
 
     return f"""
 <div style="font-family:Arial,sans-serif;font-size:13px;">
@@ -492,10 +739,11 @@ def build_internal_note(info, subdirector):
     <tr><td style="padding:4px 10px;font-weight:bold;color:#1a2c5b;">Docente mencionado</td>
         <td style="padding:4px 10px;">{teacher}</td></tr>
   </table>
+  {teacher_html}
   <p style="margin-top:14px;"><strong>Acción requerida — coordinar con {subdirector}:</strong></p>
   <p>
-    ☐ Informar a {subdirector} sobre actividades/evaluaciones en el período de ausencia<br/>
-    ☐ Confirmar plan de recuperación con el/la docente del aula<br/>
+    ☐ Confirmar con {subdirector} el manejo de actividades/evaluaciones del período<br/>
+    ☐ Verificar que los docentes del aula tengan el plan de recuperación<br/>
     ☐ Notificar al representante cuando esté definido el plan<br/>
     ☐ <strong>Cerrar esta conversación al completar el seguimiento</strong>
   </p>
@@ -593,14 +841,34 @@ def process_conversation(conv, state):
         'preescolar': 'David Hernández', 'primaria': 'David Hernández',
     }.get(level, 'Norka La Rosa y David Hernández')
 
-    # Find teacher email if mentioned
-    teacher_email = find_teacher_email(info.get('teacher_mentioned'))
+    # Phase 2: Teacher lookup from control_asistencias
+    section_from_claude = info.get('section')
+    teacher_lookup = lookup_teachers_from_ca(
+        grade_raw=info.get('grade_raw', ''),
+        section=section_from_claude,
+        named_teacher=info.get('teacher_mentioned'),
+    )
+    print(f'  Teachers: {teacher_lookup["logic"]}')
+    if teacher_lookup['cc_teachers']:
+        for name, email in teacher_lookup['cc_teachers']:
+            print(f'    CC teacher: {name} <{email}>')
 
-    # CC list (always includes soporte@ + director + subdirector)
+    # Find teacher email if mentioned (legacy path, merged into lookup above)
+    teacher_email = None  # handled by teacher_lookup now
+
+    # CC list: soporte@ + director + subdirector + section teachers (if section known)
     cc_emails = get_cc_emails(level, teacher_email)
+    for _, t_email in teacher_lookup.get('cc_teachers', []):
+        if t_email and t_email not in cc_emails:
+            cc_emails.append(t_email)
 
     if DRY_RUN:
-        print(f'  [DRY RUN] Would: assign→Josefina, reply→parent, note, email CC={cc_emails}, OdooBot DM')
+        print(f'  [DRY RUN] Would:')
+        print(f'    → assign to Josefina in FreeScout')
+        print(f'    → reply to parent ({parent_email})')
+        print(f'    → internal note (with teacher list)')
+        print(f'    → email: josefina CC {", ".join(cc_emails)}')
+        print(f'    → OdooBot DM to Josefina')
         state['processed'][str(conv_id)] = {'at': datetime.now().isoformat(), 'dry_run': True}
         return True
 
@@ -612,16 +880,16 @@ def process_conversation(conv, state):
     ok = fs_reply(conv_id, build_parent_reply(info))
     print(f'  Reply  → parent:   {"✓" if ok else "✗"}')
 
-    # 3. Internal note for Josefina
-    ok = fs_note(conv_id, build_internal_note(info, subdirector))
+    # 3. Internal note for Josefina (includes teacher list)
+    ok = fs_note(conv_id, build_internal_note(info, subdirector, teacher_lookup))
     print(f'  Note   → internal: {"✓" if ok else "✗"}')
 
-    # 4. Alert email (Josefina + CC director + subdirector + soporte@)
-    ok = send_alert_email(info, conv_id, conv_number, parent_name, cc_emails)
+    # 4. Alert email (Josefina + CC director + subdirector + teachers + soporte@)
+    ok = send_alert_email(info, conv_id, conv_number, parent_name, cc_emails, teacher_lookup)
     print(f'  Email  → alert:    {"✓" if ok else "✗"}  CC: {", ".join(cc_emails)}')
 
     # 5. OdooBot DM → Josefina
-    ok = notify_josefina_discuss(info, conv_id, conv_number)
+    ok = notify_josefina_discuss(info, conv_id, conv_number, teacher_lookup)
     print(f'  DM     → Josefina: {"✓" if ok else "✗"}')
 
     # 6. Mark processed (rename subject with [AUSENCIA] prefix via Freescout API)
