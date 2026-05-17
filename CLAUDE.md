@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v9)
+**Last Updated:** 2026-05-17 (v10)
 
 ## Core Instructions
 
@@ -75,7 +75,9 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP:cedula\|student_name\|grade` — 3-factor verify → reveal student email from Google Directory cache + Akdemia reset link; UNASSIGNED soporte@ FS ticket; cron `sync_google_directory.py` daily 07:00 VET |
-| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + `ueipab_attendance_report` + Script | Glenda FAQ (Part 1 LIVE v47.1); pagos@ email FAQ checker LIVE (`pagos_faq_email_checker.py`, every 30min); 178 ACTIVE families; Opción A $218,88 / Opción B $236,58; email vote campaign pending trigger after 19-May meeting |
+| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + Script | Glenda FAQ LIVE (v47.4) — **price gate active** (no new prices until committee approval); pagos@ email FAQ checker LIVE every 30min; 178 ACTIVE families; email vote campaign pending 19-May meeting; vote deadline ~23-May; results 26-May |
+| 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
+| 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules knowledge + PDF link; dates Jun 1 (Primaria) / Jun 2 (Media General); 4 levels + Say-Spell-Say protocol |
 
 ---
 
@@ -164,7 +166,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.47.0 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.47.4 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -179,7 +181,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.47.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell fix, absence ACTION:NOTIFY_ABSENCE, school account help ACTION:SCHOOL_ACCOUNT_HELP, budget FAQ 2026-2027 (Opción A/B + presentation link + Telegram invite) |
+| ueipab_ai_agent | 17.0.1.47.4 | Deployed 2026-05-17 — Telegram channel, DMARC, school account help, budget FAQ 2026-2027 (price-gated), pagos@ FAQ email checker, Kurios robotics link, MOA Spelling Bee 2026 full rules |
 
 ---
 
@@ -421,13 +423,27 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 ### Environment Status
 
-**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v45.1. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
+**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v47.4. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
 
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook on `dev.ueipab.edu.ve` (switches if you re-run `set_webhook`).
 
 **Telegram kill switch:** `ai_agent.telegram_enabled = False` in ir.config_parameter → stops all Telegram immediately.
 
 **HR Loan Migration:** Ready — checklist in [HR_SALARY_ADVANCE_LOAN.md](documentation/HR_SALARY_ADVANCE_LOAN.md).
+
+### Budget Consultation 2026-2027 (Feature #60)
+
+**Price gate (active until committee approves):** Glenda and `pagos_faq_email_checker.py` both have an explicit `⛔` prohibition block — they quote ONLY current prices ($197.38 mensualidad / $162.39 pronto pago / Cashea). To lift the gate: remove the prohibition block from `_BUDGET_KNOWLEDGE` instructions in `general_inquiry.py` and from `SYSTEM_PROMPT` in `pagos_faq_email_checker.py`, then update with the winning option price.
+
+**Presentation:** `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA` — shared by Glenda on budget questions.
+
+**Eligible voters:** 178 ACTIVE families — `Customers` tab col C = `ACTIVE` in spreadsheet `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`. Col A=cédula, B=name, J=email(s), D=student(s).
+
+**Vote tracking:** `partner.communication.ack` infra (from `ueipab_attendance_report`), new notice_key `budget_consulta_2026_2027`. `response_si=True` → Opción A / `response_si=False` → Opción B. Email-only voting via personalized `/partner-ack/<token>/si|no` link.
+
+**Timeline:** Contraloría ✅ 18-May → video calls 19-20 May → divulgación 21-May → voting 22-23 May → results 26-May.
+
+**pagos@ FAQ Email Checker:** `scripts/pagos_faq_email_checker.py` — cron every 30min weekdays 06:00–17:00 VET (`/etc/cron.d/pagos_faq_email_checker`). Reads pagos@ (mailbox_id=2), calls Claude Haiku, auto-replies FAQ or posts internal note `⚠️` for escalations. Stays UNASSIGNED. Processed marker: `[FAQ-AI]` or `[FAQ-AI][ESCALAR]` subject prefix. State: `scripts/pagos_faq_email_checker_state.json`.
 
 ---
 
@@ -486,6 +502,10 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 
 ### School Operations
 - **Absence Notification System** — `scripts/absence_processor.py` + `/etc/cron.d/absence_processor`; soporte@ + Glenda WA/TG; Josefina Rodriguez; teacher lookup `control_asistencias`; CC soporte@+Arcides+David/Norka
+- **School Account Help** — `ACTION:SCHOOL_ACCOUNT_HELP`; Google Directory cache (`sync_google_directory.py`, cron daily 07:00 VET); 224 active students (46 suspended deleted 2026-05-17); Akdemia reset link `https://edge.akdemia.com/login#resetPasswordModal`
+- **Budget Consultation 2026-2027** — Glenda FAQ + price gate; pagos@ email checker; 178 ACTIVE families; vote email campaign pending; results 26-May. Presentation: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+- **Kurios Robotics Regional** — Glenda shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request
+- **MOA Spelling Bee 2026** — Glenda knows full rules (4 levels, Say-Spell-Say protocol, rounds); dates Jun 1 Primaria / Jun 2 Media General; PDF: `https://drive.google.com/file/d/11LG9BRDOMjbiJC-kjU4OysnjIDAhP29V/view`
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
