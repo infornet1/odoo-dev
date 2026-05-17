@@ -422,6 +422,12 @@ def log_chatter(db, uid, pw, models, partner_id, partner, dry_run):
 # Step 7 — Send
 # ============================================================================
 
+def get_ceo_phone(db, uid, pw, models):
+    rows = models.execute_kw(db, uid, pw, 'ir.config_parameter', 'search_read',
+        [[['key', '=', 'wa_monitor.ceo_phone']]], {'fields': ['value'], 'limit': 1})
+    return rows[0]['value'] if rows and rows[0]['value'] else ''
+
+
 def send_whatsapp(wa_cfg, phone, message, dry_run):
     if dry_run:
         return True
@@ -474,6 +480,7 @@ def main():
 
     log.info("Connecting to Odoo production...")
     db, uid, pw, models = odoo_connect()
+    ceo_phone = get_ceo_phone(db, uid, pw, models)
 
     vat_filter = [args.partner_vat.strip().upper()] if args.partner_vat else None
     log.info("Loading partners + invoice balances...")
@@ -523,6 +530,15 @@ def main():
     # ── Send ────────────────────────────────────────────────────────────────
 
     print(f"\n  Sending {len(to_send)} messages...\n")
+
+    if ceo_phone:
+        now_vet = datetime.now().strftime('%H:%M')
+        send_whatsapp(wa_cfg, ceo_phone,
+            f"🚀 WA Blast iniciado\n"
+            f"📋 {len(to_send)} partners | ⏰ {now_vet} VET\n"
+            f"💰 {fmt_usd(total_balance)} total pendiente\n"
+            f"⏱️ ~{eta_min}–{eta_max} min",
+            dry_run)
     sent = errors = 0
 
     for i, p in enumerate(to_send, 1):
@@ -552,6 +568,14 @@ def main():
 
     state['last_run'] = datetime.now().isoformat()
     save_state(state)
+
+    if ceo_phone:
+        send_whatsapp(wa_cfg, ceo_phone,
+            f"{'✅' if not errors else '⚠️'} WA Blast completado\n"
+            f"✓ Enviados: {sent}/{len(to_send)}\n"
+            f"✗ Errores: {errors}\n"
+            f"○ Omitidos: {len(skipped)}",
+            dry_run)
 
     print(f"\n{'=' * 80}")
     print(f"  Done — {sent} sent, {errors} errors, {len(skipped)} skipped")

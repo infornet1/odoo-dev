@@ -222,6 +222,47 @@ def odoo_get_param(key, default=''):
     return rows[0]['value'] if rows else default
 
 
+_wa_cfg_cache = None
+
+def _wa_cfg():
+    global _wa_cfg_cache
+    if _wa_cfg_cache:
+        return _wa_cfg_cache
+    candidates = [
+        os.path.normpath(os.path.join(SCRIPT_DIR, '..', 'config', 'whatsapp_massiva.json')),
+        '/home/vision/ueipab17/config/whatsapp_massiva.json',
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            with open(p) as f:
+                _wa_cfg_cache = json.load(f)
+                return _wa_cfg_cache
+    return None
+
+
+def notify_ceo_wa(msg):
+    """Send a WA monitoring alert to CEO. No-ops if param unset, dry_run, or WA config missing."""
+    if DRY_RUN:
+        logger.info("[CEO_NOTIFY dry_run] %s", msg[:120])
+        return
+    ceo_phone = odoo_get_param('wa_monitor.ceo_phone')
+    if not ceo_phone:
+        return
+    wa = _wa_cfg()
+    if not wa:
+        return
+    try:
+        resp = requests.post(
+            wa['base_url'].rstrip('/') + '/send/whatsapp',
+            data={'secret': wa['secret'], 'account': wa['account_id'],
+                  'recipient': ceo_phone, 'type': 'text', 'message': msg},
+            timeout=15,
+        )
+        resp.raise_for_status()
+    except Exception as exc:
+        logger.warning("CEO WA notify failed: %s", exc)
+
+
 def odoo_find_partner_by_email(email):
     """Find res.partner by email (exact match, customer only)."""
     if not email:
@@ -906,6 +947,17 @@ def process_conversation(conv, processed_ids, api_key):
     logger.info("  payment_id=%s journal=%d matched=%s",
                 payment_id, journal_id,
                 matched['name'] if matched else 'none')
+
+    if payment_id:
+        monto_str = f"{receipt.get('monto', '?')} {receipt.get('moneda', '')}"
+        banco_str = (receipt.get('banco') or 'banco ?').title()
+        ref_str = receipt.get('referencia') or '—'
+        notify_ceo_wa(
+            f"💰 Pago recibido\n"
+            f"👤 {partner['name']}\n"
+            f"💵 {monto_str} — {banco_str}\n"
+            f"🔢 Ref: {ref_str[-6:] if len(ref_str) > 6 else ref_str}"
+        )
 
     base_url = (odoo_url or '').split('/web#')[0] or 'https://odoo.ueipab.edu.ve'
     note = build_note_success(

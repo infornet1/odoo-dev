@@ -504,6 +504,17 @@ class AiAgentConversation(models.Model):
             if flyer_key and hasattr(skill_handler, 'send_flyer'):
                 skill_handler.send_flyer(self, flyer_key)
 
+            # CEO monitoring: alert on handoff
+            resolution_data = action.get('resolution_data', {})
+            if resolution_data.get('action') == 'handoff':
+                route = resolution_data.get('route', 'support')
+                dest = 'Pagos' if route == 'billing' else ('PDVSA Ret.' if route == 'pdvsa_retention' else 'Soporte')
+                self._notify_ceo(
+                    f"📋 Handoff → {dest}\n"
+                    f"👤 {self.partner_id.name or self.phone}\n"
+                    f"📝 {resolution_data.get('summary', '')[:120]}"
+                )
+
             self.action_resolve(action.get('summary', ''), action.get('resolution_data'))
             return
 
@@ -748,6 +759,21 @@ class AiAgentConversation(models.Model):
         except Exception as e:
             _logger.warning("Receipt OCR structured extraction failed: %s", e)
             return None
+
+    def _notify_ceo(self, message):
+        """Send a WA monitoring alert to the CEO. Silently no-ops if param not set or dry_run."""
+        icp = self.env['ir.config_parameter'].sudo()
+        ceo_phone = icp.get_param('wa_monitor.ceo_phone', '')
+        if not ceo_phone:
+            return
+        dry_run = icp.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+        if dry_run:
+            _logger.info("[CEO_NOTIFY dry_run] %s", message[:120])
+            return
+        try:
+            self.env['ai.agent.whatsapp.service'].send_message(ceo_phone, message)
+        except Exception as exc:
+            _logger.warning("CEO WA notify failed: %s", exc)
 
     def _notify_pagos_payment_receipt(self, receipt, partner, phone,
                                        payment_id=None, odoo_url=None,
@@ -1165,6 +1191,12 @@ class AiAgentConversation(models.Model):
         ) % reason)
         _logger.info("Conversation %s: escalation — %s", self.id, reason)
 
+        self._notify_ceo(
+            f"⚠️ Escalación Glenda\n"
+            f"👤 {self.partner_id.name or self.phone}\n"
+            f"📋 {reason[:120]}"
+        )
+
     def _send_escalation_email(self, email_data):
         """Send an escalation email to HR or another department.
 
@@ -1468,6 +1500,23 @@ class AiAgentConversation(models.Model):
             "Created general_inquiry conversation %d for phone %s (partner: %s)",
             conversation.id, phone, partner.name,
         )
+
+        # CEO monitoring: alert when a known debtor contacts Glenda
+        if partner.customer_rank:
+            balance = sum(self.env['account.move'].sudo().search([
+                ('partner_id', 'in', [partner.id] + partner.child_ids.ids),
+                ('move_type', 'in', ['out_invoice', 'out_receipt']),
+                ('state', '=', 'posted'),
+                ('payment_state', 'not in', ['paid', 'reversed']),
+            ]).mapped('amount_residual'))
+            if balance >= 1.0:
+                conversation._notify_ceo(
+                    f"📱 Cliente contactó a Glenda\n"
+                    f"👤 {partner.name}\n"
+                    f"💰 Saldo: ${balance:,.2f} USD pendiente\n"
+                    f"📞 {phone}"
+                )
+
         return conversation
 
     @api.model
