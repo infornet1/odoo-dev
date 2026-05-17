@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v5)
+**Last Updated:** 2026-05-17 (v6)
 
 ## Core Instructions
 
@@ -70,6 +70,7 @@
 | 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — unassigned Freescout pagos@ convs; cron every 15 min |
 | 53 | WA Invoice Reminder | Production | Script + Wizard | `scripts/wa_invoice_reminder.py` — daily Representante + PDVSA balance blast; cron weekdays 07:00 VET `/etc/cron.d/wa_invoice_reminder`; wizard UI trigger: Accounting→Customers→Recordatorio de Saldo→"Enviar WA (en segundo plano)"; [Plan](documentation/WA_INVOICE_REMINDER_PLAN.md) |
 | 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | `models/mail_bot_glenda.py` — internal staff chat Glenda via Odoo Discuss OdooBot; zero WA credits; dry_run guarded |
+| 55 | Glenda Silent Timeout + Quiet Hours | Production | `ueipab_ai_agent` | `general_inquiry` send_reminders=False (silent close, no WA farewell); proactive quiet 20:30–07:30 VET (`ai_agent.proactive_quiet_start/end`); reactive replies always OK |
 
 ---
 
@@ -158,7 +159,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.42.3 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.43.0 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -173,7 +174,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.42.3 | Deployed 2026-05-17 — CEO command center (OdooBot Discuss + WA alerts), tertiary monitoring, IDENTIFICACION DEL INTERLOCUTOR fix |
+| ueipab_ai_agent | 17.0.1.43.0 | Deployed 2026-05-17 — silent timeout + proactive quiet hours (20:30-07:30 VET); NameError fix tertiary_phone |
 
 ---
 
@@ -226,6 +227,14 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **Hybrid pattern:** API for writes (proper ORM handling), SQL kept for reads and `threads.body` search (no API equivalent)
 - **Helper functions** in `ai_agent_resolution_bridge.py`: `fs_api_update_conversation(conv_db_id, payload, by_user_id=1)` and `fs_api_add_note(conv_db_id, html_body, user_id=1)` — config loaded lazily from `freescout_api.json`
 - **Phase 2 complete (2026-05-13):** Resolution bridge primary writes migrated; `close_related_conversations()` stays SQL (thread body search)
+
+### Glenda Silent Timeout + Proactive Quiet Hours
+
+- **`send_reminders` field on `ai.agent.skill`** (Boolean, default True) — if False, `_cron_check_timeouts` skips all `_send_reminder()` calls and closes the conversation silently via `action_timeout()` after one `reminder_interval_hours` window (24h for general_inquiry). No WA messages sent.
+- **`general_inquiry` skill** has `send_reminders=False` — no "Te escribo por última vez…" farewell WA; conversations just expire silently.
+- **`_in_proactive_quiet_hours()`** — returns True during 20:30–07:30 VET (overnight). Configurable via `ai_agent.proactive_quiet_start` / `ai_agent.proactive_quiet_end` params. Applied in `_cron_check_timeouts` to defer reminder WA sends during the window (silent timeouts still proceed — no WA cost).
+- **Reactive replies are always allowed** — `_cron_poll_messages` (customer-triggered) is NOT gated by quiet hours; only `_cron_check_timeouts` (proactive) is blocked.
+- **NameError fix** — `tertiary_phone` and `own_phones` are now defined in `_cron_poll_messages` alongside `primary_phone` (previously only defined inside `_get_or_create_general_inquiry_conversation`, causing NameError on non-primary account messages).
 
 ### Glenda OdooBot Bridge (Discuss)
 
