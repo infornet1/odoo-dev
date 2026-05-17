@@ -161,7 +161,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.44.9 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.45.0 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -176,7 +176,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.44.9 | Deployed 2026-05-17 — Telegram channel `@GlendaUeipabBot`; DMARC processor; CEO supervision; channel badge UI |
+| ueipab_ai_agent | 17.0.1.45.0 | Deployed 2026-05-17 — Telegram channel, DMARC, CEO supervision, channel badge UI, farewell detection fix |
 
 ---
 
