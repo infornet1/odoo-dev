@@ -65,31 +65,22 @@ HTML_TEMPLATE = """\
        style="max-width:600px;width:100%;border-radius:12px;overflow:hidden;
               box-shadow:0 4px 24px rgba(0,0,0,0.12);">
 
-  <!-- BANNER HEADER -->
+  <!-- BANNER IMAGE -->
   <tr>
-    <td style="background:linear-gradient(135deg,#0a1628 0%,#0d2045 50%,#0a1628 100%);
-               padding:0;text-align:center;">
-      <!-- Try image banner first; if not available, styled header shows -->
+    <td style="padding:0;background:#0a1628;">
       <a href="{telegram_url}" style="display:block;text-decoration:none;">
-        <img src="{banner_url}" alt="¡Bienvenida, Agente AI Glenda!" width="600"
-             style="width:100%;max-width:600px;display:block;border:0;"
-             onerror="this.style.display='none'">
+        <img src="{banner_url}"
+             alt="¡Bienvenida, Agente AI Glenda! — Colegio Andrés Bello"
+             width="600" style="width:100%;max-width:600px;display:block;border:0;">
       </a>
-      <!-- Fallback header (shows if image fails) -->
-      <div style="padding:32px 24px 24px;">
-        <img src="{logo_url}" alt="Colegio Andrés Bello" width="80" height="80"
-             style="border-radius:50%;border:3px solid #C8A951;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;">
-        <p style="margin:0 0 4px;font-size:13px;color:#C8A951;letter-spacing:3px;
-                  text-transform:uppercase;font-weight:600;">UNA NUEVA ERA COMIENZA EN</p>
-        <h1 style="margin:0 0 8px;font-size:32px;font-weight:900;color:#ffffff;
-                   letter-spacing:1px;">Andrés Bello</h1>
-        <p style="margin:0;font-size:22px;color:#C8A951;font-weight:700;">
-          ¡Bienvenida, Agente AI <span style="color:#ffffff;">GLENDA</span>!
-        </p>
-        <p style="margin:16px 0 0;font-size:12px;color:#8ba4c8;letter-spacing:1px;">
-          Impulsando el futuro con Ciencia, Tecnología, Ingeniería, Arte y Matemáticas
-        </p>
-      </div>
+    </td>
+  </tr>
+  <!-- Telegram strip below banner -->
+  <tr>
+    <td style="background:#0088cc;padding:11px 32px;text-align:center;">
+      <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;letter-spacing:0.3px;">
+        ✈️ &nbsp;Ahora también en Telegram &nbsp;·&nbsp; @GlendaUeipabBot
+      </p>
     </td>
   </tr>
 
@@ -246,10 +237,9 @@ def build_capabilities_html():
 
 
 def build_html(recipient_name='Representante'):
-    first = recipient_name.split()[0].title() if recipient_name else 'Representante'
     intro = HTML_TEMPLATE.replace(
         'Estimado representante,',
-        f'Estimado/a <strong>{first}</strong>,'
+        'Estimad@ Representante,'
     )
     return intro.format(
         banner_url=BANNER_URL,
