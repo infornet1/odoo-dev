@@ -161,7 +161,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.44.1 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.44.9 | 2026-05-17 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -176,7 +176,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.43.0 | Deployed 2026-05-17 — silent timeout + proactive quiet hours (20:30-07:30 VET); NameError fix tertiary_phone |
+| ueipab_ai_agent | 17.0.1.44.9 | Deployed 2026-05-17 — Telegram channel `@GlendaUeipabBot`; DMARC processor; CEO supervision; channel badge UI |
 
 ---
 
@@ -225,6 +225,22 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 - **`PUT /api/conversations/{id}`** — status must be **string**; `byUser` (int) **required** on status changes
 - **`POST /api/conversations/{id}/threads`** — note: `{"type":"note","text":"<html>","user":<int>}`; `user` required
 - **Hybrid:** API for writes; SQL for reads + `threads.body` search
+
+### Telegram Channel (ai.agent.telegram.service)
+
+See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for full deployment docs.
+
+**Critical Odoo 17 rename:** PostgreSQL tables are `discuss_channel` / `discuss_channel_member` (not `mail_channel`). Any raw SQL in `_notify_ceo_discuss()` or similar must use the new names. ORM model names are `discuss.channel` / `discuss.channel.member`.
+
+**Webhook cursor abort pattern:** `_notify_ceo_discuss()` raw SQL failure inside a webhook request aborts the PostgreSQL cursor via uncaught exception (Python try/except catches it but PG stays aborted → all subsequent queries fail). Fix: wrap all CEO notification calls with `with self.env.cr.savepoint():` so failures roll back to savepoint only.
+
+**Token lookup in webhook context:** `ir.config_parameter` `@ormcache` can throw `KeyError` mid-transaction after a `create()`. `_token()` in `ai_agent_telegram_service.py` has a direct SQL fallback: `env.cr.execute("SELECT value FROM ir_config_parameter WHERE key = %s", [key])`.
+
+**`address_home_id` not searchable:** In Odoo 17 HR, `hr.employee.address_home_id` is group-restricted and cannot be used in ORM search domains. Use `user_id.partner_id` only for partner→employee lookups.
+
+**No anti-spam on Telegram:** `_send_to_user()` skips `whatsapp_service._throttle_send()` entirely for `channel='telegram'`. Replies are instant (only Claude latency ~1–5s).
+
+**Monitoring URL:** `https://odoo.ueipab.edu.ve/web#action=830&cids=1&menu_id=569` → filter by Canal=Telegram; group by Canal available.
 
 ### Glenda Technical Patterns
 
@@ -326,35 +342,49 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 | `hr_data_collection` | Recoleccion de Datos HR | `hr.data.collection.request` | 30 | No |
 | `general_inquiry` | Consulta General | *(inbound)* | 10 | **Yes** |
 
-**Key models:** `ai.agent.skill`, `ai.agent.conversation`, `ai.agent.message`, `ai.agent.whatsapp.service`, `ai.agent.claude.service`
+**Key models:** `ai.agent.skill`, `ai.agent.conversation`, `ai.agent.message`, `ai.agent.whatsapp.service`, `ai.agent.telegram.service`, `ai.agent.claude.service`
+
+### Channels
+
+| Channel | Entry point | Anti-spam | Real-time |
+|---------|------------|-----------|-----------|
+| WhatsApp | `_cron_poll_messages()` (5 min cron) | 120s between sends | No |
+| Telegram | `telegram_webhook.py` POST `/ai-agent/telegram/webhook` | None | **Yes** |
+| OdooBot/Discuss | `mail_bot_glenda.py` `_get_answer()` | None | Yes |
+
+**`_send_to_user(text)`** — channel dispatcher on `ai.agent.conversation`; replaces all 7 direct `wa_service.send_message()` callsites. Returns WA message_id or 0 for Telegram.
+
+**`channel` field** — `Selection([('whatsapp','WhatsApp'),('telegram','Telegram')])` on `ai.agent.conversation`. Default `whatsapp`. Telegram convs have `phone=''` and `telegram_chat_id` set.
 
 ### Key Features
 
 - **Conversation lifecycle:** draft → active → waiting → resolved/timeout/failed
 - **WhatsApp reminders:** 24h interval, 2 max, auto-timeout after 72h
+- **Telegram:** `@GlendaUeipabBot` — webhook instantáneo, sin throttle, sin ventana 24h, gratis
+- **Telegram deep-link:** `t.me/GlendaUeipabBot?start=EMP_{emp_id}` → auto-identifica empleado; handler `_handle_telegram_employee_start()`
+- **WA→Telegram invite:** first WA general_inquiry reply appends Telegram bot link; toggle `ai_agent.telegram_invite_enabled`
 - **Escalation:** `ACTION:ESCALATE:desc` → Freescout ticket via bridge script
-- **Image support:** Multimodal — Glenda sees customer screenshots via Claude vision
+- **Image support:** Multimodal — Glenda sees screenshots (WA: MassivaMóvil URL; Telegram: `file_id → get_file_url()`)
 - **Re-trigger:** `ACTION:ALTERNATIVE_PHONE:04XXX` → pre-fills wizard with new number
 - **Email verification:** `ACTION:VERIFY_EMAIL:email` → sends verification email
 - **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
-- **Holiday schedule:** Public holidays use weekend hours (09:30-19:00) via `ai_agent.holidays` param
-- **Per-skill schedule:** `respect_schedule` on `ai.agent.skill` — `False` = 24/7; `general_inquiry` is always 24/7
-- **General Inquiry:** Handles unsolicited inbound WA — identifies contact, routes to `pagos@` (billing) or `soporte@`
-- **Flyer/Audio:** **⚠️ NOT delivered** — MassivaMóvil `type=photo/audio/voice` queues but never delivers
+- **General Inquiry:** Handles unsolicited inbound (WA + Telegram) — identifies contact, routes to `pagos@` or `soporte@`
+- **Flyer/Audio:** **⚠️ WA only** — skipped on Telegram (`channel != 'whatsapp'` guard in `_send_flyer()`)
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
+- **Calibration:** WA + Telegram conversations both count toward bonus; feedback linked via `user_id.partner_id`
 
 ### WA Poll Cron — Account Filter Note
 
-As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number from pre-switch waiting conversations. **TODO:** restore `account_id=primary_account_id` filter once pre-switch conversations drain.
+As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number. **TODO:** restore `account_id=primary_account_id` once pre-switch conversations drain.
 
 ### Environment Status
 
-**Production (2026-05-10):** `dry_run=False`, `active_db=DB_UEIPAB`, poll 5min active, timeout cron OFF (enable after 48h stable). Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
+**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v44.9. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
 
-**Testing (2026-05-14):** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). ⚠️ Empty string `''` does NOT lock (code treats as "allow"). Must be set to the production DB name.
+**Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook on `dev.ueipab.edu.ve` (switches if you re-run `set_webhook`).
 
-**Production Migration:** COMPLETE as of 2026-05-10. See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md).
+**Telegram kill switch:** `ai_agent.telegram_enabled = False` in ir.config_parameter → stops all Telegram immediately.
 
 **HR Loan Migration:** Ready — checklist in [HR_SALARY_ADVANCE_LOAN.md](documentation/HR_SALARY_ADVANCE_LOAN.md).
 
@@ -401,6 +431,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 
 ### AI Agent & Glenda
 - [AI Agent Module](documentation/AI_AGENT_MODULE.md)
+- [Glenda Telegram Channel](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; Fase 1+2 live; announcement script; deep-link EMP_{id}
 - [Glenda Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md)
 - [Glenda Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md)
 - [HR Data Collection (Glenda)](documentation/GLENDA_HR_DATA_COLLECTION.md)
