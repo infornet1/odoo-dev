@@ -61,7 +61,7 @@ class HrAttendanceReportWizard(models.TransientModel):
 
     # ─── Employee selection ───────────────────────────────────────────────────
     filter_mode = fields.Selection([
-        ('all',        'Todos los empleados activos'),
+        ('all',        'Empleados en nómina (lote reciente)'),
         ('department', 'Por departamento'),
         ('manual',     'Selección manual'),
     ], string='Incluir', default='all', required=True)
@@ -70,7 +70,7 @@ class HrAttendanceReportWizard(models.TransientModel):
 
     employee_ids = fields.Many2many(
         'hr.employee', string='Empleados',
-        default=lambda self: self.env['hr.employee'].search([('active', '=', True)]),
+        default=lambda self: self._get_payroll_employees(),
     )
 
     employees_info = fields.Char(
@@ -90,6 +90,26 @@ class HrAttendanceReportWizard(models.TransientModel):
         default=False,
         help="Busca reportes ya generados para el período y empleados seleccionados y reenvía el correo.",
     )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helpers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _get_payroll_employees(self):
+        """Return employees from the most recent closed payroll batch.
+
+        This mirrors exactly who appears in payroll (e.g. MAYO15 = 44 employees).
+        Falls back to employees with an active open contract if no batch exists.
+        """
+        batch = self.env['hr.payslip.run'].search(
+            [('state', '=', 'close')], order='date_end desc', limit=1,
+        )
+        if batch:
+            return batch.slip_ids.mapped('employee_id').filtered(lambda e: e.active)
+        return self.env['hr.employee'].search([
+            ('active', '=', True),
+            ('contract_ids.state', '=', 'open'),
+        ])
 
     # ─────────────────────────────────────────────────────────────────────────
     # Compute / onchange
@@ -152,7 +172,7 @@ class HrAttendanceReportWizard(models.TransientModel):
     def _onchange_filter_mode(self):
         if self.filter_mode == 'all':
             self.department_id = False
-            self.employee_ids = self.env['hr.employee'].search([('active', '=', True)])
+            self.employee_ids = self._get_payroll_employees()
         elif self.filter_mode == 'department':
             self.employee_ids = [(5, 0, 0)]
         elif self.filter_mode == 'manual':
@@ -174,7 +194,7 @@ class HrAttendanceReportWizard(models.TransientModel):
     def _onchange_generation_mode(self):
         """Reset employee filter to 'all' when switching modes for clean UX."""
         if self.generation_mode == 'range' and self.filter_mode == 'all':
-            self.employee_ids = self.env['hr.employee'].search([('active', '=', True)])
+            self.employee_ids = self._get_payroll_employees()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Helpers
