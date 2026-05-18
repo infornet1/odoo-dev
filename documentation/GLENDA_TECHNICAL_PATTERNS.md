@@ -75,6 +75,7 @@ Reference for all Glenda-specific implementation details. See also [AI_AGENT_MOD
 ## Quotation Engine & Enrollment Info
 
 - **2026-2027 enrollment:** Costos anuales $101,58/alumno (Seguro $30,58 + Guía Inglés $25 + Olimpiadas $10 + Enciclopedia $36 — aplica a todos los niveles). Pago vía acuerdo especial may-jul. REQUISITO: 2025-2026 completamente saldado — no puede inscribir con deuda. PDVSA benefit discontinued — new prospect → billing handoff.
+- **Seguro Escolar 2026-2027 (Feature #67 — PENDING, deploy after budget announcement):** Seguros Caracas Accidentes Escolares, Alt. 2, 24h. Coverages: muerte/invalidez $4,000; G.M. accidentales $4,000; atención in situ INCLUIDA; poliomielitis/tuberculosis $1,200. Claims: WA (+58)0414-903.3738 / amis@grupov.com.ve / APP Asegurados / 0800-SEGUCAR. Local advisor (El Tigre): Sra. Johanna Hernández de Yung — johannayungh@gmail.com / suscripcionyung2020@gmail.com / WA https://wa.me/584248340051. PDF: `/home/ftpuser/odoo-dev/SeguroEscolar26-27.pdf`.
 - **Quotation engine:** mensualidad + inscripción + costos anuales ($101,58/alumno) + TOTAL PRIMER MES. Sibling discounts: 1st 5%, 2nd 8%, 3rd+ 11%. Enciclopedia $36 aplica a todos los niveles (ya incluida en $101,58).
 - **Tarifas 2025-2026 (hasta 31 ago):** $197,38 regular / $162,39 pronto pago (10 primeros días)
 - **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38; puede prepagar meses adicionales a $197,38 c/u con descuentos hermanos

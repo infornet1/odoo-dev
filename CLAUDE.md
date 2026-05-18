@@ -82,6 +82,7 @@
 | 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | When WA parent complains about slow response, Glenda explains 5-min polling delay and recommends t.me/GlendaUeipabBot; WA-channel only (v47.5) |
 | 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | Proveedor oficial del distintivo del uniforme; costo ~$8–$10 c/u; WA https://wa.me/584148172725; email almacenpariseltigre@gmail.com; IG https://www.instagram.com/almacenpariseltigre |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — queues `mail.mail` to recursoshumanos@ on every employee ACK; includes name, period, datetime, IP (v6.4) |
+| 67 | Glenda Seguro Escolar 2026-2027 | Pending (blocked until budget announcement) | `ueipab_ai_agent` | Seguros Caracas Accidentes Escolares Alt.2; $30.58/alumno/año; coverages + claim WA 0414-903.3738 + amis@grupov.com.ve + APP Asegurados; local advisor Sra. Johanna Hernández WA https://wa.me/584248340051; deploy after budget results ~26-May |
 
 ---
 

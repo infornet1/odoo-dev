@@ -135,6 +135,9 @@ class AiAgentConversation(models.Model):
     # Alternative contact info (captured when a family member provides a different number)
     alternative_phone = fields.Char('Telefono Alternativo')
 
+    # Manual silence — suppresses all outbound replies and reminders
+    silent = fields.Boolean('Silenciada', default=False)
+
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
         for rec in self:
@@ -441,12 +444,52 @@ class AiAgentConversation(models.Model):
                     'whatsapp_message_id': extra_id,
                 })
 
+        now_dt = fields.Datetime.now()
+        prev_last_msg = self.last_message_date
+
         self.write({
             'state': 'active',
-            'last_message_date': fields.Datetime.now(),
+            'last_message_date': now_dt,
             'last_sender': 'customer',
             'reminder_count': 0,
         })
+
+        # Tier-1 bot detection — skipped if already manually silenced
+        if not self.silent:
+            # Speed check: consecutive messages < 2s apart = bot-like
+            if prev_last_msg and (now_dt - prev_last_msg).total_seconds() < 2:
+                gap = (now_dt - prev_last_msg).total_seconds()
+                _logger.warning("Conv %d: bot-speed detected (%.1fs gap) — silencing", self.id, gap)
+                self.write({'silent': True})
+                self.message_post(body=_(
+                    "⚠️ Bot detectado: mensajes con %.1fs de intervalo. Silenciada automáticamente."
+                ) % gap)
+
+        if not self.silent and (self.phone or self.telegram_chat_id):
+            # Rate limit: max 30 inbound per contact in a rolling 24h window
+            from datetime import timedelta
+            cutoff = now_dt - timedelta(hours=24)
+            contact_domain = [('phone', '=', self.phone)] if self.phone \
+                else [('telegram_chat_id', '=', self.telegram_chat_id)]
+            conv_ids = self.search(contact_domain).ids
+            if conv_ids:
+                inbound_count = self.env['ai.agent.message'].search_count([
+                    ('conversation_id', 'in', conv_ids),
+                    ('direction', '=', 'inbound'),
+                    ('timestamp', '>=', cutoff),
+                ])
+                if inbound_count > 30:
+                    _logger.warning(
+                        "Conv %d: rate limit hit (%d inbound/24h) — silencing",
+                        self.id, inbound_count)
+                    self.write({'silent': True})
+                    self.message_post(body=_(
+                        "⚠️ Límite de mensajes: %d mensajes en 24h. Silenciada automáticamente."
+                    ) % inbound_count)
+
+        if self.silent:
+            _logger.info("Conv %d silenced — inbound logged, reply suppressed", self.id)
+            return
 
         # Check turn limit
         skill = self.skill_id
@@ -585,12 +628,13 @@ class AiAgentConversation(models.Model):
         icp = self.env['ir.config_parameter'].sudo()
         if (self.channel == 'whatsapp'
                 and self.skill_id.code == 'general_inquiry'
-                and not self.agent_message_ids
+                and not self.agent_message_ids.filtered(lambda m: m.direction == 'outbound')
                 and icp.get_param('ai_agent.telegram_invite_enabled', 'True') == 'True'):
             bot_username = icp.get_param('ai_agent.telegram_bot_username', 'GlendaUeipabBot')
             response_text += (
                 f"\n\n📲 Por cierto, también puede escribirme por Telegram "
-                f"(@{bot_username}) — respondo al instante y sin límites de tiempo. "
+                f"(@{bot_username}) para respuestas al instante: "
+                f"https://t.me/{bot_username} — "
                 f"Si prefiere seguir por WhatsApp, con gusto le atiendo aquí también."
             )
 
@@ -1908,9 +1952,10 @@ class AiAgentConversation(models.Model):
         self._notify_ceo_telegram_event('⏱️ Timeout', 'Sin respuesta del empleado')
 
     def action_force_resolve(self):
-        """Manual resolve button for managers."""
-        self.ensure_one()
-        self.action_resolve(summary='Resuelto manualmente')
+        """Manual resolve — works from form button or list server action."""
+        for conv in self:
+            if conv.state in ('active', 'waiting'):
+                conv.action_resolve(summary='Resuelto manualmente')
 
     def action_retry(self):
         """Reset a failed/timeout conversation to waiting state."""
@@ -2338,6 +2383,9 @@ class AiAgentConversation(models.Model):
             max_reminders = skill.max_reminders if skill.max_reminders >= 0 else 2
 
             if not conv.last_message_date:
+                continue
+
+            if conv.silent:
                 continue
 
             deadline = conv.last_message_date + timedelta(hours=interval_hours)
