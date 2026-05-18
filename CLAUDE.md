@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-17 (v11)
+**Last Updated:** 2026-05-18 (v12)
 
 ## Core Instructions
 
@@ -79,6 +79,7 @@
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
 | 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules knowledge + PDF link; dates Jun 1 (Primaria) / Jun 2 (Media General); 4 levels + Say-Spell-Say protocol |
 | 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 emails sent 2026-05-17; banner `/flyers/glenda_banner.png`; Active+Pipeline families; `--live` to resend |
+| 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | When WA parent complains about slow response, Glenda explains 5-min polling delay and recommends t.me/GlendaUeipabBot; WA-channel only (v47.5) |
 
 ---
 
@@ -167,7 +168,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.47.4 | 2026-05-17 |
+| ueipab_ai_agent | 17.0.1.47.5 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -182,7 +183,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.47.4 | Deployed 2026-05-17 — Telegram channel, DMARC, school account help, budget FAQ 2026-2027 (price-gated), pagos@ FAQ email checker, Kurios robotics link, MOA Spelling Bee 2026 full rules |
+| ueipab_ai_agent | 17.0.1.47.5 | Deployed 2026-05-18 — WA→Telegram speed suggestion (5-min polling explanation + t.me link when parent complains about slow replies) |
 
 ---
 
@@ -432,6 +433,7 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 - **Glenda response (price gate active):** confirms current prices + deflects "próximo año" with "información oficial se comunicará oportunamente"
 - **Action:** Let Glenda handle within guardrails (safe). Escalate via `action_process_reply` from Odoo shell if conversation needs manual override
 - **Re-trigger stuck conv via shell:** `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
+- **Re-trigger via XML-RPC (no shell access):** `action_process_reply` returns None → XML-RPC marshal fails. Workaround: create a one-shot `ir.actions.server` record via XML-RPC, `run()` it, then `unlink()` it. The server action executes in Odoo context and the None return is swallowed. See `scripts/` session history for pattern. Use `allow_none=True` on the `ServerProxy`.
 
 ### Environment Status
 
