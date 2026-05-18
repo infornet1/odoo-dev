@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -330,6 +331,141 @@ class GeneralInquirySkill:
             'institution': icp.get_param('ai_agent.institution_display_name', 'Instituto Privado Andrés Bello'),
         }
 
+    # ── Family Billing Enrichment ────────────────────────────────────────────
+
+    _BILLING_KEYWORDS = {
+        'mensualidad', 'mensual', 'inscripcion', 'inscripción', 'cuota', 'pago',
+        'costo', 'precio', 'tarifa', 'representado', 'hijo', 'hija', 'alumno',
+        'alumna', 'estudiante', 'propuesta', 'opcion', 'opción', 'monto',
+        'cuanto', 'cuánto', 'vale', 'cobra', 'cobran',
+    }
+
+    @staticmethod
+    def _norm_phone(raw):
+        """Normalize phone → 10-digit Venezuelan format."""
+        p = (raw or '').strip().replace(' ', '').replace('-', '').lstrip('+')
+        if p.startswith('58') and len(p) > 10:
+            p = p[2:]
+        p = p.lstrip('0')
+        return p[-10:] if len(p) > 10 else p
+
+    @staticmethod
+    def _word_overlap(a, b):
+        """Count matching words between two uppercased strings."""
+        wa = set(a.upper().split())
+        wb = set(b.upper().split())
+        return len(wa & wb)
+
+    def _load_family_billing_cache(self, conversation):
+        raw = conversation.env['ir.config_parameter'].sudo().get_param(
+            'school.family_billing_json', '{}')
+        try:
+            return json.loads(raw).get('families', [])
+        except Exception:
+            return []
+
+    def _load_directory_cache(self, conversation):
+        raw = conversation.env['ir.config_parameter'].sudo().get_param(
+            'school.student_directory_json', '{}')
+        try:
+            return json.loads(raw).get('students', [])
+        except Exception:
+            return []
+
+    def _lookup_grade(self, student_name, directory):
+        """Return grade string for a student name via fuzzy match, or ''."""
+        best, best_score = None, 1
+        for s in directory:
+            score = self._word_overlap(student_name, s.get('name', ''))
+            if score > best_score:
+                best, best_score = s, score
+        if best:
+            return best.get('grade') or best.get('ou') or ''
+        return ''
+
+    def _enrich_billing_context(self, conversation):
+        """
+        Look up the conversation partner in the family billing cache.
+        Returns a formatted context block string, or '' if not found.
+
+        Lookup strategy (in order):
+        1. Phone match against billing cache
+        2. No match → check latest inbound message for student names
+        """
+        import re
+        families   = self._load_family_billing_cache(conversation)
+        directory  = self._load_directory_cache(conversation)
+        if not families:
+            return ''
+
+        family = None
+
+        # Strategy 1 — phone match
+        conv_phone = self._norm_phone(conversation.phone or '')
+        if conv_phone:
+            for f in families:
+                if f.get('phone') and self._norm_phone(f['phone']) == conv_phone:
+                    family = f
+                    break
+
+        # Strategy 2 — student name mention in latest inbound message
+        if not family:
+            latest = conversation.env['ai.agent.message'].search(
+                [('conversation_id', '=', conversation.id),
+                 ('direction', '=', 'inbound')],
+                order='id desc', limit=1)
+            msg_text = (latest.body or '').upper() if latest else ''
+
+            # Only attempt name search if billing keywords are present
+            words_in_msg = set(re.sub(r'[^\w\s]', ' ', msg_text).split())
+            has_billing_kw = bool(words_in_msg & {k.upper() for k in self._BILLING_KEYWORDS})
+
+            if has_billing_kw and msg_text:
+                best_family, best_score = None, 1
+                for f in families:
+                    for student in f.get('students', []):
+                        score = self._word_overlap(student, msg_text)
+                        if score > best_score:
+                            best_family, best_score = f, score
+                family = best_family
+
+        if not family:
+            return ''
+
+        # Build grade info for each student
+        student_lines = []
+        for student in family.get('students', []):
+            grade = self._lookup_grade(student, directory)
+            grade_str = f' → {grade}' if grade else ''
+            student_lines.append(f'    · {student}{grade_str}')
+
+        monthly   = family.get('monthly', 0.0)
+        quantity  = family.get('quantity', 1)
+        discount  = family.get('discount', '')
+        status    = family.get('status', '')
+        parent    = family.get('parent_name', '')
+
+        discount_note = f' | Descuento: {discount}' if discount else (
+            ' | Descuento hermanos aplicado' if quantity > 1 else '')
+
+        status_note = f' | Estado: {status}' if status and status != 'ACTIVE' else ''
+
+        block = (
+            "\n📋 DATOS FAMILIARES (fuente: sistema escolar — NO solicitar al representante):\n"
+            f"  Representante : {parent}{status_note}\n"
+            f"  Estudiantes   :\n"
+            + '\n'.join(student_lines) + '\n'
+            + f"  Mensualidad actual: ${monthly:,.2f} | {quantity} estudiante(s){discount_note}\n"
+            "  ── Con la propuesta aprobada, las nuevas mensualidades serían:\n"
+            f"     Opción A (+10,89%): ${monthly * 1.1089:,.2f}/mes "
+            f"(pronto pago ${monthly * 1.1089 * 0.95:,.2f})\n"
+            f"     Opción B (+19,86%): ${monthly * 1.1986:,.2f}/mes "
+            f"(pronto pago ${monthly * 1.1986 * 0.95:,.2f})\n"
+            "  IMPORTANTE: Responde directamente con estos datos. "
+            "No los pidas al representante. ──\n"
+        )
+        return block
+
     # ── Balance query helpers ─────────────────────────────────────────────────
 
     def _query_partner_balance(self, conversation, partner):
@@ -503,6 +639,7 @@ class GeneralInquirySkill:
             'partner_found_in_odoo':     partner_found,
             'balance':                   balance,
             'bcv':                       self._get_bcv_context(conversation),
+            'billing_enrichment':        self._enrich_billing_context(conversation),
             'is_calibration_tester':     bool(calibration_employee),
             'calibration_employee_name': calibration_employee.name if calibration_employee else '',
             'calibration_employee_id':   calibration_employee.id if calibration_employee else False,
@@ -623,6 +760,8 @@ class GeneralInquirySkill:
                 f"- ACTION:LOG_FEEDBACK es un marcador interno. {first} NO lo verá.\n\n"
             )
 
+        billing_enrichment = context.get('billing_enrichment', '')
+
         return (
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
             + calibration_block
@@ -630,6 +769,7 @@ class GeneralInquirySkill:
             + _BUDGET_KNOWLEDGE
             + self._build_bcv_block(bcv) + "\n"
             + balance_ctx + "\n"
+            + billing_enrichment
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx
