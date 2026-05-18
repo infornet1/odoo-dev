@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v12)
+**Last Updated:** 2026-05-18 (v13)
 
 ## Core Instructions
 
@@ -168,7 +168,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.47.5 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.48.0 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -183,7 +183,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.47.5 | Deployed 2026-05-18 — WA→Telegram speed suggestion (5-min polling explanation + t.me link when parent complains about slow replies) |
+| ueipab_ai_agent | 17.0.1.48.0 | Deployed 2026-05-18 — Claude retry (2×, 3s/6s backoff on 429) + OpenAI gpt-4o-mini fallback; WA→Telegram speed suggestion |
 
 ---
 
@@ -367,6 +367,9 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Config:** `/opt/odoo-dev/config/anthropic_api.json` (gitignored)
 - **Model:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) - $1/$5 per MTok
 - **Use case:** AI backbone for WhatsApp bounce resolution (~$0.005 per conversation)
+- **Retry policy (v48.0):** 2 retries on HTTP 429 — delays 3s, 6s — then OpenAI fallback
+- **OpenAI fallback (v48.0):** `gpt-4o-mini` via `requests` (no SDK). Triggers on: (1) Claude 429 after all retries, (2) `credits_ok=False`. Toggle: `ai_agent.openai_fallback_enabled=True`. Key: `ai_agent.openai_api_key`. Model override: `ai_agent.openai_model`.
+- **Zero new dependencies:** both providers use `requests` only — no `openai` or `anthropic` SDK in container
 
 ---
 
