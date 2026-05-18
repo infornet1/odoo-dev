@@ -474,8 +474,13 @@ class AiAgentConversation(models.Model):
 
         # Tier-1 bot detection — skipped if already manually silenced
         if not self.silent:
-            # Speed check: consecutive messages < 2s apart = bot-like
-            if prev_last_msg and (now_dt - prev_last_msg).total_seconds() < 2:
+            # Speed check: consecutive CUSTOMER messages < 2s apart = bot-like.
+            # Only fires when prev sender was also 'customer' — never on agent-initiated
+            # conversations where action_start() just set last_message_date moments ago.
+            prev_sender_was_customer = (self.last_sender == 'customer')
+            if (prev_last_msg
+                    and prev_sender_was_customer
+                    and (now_dt - prev_last_msg).total_seconds() < 2):
                 gap = (now_dt - prev_last_msg).total_seconds()
                 _logger.warning("Conv %d: bot-speed detected (%.1fs gap) — silencing", self.id, gap)
                 self.write({'silent': True})
