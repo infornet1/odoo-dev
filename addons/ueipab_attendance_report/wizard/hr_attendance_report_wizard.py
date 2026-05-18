@@ -260,6 +260,9 @@ class HrAttendanceReportWizard(models.TransientModel):
         Report = self.env['hr.attendance.report']
         for rid in report_ids:
             rec = Report.browse(rid)
+            # Never re-email employees who already confirmed
+            if rec.state == 'acknowledged':
+                continue
             if rec.employee_id.work_email:
                 template.send_mail(rid, force_send=True)
                 # Historical records stay 'acknowledged' — don't downgrade to 'sent'
@@ -352,6 +355,7 @@ class HrAttendanceReportWizard(models.TransientModel):
                     ('employee_id', 'in', self.employee_ids.ids),
                     ('date_from',   '=', q['date_from']),
                     ('date_to',     '=', q['date_to']),
+                    ('state',       '!=', 'acknowledged'),
                 ])
                 report_ids.extend(recs.ids)
 
@@ -365,6 +369,7 @@ class HrAttendanceReportWizard(models.TransientModel):
                 ('employee_id', 'in', self.employee_ids.ids),
                 ('date_from',   '=', self.date_from),
                 ('date_to',     '=', self.date_to),
+                ('state',       '!=', 'acknowledged'),
             ])
             report_ids = recs.ids
             month_name = dict(MONTHS_ES).get(self.month, self.month)

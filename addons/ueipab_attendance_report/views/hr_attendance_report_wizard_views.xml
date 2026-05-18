@@ -87,7 +87,7 @@
                     <span style="font-size:13px;color:#856404;">
                         &#128231;&#160;
                         <strong>Modo reenv&#237;o:</strong>
-                        Solo se enviar&#225;n correos a empleados que ya tienen reporte para el per&#237;odo seleccionado. No se crear&#225;n nuevos registros.
+                        Solo se enviar&#225;n correos a empleados con reporte <strong>pendiente de confirmaci&#243;n</strong> para el per&#237;odo seleccionado. Empleados que ya confirmaron (&#10003;) son omitidos. No se crear&#225;n nuevos registros.
                     </span>
                 </div>
 
