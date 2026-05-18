@@ -4,6 +4,35 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-17 — Nginx: Add `my` to Odoo Route Whitelist (dev.ueipab.edu.ve)
+
+**Type:** Infrastructure fix | **File:** `/etc/nginx/sites-available/dev.ueipab.edu.ve`
+
+### Problem
+`https://dev.ueipab.edu.ve/my/ari` (and all other Odoo portal `/my/*` routes) returned HTTP 404. The nginx config for the dev server uses an explicit regex whitelist to route paths to Odoo on port 8019:
+
+```nginx
+location ~ ^/(web|website|payslip|mail|report|arc|attendance-ack|...|ai-agent)(/|$) {
+    proxy_pass http://127.0.0.1:8019;
+```
+
+`my` was not in the list, so the request fell through to the default `location /` block (Flask app on port 5000), which returned 404.
+
+The route itself was correctly registered — `curl localhost:8019/my/ari` returned 303 (login redirect) confirming Odoo handled it fine locally.
+
+### Fix
+Added `my` to the regex alternation group:
+
+```nginx
+location ~ ^/(web|website|payslip|mail|report|arc|attendance-ack|attendance-fix|attendance-correction|notice-ack|glenda-calibracion|employee-info|partner-ack|ai-agent|my)(/|$) {
+```
+
+`nginx -t && nginx -s reload` applied with no errors.
+
+**Impact:** All standard Odoo portal pages (`/my/account`, `/my/invoices`, `/my/ari`, etc.) now route correctly through the dev proxy.
+
+---
+
 ## 2026-05-16 — Pagos Processor: Venezuelan Bank Code Detection
 
 **Type:** Enhancement | **Script:** `scripts/pagos_receipt_processor.py`

@@ -25,7 +25,7 @@
 | 7 | Batch Email Template Selector | Production | `ueipab_payroll_enhancements` | - |
 | 8 | Comprobante de Pago Compacto | Production | `ueipab_payroll_enhancements` | [Docs](documentation/COMPROBANTE_DE_PAGO.md) |
 | 9 | Acuerdo Finiquito Laboral | Production | `ueipab_payroll_enhancements` | [Docs](documentation/FINIQUITO_REPORT.md) |
-| 10 | AR-I Portal | Testing | `ueipab_ari_portal` | - |
+| 10 | AR-I Portal | Testing | `ueipab_ari_portal` | Portal `/my/ari`; nginx whitelist includes `my` (2026-05-17) |
 | 11 | Payslip Acknowledgment | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
