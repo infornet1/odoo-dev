@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v19)
+**Last Updated:** 2026-05-18 (v20)
 
 ## Core Instructions
 
@@ -173,7 +173,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.51.0 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.51.2 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -188,7 +188,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.51.0 | Deployed 2026-05-18 — #68 draft/review wizard (Guardar Borrador); #69 family billing enrichment (monthly+forecast+annual costs); budget FAQ stage active |
+| ueipab_ai_agent | 17.0.1.51.2 | Deployed 2026-05-18 — #68 draft/review wizard; #69 billing enrichment; bot detection fix (agent-start no longer silenced); 🔄 Actualizar button on conv form |
 
 ---
 
@@ -303,7 +303,11 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Annual one-time costs per student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**. Multiplied by `quantity` in enrichment.
 
-**Iniciar Conversación wizard (v51.0):** `💾 Guardar Borrador` → draft conv + form review (no WA sent); `🚀 Iniciar Ahora` → fire immediately. `initial_message` stored on `ai.agent.conversation` — `action_start()` skips greeting if set, processes directly, clears field after send.
+**Iniciar Conversación wizard (v51.0):** `💾 Guardar Borrador` → draft + form review (no WA); `🚀 Iniciar Ahora` → fires immediately. `initial_message` on `ai.agent.conversation` — `action_start()` skips greeting if set, answers directly, clears after send.
+
+**Bot detection guard (v51.1):** 2s speed check only fires when `last_sender == 'customer'`. Without this, `action_start()` setting `last_sender='agent'` then immediately calling `action_process_reply()` falsely triggered `silent=True`.
+
+**🔄 Actualizar (v51.2):** Button on conv form (`draft/active/waiting`). `action_refresh()` returns `act_window` for same record — reloads messages without full browser refresh.
 
 ### Glenda Technical Patterns
 
