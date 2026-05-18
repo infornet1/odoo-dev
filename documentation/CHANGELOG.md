@@ -2350,4 +2350,24 @@ docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
 
 ---
 
-**Last Updated:** 2025-11-27
+**Last Updated:** 2026-05-18
+
+---
+
+## 2026-05-18 — Distintivo Escolar Email Campaign
+
+**Feature #65** — Almacenes París official uniform badge provider announced via email.
+
+- **Template:** HTML with school logo, provider card, price badge, clickable WA/Email/IG buttons, Glenda Telegram CTA
+- **From:** soporte@ueipab.edu.ve | **Reply-To:** pagos@ueipab.edu.ve
+- **Recipients:** 322 unique — 178 ACTIVE + 6 PIPELINE families (279 parent emails) + 45 employees
+- **Sent:** 2026-05-18 ~14:06 VET from production | **Result:** 322 sent, 0 failed
+- **Glenda knowledge:** `_INSTITUTIONAL_KNOWLEDGE` updated with provider, contact links, local advisor Sra. Johanna Hernández (WA https://wa.me/584248340051)
+
+## 2026-05-18 — AI Agent v1.49.x — Bot Detection + List Actions + Telegram Invite Fix
+
+- **Bot detection Tier-1:** speed check (<2s gap) + rate limit (>30 inbound/24h) → auto-silence with chatter note
+- **List actions:** Cerrar Manualmente / Silenciar / Activar Respuestas on `ai.agent.conversation`
+- **`silent` field:** suppresses replies, reminders, cron timeouts; reversible
+- **Telegram invite fix:** `not agent_message_ids.filtered(outbound)` — first reply now correctly fires
+- **Telegram invite:** direct `https://t.me/GlendaUeipabBot` hyperlink included
