@@ -36,10 +36,37 @@ class AttendanceAckController(http.Controller):
             'ack_ip': ip,
         })
 
+        self._notify_rrhh(report, ip)
+
         return request.make_response(
             self._page_success(report),
             headers=[('Content-Type', 'text/html; charset=utf-8')],
         )
+
+    def _notify_rrhh(self, report, ip):
+        """Queue a CC notification to recursoshumanos@ on every attendance ACK."""
+        emp    = report.employee_id.name
+        period = report.get_period_label()
+        ack_dt = report.ack_date.strftime('%d/%m/%Y %H:%M') if report.ack_date else ''
+        request.env['mail.mail'].sudo().create({
+            'subject':    f'✅ Confirmación Reporte Asistencia — {emp}',
+            'email_from': 'Sistema UEIPAB <recursoshumanos@ueipab.edu.ve>',
+            'email_to':   'recursoshumanos@ueipab.edu.ve',
+            'body_html':  f"""
+<p>El empleado ha confirmado la recepción de su reporte de asistencia.</p>
+<table style="border-collapse:collapse;font-size:13px;width:100%;max-width:480px;">
+  <tr><td style="padding:6px 12px;background:#f0f4fa;font-weight:bold;width:40%;">Empleado</td>
+      <td style="padding:6px 12px;">{emp}</td></tr>
+  <tr><td style="padding:6px 12px;background:#f0f4fa;font-weight:bold;">Período</td>
+      <td style="padding:6px 12px;">{period}</td></tr>
+  <tr><td style="padding:6px 12px;background:#f0f4fa;font-weight:bold;">Fecha confirmación</td>
+      <td style="padding:6px 12px;">{ack_dt}</td></tr>
+  <tr><td style="padding:6px 12px;background:#f0f4fa;font-weight:bold;">IP</td>
+      <td style="padding:6px 12px;">{ip}</td></tr>
+</table>""",
+            'state': 'outgoing',
+            'auto_delete': True,
+        })
 
     # -------------------------------------------------------------------------
     # HTML response pages (inline — no template dependency)
