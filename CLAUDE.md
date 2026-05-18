@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v18)
+**Last Updated:** 2026-05-18 (v19)
 
 ## Core Instructions
 
@@ -83,7 +83,8 @@
 | 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com; blast 2026-05-18 (322 recipients) |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on every ACK (v6.4) |
 | 67 | Glenda Seguro Escolar 2026-2027 | Pending (blocked until budget announcement) | `ueipab_ai_agent` | $30.58/alumno; advisor WA https://wa.me/584248340051; deploy after budget ~26-May |
-| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; optional `initial_message` field — staff pastes cross-channel msg, Glenda processes it after greeting |
+| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `💾 Guardar Borrador` (review before send) + `🚀 Iniciar Ahora`; `initial_message` on conv model — skips greeting, answers directly |
+| 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` cache (199 families); phone/name match → injects monthly, students+grades, forecast Jun–Aug, annual costs × quantity; `sync_family_billing.py` daily 07:30 VET |
 
 ---
 
@@ -172,7 +173,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.50.1 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.51.0 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -187,7 +188,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.50.1 | Deployed 2026-05-18 — budget price gate lifted; Feature #68 manual WA trigger; direct answer when initial_message set (no greeting) |
+| ueipab_ai_agent | 17.0.1.51.0 | Deployed 2026-05-18 — #68 draft/review wizard (Guardar Borrador); #69 family billing enrichment (monthly+forecast+annual costs); budget FAQ stage active |
 
 ---
 
@@ -287,6 +288,22 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **No anti-spam on Telegram:** `_send_to_user()` skips `whatsapp_service._throttle_send()` entirely for `channel='telegram'`. Replies are instant (only Claude latency ~1–5s).
 
 **Monitoring URL:** `https://odoo.ueipab.edu.ve/web#action=830&cids=1&menu_id=569` → filter by Canal=Telegram; group by Canal available.
+
+### Glenda Family Billing Enrichment (Feature #69)
+
+**Cache:** `school.family_billing_json` in `ir.config_parameter` — 199 families from Customers spreadsheet. Synced by `scripts/sync_family_billing.py --live` (cron `/etc/cron.d/sync_family_billing` daily 07:30 VET).
+
+**Lookup (in `_enrich_billing_context()`):**
+1. Phone match: normalize conv phone → match cache `phone` field
+2. Fallback: fuzzy student name match from latest inbound message (billing keywords required)
+
+**Injected block (📋 DATOS FAMILIARES):** parent name, students + grades (from `school.student_directory_json`), monthly, discount note, forecast (remaining months to Aug 31 × monthly), annual one-time costs (quantity × $101.58), Option A/B projections.
+
+**School year billing period:** ends **31 agosto 2026**. Forecast = months from `today.month+1` to August (e.g. in May → 3 months: Jun, Jul, Aug).
+
+**Annual one-time costs per student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**. Multiplied by `quantity` in enrichment.
+
+**Iniciar Conversación wizard (v51.0):** `💾 Guardar Borrador` → draft conv + form review (no WA sent); `🚀 Iniciar Ahora` → fire immediately. `initial_message` stored on `ai.agent.conversation` — `action_start()` skips greeting if set, processes directly, clears field after send.
 
 ### Glenda Technical Patterns
 
