@@ -82,15 +82,24 @@ class StartConversationWizard(models.TransientModel):
                     'whatsapp_contact_date': fields.Datetime.now(),
                 })
 
-        # Start the conversation (send greeting)
-        conversation.action_start()
-
-        # If staff pasted the parent's original message, process it immediately
         if self.initial_message and self.initial_message.strip():
+            # Skip generic greeting — answer the parent's question directly
+            conversation.write({
+                'state': 'waiting',
+                'last_message_date': fields.Datetime.now(),
+                'last_sender': 'agent',
+            })
+            conversation.message_post(body=_(
+                "Conversacion iniciada con mensaje del representante. "
+                "Respondiendo directamente sin saludo genérico."
+            ))
             conversation.action_process_reply(
                 message_text=self.initial_message.strip(),
                 wa_message_id=0,
             )
+        else:
+            # Normal flow — send greeting and wait for parent reply
+            conversation.action_start()
 
         # Return action to view the conversation
         return {
