@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v16)
+**Last Updated:** 2026-05-18 (v17)
 
 ## Core Instructions
 
@@ -322,6 +322,24 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 - **DKIM:** only `google` selector published for `ueipab.edu.ve` (Google Workspace). No other authorized signers.
 - **Akdemia note:** `em.akdemia.com` (SendGrid subdomain, PTR `o1.em.akdemia.com`) sends with `From: *@ueipab.edu.ve` but MAIL FROM `em.akdemia.com` → DMARC misalign, blocked. Expected and classified as `third_party`.
 - **SPF:** currently `~all` (softfail); planned upgrade to `-all` ~2026-05-27 once delivery confirmed stable.
+
+### HTML Email / WA Broadcast Templates (ad-hoc)
+
+Sent via `mail.mail` XML-RPC (`state='outgoing'`, trigger queue cron id=3 with `method_direct_trigger`). These are one-off campaigns, not saved `mail.template` records.
+
+**Budget Consultation 2026-2027 email** (mail.mail id=4736 — test sent 2026-05-18):
+- Subject: `⭐ Inscripción Anticipada 2026-2027 + Propuesta Económica — Colegio Andrés Bello`
+- Sections: gold promo banner → inscripción $187.51 + sep $197.38 + bono sorpresa → options A/B cards → timeline → CTA button → Glenda Telegram CTA
+- Presentation link: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+- Target: 178 ACTIVE families (trigger pending user approval)
+
+**⚠️ Logo URL pattern for HTML emails:**
+- ✅ USE: `https://odoo.ueipab.edu.ve/web/image/res.company/1/logo` — **1080×1080 square**, renders correctly in circular frames
+- ❌ AVOID: `https://dev.ueipab.edu.ve/flyers/ueipab_logo.png` — **291×120 landscape rectangle**, distorts in circular/square frames
+
+**WA community broadcast** (budget + promo, 2026-05-18 — pending send):
+- Sections: promo (inscripción anticipada) first → options A/B → timeline → presentation link → Glenda links (Telegram + WA)
+- Telegram link: `https://t.me/GlendaUeipabBot` | WA: +58 414-832-1989
 
 ### mail.template body_html — multilingual JSONB (critical)
 
