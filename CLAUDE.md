@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v13)
+**Last Updated:** 2026-05-18 (v14)
 
 ## Core Instructions
 
@@ -169,7 +169,7 @@
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.48.0 | 2026-05-18 |
-| ueipab_attendance_report | 17.0.1.6.0 | 2026-05-11 |
+| ueipab_attendance_report | 17.0.1.6.3 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
 ### Production Environment
@@ -179,7 +179,7 @@
 | ueipab_payroll_enhancements | 17.0.1.70.0 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed |
-| ueipab_attendance_report | 17.0.1.6.0 | Deployed 2026-05-13 — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
+| ueipab_attendance_report | 17.0.1.6.3 | Deployed 2026-05-18 — default 44 payroll employees (latest closed batch); resend skips acknowledged; queue emails (no UI timeout) — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
@@ -287,6 +287,13 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 ### Glenda Technical Patterns
 
 See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) for full reference on: Silent Timeout/Quiet Hours, OdooBot Bridge (Discuss), Auto Draft Payment / Journal Map, BCV Rate Context, Invoice Balance Query, Daily Executive Digest, Quotation Engine & Enrollment info.
+
+### Attendance Biweekly Report Wizard (v6.3 patterns)
+
+- **Employee default:** `_get_payroll_employees()` — latest closed `hr.payslip.run` employees (e.g. MAYO15 = 44). Fallback: `contract_ids.state='open'`. Wizard file: `ueipab_attendance_report/wizard/hr_attendance_report_wizard.py`
+- **Resend skips acknowledged:** `action_resend_reports()` domain includes `('state','!=','acknowledged')` + guard in `_send_emails()`. Never re-emails employees who already confirmed.
+- **No UI timeout:** `force_send=False` in `_send_emails()` — emails queue as `state='outgoing'`, mail queue cron delivers. Before: 44 × 2.5s = 110s → HTTP worker killed. After: <1s return.
+- **States:** `draft` → `sent` (queued) → `acknowledged` (confirmed via token link). `is_historical` records auto-acknowledged on create.
 
 ### WA & Email Invoice Reminder
 
