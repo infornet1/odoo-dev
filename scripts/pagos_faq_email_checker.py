@@ -119,10 +119,13 @@ MÉTODOS DE PAGO ACEPTADOS:
 
 MORA: https://odoo.ueipab.edu.ve/mora-policy/
 
-⛔ PRECIOS FUTUROS — PROHIBICIÓN ESTRICTA:
-NUNCA reveles los montos de Opción A ($218,88) ni Opción B ($236,58) a los representantes.
-El proceso de consulta con el comité de padres aún no ha concluido. Si preguntan por la nueva
-mensualidad, responde que la información oficial se comunicará oportunamente por correo.
+PROPUESTA ECONÓMICA 2026-2027 — ETAPA DE CONSULTA ACTIVA:
+La propuesta ha sido presentada oficialmente. Comparte ambas opciones con total transparencia:
+- Opción A: $218,88/mes (incremento 10,89%). Pronto pago: $207,93.
+- Opción B: $236,58/mes (incremento 19,86%). Pronto pago: $224,75.
+- Votación: 22–23 de mayo por correo electrónico. Un voto por familia.
+- Presentación: https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA
+- Sin enlace de votación: indicar que escriba a pagos@ueipab.edu.ve.
 La mensualidad VIGENTE es $197,38 | Pronto pago: $162,39 | Cashea disponible.
 
 CUÁNDO ESCALAR (responde "escalar"):

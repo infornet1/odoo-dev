@@ -26,23 +26,29 @@
               action="ai_agent_conversation_action"
               sequence="1"/>
 
+    <menuitem id="menu_ai_agent_start_conversation"
+              name="Iniciar Conversación"
+              parent="menu_ai_agent_operations"
+              action="action_start_conversation_standalone"
+              sequence="2"/>
+
     <menuitem id="menu_ai_agent_bounce_log"
               name="Bounce Log"
               parent="menu_ai_agent_operations"
               action="ueipab_bounce_log.mail_bounce_log_action"
-              sequence="2"/>
+              sequence="3"/>
 
     <menuitem id="menu_ai_agent_data_collection"
               name="Recoleccion de Datos"
               parent="menu_ai_agent_operations"
               action="hr_data_collection_request_action"
-              sequence="3"/>
+              sequence="4"/>
 
     <menuitem id="menu_ai_agent_create_from_batch"
               name="Crear desde Lote"
               parent="menu_ai_agent_operations"
               action="action_create_collection_standalone"
-              sequence="4"/>
+              sequence="5"/>
 
     <menuitem id="menu_ai_agent_calibration"
               name="Programa Calibración"

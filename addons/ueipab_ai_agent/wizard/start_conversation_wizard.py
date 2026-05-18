@@ -9,6 +9,11 @@ class StartConversationWizard(models.TransientModel):
     skill_id = fields.Many2one('ai.agent.skill', required=True, string='Skill')
     partner_id = fields.Many2one('res.partner', required=True, string='Contacto')
     phone = fields.Char('Telefono WhatsApp', required=True)
+    initial_message = fields.Text(
+        'Mensaje del representante',
+        help='Opcional: pega aquí el mensaje que el representante envió por otro canal '
+             '(correo, WA distinto, presencial). Glenda lo procesará automáticamente '
+             'tras el saludo inicial.')
     source_model = fields.Char('Modelo Origen')
     source_id = fields.Integer('ID Origen')
 
@@ -79,6 +84,13 @@ class StartConversationWizard(models.TransientModel):
 
         # Start the conversation (send greeting)
         conversation.action_start()
+
+        # If staff pasted the parent's original message, process it immediately
+        if self.initial_message and self.initial_message.strip():
+            conversation.action_process_reply(
+                message_text=self.initial_message.strip(),
+                wa_message_id=0,
+            )
 
         # Return action to view the conversation
         return {

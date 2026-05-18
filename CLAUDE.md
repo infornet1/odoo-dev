@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v17)
+**Last Updated:** 2026-05-18 (v18)
 
 ## Core Instructions
 
@@ -72,17 +72,18 @@
 | 54 | Glenda OdooBot Bridge | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 55 | Glenda Silent Timeout + Quiet Hours | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 56 | DMARC Report Processor | Production | Script + Cron | `scripts/dmarc_report_processor.py` — [CEO](documentation/CEO_COMMAND_CENTER.md) |
-| 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; webhook `odoo.ueipab.edu.ve`; deep-link `EMP_{id}`; WA invite on 1st reply |
-| 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py` — soporte@ inbox + Glenda WA/TG `ACTION:NOTIFY_ABSENCE`; cron weekdays 06:00-17:00 VET; Josefina Rodriguez; teacher lookup via `control_asistencias`; CC soporte@+Arcides+David/Norka |
-| 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP:cedula\|student_name\|grade` — 3-factor verify → reveal student email from Google Directory cache + Akdemia reset link; UNASSIGNED soporte@ FS ticket; cron `sync_google_directory.py` daily 07:00 VET |
-| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + Script | Glenda FAQ LIVE (v47.4) — **price gate active** (no new prices until committee approval); pagos@ email FAQ checker LIVE every 30min; 178 ACTIVE families; email vote campaign pending 19-May meeting; vote deadline ~23-May; results 26-May |
+| 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; deep-link `EMP_{id}` |
+| 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py`; see Key Technical Patterns |
+| 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP`; see Key Technical Patterns |
+| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + Script | **price gate active**; pagos@ FAQ checker LIVE; 178 ACTIVE families; results ~26-May |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
-| 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules knowledge + PDF link; dates Jun 1 (Primaria) / Jun 2 (Media General); 4 levels + Say-Spell-Say protocol |
-| 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 emails sent 2026-05-17; banner `/flyers/glenda_banner.png`; Active+Pipeline families; `--live` to resend |
-| 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | When WA parent complains about slow response, Glenda explains 5-min polling delay and recommends t.me/GlendaUeipabBot; WA-channel only (v47.5) |
-| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | Proveedor oficial del distintivo del uniforme; costo ~$8–$10 c/u; WA https://wa.me/584148172725; email almacenpariseltigre@gmail.com; IG https://www.instagram.com/almacenpariseltigre — email blast sent 2026-05-18 (322 recipients: 184 families ACTIVE+PIPELINE + 45 empl; Reply-To pagos@) |
-| 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — queues `mail.mail` to recursoshumanos@ on every employee ACK; includes name, period, datetime, IP (v6.4) |
-| 67 | Glenda Seguro Escolar 2026-2027 | Pending (blocked until budget announcement) | `ueipab_ai_agent` | Seguros Caracas Accidentes Escolares Alt.2; $30.58/alumno/año; coverages + claim WA 0414-903.3738 + amis@grupov.com.ve + APP Asegurados; local advisor Sra. Johanna Hernández WA https://wa.me/584248340051; deploy after budget results ~26-May |
+| 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules + PDF; Jun 1 Primaria / Jun 2 Media General |
+| 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 sent 2026-05-17; `--live` to resend |
+| 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → explains polling delay + recommends Telegram; WA-channel only (v47.5) |
+| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com; blast 2026-05-18 (322 recipients) |
+| 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on every ACK (v6.4) |
+| 67 | Glenda Seguro Escolar 2026-2027 | Pending (blocked until budget announcement) | `ueipab_ai_agent` | $30.58/alumno; advisor WA https://wa.me/584248340051; deploy after budget ~26-May |
+| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; optional `initial_message` field — staff pastes cross-channel msg, Glenda processes it after greeting |
 
 ---
 
@@ -167,11 +168,11 @@
 | Module | Version | Last Update |
 |--------|---------|-------------|
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.70.0 | 2026-05-16 |
+| ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.49.5 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.50.0 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -179,14 +180,14 @@
 
 | Module | Version | Status |
 |--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.70.0 | Deployed 2026-05-16 |
+| ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
 | hrms_dashboard | 17.0.1.0.2 | Installed |
 | ueipab_attendance_report | 17.0.1.6.4 | Deployed 2026-05-18 — default 44 payroll employees; resend skips acknowledged; queue emails (no timeout); ACK CC → recursoshumanos@ — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.49.5 | Deployed 2026-05-18 — Claude retry + OpenAI fallback; WA→Telegram speed suggestion; budget consultation knowledge; Almacenes París; Kurios payment → school directly (NOT Kurios) + medios de pago + pagos@ |
+| ueipab_ai_agent | 17.0.1.50.0 | Deployed 2026-05-18 — budget price gate lifted (FAQ stage); Manual WA Trigger menu (Feature #68) |
 
 ---
 
@@ -327,19 +328,9 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 
 Sent via `mail.mail` XML-RPC (`state='outgoing'`, trigger queue cron id=3 with `method_direct_trigger`). These are one-off campaigns, not saved `mail.template` records.
 
-**Budget Consultation 2026-2027 email** (mail.mail id=4736 — test sent 2026-05-18):
-- Subject: `⭐ Inscripción Anticipada 2026-2027 + Propuesta Económica — Colegio Andrés Bello`
-- Sections: gold promo banner → inscripción $187.51 + sep $197.38 + bono sorpresa → options A/B cards → timeline → CTA button → Glenda Telegram CTA
-- Presentation link: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
-- Target: 178 ACTIVE families (trigger pending user approval)
-
 **⚠️ Logo URL pattern for HTML emails:**
 - ✅ USE: `https://odoo.ueipab.edu.ve/web/image/res.company/1/logo` — **1080×1080 square**, renders correctly in circular frames
 - ❌ AVOID: `https://dev.ueipab.edu.ve/flyers/ueipab_logo.png` — **291×120 landscape rectangle**, distorts in circular/square frames
-
-**WA community broadcast** (budget + promo, 2026-05-18 — pending send):
-- Sections: promo (inscripción anticipada) first → options A/B → timeline → presentation link → Glenda links (Telegram + WA)
-- Telegram link: `https://t.me/GlendaUeipabBot` | WA: +58 414-832-1989
 
 ### mail.template body_html — multilingual JSONB (critical)
 
@@ -449,7 +440,6 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Flyer/Audio:** **⚠️ WA only** — skipped on Telegram (`channel != 'whatsapp'` guard in `_send_flyer()`)
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
 - **Calibration:** WA + Telegram conversations both count toward bonus; feedback linked via `user_id.partner_id`
-- **Absence notification:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Glenda creates Freescout soporte@ conv → `absence_processor.py` cron picks it up within 10 min
 
 ### WA Poll Cron — Account Filter Note
 
@@ -462,10 +452,7 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 **Known risk:** Competitors may contact Glenda via Telegram or WA to probe pricing.
 - **Price gate** is the primary defence — Glenda only quotes $197.38 / $162.39, never proposed budget amounts
 - **Detection signal:** immediately asks about next-year costs with no child/grade context
-- **Glenda response (price gate active):** confirms current prices + deflects "próximo año" with "información oficial se comunicará oportunamente"
-- **Action:** Let Glenda handle within guardrails (safe). Escalate via `action_process_reply` from Odoo shell if conversation needs manual override
-- **Re-trigger stuck conv via shell:** `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
-- **Re-trigger via XML-RPC (no shell access):** `action_process_reply` returns None → XML-RPC marshal fails. Workaround: create a one-shot `ir.actions.server` record via XML-RPC, `run()` it, then `unlink()` it. The server action executes in Odoo context and the None return is swallowed. See `scripts/` session history for pattern. Use `allow_none=True` on the `ServerProxy`.
+- **Action:** Let Glenda handle within guardrails. Re-trigger stuck conv via shell: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
 ### Environment Status
 
@@ -479,26 +466,17 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 ### Budget Consultation 2026-2027 (Feature #60)
 
-**Price gate (active until committee approves):** Glenda and `pagos_faq_email_checker.py` both have an explicit `⛔` prohibition block — they quote ONLY current prices ($197.38 mensualidad / $162.39 pronto pago / Cashea). To lift the gate: remove the prohibition block from `_BUDGET_KNOWLEDGE` instructions in `general_inquiry.py` and from `SYSTEM_PROMPT` in `pagos_faq_email_checker.py`, then update with the winning option price.
+**Price gate (active until committee approves):** Glenda and `pagos_faq_email_checker.py` both block proposed budget amounts — quote ONLY $197.38/$162.39/Cashea. To lift: remove `⛔` prohibition block from `_BUDGET_KNOWLEDGE` in `general_inquiry.py` and `SYSTEM_PROMPT` in `pagos_faq_email_checker.py`, then add winning option price.
 
-**Presentation:** `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA` — shared by Glenda on budget questions.
+**pagos@ FAQ Email Checker:** `scripts/pagos_faq_email_checker.py` — cron every 30min weekdays 06:00–17:00 VET (`/etc/cron.d/pagos_faq_email_checker`). Markers: `[FAQ-AI]` / `[FAQ-AI][ESCALAR]`. State: `scripts/pagos_faq_email_checker_state.json`.
 
-**Eligible voters:** 178 ACTIVE families — `Customers` tab col C = `ACTIVE` in spreadsheet `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`. Col A=cédula, B=name, J=email(s), D=student(s).
-
-**Vote tracking:** `partner.communication.ack` infra (from `ueipab_attendance_report`), new notice_key `budget_consulta_2026_2027`. `response_si=True` → Opción A / `response_si=False` → Opción B. Email-only voting via personalized `/partner-ack/<token>/si|no` link.
-
-**Timeline:** Contraloría ✅ 18-May → video calls 19-20 May → divulgación 21-May → voting 22-23 May → results 26-May.
-
-**pagos@ FAQ Email Checker:** `scripts/pagos_faq_email_checker.py` — cron every 30min weekdays 06:00–17:00 VET (`/etc/cron.d/pagos_faq_email_checker`). Reads pagos@ (mailbox_id=2), calls Claude Haiku, auto-replies FAQ or posts internal note `⚠️` for escalations. Stays UNASSIGNED. Processed marker: `[FAQ-AI]` or `[FAQ-AI][ESCALAR]` subject prefix. State: `scripts/pagos_faq_email_checker_state.json`.
+**Vote tracking:** `partner.communication.ack`, notice_key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`. Timeline: voting 22-23 May → results 26-May.
 
 ---
 
 ## Akdemia Data Pipeline
 
-See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
-- **Scraper:** `/var/www/dev/odoo_api_bridge/customer_matching/integrations/akdemia_scraper.py` (Playwright)
-- **Cron:** `/etc/cron.d/customer_matching` — daily 06:00 VET
-- **Resolution Bridge phases:** 2a=refresh in_akdemia, 2b=auto-confirm akdemia_pending, 2c=auto-resolve (PATH F), 3=query, 4=process (Freescout + Sheets), 5=sync Customers family emails
+See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akdemia_scraper.py` (Playwright); cron daily 06:00 VET; phases 2a–5 (Freescout + Sheets sync).
 
 ---
 
@@ -547,12 +525,8 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 - [Freescout API Migration Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
 ### School Operations
-- **Absence Notification System** — `scripts/absence_processor.py` + `/etc/cron.d/absence_processor`; soporte@ + Glenda WA/TG; Josefina Rodriguez; teacher lookup `control_asistencias`; CC soporte@+Arcides+David/Norka
-- **School Account Help** — `ACTION:SCHOOL_ACCOUNT_HELP`; Google Directory cache (`sync_google_directory.py`, cron daily 07:00 VET); 224 active students (46 suspended deleted 2026-05-17); Akdemia reset link `https://edge.akdemia.com/login#resetPasswordModal`
-- **Budget Consultation 2026-2027** — Glenda FAQ + price gate ($197.38/$162.39 only); pagos@ email checker; 178 ACTIVE families; vote email campaign pending trigger after 19-May meeting; results 26-May. Presentation: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
-- **Glenda Telegram Announcement** — `scripts/send_glenda_telegram_email.py --live` sent 2026-05-17 to 279 emails (274 delivered, 5 failed on @ueipab.edu.ve internal). Banner: `/var/www/dev/flyers/glenda_banner.png` (IMG_6669.PNG). Greeting: "Estimad@ Representante,"
-- **Kurios Robotics Regional** — Glenda shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request. Competition fee $10/alumno (only if selected) paid **directly to school** (NOT to Kurios) via standard payment methods; parent notifies pagos@ueipab.edu.ve after paying (v49.5)
-- **MOA Spelling Bee 2026** — Glenda knows full rules (4 levels, Say-Spell-Say protocol, rounds); dates Jun 1 Primaria / Jun 2 Media General; PDF: `https://drive.google.com/file/d/11LG9BRDOMjbiJC-kjU4OysnjIDAhP29V/view`
+
+See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), School Account Help (Feature #59), Budget Consultation (Feature #60) — all detailed in Key Technical Patterns above.
 
 ### Infrastructure
 - [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)

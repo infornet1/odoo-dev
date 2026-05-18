@@ -10,6 +10,13 @@
                     <field name="skill_id"/>
                     <field name="partner_id"/>
                     <field name="phone"/>
+                </group>
+                <group string="Mensaje del representante (opcional)">
+                    <field name="initial_message" nolabel="1" colspan="2"
+                           placeholder="Pega aquí el mensaje original del representante recibido por otro canal (correo, WA distinto, presencial). Glenda lo procesará automáticamente tras el saludo."
+                           widget="text"/>
+                </group>
+                <group>
                     <field name="source_model" invisible="1"/>
                     <field name="source_id" invisible="1"/>
                 </group>
@@ -20,6 +27,16 @@
                 </footer>
             </form>
         </field>
+    </record>
+
+
+    <!-- Standalone action — opens wizard directly from AI Agent menu -->
+    <record id="action_start_conversation_standalone" model="ir.actions.act_window">
+        <field name="name">Iniciar Conversación WhatsApp</field>
+        <field name="res_model">ai.agent.start.conversation.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="start_conversation_wizard_view_form"/>
+        <field name="target">new</field>
     </record>
 
 </odoo>
