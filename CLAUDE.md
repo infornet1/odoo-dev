@@ -82,7 +82,7 @@
 | 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → explains polling delay + recommends Telegram; WA-channel only (v47.5) |
 | 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com; blast 2026-05-18 (322 recipients) |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on every ACK (v6.4) |
-| 67 | Glenda Seguro Escolar 2026-2027 | Pending (blocked until budget announcement) | `ueipab_ai_agent` | $30.58/alumno; advisor WA https://wa.me/584248340051; deploy after budget ~26-May |
+| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Accidentes Escolares Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve / App Asegurados; asesora local Johanna Hernández WA https://wa.me/584248340051; deployed 2026-05-18 (budget announced) |
 | 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `💾 Guardar Borrador` (review before send) + `🚀 Iniciar Ahora`; `initial_message` on conv model — skips greeting, answers directly |
 | 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` cache (199 families); phone/name match → injects monthly, students+grades, forecast Jun–Aug, annual costs × quantity; `sync_family_billing.py` daily 07:30 VET |
 
@@ -173,7 +173,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.51.2 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.51.4 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -188,7 +188,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.51.2 | Deployed 2026-05-18 — #68 draft/review wizard; #69 billing enrichment; bot detection fix (agent-start no longer silenced); 🔄 Actualizar button on conv form |
+| ueipab_ai_agent | 17.0.1.51.4 | Deployed 2026-05-18 — #68 draft/review; #69 billing enrichment; #67 Seguros Caracas live; Meet links (19–20 mayo); bot fix; 🔄 refresh |
 
 ---
 
