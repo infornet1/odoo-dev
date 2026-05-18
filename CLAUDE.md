@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v15)
+**Last Updated:** 2026-05-18 (v16)
 
 ## Core Instructions
 
@@ -171,7 +171,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.49.1 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.49.5 | 2026-05-18 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -186,7 +186,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.49.1 | Deployed 2026-05-18 — Claude retry + OpenAI fallback; WA→Telegram speed suggestion; budget consultation knowledge; Almacenes París |
+| ueipab_ai_agent | 17.0.1.49.5 | Deployed 2026-05-18 — Claude retry + OpenAI fallback; WA→Telegram speed suggestion; budget consultation knowledge; Almacenes París; Kurios payment → school directly (NOT Kurios) + medios de pago + pagos@ |
 
 ---
 
@@ -533,7 +533,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md).
 - **School Account Help** — `ACTION:SCHOOL_ACCOUNT_HELP`; Google Directory cache (`sync_google_directory.py`, cron daily 07:00 VET); 224 active students (46 suspended deleted 2026-05-17); Akdemia reset link `https://edge.akdemia.com/login#resetPasswordModal`
 - **Budget Consultation 2026-2027** — Glenda FAQ + price gate ($197.38/$162.39 only); pagos@ email checker; 178 ACTIVE families; vote email campaign pending trigger after 19-May meeting; results 26-May. Presentation: `https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
 - **Glenda Telegram Announcement** — `scripts/send_glenda_telegram_email.py --live` sent 2026-05-17 to 279 emails (274 delivered, 5 failed on @ueipab.edu.ve internal). Banner: `/var/www/dev/flyers/glenda_banner.png` (IMG_6669.PNG). Greeting: "Estimad@ Representante,"
-- **Kurios Robotics Regional** — Glenda shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request
+- **Kurios Robotics Regional** — Glenda shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request. Competition fee $10/alumno (only if selected) paid **directly to school** (NOT to Kurios) via standard payment methods; parent notifies pagos@ueipab.edu.ve after paying (v49.5)
 - **MOA Spelling Bee 2026** — Glenda knows full rules (4 levels, Say-Spell-Say protocol, rounds); dates Jun 1 Primaria / Jun 2 Media General; PDF: `https://drive.google.com/file/d/11LG9BRDOMjbiJC-kjU4OysnjIDAhP29V/view`
 
 ### Infrastructure
