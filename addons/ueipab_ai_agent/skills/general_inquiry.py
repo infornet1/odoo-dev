@@ -460,6 +460,10 @@ class GeneralInquirySkill:
         next_month = today.month + 1 if today.month < 12 else 1
         remaining = [m for m in range(next_month, _SCHOOL_YEAR_END_MONTH + 1)]
         forecast_block = ''
+        # One-time annual costs 2026-2027 per student
+        _ANNUAL_COST_PER_STUDENT = 101.58   # seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36
+        annual_total = _ANNUAL_COST_PER_STUDENT * quantity
+
         if remaining:
             n            = len(remaining)
             month_names  = ', '.join(_MONTH_ES.get(m, str(m)) for m in remaining)
@@ -471,6 +475,9 @@ class GeneralInquirySkill:
                 f"    Total regular    : {n} × ${monthly:,.2f} = ${total_reg:,.2f}\n"
                 f"    Total pronto pago: {n} × ${monthly * 0.95:,.2f} = ${total_pp:,.2f}\n"
                 f"    (Pronto pago = pagar en los primeros 10 días de cada mes)\n"
+                f"  COSTOS ÚNICOS 2026-2027 (acuerdo especial, por alumno):\n"
+                f"    {quantity} alumno(s) × $101,58 = ${annual_total:,.2f}\n"
+                f"    (seguro $30,58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36)\n"
                 f"  USA ESTOS DATOS para responder sin preguntar al representante. ──\n"
             )
 
