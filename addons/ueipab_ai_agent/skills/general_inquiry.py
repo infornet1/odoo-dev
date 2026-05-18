@@ -450,13 +450,38 @@ class GeneralInquirySkill:
 
         status_note = f' | Estado: {status}' if status and status != 'ACTIVE' else ''
 
+        # ── Remaining months forecast (2025-2026 billing period ends Aug 31) ──
+        from datetime import date as _date
+        _MONTH_ES = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',
+                     6:'junio',7:'julio',8:'agosto',9:'septiembre',
+                     10:'octubre',11:'noviembre',12:'diciembre'}
+        _SCHOOL_YEAR_END_MONTH = 8   # August
+        today = _date.today()
+        next_month = today.month + 1 if today.month < 12 else 1
+        remaining = [m for m in range(next_month, _SCHOOL_YEAR_END_MONTH + 1)]
+        forecast_block = ''
+        if remaining:
+            n            = len(remaining)
+            month_names  = ', '.join(_MONTH_ES.get(m, str(m)) for m in remaining)
+            total_reg    = monthly * n
+            total_pp     = monthly * 0.95 * n
+            forecast_block = (
+                f"  PRONÓSTICO AÑO ESCOLAR 2025-2026 (meses aún no facturados):\n"
+                f"    Meses pendientes : {month_names} ({n} mensualidad{'es' if n!=1 else ''})\n"
+                f"    Total regular    : {n} × ${monthly:,.2f} = ${total_reg:,.2f}\n"
+                f"    Total pronto pago: {n} × ${monthly * 0.95:,.2f} = ${total_pp:,.2f}\n"
+                f"    (Pronto pago = pagar en los primeros 10 días de cada mes)\n"
+                f"  USA ESTOS DATOS para responder sin preguntar al representante. ──\n"
+            )
+
         block = (
             "\n📋 DATOS FAMILIARES (fuente: sistema escolar — NO solicitar al representante):\n"
             f"  Representante : {parent}{status_note}\n"
             f"  Estudiantes   :\n"
             + '\n'.join(student_lines) + '\n'
             + f"  Mensualidad actual: ${monthly:,.2f} | {quantity} estudiante(s){discount_note}\n"
-            "  ── Con la propuesta aprobada, las nuevas mensualidades serían:\n"
+            + forecast_block
+            + "  ── Con la propuesta aprobada, las nuevas mensualidades serían:\n"
             f"     Opción A (+10,89%): ${monthly * 1.1089:,.2f}/mes "
             f"(pronto pago ${monthly * 1.1089 * 0.95:,.2f})\n"
             f"     Opción B (+19,86%): ${monthly * 1.1986:,.2f}/mes "
@@ -800,17 +825,14 @@ class GeneralInquirySkill:
             "respuesta (usa exactamente la clave de la lista de flyers). Solo un flyer por respuesta.\n"
             "  Ejemplo: ACTION:SEND_FLYER:inscripcion\n"
             "PERÍODO DE FACTURACIÓN 2025-2026:\n"
-            "- El año escolar 2025-2026 se factura hasta el 31 de agosto de 2026 (NO en junio ni julio).\n"
-            "- Meses restantes desde mayo 2026: mayo, junio, julio, agosto = hasta 4 mensualidades.\n"
+            "- El año escolar 2025-2026 se factura hasta el 31 de agosto de 2026.\n"
             "- Cuando un representante pregunte cuánto falta para culminar el año o el total de meses "
             "pendientes: NUNCA le preguntes cuántos meses le quedan. En su lugar:\n"
             "  1. Si el contacto está identificado → usa ACTION:QUERY_BALANCE:FOUND para obtener las "
             "facturas pendientes reales del sistema.\n"
-            "  2. Con el saldo obtenido, calcula el pronóstico completo:\n"
-            "     - Facturas ya emitidas y pendientes de pago (del saldo)\n"
-            "     - Meses aún no facturados hasta agosto 2026 (referencia: hoy es mayo 2026)\n"
-            "     - Total estimado para cerrar el año escolar\n"
-            "  3. Presenta el desglose claro al representante.\n"
+            "  2. El bloque 📋 DATOS FAMILIARES ya incluye el PRONÓSTICO con los meses exactos "
+            "y montos calculados. Úsalos directamente para responder sin inventar cifras.\n"
+            "  3. Presenta: saldo pendiente (si hay) + meses no facturados del pronóstico = total.\n"
             "- Si el contacto NO está identificado: pídele la cédula para consultar su saldo.\n"
             "- Si la consulta es sobre su SALDO, DEUDA o FACTURAS PENDIENTES:\n"
             "  * Si el contacto ya está identificado y el SALDO EN SISTEMA indica facturas pendientes: "
