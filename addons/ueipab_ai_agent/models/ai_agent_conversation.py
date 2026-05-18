@@ -344,6 +344,17 @@ class AiAgentConversation(models.Model):
             return t >= q_start or t < q_end
         return q_start <= t < q_end
 
+    def action_refresh(self):
+        """Reload the conversation form to show latest messages and state."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
     def action_start(self):
         """Send greeting message (or process initial_message directly) and activate conversation."""
         self.ensure_one()

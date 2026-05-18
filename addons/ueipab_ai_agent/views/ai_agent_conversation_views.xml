@@ -44,6 +44,10 @@
                     <button name="action_start" string="Iniciar Conversacion"
                             type="object" class="btn-primary"
                             invisible="state != 'draft'"/>
+                    <button name="action_refresh" string="🔄 Actualizar"
+                            type="object" class="btn-secondary"
+                            invisible="state not in ('active', 'waiting', 'draft')"
+                            title="Recargar mensajes y estado de la conversación"/>
                     <button name="action_force_resolve" string="Resolver Manualmente"
                             type="object" class="btn-secondary"
                             invisible="state not in ('active', 'waiting')"
