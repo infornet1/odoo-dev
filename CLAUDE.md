@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v20)
+**Last Updated:** 2026-05-18 (v21)
 
 ## Core Instructions
 
@@ -82,9 +82,11 @@
 | 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → explains polling delay + recommends Telegram; WA-channel only (v47.5) |
 | 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com; blast 2026-05-18 (322 recipients) |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on every ACK (v6.4) |
-| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Accidentes Escolares Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve / App Asegurados; asesora local Johanna Hernández WA https://wa.me/584248340051; deployed 2026-05-18 (budget announced) |
-| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `💾 Guardar Borrador` (review before send) + `🚀 Iniciar Ahora`; `initial_message` on conv model — skips greeting, answers directly |
-| 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` cache (199 families); phone/name match → injects monthly, students+grades, forecast Jun–Aug, annual costs × quantity; `sync_family_billing.py` daily 07:30 VET |
+| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve; asesora Johanna Hernández https://wa.me/584248340051 |
+| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `💾 Guardar Borrador` + `🚀 Iniciar Ahora`; `initial_message` on conv — skips greeting |
+| 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` (199 families); phone/name → monthly+grades+forecast Jun–Aug+annual costs; `sync_family_billing.py` 07:30 VET |
+| 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; hourly (voting week); scores 1–5; CEO email + OdooBot DM + WA if critical |
+| 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` — 7-section HTML guide; sent to CS staff 2026-05-18 |
 
 ---
 
@@ -308,6 +310,10 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **Bot detection guard (v51.1):** 2s speed check only fires when `last_sender == 'customer'`. Without this, `action_start()` setting `last_sender='agent'` then immediately calling `action_process_reply()` falsely triggered `silent=True`.
 
 **🔄 Actualizar (v51.2):** Button on conv form (`draft/active/waiting`). `action_refresh()` returns `act_window` for same record — reloads messages without full browser refresh.
+
+**Meet links (v51.3):** 19 mayo 3pm → `meet.google.com/dxk-yyjr-jzg`; 20 mayo 2pm → `meet.google.com/joa-hyjw-dob` — in `_INSTITUTIONAL_KNOWLEDGE`; Glenda provides links directly.
+
+**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Claude Haiku scores `general_inquiry` convs 1–5 (accuracy, answered question, opportunities, tone). Digest → CEO email + OdooBot DM + WA if critical. State: `scripts/glenda_supervisor_state.json`. Cron: `/etc/cron.d/glenda_supervisor` — hourly voting week (`0 11-23,0,1 * * 1-5`); reduce to `0 11-23/2` (2h) or `0 15` (daily) when ready.
 
 ### Glenda Technical Patterns
 
