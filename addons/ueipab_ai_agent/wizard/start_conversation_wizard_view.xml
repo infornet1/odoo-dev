@@ -21,8 +21,12 @@
                     <field name="source_id" invisible="1"/>
                 </group>
                 <footer>
-                    <button name="action_start" string="Iniciar Conversacion"
-                            type="object" class="btn-primary"/>
+                    <button name="action_save_draft" string="💾 Guardar Borrador"
+                            type="object" class="btn-secondary"
+                            help="Crea la conversación en borrador para revisar antes de enviar"/>
+                    <button name="action_start" string="🚀 Iniciar Ahora"
+                            type="object" class="btn-primary"
+                            help="Crea la conversación y envía el mensaje a WhatsApp de inmediato"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

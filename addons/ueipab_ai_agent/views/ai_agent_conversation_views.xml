@@ -79,6 +79,15 @@
                             <field name="resolved_date"/>
                         </group>
                     </group>
+                    <!-- Draft review: show initial message before firing -->
+                    <group invisible="not initial_message or state != 'draft'"
+                           string="📋 Mensaje del representante (revisar antes de iniciar)">
+                        <field name="initial_message" nolabel="1" colspan="2"
+                               readonly="1" widget="text"
+                               style="background:#fff8e1;border-left:4px solid #f59e0b;
+                                      padding:10px;border-radius:4px;"/>
+                    </group>
+
                     <group invisible="source_model == ''">
                         <group string="Origen">
                             <field name="source_model"/>

@@ -103,6 +103,10 @@ class AiAgentConversation(models.Model):
     # Source record (generic link)
     source_model = fields.Char('Modelo Origen')
     source_id = fields.Integer('ID Origen')
+    initial_message = fields.Text(
+        'Mensaje del representante',
+        help='Mensaje recibido por otro canal. Glenda lo procesará al iniciar, '
+             'saltándose el saludo genérico. Se borra tras el envío.')
 
     # Agent Messages (not mail.thread message_ids)
     agent_message_ids = fields.One2many('ai.agent.message', 'conversation_id', string='Mensajes')
@@ -341,7 +345,7 @@ class AiAgentConversation(models.Model):
         return q_start <= t < q_end
 
     def action_start(self):
-        """Send greeting message and activate conversation."""
+        """Send greeting message (or process initial_message directly) and activate conversation."""
         self.ensure_one()
         if self.state != 'draft':
             raise UserError(_("Solo se puede iniciar una conversacion en estado Borrador."))
@@ -350,15 +354,29 @@ class AiAgentConversation(models.Model):
         if not skill_handler:
             raise UserError(_("No se encontro el handler para el skill '%s'.") % self.skill_id.code)
 
-        # Get greeting from skill handler with context
-        context = skill_handler.get_context(self)
+        if self.initial_message and self.initial_message.strip():
+            # Skip generic greeting — respond directly to the representative's message
+            msg = self.initial_message.strip()
+            self.write({
+                'state': 'waiting',
+                'last_message_date': fields.Datetime.now(),
+                'last_sender': 'agent',
+                'initial_message': False,
+            })
+            self.message_post(body=_(
+                "Conversacion iniciada con mensaje del representante. "
+                "Respondiendo directamente (sin saludo genérico)."
+            ))
+            self.action_process_reply(message_text=msg, wa_message_id=0)
+            return
+
+        # Normal flow — send greeting and wait for reply
+        context  = skill_handler.get_context(self)
         greeting = skill_handler.get_greeting(self, context)
 
-        # Send via configured channel
-        dry_run = self._is_dry_run()
+        dry_run   = self._is_dry_run()
         wa_msg_id = self._send_to_user(greeting)
 
-        # Log message
         self.env['ai.agent.message'].create({
             'conversation_id': self.id,
             'direction': 'outbound',

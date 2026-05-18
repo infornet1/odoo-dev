@@ -12,31 +12,22 @@ class StartConversationWizard(models.TransientModel):
     initial_message = fields.Text(
         'Mensaje del representante',
         help='Opcional: pega aquí el mensaje que el representante envió por otro canal '
-             '(correo, WA distinto, presencial). Glenda lo procesará automáticamente '
-             'tras el saludo inicial.')
+             '(correo, WA distinto, presencial). Glenda lo procesará al iniciar, '
+             'saltándose el saludo genérico.')
     source_model = fields.Char('Modelo Origen')
     source_id = fields.Integer('ID Origen')
 
     @api.onchange('partner_id')
     def _onchange_partner_id(self):
         if self.partner_id:
-            # When opened from bounce log, phone is pre-filled via default_phone
-            # (may contain alternative phone from escalated conversation)
             if not self.env.context.get('default_phone'):
                 self.phone = self.partner_id.mobile or self.partner_id.phone or ''
 
-    def action_start(self):
-        """Create conversation and send greeting."""
-        self.ensure_one()
-
-        if not self.phone:
-            raise UserError(_("Debe indicar un numero de telefono WhatsApp."))
-
-        # Normalize phone
+    def _prepare_conversation_vals(self):
         wa_service = self.env['ai.agent.whatsapp.service']
         normalized_phone = wa_service._normalize_phone(self.phone)
 
-        # Check for existing active conversation
+        # Guard: existing active conversation
         existing = self.env['ai.agent.conversation'].search([
             ('partner_id', '=', self.partner_id.id),
             ('skill_id', '=', self.skill_id.id),
@@ -48,10 +39,9 @@ class StartConversationWizard(models.TransientModel):
                     "Ya existe una conversacion activa para este contacto y skill (%s). "
                     "Cierre o resuelva la conversacion existente primero."
                 ) % existing.name)
-            # Escalated conversation — close it and allow retry with new number
             existing.write({'state': 'failed'})
 
-        # Check for duplicate conversation by phone (different partner, same number)
+        # Guard: duplicate phone
         phone_dup = self.env['ai.agent.conversation'].search([
             ('phone', '=', normalized_phone),
             ('state', 'in', ('draft', 'active', 'waiting')),
@@ -59,20 +49,20 @@ class StartConversationWizard(models.TransientModel):
         ], limit=1)
         if phone_dup:
             raise UserError(_(
-                "Ya existe una conversacion activa con este numero de telefono (%s) "
-                "para el contacto %s. Cierre o resuelva la conversacion existente primero."
+                "Ya existe una conversacion activa con este numero (%s) para %s. "
+                "Cierre o resuelva primero."
             ) % (normalized_phone, phone_dup.partner_id.name))
 
-        # Create conversation
-        conversation = self.env['ai.agent.conversation'].create({
+        return {
             'skill_id': self.skill_id.id,
             'partner_id': self.partner_id.id,
             'phone': normalized_phone,
+            'initial_message': self.initial_message.strip() if self.initial_message else False,
             'source_model': self.source_model or '',
             'source_id': self.source_id or 0,
-        })
+        }
 
-        # Link to source record if it's a bounce log
+    def _link_bounce_log(self, conversation):
         if self.source_model == 'mail.bounce.log' and self.source_id:
             bounce_log = self.env['mail.bounce.log'].browse(self.source_id)
             if bounce_log.exists():
@@ -82,26 +72,7 @@ class StartConversationWizard(models.TransientModel):
                     'whatsapp_contact_date': fields.Datetime.now(),
                 })
 
-        if self.initial_message and self.initial_message.strip():
-            # Skip generic greeting — answer the parent's question directly
-            conversation.write({
-                'state': 'waiting',
-                'last_message_date': fields.Datetime.now(),
-                'last_sender': 'agent',
-            })
-            conversation.message_post(body=_(
-                "Conversacion iniciada con mensaje del representante. "
-                "Respondiendo directamente sin saludo genérico."
-            ))
-            conversation.action_process_reply(
-                message_text=self.initial_message.strip(),
-                wa_message_id=0,
-            )
-        else:
-            # Normal flow — send greeting and wait for parent reply
-            conversation.action_start()
-
-        # Return action to view the conversation
+    def _open_conversation(self, conversation):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Conversacion AI',
@@ -110,3 +81,29 @@ class StartConversationWizard(models.TransientModel):
             'view_mode': 'form',
             'target': 'current',
         }
+
+    def action_save_draft(self):
+        """Create conversation in draft state and open form for review — no WA sent."""
+        self.ensure_one()
+        if not self.phone:
+            raise UserError(_("Debe indicar un numero de telefono WhatsApp."))
+        vals = self._prepare_conversation_vals()
+        conversation = self.env['ai.agent.conversation'].create(vals)
+        self._link_bounce_log(conversation)
+        if self.initial_message:
+            conversation.message_post(body=_(
+                "📋 Borrador creado. Mensaje del representante guardado. "
+                "Revisa los datos y haz clic en 'Iniciar Conversacion' cuando estés listo."
+            ))
+        return self._open_conversation(conversation)
+
+    def action_start(self):
+        """Create conversation and fire immediately (send greeting or process initial_message)."""
+        self.ensure_one()
+        if not self.phone:
+            raise UserError(_("Debe indicar un numero de telefono WhatsApp."))
+        vals = self._prepare_conversation_vals()
+        conversation = self.env['ai.agent.conversation'].create(vals)
+        self._link_bounce_log(conversation)
+        conversation.action_start()
+        return self._open_conversation(conversation)
