@@ -12,12 +12,12 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 | Cron | Before | After | Reason |
 |---|---|---|---|
-| `pagos_faq_email_checker` | 30 min, Mon–Fri only | **5 min, Mon–Sun 06:00–21:00 VET** | Voting period — parents email evenings/weekends; 30 min unacceptable for FAQ auto-reply |
+| `pagos_faq_email_checker` | 30 min, Mon–Fri only | **10 min, Mon–Sun 06:00–21:00 VET** | Parents email evenings/weekends too; 30 min too slow for FAQ auto-reply |
 | `ai_agent_email_checker` | 15 min (4×/hour) | **5 min (12×/hour)** | Align with escalation bridge; bounce customers waiting for verification |
 
 **Technical:** `pagos_faq_email_checker` now wrapped with `flock -n /tmp/lock.pagos_faq_checker` (previously had no overlap guard — safe at 30 min, required at 5 min).
 
-**Permanent change** — fast response is better UX year-round for all pagos@ FAQ topics (not just budget voting).
+**Permanent change** — 10 min is the production baseline; covers all pagos@ FAQ topics year-round.
 
 ---
 
