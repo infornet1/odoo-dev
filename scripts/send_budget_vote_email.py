@@ -95,9 +95,11 @@ def _load_spreadsheet_recipients():
         phone  = r[11].strip()
         if not name or status != 'ACTIVE':
             continue
-        if not email:
-            log.warning("SKIP (no email): %s", name)
+        if not email and not phone:
+            log.warning("SKIP (no email, no phone): %s", name)
             continue
+        if not email:
+            log.info("No email — will route via Glenda WA: %s (phone=%s)", name, phone)
         recipients.append({'name': name, 'email': email, 'phone': phone})
 
     log.info("Spreadsheet: %d ACTIVE rows loaded", len(recipients))
@@ -173,6 +175,41 @@ def _get_token(models, db, uid, key, ack_id):
         'partner.communication.ack', 'read', [[ack_id]],
         {'fields': ['token']})
     return rec[0]['token'] if rec else None
+
+
+def _create_glenda_vote_conv(models, db, uid, key, name, phone, partner_id):
+    """Create + start a Glenda WA conversation for a parent with no email.
+    The initial_message triggers Claude to respond with the full vote intro
+    including the Google Slides link and both options.
+    """
+    skills = call(models, db, uid, key,
+        'ai.agent.skill', 'search_read',
+        [[('code', '=', 'general_inquiry')]],
+        {'fields': ['id'], 'limit': 1})
+    if not skills:
+        log.warning("  Could not find general_inquiry skill — skipping Glenda conv")
+        return None
+    skill_id = skills[0]['id']
+
+    initial_msg = (
+        "Hola, no tengo correo electrónico registrado y quisiera ver "
+        "la propuesta presupuestaria 2026-2027 y ejercer mi voto."
+    )
+
+    conv_vals = {
+        'skill_id':        skill_id,
+        'phone':           phone,
+        'initial_message': initial_msg,
+        'state':           'draft',
+    }
+    if partner_id:
+        conv_vals['partner_id'] = partner_id
+
+    conv_id = call(models, db, uid, key,
+        'ai.agent.conversation', 'create', [[conv_vals]])
+    call(models, db, uid, key,
+        'ai.agent.conversation', 'action_start', [[conv_id]])
+    return conv_id
 
 
 # ── HTML builder ───────────────────────────────────────────────────────────────
@@ -719,13 +756,35 @@ def main(live, test):
 
     log.info("Recipients to process: %d", len(rows))
 
-    sent = skipped = 0
+    sent = skipped = glenda_direct = 0
 
     for row in rows:
         name       = row['name']
         email      = CEO_EMAIL if test else row['email']
         phone      = row.get('phone', '')
         partner_id = row['partner_id']
+
+        # ── No email but has phone → Glenda WA directly ──────────────────────
+        if not email and phone and not test:
+            if not live:
+                log.info("  DRY  %s — no email, would create Glenda WA (phone=%s)",
+                         name, phone)
+                continue
+            conv_id = _create_glenda_vote_conv(
+                models, db, uid, key, name, phone, partner_id)
+            if conv_id:
+                log.info("  GLENDA %s — WA conv #%d started (no email)", name, conv_id)
+                glenda_direct += 1
+            else:
+                log.warning("  SKIP %s — no email and Glenda conv failed", name)
+                skipped += 1
+            time.sleep(SEND_DELAY)
+            continue
+
+        if not email:
+            log.warning("  SKIP %s — no email, no phone", name)
+            skipped += 1
+            continue
 
         # Check existing ACK
         ack = _get_existing_ack(models, db, uid, key, partner_id)
@@ -779,7 +838,8 @@ def main(live, test):
             log.warning("Could not trigger mail queue: %s", e)
 
     log.info("=" * 70)
-    log.info("QUEUED: %d  |  SKIPPED: %d", sent, skipped)
+    log.info("QUEUED: %d  |  GLENDA DIRECT: %d  |  SKIPPED: %d",
+             sent, glenda_direct, skipped)
     log.info("=" * 70)
 
 
