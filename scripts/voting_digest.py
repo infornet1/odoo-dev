@@ -34,6 +34,7 @@ CEO_NAME    = 'Gustavo Perdomo'
 
 # ── Odoo UI deep-links ─────────────────────────────────────────────────────────
 MONITOR_URL = f'{ODOO_URL}/web#action=840&cids=1&menu_id=580'
+LOGO_URL    = f'{ODOO_URL}/web/image/res.company/1/logo'
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -111,16 +112,17 @@ def _tally(records):
 
     voted = by_state['continuing'] + by_state['leaving']
     return {
-        'total':       total,
-        'voted':       voted,
-        'continuing':  by_state['continuing'],
-        'leaving':     by_state['leaving'],
-        'pending':     by_state['pending'],
-        'by_channel':  by_channel,
-        'recent':      recent,
-        'pct_a':       round(by_state['continuing'] / voted * 100) if voted else 0,
-        'pct_b':       round(by_state['leaving']    / voted * 100) if voted else 0,
-        'pct_voted':   round(voted / total * 100) if total else 0,
+        'total':        total,
+        'voted':        voted,
+        'continuing':   by_state['continuing'],
+        'leaving':      by_state['leaving'],
+        'pending':      by_state['pending'],
+        'by_channel':   by_channel,
+        'recent':       recent,
+        'pct_a':        round(by_state['continuing'] / voted * 100) if voted else 0,
+        'pct_b':        round(by_state['leaving']    / voted * 100) if voted else 0,
+        'pct_voted':    round(voted / total * 100) if total else 0,
+        '_all_records': records,
     }
 
 
@@ -197,6 +199,46 @@ def _build_html(t, recent_delta, state):
         f'{ch_rows}</table>'
     ) if ch_rows else '<span style="font-size:12px;color:#aaa;">Sin datos de canal aún</span>'
 
+    # Full voted list (all voted, sorted most recent first)
+    voted_records = sorted(
+        [r for r in t.get('_all_records', []) if r.get('state') != 'pending'],
+        key=lambda r: r.get('ack_date') or '',
+        reverse=True,
+    )
+    if voted_records:
+        voted_rows = ''.join(
+            f'<tr style="border-bottom:1px solid #f0f0f0;">'
+            f'<td style="padding:5px 8px;font-size:12px;color:#333;">{r["partner_name"]}</td>'
+            f'<td style="padding:5px 8px;font-size:11px;color:#888;">{r["partner_email"]}</td>'
+            f'<td style="padding:5px 8px;font-size:12px;font-weight:bold;'
+            f'color:{"#1a2c5b" if r["state"]=="continuing" else "#6c3483"};">'
+            f'{"Opción A" if r["state"]=="continuing" else "Opción B"}</td>'
+            f'<td style="padding:5px 8px;font-size:11px;color:#aaa;">'
+            f'{(r.get("ack_date") or "")[:16].replace("T"," ")}</td>'
+            f'</tr>'
+            for r in voted_records
+        )
+        voted_section = f"""
+<div style="margin-top:20px;">
+  <div style="font-size:13px;font-weight:bold;color:#1a2c5b;margin-bottom:8px;">
+    📋 Votos registrados ({len(voted_records)})
+  </div>
+  <table cellpadding="0" cellspacing="0" width="100%"
+         style="border:1px solid #dde;border-radius:6px;overflow:hidden;">
+    <thead>
+      <tr style="background:#f0f4fa;">
+        <th style="padding:5px 8px;text-align:left;font-size:11px;color:#555;">Representante</th>
+        <th style="padding:5px 8px;text-align:left;font-size:11px;color:#555;">Email</th>
+        <th style="padding:5px 8px;text-align:left;font-size:11px;color:#555;">Decisión</th>
+        <th style="padding:5px 8px;text-align:left;font-size:11px;color:#555;">Fecha/Hora</th>
+      </tr>
+    </thead>
+    <tbody>{voted_rows}</tbody>
+  </table>
+</div>"""
+    else:
+        voted_section = ''
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"/></head>
@@ -211,6 +253,9 @@ def _build_html(t, recent_delta, state):
   <tr>
     <td style="background:linear-gradient(135deg,#1a2c5b 0%,#2471a3 100%);
                padding:24px 28px 20px;text-align:center;">
+      <img src="{LOGO_URL}" alt="Colegio Andrés Bello" width="64" height="64"
+           style="border-radius:50%;border:3px solid rgba(255,255,255,0.3);
+                  display:block;margin:0 auto 12px;"/>
       <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-bottom:4px;">
         REPORTE AUTOMÁTICO · CADA 15 MIN
       </div>
@@ -321,6 +366,9 @@ def _build_html(t, recent_delta, state):
       {recent_section}
     </td>
   </tr>
+
+  <!-- Voted list -->
+  {f'<tr><td style="padding:0 28px;">{voted_section}</td></tr>' if voted_section else ''}
 
   <!-- Channel breakdown -->
   <tr>

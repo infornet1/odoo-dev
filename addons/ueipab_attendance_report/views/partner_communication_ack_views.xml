@@ -46,11 +46,9 @@
         <field name="arch" type="xml">
             <form string="Comunicado a Representante">
                 <header>
-                    <button name="action_mark_continuing" string="✅ Registrar: Opción A"
+                    <button name="action_open_vote_wizard"
+                            string="📞 Registrar voto asistido"
                             type="object" class="btn-primary"
-                            invisible="state != 'pending'"/>
-                    <button name="action_mark_leaving" string="🔵 Registrar: Opción B"
-                            type="object"
                             invisible="state != 'pending'"/>
                     <button name="action_reset_pending" string="Reiniciar a Pendiente"
                             type="object"
@@ -59,6 +57,15 @@
                            statusbar_visible="pending,continuing,leaving"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box"
+                         invisible="state != 'pending'">
+                        <button name="action_open_vote_form_url"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-external-link"
+                                string="Abrir formulario\nde voto (tablet)"
+                                title="Abre el formulario público para voto presencial"/>
+                    </div>
                     <group>
                         <group string="Campaña">
                             <field name="notice_key"/>
@@ -87,6 +94,8 @@
                         <group string="Sistema">
                             <field name="token"/>
                             <field name="bounce_wa_sent"/>
+                            <field name="partner_phone"
+                                   invisible="not partner_phone"/>
                         </group>
                     </group>
                     <group string="Notas de auditoría">

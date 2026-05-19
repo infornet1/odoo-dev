@@ -95,6 +95,27 @@ class PartnerCommunicationAck(models.Model):
                 rec._record_decision('leaving', channel='in_person',
                                      user_id=self.env.user.id)
 
+    def action_open_vote_wizard(self):
+        self.ensure_one()
+        return {
+            'type':      'ir.actions.act_window',
+            'name':      'Registrar voto asistido',
+            'res_model': 'vote.assist.wizard',
+            'view_mode': 'form',
+            'target':    'new',
+            'context':   {'default_ack_id': self.id},
+        }
+
+    def action_open_vote_form_url(self):
+        self.ensure_one()
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        url  = f"{base}/partner-ack/{self.token}"
+        return {
+            'type': 'ir.actions.act_url',
+            'url':  url,
+            'target': 'new',
+        }
+
     def action_reset_pending(self):
         for rec in self:
             rec.write({

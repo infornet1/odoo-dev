@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_vote_assist_wizard_form" model="ir.ui.view">
+        <field name="name">vote.assist.wizard.form</field>
+        <field name="model">vote.assist.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Registrar voto asistido">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <strong>Registrar voto en nombre del representante.</strong>
+                        Este acto queda registrado con su usuario y canal para auditoría.
+                    </div>
+                    <group>
+                        <group string="Campaña">
+                            <field name="notice_label" readonly="1"/>
+                            <field name="partner_name" readonly="1"/>
+                            <field name="ack_id" invisible="1"/>
+                        </group>
+                        <group string="Voto">
+                            <field name="decision" required="1" widget="radio"/>
+                            <field name="vote_channel" required="1" widget="radio"/>
+                        </group>
+                    </group>
+                    <group string="Notas de auditoría (opcional)">
+                        <field name="vote_notes" nolabel="1"
+                               placeholder="Ej: llamada entrante 10:32am, representante confirmó verbalmente Opción A"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" type="object"
+                            string="✅ Confirmar voto" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_vote_assist_wizard" model="ir.actions.act_window">
+        <field name="name">Registrar voto asistido</field>
+        <field name="res_model">vote.assist.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_ack_id': active_id}</field>
+    </record>
+
+</odoo>
