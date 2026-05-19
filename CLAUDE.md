@@ -341,15 +341,7 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 
 ### DMARC Report Processor
 
-- **Script:** `scripts/dmarc_report_processor.py` — runs live daily
-- **Cron:** `/etc/cron.d/dmarc_processor` — 10:30 UTC daily
-- **Source:** FreeScout `finanzas@` mailbox (mailbox_id=5); finds active conversations whose subject matches `Report domain: ueipab.edu.ve*`
-- **Flow:** parse ZIP/GZ XML attachments → classify IPs → post HTML note to each conversation → close conversation → send digest email → OdooBot DM alert (critical only)
-- **IP classes:** `good` (Google Workspace + UEIPAB server) / `third_party` (known misaligned senders, e.g. Akdemia SendGrid `50.31.44.87`) / `unknown`
-- **Alert threshold:** only `unknown` IPs where `dkim=pass OR spf=pass` trigger `⚠️` alert + OdooBot DM. Unknown IPs that failed auth but were delivered anyway by the receiving MTA (disposition=none override) show as `🔍` — informational, not alarming.
-- **DKIM:** only `google` selector published for `ueipab.edu.ve` (Google Workspace). No other authorized signers.
-- **Akdemia note:** `em.akdemia.com` (SendGrid subdomain, PTR `o1.em.akdemia.com`) sends with `From: *@ueipab.edu.ve` but MAIL FROM `em.akdemia.com` → DMARC misalign, blocked. Expected and classified as `third_party`.
-- **SPF:** currently `~all` (softfail); planned upgrade to `-all` ~2026-05-27 once delivery confirmed stable.
+See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md). Script: `scripts/dmarc_report_processor.py`; cron 10:30 UTC daily. Source: FreeScout `finanzas@` (mailbox_id=5). IP classes: `good`/`third_party`/`unknown`. Alert: unknown IPs with dkim/spf=pass → OdooBot DM. Akdemia SendGrid `50.31.44.87` = `third_party` (expected). SPF upgrade to `-all` planned ~2026-05-27.
 
 ### HTML Email / WA Broadcast Templates (ad-hoc)
 
@@ -470,9 +462,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 ### WA Poll Cron — Account Filter Note
 
-As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron temporarily uses `account_id=None` (all accounts) to catch replies to the old number. **TODO:** restore `account_id=primary_account_id` once pre-switch conversations drain.
-
-**⚠️ Backup number flood (2026-05-17):** After Telegram announcement email sent to 279 parents, many wrote to backup number +584248944898 which the cron ignores ("received on non-primary account"). If backup number traffic persists, consider temporarily enabling `account_id=None` to serve those parents.
+Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) to catch any replies to old number.
 
 ### Competitor/Suspicious Contact Pattern
 
@@ -483,21 +473,13 @@ As of 2026-03-30, primary switched to dedicated number +584148321989. Poll cron 
 
 ### Environment Status
 
-**Production (2026-05-17):** `dry_run=False`, `active_db=DB_UEIPAB`, v47.4. WA poll 5min active. Telegram webhook live on `odoo.ueipab.edu.ve`. Contact schedule VET: Weekdays 06:30-20:30, Weekends/holidays 09:30-19:00. `general_inquiry` exempt (24/7).
+**Production:** `dry_run=False`, `active_db=DB_UEIPAB`, v51.4. WA poll 5min. Telegram webhook `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill switch: `ai_agent.telegram_enabled=False`.
 
-**Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook on `dev.ueipab.edu.ve` (switches if you re-run `set_webhook`).
-
-**Telegram kill switch:** `ai_agent.telegram_enabled = False` in ir.config_parameter → stops all Telegram immediately.
-
-**HR Loan Migration:** Ready — checklist in [HR_SALARY_ADVANCE_LOAN.md](documentation/HR_SALARY_ADVANCE_LOAN.md).
+**Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook `dev.ueipab.edu.ve`.
 
 ### Budget Consultation 2026-2027 (Feature #60)
 
-**Price gate (active until committee approves):** Glenda and `pagos_faq_email_checker.py` both block proposed budget amounts — quote ONLY $197.38/$162.39/Cashea. To lift: remove `⛔` prohibition block from `_BUDGET_KNOWLEDGE` in `general_inquiry.py` and `SYSTEM_PROMPT` in `pagos_faq_email_checker.py`, then add winning option price.
-
-**pagos@ FAQ Email Checker:** `scripts/pagos_faq_email_checker.py` — cron every 30min weekdays 06:00–17:00 VET (`/etc/cron.d/pagos_faq_email_checker`). Markers: `[FAQ-AI]` / `[FAQ-AI][ESCALAR]`. State: `scripts/pagos_faq_email_checker_state.json`.
-
-**Vote tracking:** `partner.communication.ack`, notice_key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`. Timeline: voting 22-23 May → results 26-May.
+**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 30min; markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`.
 
 ---
 
