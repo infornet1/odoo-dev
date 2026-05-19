@@ -679,7 +679,8 @@ class AiAgentConversation(models.Model):
         if (self.channel == 'whatsapp'
                 and self.skill_id.code == 'general_inquiry'
                 and not self.agent_message_ids.filtered(lambda m: m.direction == 'outbound')
-                and icp.get_param('ai_agent.telegram_invite_enabled', 'True') == 'True'):
+                and icp.get_param('ai_agent.telegram_invite_enabled', 'True') == 'True'
+                and 't.me/' not in response_text):
             bot_username = icp.get_param('ai_agent.telegram_bot_username', 'GlendaUeipabBot')
             response_text += (
                 f"\n\n📲 Por cierto, también puede escribirme por Telegram "
