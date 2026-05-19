@@ -175,7 +175,7 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.55.0 | 2026-05-19 |
+| ueipab_ai_agent | 17.0.1.55.3 | 2026-05-19 |
 | ueipab_attendance_report | 17.0.1.6.9 | 2026-05-19 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
@@ -193,7 +193,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.55.0 | Deployed 2026-05-19 — ACTION:RECORD_VOTE + voting window prompt + FreeScout close on WA vote + FS config in ir.config_parameter |
+| ueipab_ai_agent | 17.0.1.55.3 | Deployed 2026-05-19 — ACTION:RECORD_VOTE; voting WA prompt (21-26 May) with Slides link + $174.95 Glenda discount; FreeScout close on vote; FS config in ir.config_parameter; no-email→Glenda WA |
 
 ---
 
