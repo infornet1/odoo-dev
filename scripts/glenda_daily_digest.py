@@ -24,6 +24,8 @@ import os
 import re
 import sys
 import xmlrpc.client
+import pymysql
+import pymysql.cursors
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 
@@ -52,6 +54,13 @@ ODOO_CONFIGS = {
 
 TO_EMAIL  = 'gustavo.perdomo@ueipab.edu.ve'
 FROM_EMAIL = 'Glenda — Reporte Diario <recursoshumanos@ueipab.edu.ve>'
+
+FS_DB = dict(
+    host='localhost', user='free297', password='1gczp1S@3!',
+    database='free297', charset='utf8mb4',
+    cursorclass=pymysql.cursors.DictCursor,
+)
+FS_BASE_URL = 'https://freescout.ueipab.edu.ve'
 
 # ── Topic detection keywords (Spanish) ───────────────────────────────────────
 TOPICS = [
@@ -350,7 +359,7 @@ def _s(n, label_s, label_p):
     return f"{n} {label_s if n == 1 else label_p}"
 
 
-def build_html(data, env_name, calib=None):
+def build_html(data, env_name, calib=None, fs_data=None):
     day   = data['day'].strftime('%d/%m/%Y')
     today = datetime.now().strftime('%d/%m/%Y %H:%M')
     env_badge = (
@@ -640,6 +649,14 @@ def build_html(data, env_name, calib=None):
 
     <div style="border-top:2px solid #d4af37;margin:22px 0;"></div>
 
+    <!-- Freescout escalation outcomes -->
+    <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">🔗 Freescout — Escalaciones &amp; FAQ
+      <span style="font-size:13px;font-weight:normal;color:#555;">— resultados de handoffs de Glenda</span>
+    </h2>
+    {build_freescout_section(fs_data)}
+
+    <div style="border-top:2px solid #d4af37;margin:22px 0;"></div>
+
     <!-- Suspicious -->
     <h2 style="margin:0 0 10px;font-size:16px;color:#1a2c5b;">🔍 Actividad sospechosa</h2>
     {sus_section}
@@ -893,6 +910,183 @@ def build_calibration_section(calib):
 """
 
 
+# ── Freescout escalation outcomes ────────────────────────────────────────────
+
+def fetch_freescout_escalations(start_utc, end_utc):
+    """Fetch Glenda-generated Freescout conversations for the digest day.
+
+    Returns dict with:
+      new_escalations  — list of convs created today from Glenda handoffs
+      stale_open       — list of Glenda convs still open after 24h
+      faq_answered     — int: FAQ auto-replies that answered (not escalated)
+      faq_escalated    — int: FAQ auto-replies that flagged for escalation
+    """
+    conn = pymysql.connect(**FS_DB)
+    try:
+        with conn:
+            cur = conn.cursor()
+
+            # Glenda-generated conversations created in the day window
+            cur.execute("""
+                SELECT c.id, c.subject, c.status, c.created_at,
+                    TIMESTAMPDIFF(MINUTE, c.created_at,
+                        COALESCE(
+                            (SELECT MIN(t.created_at) FROM threads t
+                             WHERE t.conversation_id = c.id AND t.type = 2
+                             AND t.created_at > c.created_at),
+                            NULL
+                        )
+                    ) AS mins_to_reply
+                FROM conversations c
+                WHERE (c.subject LIKE '%%[Glenda]%%'
+                    OR c.subject LIKE '%%[FAQ-AI][ESCALAR]%%'
+                    OR c.subject LIKE '%%[URGENTE%%'
+                    OR c.subject LIKE '%%AUSENCIA%%')
+                AND c.created_at >= %s AND c.created_at < %s
+                ORDER BY c.created_at ASC
+                LIMIT 50
+            """, (start_utc, end_utc))
+            new_escalations = cur.fetchall()
+
+            # Glenda convs still open longer than 24h
+            cur.execute("""
+                SELECT c.id, c.subject, c.status, c.created_at,
+                    TIMESTAMPDIFF(HOUR, c.created_at, NOW()) AS hours_open
+                FROM conversations c
+                WHERE (c.subject LIKE '%%[Glenda]%%'
+                    OR c.subject LIKE '%%[FAQ-AI][ESCALAR]%%')
+                AND c.status = 1
+                AND c.created_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                ORDER BY c.created_at ASC
+                LIMIT 15
+            """)
+            stale_open = cur.fetchall()
+
+            # FAQ-AI stats for the day
+            cur.execute("""
+                SELECT
+                    SUM(CASE WHEN subject LIKE '%%[ESCALAR]%%' THEN 0 ELSE 1 END) AS answered,
+                    SUM(CASE WHEN subject LIKE '%%[ESCALAR]%%' THEN 1 ELSE 0 END) AS escalated
+                FROM conversations
+                WHERE subject LIKE '%%[FAQ-AI]%%'
+                AND created_at >= %s AND created_at < %s
+            """, (start_utc, end_utc))
+            faq = cur.fetchone() or {}
+
+            return {
+                'new_escalations': list(new_escalations),
+                'stale_open':      list(stale_open),
+                'faq_answered':    int(faq.get('answered') or 0),
+                'faq_escalated':   int(faq.get('escalated') or 0),
+            }
+    except Exception as e:
+        logger.warning("Freescout fetch error: %s", e)
+        return None
+
+
+def build_freescout_section(fs_data):
+    """Build the Freescout escalation outcomes HTML section."""
+    if not fs_data:
+        return (
+            '<div style="background:#f5f5f5;border-radius:8px;padding:12px 16px;">'
+            '<p style="margin:0;color:#888;font-size:13px;">'
+            'Datos de Freescout no disponibles.</p></div>'
+        )
+
+    new_esc   = fs_data['new_escalations']
+    stale     = fs_data['stale_open']
+    faq_ans   = fs_data['faq_answered']
+    faq_esc   = fs_data['faq_escalated']
+    stale_ct  = len(stale)
+
+    status_map = {1: ('Activa', '#f9a825'), 2: ('Pendiente', '#1565c0'), 3: ('Cerrada', '#2e7d32')}
+
+    def chip(val, label, color):
+        return (
+            f'<span style="display:inline-block;background:{color};color:#fff;'
+            f'border-radius:6px;padding:4px 12px;font-size:13px;margin:2px 4px 2px 0;">'
+            f'<strong>{val}</strong> {label}</span>'
+        )
+
+    stale_color = '#c62828' if stale_ct > 0 else '#2e7d32'
+    chips = (
+        chip(len(new_esc), 'escalaciones hoy', '#1a2c5b')
+        + chip(faq_ans,   'FAQ respondidas', '#2e7d32')
+        + chip(faq_esc,   'FAQ escaladas', '#f9a825')
+        + chip(f'{stale_ct} ⚠️' if stale_ct else '0', 'abiertas >24h', stale_color)
+    )
+
+    # Today's escalations table
+    if new_esc:
+        esc_rows = ''
+        for c in new_esc:
+            status_label, status_color = status_map.get(c['status'], ('?', '#888'))
+            mins = c.get('mins_to_reply')
+            reply_str = f"{mins}min" if mins is not None else '—'
+            subject_short = (c['subject'] or '')[:70]
+            fs_link = f'{FS_BASE_URL}/conversation/{c["id"]}'
+            esc_rows += (
+                f'<tr style="border-bottom:1px solid #eee;vertical-align:top;">'
+                f'<td style="padding:6px 10px;font-size:12px;">'
+                f'<a href="{fs_link}" style="color:#1a2c5b;text-decoration:none;">#{c["id"]}</a></td>'
+                f'<td style="padding:6px 10px;font-size:12px;">{subject_short}</td>'
+                f'<td style="padding:6px 10px;text-align:center;">'
+                f'<span style="background:{status_color};color:#fff;padding:2px 6px;'
+                f'border-radius:4px;font-size:10px;">{status_label}</span></td>'
+                f'<td style="padding:6px 10px;text-align:center;font-size:12px;">{reply_str}</td>'
+                f'</tr>'
+            )
+        esc_table = (
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            '<tr style="background:#f0f4fa;">'
+            '<th style="padding:6px 10px;text-align:left;">#</th>'
+            '<th style="padding:6px 10px;text-align:left;">Asunto</th>'
+            '<th style="padding:6px 10px;text-align:center;">Estado</th>'
+            '<th style="padding:6px 10px;text-align:center;">1ra respuesta</th>'
+            '</tr>'
+            + esc_rows + '</table>'
+        )
+    else:
+        esc_table = '<p style="color:#888;font-size:13px;margin:8px 0;">Sin escalaciones nuevas ayer.</p>'
+
+    # Stale open convs warning
+    if stale:
+        stale_rows = ''
+        for c in stale:
+            hrs = c.get('hours_open', '?')
+            subject_short = (c['subject'] or '')[:70]
+            fs_link = f'{FS_BASE_URL}/conversation/{c["id"]}'
+            stale_rows += (
+                f'<tr style="border-bottom:1px solid #ffcdd2;vertical-align:top;">'
+                f'<td style="padding:5px 10px;font-size:12px;">'
+                f'<a href="{fs_link}" style="color:#c62828;text-decoration:none;">#{c["id"]}</a></td>'
+                f'<td style="padding:5px 10px;font-size:12px;">{subject_short}</td>'
+                f'<td style="padding:5px 10px;text-align:center;font-size:12px;color:#c62828;">'
+                f'{hrs}h abierta</td>'
+                f'</tr>'
+            )
+        stale_block = (
+            '<div style="background:#fff8f8;border:1px solid #ffcdd2;'
+            'border-radius:6px;padding:12px;margin-top:12px;">'
+            '<p style="margin:0 0 8px;font-size:12px;font-weight:bold;color:#c62828;">'
+            f'⚠️ {stale_ct} escalación{"es" if stale_ct!=1 else ""} sin resolver >24h</p>'
+            '<table style="width:100%;border-collapse:collapse;">'
+            + stale_rows + '</table></div>'
+        )
+    else:
+        stale_block = (
+            '<div style="background:#e8f5e9;border-radius:6px;padding:8px 12px;margin-top:10px;">'
+            '<p style="margin:0;color:#2e7d32;font-size:12px;">'
+            '✓ Sin escalaciones pendientes de más de 24h.</p></div>'
+        )
+
+    return f"""
+<div style="margin-bottom:10px;">{chips}</div>
+{esc_table}
+{stale_block}
+"""
+
+
 # ── Email sending ─────────────────────────────────────────────────────────────
 
 def send_email(env_name, subject, html_body):
@@ -944,33 +1138,46 @@ def main():
             'skill_stats': {}, 'topics': [], 'unresolved': [], 'suspicious': [],
         }
 
-    # Calibration data (uses same connection — re-open)
+    # Shared UTC window for calibration + Freescout
+    day_start_utc = datetime(day.year, day.month, day.day, 4, 0, 0)
+    day_end_utc   = day_start_utc + timedelta(days=1)
+
+    # Calibration data
     calib = None
     try:
         db, uid, pw, models_conn = connect(args.env)
-        start_utc = datetime(day.year, day.month, day.day, 4, 0, 0)
-        end_utc   = start_utc + timedelta(days=1)
         calib = fetch_calibration_data(
             db, uid, pw, models_conn,
-            start_utc.strftime('%Y-%m-%d %H:%M:%S'),
-            end_utc.strftime('%Y-%m-%d %H:%M:%S'),
+            day_start_utc.strftime('%Y-%m-%d %H:%M:%S'),
+            day_end_utc.strftime('%Y-%m-%d %H:%M:%S'),
         )
     except Exception as e:
         logger.warning("Could not fetch calibration data: %s", e)
 
+    # Freescout escalation outcomes
+    fs_data = None
+    try:
+        fs_data = fetch_freescout_escalations(day_start_utc, day_end_utc)
+    except Exception as e:
+        logger.warning("Could not fetch Freescout data: %s", e)
+
     day_str = day.strftime('%d/%m/%Y')
     bonus_str = f' · {calib["bonus_count"]}/{calib["total_enrolled"]} bono' if calib else ''
+    fs_str = (
+        f' · {fs_data["faq_answered"]}FAQ ✓'
+        if fs_data and fs_data['faq_answered'] else ''
+    )
     subject = (
         f"[Glenda] Reporte Diario {day_str} — "
         f"{data['total_convs']} conv · "
         f"{data['resolved']} resueltas · "
         f"${data['claude_cost']:.3f} Claude"
-        f"{bonus_str}"
+        f"{bonus_str}{fs_str}"
     )
     if args.env == 'testing':
         subject = '[TESTING] ' + subject
 
-    html = build_html(data, args.env, calib)
+    html = build_html(data, args.env, calib, fs_data)
 
     if args.dry_run:
         print(html)

@@ -48,6 +48,30 @@ FS_DB = dict(
     cursorclass=pymysql.cursors.DictCursor,
 )
 
+# Senders that are always automated — never genuine parent inquiries
+SYSTEM_SENDERS = frozenset({
+    'mailer-daemon', 'postmaster', 'daemon', 'noreply', 'no-reply',
+    'donotreply', 'do-not-reply', 'notifications@', 'notificaciones@',
+    'finanzas@ueipab.edu.ve',          # internal BCV rate / automated notifications
+    'pagos@ueipab.edu.ve',             # circular — our own mailbox
+    'soporte@ueipab.edu.ve',
+    'recursoshumanos@ueipab.edu.ve',
+})
+
+# Subject patterns that identify automated/system emails
+_AUTO_SUBJECT_RE = re.compile(
+    r'tasa\s+bcv'
+    r'|delivery\s+status\s+notification'
+    r'|mail\s+delivery\s+(failed|sub)'
+    r'|undelivered\s+mail|returned\s+mail'
+    r'|out\s+of\s+(office|the\s+office)'
+    r'|auto.?reply|automatic\s+reply'
+    r'|\[glenda\]'               # Glenda-generated escalation convs looping back
+    r'|backup\s+payment'         # payment processor marketing spam
+    r'|order\s+disruption',
+    re.IGNORECASE,
+)
+
 ANTHROPIC_CONFIG_PATH = '/opt/odoo-dev/config/anthropic_api.json'
 FS_API_CONFIG_PATH    = '/opt/odoo-dev/config/freescout_api.json'
 
@@ -203,6 +227,17 @@ def get_new_conversations(conn, processed_ids):
         return cur.fetchall()
 
 
+def _is_automated(conv):
+    """Return True if this looks like a system/automated email, not a parent inquiry."""
+    sender  = (conv.get('last_from') or conv.get('customer_email') or '').lower()
+    subject = (conv.get('subject') or '').lower()
+    if any(s in sender for s in SYSTEM_SENDERS):
+        return True
+    if _AUTO_SUBJECT_RE.search(subject):
+        return True
+    return False
+
+
 def strip_html(html):
     """Basic HTML → plain text."""
     text = re.sub(r'<br\s*/?>', '\n', html or '', flags=re.IGNORECASE)
@@ -320,9 +355,25 @@ def main():
 
     logger.info("Found %d new conversation(s) in pagos@ inbox", len(conversations))
 
+    # Filter automated/system emails before calling Claude
+    genuine = []
+    for conv in conversations:
+        if _is_automated(conv):
+            logger.info("  Skip (automated): #%d %s", conv['id'], (conv.get('subject') or '')[:60])
+            processed_ids.append(conv['id'])  # mark seen to avoid re-checking next run
+        else:
+            genuine.append(conv)
+
+    if not genuine:
+        logger.info("All conversations filtered as automated — nothing to process.")
+        save_state(state)
+        return
+
+    logger.info("%d genuine parent conversation(s) after filter", len(genuine))
+
     answered = escalated = errors = 0
 
-    for conv in conversations:
+    for conv in genuine:
         conv_id  = conv['id']
         subject  = conv['subject'] or '(sin asunto)'
         body_raw = conv.get('last_body') or ''
