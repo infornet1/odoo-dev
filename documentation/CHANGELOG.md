@@ -4,6 +4,42 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-19 — ueipab_ai_agent v52.0: Glenda Welcome Menu + Budget UX
+
+**Module:** `ueipab_ai_agent` | **Environments:** Both (testing + production)
+
+### Changes
+
+**Feature #72 — Structured welcome menu (`get_greeting()`):**
+- 5-option numbered menu sent when a conversation is manually started via Iniciar Conversación wizard
+- Options: saldo pendiente / propuesta 2026-2027 / inscripción anticipada / información general / otro asunto
+- Telegram footer appended on WhatsApp channel only (skipped on Telegram to avoid circular invite)
+
+**Audience context block (`get_system_prompt()`):**
+- `audience_block`: flags non-tech-savvy parent audience (Media General parents); menu routing instructions (option 1→balance, 2→proposal, 3→enrollment, 4→info, 5→other); tone rules (short first paragraph, no jargon, repeat-with-patience, always offer email contact)
+
+**PRIMER CONTACTO — organic inbound menu (`get_system_prompt()`):**
+- `menu_block`: instructs Claude to show the full 5-option menu when the first message is a generic greeting (hola, buenas, etc.) and to answer directly when it includes a specific question
+- Telegram footer conditional: only included in menu text for WhatsApp channel
+
+**Balance gate — 2025-2026 debt check before 2026-2027 quote:**
+- Replaced `COTIZACIÓN MULTI-ALUMNO` `REQUISITO PREVIO` note with a mandatory first-step check
+- If pending invoices exist: inform saldo first, calculate total to regularize (saldo + remaining months × $197.38), explain enrollment blocked, offer pagos@ connection
+- If saldo=0: confirm al día, proceed with quotation
+- If contact unidentified: request cédula first
+
+**Side-by-side A vs B quotation format:**
+- Replaced single-option format with two-column OPCION A / OPCION B table
+- Mandatory closing note: "Las tarifas definitivas se confirman tras el escrutinio del 26/05/2026"
+- Handoff example updated to reference both options
+
+**Emoji rule:**
+- Updated from "No uses emojis" → "No uses emojis decorativos, excepto los numeros del menu (1️⃣–5️⃣)"
+
+**Design decision:** No new skill created for budget consultation — it is a topic within `general_inquiry`, not a separate conversation channel.
+
+---
+
 ## 2026-05-17 — Nginx: Add `my` to Odoo Route Whitelist (dev.ueipab.edu.ve)
 
 **Type:** Infrastructure fix | **File:** `/etc/nginx/sites-available/dev.ueipab.edu.ve`
