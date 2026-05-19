@@ -1,3 +1,5 @@
+import re as _re
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -7,7 +9,10 @@ class StartConversationWizard(models.TransientModel):
     _description = 'Start AI Agent Conversation'
 
     skill_id = fields.Many2one('ai.agent.skill', required=True, string='Skill')
-    partner_id = fields.Many2one('res.partner', required=True, string='Contacto')
+    partner_id = fields.Many2one(
+        'res.partner', string='Contacto',
+        help='Opcional. Si se deja en blanco se buscará o creará un contacto '
+             'provisional a partir del número de teléfono.')
     phone = fields.Char('Telefono WhatsApp', required=True)
     initial_message = fields.Text(
         'Mensaje del representante',
@@ -23,13 +28,49 @@ class StartConversationWizard(models.TransientModel):
             if not self.env.context.get('default_phone'):
                 self.phone = self.partner_id.mobile or self.partner_id.phone or ''
 
+    def _get_or_create_placeholder_partner(self, normalized_phone):
+        """Find an existing partner for this phone or create a placeholder lead."""
+        all_digits = _re.sub(r'[^\d]', '', normalized_phone)
+        candidates = []
+        if len(all_digits) == 12 and all_digits.startswith('58'):
+            local10 = all_digits[2:]
+            area, num = local10[:3], local10[3:]
+            candidates = [
+                f'+58 {area} {num}',
+                f'0{local10}',
+                normalized_phone,
+            ]
+        else:
+            candidates = [normalized_phone]
+
+        _NO_PLACEHOLDER = ('name', 'not like', 'Consulta WhatsApp')
+        partner = None
+        for cand in candidates:
+            partner = self.env['res.partner'].sudo().search(
+                ['&', _NO_PLACEHOLDER, '|', ('phone', '=', cand), ('mobile', '=', cand)],
+                limit=1,
+            )
+            if partner:
+                break
+
+        if not partner:
+            partner = self.env['res.partner'].sudo().create({
+                'name': f'Consulta WhatsApp {normalized_phone}',
+                'mobile': normalized_phone,
+                'customer_rank': 1,
+            })
+        return partner
+
     def _prepare_conversation_vals(self):
         wa_service = self.env['ai.agent.whatsapp.service']
         normalized_phone = wa_service._normalize_phone(self.phone)
 
-        # Guard: existing active conversation
+        # Resolve partner: use selected contact or auto-create a placeholder lead
+        partner = self.partner_id or self._get_or_create_placeholder_partner(normalized_phone)
+
+        # Guard: existing active conversation for this partner+skill
         existing = self.env['ai.agent.conversation'].search([
-            ('partner_id', '=', self.partner_id.id),
+            ('partner_id', '=', partner.id),
             ('skill_id', '=', self.skill_id.id),
             ('state', 'in', ('draft', 'active', 'waiting')),
         ], limit=1)
@@ -55,7 +96,7 @@ class StartConversationWizard(models.TransientModel):
 
         return {
             'skill_id': self.skill_id.id,
-            'partner_id': self.partner_id.id,
+            'partner_id': partner.id,
             'phone': normalized_phone,
             'initial_message': self.initial_message.strip() if self.initial_message else False,
             'source_model': self.source_model or '',

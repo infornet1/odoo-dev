@@ -75,7 +75,7 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; deep-link `EMP_{id}` |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py`; see Key Technical Patterns |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP`; see Key Technical Patterns |
-| 60 | Budget Consultation 2026-2027 | In Progress | `ueipab_ai_agent` + Script | **price gate active**; pagos@ FAQ checker LIVE; 178 ACTIVE families; results ~26-May |
+| 60 | Budget Consultation 2026-2027 | Production | `ueipab_ai_agent` + Script | price gate lifted 2026-05-18; vote email script ready (`scripts/send_budget_vote_email.py`); 226 recipients; results 26-May; [Docs](documentation/BUDGET_VOTE_EMAIL.md) |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
 | 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules + PDF; Jun 1 Primaria / Jun 2 Media General |
 | 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 sent 2026-05-17; `--live` to resend |
@@ -175,8 +175,8 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.52.0 | 2026-05-19 |
-| ueipab_attendance_report | 17.0.1.6.4 | 2026-05-19 |
+| ueipab_ai_agent | 17.0.1.53.1 | 2026-05-19 |
+| ueipab_attendance_report | 17.0.1.6.5 | 2026-05-19 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
 | ueipab_ari_portal | 17.0.1.0.0 | — (testing only) |
@@ -189,11 +189,11 @@
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| ueipab_attendance_report | 17.0.1.6.4 | Deployed 2026-05-18 — 44 payroll employees default; resend skips acked; queue no timeout; ACK CC → recursoshumanos@ |
+| ueipab_attendance_report | 17.0.1.6.5 | Deployed 2026-05-19 — notice_key-aware `partner_ack` confirmation pages (budget vote Opc A/B labels) |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.52.0 | Deployed 2026-05-19 — #72 welcome menu; audience context; balance gate; A vs B quotation; menu routing; Telegram footer |
+| ueipab_ai_agent | 17.0.1.53.1 | Deployed 2026-05-19 — #73 optional partner wizard + is_placeholder badge; bot detection fix (turn_count>1); v53.0 also deployed same day |
 
 ---
 
@@ -491,7 +491,9 @@ Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) t
 
 ### Budget Consultation 2026-2027 (Feature #60)
 
-**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 10min weekdays+weekends 06:00–21:00 VET (was 30min); markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`.
+**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 10min weekdays+weekends 06:00–21:00 VET (was 30min); markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si` = Opc A / `/partner-ack/<token>/no` = Opc B.
+
+**Vote email script:** `scripts/send_budget_vote_email.py` — 226 recipients (tag 25 Representante, not tag 29 Inactivo); `TEST=true LIVE=true` for CEO preview; `LIVE=true` for live send. Controller (`ueipab_attendance_report` v6.5) shows budget-specific confirmation pages. See [Docs](documentation/BUDGET_VOTE_EMAIL.md). Results: 26-May-2026.
 
 ---
 

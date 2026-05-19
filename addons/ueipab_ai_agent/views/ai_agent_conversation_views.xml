@@ -12,6 +12,9 @@
                   decoration-muted="state == 'draft'">
                 <field name="name"/>
                 <field name="partner_id"/>
+                <field name="is_placeholder" widget="badge"
+                       decoration-warning="is_placeholder == 'Desconocido'"
+                       string="Lead" optional="show"/>
                 <field name="skill_id"/>
                 <field name="channel" widget="badge"
                        decoration-success="channel == 'whatsapp'"

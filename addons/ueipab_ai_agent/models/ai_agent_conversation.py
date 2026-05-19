@@ -142,6 +142,19 @@ class AiAgentConversation(models.Model):
     # Manual silence — suppresses all outbound replies and reminders
     silent = fields.Boolean('Silenciada', default=False)
 
+    # Placeholder flag — partner was auto-created from an unknown phone (lead not yet identified)
+    is_placeholder = fields.Char(
+        'Lead',
+        compute='_compute_is_placeholder',
+        store=True,
+    )
+
+    @api.depends('partner_id.name')
+    def _compute_is_placeholder(self):
+        for rec in self:
+            name = rec.partner_id.name or ''
+            rec.is_placeholder = 'Desconocido' if name.startswith('Consulta WhatsApp') else ''
+
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
         for rec in self:
@@ -488,9 +501,12 @@ class AiAgentConversation(models.Model):
             # Speed check: consecutive CUSTOMER messages < 2s apart = bot-like.
             # Only fires when prev sender was also 'customer' — never on agent-initiated
             # conversations where action_start() just set last_message_date moments ago.
+            # Also skipped on turn_count <= 1: the conversation is brand-new and
+            # last_message_date reflects creation time, not a prior customer message.
             prev_sender_was_customer = (self.last_sender == 'customer')
             if (prev_last_msg
                     and prev_sender_was_customer
+                    and self.turn_count > 1
                     and (now_dt - prev_last_msg).total_seconds() < 2):
                 gap = (now_dt - prev_last_msg).total_seconds()
                 _logger.warning("Conv %d: bot-speed detected (%.1fs gap) — silencing", self.id, gap)

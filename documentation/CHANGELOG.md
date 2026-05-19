@@ -4,6 +4,80 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-19 — Budget Vote Email + AI Agent Enhancements
+
+### ueipab_ai_agent v17.0.1.53.0 — Optional partner + Placeholder badge
+
+**Feature #73:** `start_conversation_wizard.py` — `partner_id` is now optional.
+
+- `_get_or_create_placeholder_partner(phone)`: matches existing contacts across 3 phone formats (`+58 414 XXXXXXX`, `0414XXXXXXX`, E.164); creates `Consulta WhatsApp {phone}` partner if no match
+- `partner_id` removed from `required=True` in wizard; model stays required (placeholder always resolved before conversation create)
+- New stored computed `is_placeholder` Char field on `ai.agent.conversation`: returns `'Desconocido'` when partner name starts with `Consulta WhatsApp`, otherwise `''`
+- `widget="badge" decoration-warning` column in conversation tree view — amber **"Desconocido"** badge visible at a glance
+- Wizard form: partner field shows `"Opcional — déjalo en blanco si el número no está en Odoo"` placeholder text
+
+**Use case:** staff can start a conversation with an unknown lead using only a phone number. Inbound unknown contacts already triggered this path automatically; the wizard now matches.
+
+---
+
+### ueipab_ai_agent v17.0.1.53.1 — Bot detection false-positive fix
+
+**Bug:** first inbound message of any `general_inquiry` conversation was silenced by the 2-second bot detection guard.
+
+**Root cause:** `_get_or_create_general_inquiry_conversation()` sets `last_message_date=now()` and `last_sender='customer'` at creation. `action_process_reply()` runs for the first message moments later in the same cron window — gap < 2s → bot detection fired.
+
+**Fix:** added `self.turn_count > 1` guard to the speed check. Bot detection now only fires when there is already more than one inbound message, making it impossible to trigger on a brand-new conversation.
+
+```python
+# Before
+if (prev_last_msg and prev_sender_was_customer
+        and (now_dt - prev_last_msg).total_seconds() < 2):
+
+# After
+if (prev_last_msg and prev_sender_was_customer
+        and self.turn_count > 1                          # ← new guard
+        and (now_dt - prev_last_msg).total_seconds() < 2):
+```
+
+**Immediate fix:** conversation #88 (Jessica Bolívar, "cómo pagar con Cashea") — silenced since 2026-05-18 — unsilenced via Odoo shell, reply triggered manually.
+
+---
+
+### ueipab_attendance_report v17.0.1.6.5 — notice_key-aware partner_ack confirmation pages
+
+`controllers/partner_ack.py` now adapts confirmation text based on `ack.notice_key`:
+
+- New `_vote_context(ack, decision)` helper returns label, bg, border, color, emoji per campaign
+- `budget_consulta_2026_2027`: "Votó por Opción A — $218,88/mes ✅" / "Votó por Opción B — $236,58/mes ✅"
+- All other keys: existing continuity labels unchanged
+- New `_page_budget_vote_success(ack, decision)` page: large price display, annual cost, results date
+- `_send_ack_confirmation` CC email uses campaign-specific labels
+- `_page_already_done` uses `_vote_context` for correct historical display
+
+---
+
+### Budget Vote Email — `scripts/send_budget_vote_email.py` (new)
+
+New script to send the 2026-2027 budget consultation vote email to 226 Representante families.
+
+**Key design:**
+- Two side-by-side ballot cards: Option A (navy) and Option B (purple)
+- Context box: inflation 611.86%, Bs. 487.12, growth 8.5%
+- Brother discounts table (5%/8%/11%)
+- Annual extras breakdown ($101.58/alumno — seguro + inglés + olimpiadas + enciclopedia)
+- 🛡️ Seguro Escolar callout: Seguros Caracas, claim contacts, [policy PDF link](https://drive.google.com/file/d/1KLJ5i9IgE5f0BhN1sGJvmVUCZMX7-mtU/view)
+- Early enrollment offer ($187.51 until Jul 31)
+- Process timeline (4 steps with status chips)
+- ⚖️ Mora policy callout: 4-step summary + link to `/mora-policy/`
+- Red test banner in `TEST=true` mode
+- Skips partners who already voted
+
+**Test email sent:** `gustavo.perdomo@ueipab.edu.ve` — pending CEO approval before live send.
+
+See [BUDGET_VOTE_EMAIL.md](BUDGET_VOTE_EMAIL.md) for full reference.
+
+---
+
 ## 2026-05-19 — PDVSA Campaign: Enhanced Email + Budget Proposal Section
 
 **Type:** Email campaign | **Script:** `scripts/send_pdvsa_communication.py` pattern | **Env:** Production (DB_UEIPAB)

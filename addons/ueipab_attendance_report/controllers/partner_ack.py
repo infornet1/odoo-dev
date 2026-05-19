@@ -50,17 +50,45 @@ class PartnerAckController(http.Controller):
             return self._respond(self._page_success_yes(ack))
         return self._respond(self._page_success_no(ack))
 
+    def _vote_context(self, ack, decision):
+        """Return label/styling for a vote decision, adapting to notice_key."""
+        is_budget = (ack.notice_key == 'budget_consulta_2026_2027')
+        if is_budget:
+            if decision == 'continuing':
+                return {
+                    'label': 'Votó por Opción A — $218,88/mes ✅',
+                    'bg': '#e8f0fb', 'border': '#b8cef5', 'color': '#1a2c5b',
+                    'emoji': '🗳️',
+                }
+            return {
+                'label': 'Votó por Opción B — $236,58/mes ✅',
+                'bg': '#f3e5f5', 'border': '#ce93d8', 'color': '#6c3483',
+                'emoji': '🗳️',
+            }
+        # Default: continuity campaign
+        if decision == 'continuing':
+            return {
+                'label': 'Sí, continuará en 2026-2027 ✅',
+                'bg': '#d4edda', 'border': '#c3e6cb', 'color': '#155724',
+                'emoji': '🎉',
+            }
+        return {
+            'label': 'No continuará ❌',
+            'bg': '#e8f4f8', 'border': '#bee5eb', 'color': '#1a2c5b',
+            'emoji': '📋',
+        }
+
     def _send_ack_confirmation(self, ack, decision):
         """Send CC confirmation to votacion@ when a partner records their decision."""
         try:
             dt       = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
             name     = ack.partner_name or ''
             email    = ack.partner_email or ''
-            label    = 'Sí, continuará en 2026-2027 ✅' if decision == 'continuing' \
-                       else 'No continuará ❌'
-            bg       = '#d4edda' if decision == 'continuing' else '#e8f4f8'
-            border   = '#c3e6cb' if decision == 'continuing' else '#bee5eb'
-            color    = '#155724' if decision == 'continuing' else '#1a2c5b'
+            ctx      = self._vote_context(ack, decision)
+            label    = ctx['label']
+            bg       = ctx['bg']
+            border   = ctx['border']
+            color    = ctx['color']
 
             body = f"""
 <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
@@ -215,6 +243,8 @@ class PartnerAckController(http.Controller):
     # ── Success pages ─────────────────────────────────────────────────────────
 
     def _page_success_yes(self, ack):
+        if ack.notice_key == 'budget_consulta_2026_2027':
+            return self._page_budget_vote_success(ack, 'continuing')
         name = ack.partner_name or ''
         dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
         return self._base_page(
@@ -245,6 +275,8 @@ class PartnerAckController(http.Controller):
         )
 
     def _page_success_no(self, ack):
+        if ack.notice_key == 'budget_consulta_2026_2027':
+            return self._page_budget_vote_success(ack, 'leaving')
         name = ack.partner_name or ''
         dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
         return self._base_page(
@@ -276,9 +308,8 @@ class PartnerAckController(http.Controller):
     def _page_already_done(self, ack):
         name  = ack.partner_name or ''
         dt    = ack.ack_date.strftime('%d/%m/%Y %H:%M') if ack.ack_date else ''
-        state_labels = {'continuing': 'Continuará en 2026-2027 ✅',
-                        'leaving': 'No continuará ℹ️'}
-        label = state_labels.get(ack.state, ack.state)
+        ctx   = self._vote_context(ack, ack.state)
+        label = ctx['label']
         return self._base_page(
             'Ya respondido',
             f"""
@@ -292,6 +323,42 @@ class PartnerAckController(http.Controller):
   <p style="margin:0 0 4px;"><strong>Decisi&oacute;n:</strong> {label}</p>
   <p style="margin:0;"><strong>Respondido el:</strong> {dt}</p>
 </div>
+"""
+        )
+
+    def _page_budget_vote_success(self, ack, decision):
+        name  = ack.partner_name or ''
+        dt    = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        ctx   = self._vote_context(ack, decision)
+        is_a  = (decision == 'continuing')
+        price = '$218,88' if is_a else '$236,58'
+        label = 'Opci&oacute;n A' if is_a else 'Opci&oacute;n B'
+        pp    = '$207,93' if is_a else '$224,75'
+        annual = '$2.845,45' if is_a else '$3.075,55'
+        hdr_bg = '#1a2c5b' if is_a else '#6c3483'
+        return self._base_page(
+            f'Voto registrado &mdash; {label}',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">🗳️</div>
+  <h2 style="color:{hdr_bg};margin:10px 0 4px;">¡Voto registrado!</h2>
+  <p style="color:#555;font-size:14px;margin:0;">
+    <strong>{name}</strong>
+  </p>
+</div>
+<div style="background:{ctx['bg']};border:2px solid {ctx['border']};border-radius:10px;
+            padding:18px;font-size:13px;color:{ctx['color']};margin-bottom:16px;text-align:center;">
+  <div style="font-size:22px;font-weight:bold;margin-bottom:6px;">{ctx['emoji']} {label}</div>
+  <div style="font-size:32px;font-weight:bold;margin-bottom:4px;">{price}<span style="font-size:14px;">/mes</span></div>
+  <div style="font-size:12px;opacity:0.8;">Pronto pago: {pp} &nbsp;|&nbsp; Costo anual: {annual}</div>
+  <div style="margin-top:10px;font-size:12px;">&#128336;&nbsp; Registrado el: <strong>{dt}</strong></div>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;font-size:13px;color:#444;">
+  <p style="margin:0;">Los resultados de la votaci&oacute;n ser&aacute;n publicados el <strong>26 de mayo de 2026</strong>.
+  Para consultas escr&iacute;banos a
+  <a href="mailto:votacion@ueipab.edu.ve" style="color:#1a2c5b;">votacion@ueipab.edu.ve</a>.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:16px 0 0;">Puede cerrar esta p&aacute;gina.</p>
 """
         )
 

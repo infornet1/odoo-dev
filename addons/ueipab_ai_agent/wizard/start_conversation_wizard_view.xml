@@ -8,7 +8,8 @@
             <form string="Iniciar Conversacion WhatsApp">
                 <group>
                     <field name="skill_id"/>
-                    <field name="partner_id"/>
+                    <field name="partner_id"
+                           placeholder="Opcional — déjalo en blanco si el número no está en Odoo"/>
                     <field name="phone"/>
                 </group>
                 <group string="Mensaje del representante (opcional)">
