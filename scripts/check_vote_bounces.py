@@ -2,7 +2,13 @@
 """
 Vote Bounce Detector — Consulta Presupuestaria 2026-2027
 =========================================================
-Detects bounced vote emails (mail.mail state=exception), then for each:
+Source of truth for bounces: FreeScout soporte@ (mailbox_id=3).
+
+ALL email bounces (NDR/MAILER-DAEMON notifications) land in soporte@ because
+the Odoo SMTP auth user is soporte@ueipab.edu.ve — Gmail sets the Return-Path
+to the authenticated user regardless of the email_from header.
+
+For each bounced vote email:
   1. Creates a Glenda WA conversation so the parent can vote via WhatsApp
   2. Opens a FreeScout conversation in votacion@ (mailbox_id=8) as unassigned
      with direct Odoo hyperlinks for staff follow-up
@@ -10,10 +16,12 @@ Detects bounced vote emails (mail.mail state=exception), then for each:
   4. Sets bounce_wa_sent=True to prevent reprocessing
 
 Usage:
-    python3 scripts/check_vote_bounces.py           # dry-run
-    python3 scripts/check_vote_bounces.py --live    # process + notify
+    python3 scripts/check_vote_bounces.py                      # dry-run
+    python3 scripts/check_vote_bounces.py --live               # process + notify
+    python3 scripts/check_vote_bounces.py --live --since 2026-05-21  # only NDRs after send
 
 State file: scripts/vote_bounces_state.json
+Recommended: run 24-48h after the vote email send to catch delayed NDRs.
 """
 
 import argparse
@@ -38,11 +46,12 @@ PROD_CFG      = '/opt/odoo-dev/config/production.json'
 FS_CFG        = '/opt/odoo-dev/config/freescout_api.json'
 STATE_FILE    = os.path.join(os.path.dirname(__file__), 'vote_bounces_state.json')
 
-NOTICE_KEY    = 'budget_consulta_2026_2027'
-ODOO_URL      = 'https://odoo.ueipab.edu.ve'
-FS_MAILBOX_ID = 8          # votacion@ueipab.edu.ve
-FS_BYUSER     = 10         # Gustavo Perdomo
-FS_FOLDER_INBOX = 271      # Unassigned inbox for mailbox 8
+NOTICE_KEY        = 'budget_consulta_2026_2027'
+ODOO_URL          = 'https://odoo.ueipab.edu.ve'
+FS_BOUNCE_MAILBOX = 3    # soporte@ — where ALL bounces land (SMTP Return-Path)
+FS_VOTE_MAILBOX   = 8    # votacion@ — where monitoring convs are opened
+FS_BYUSER         = 10   # Gustavo Perdomo
+FS_FOLDER_INBOX   = 271  # Unassigned inbox for votacion@ mailbox
 
 # Odoo UI deep-links
 ACK_URL       = (ODOO_URL +
@@ -88,11 +97,78 @@ def _save_state(state):
     json.dump(state, open(STATE_FILE, 'w'), indent=2)
 
 
-# ── Bounce detection ───────────────────────────────────────────────────────────
+# ── Bounce detection via FreeScout soporte@ ───────────────────────────────────
 
-def _find_bounced_acks(m, db, uid, key):
-    """Return list of ACK records whose vote email bounced and WA not yet sent."""
-    # Get all pending ACKs not yet bounce-notified
+def _extract_bounced_addrs_from_freescout(since_date=None):
+    """
+    Query FreeScout soporte@ (mailbox_id=3) for NDR/Failure notifications.
+
+    ALL bounces land here because soporte@ueipab.edu.ve is the SMTP Return-Path
+    (Gmail envelope sender = authenticated user, regardless of email_from header).
+
+    Returns: dict of {lower_email: freescout_conv_id}
+    """
+    import pymysql
+    import re
+
+    bounced = {}  # email → fs_conv_id
+
+    # Patterns for Google's NDR HTML body
+    addr_pat = re.compile(
+        r"(?:wasn.t|couldn.t be) delivered to\s*<[^>]*><b>([^<]+)</b>",
+        re.IGNORECASE
+    )
+    # Fallback: plain-text section after HTML stripping
+    addr_fallback = re.compile(
+        r"delivered to\s{1,5}(\S+@\S+\.\w+)",
+        re.IGNORECASE
+    )
+
+    try:
+        conn = pymysql.connect(host='localhost', user='free297',
+                               password='1gczp1S@3!', database='free297',
+                               charset='utf8mb4')
+        cur = conn.cursor()
+
+        date_filter = f"AND c.created_at >= '{since_date}'" if since_date else ""
+        cur.execute(f"""
+            SELECT c.id, t.body
+            FROM conversations c
+            JOIN threads t ON t.conversation_id = c.id AND t.type = 1
+            WHERE c.customer_id   = 29
+              AND c.mailbox_id    = {FS_BOUNCE_MAILBOX}
+              AND c.subject       LIKE '%Failure%'
+              {date_filter}
+            ORDER BY c.created_at DESC
+            LIMIT 200
+        """)
+
+        for fs_conv_id, body in cur.fetchall():
+            body_str = body or ''
+            m = addr_pat.search(body_str)
+            if not m:
+                m = addr_fallback.search(
+                    body_str.replace('&nbsp;', ' ').replace('\xa0', ' '))
+            if m:
+                addr = m.group(1).strip().lower().rstrip('.')
+                if '@' in addr and addr not in bounced:
+                    bounced[addr] = fs_conv_id
+
+        conn.close()
+        log.info("FreeScout soporte@ scan: %d unique bounced addresses found", len(bounced))
+
+    except Exception as e:
+        log.error("FreeScout query failed: %s", e)
+
+    return bounced
+
+
+def _find_bounced_acks(m, db, uid, key, since_date=None):
+    """
+    Return list of ACK records whose vote email bounced (WA not yet sent).
+    Bounce source: FreeScout soporte@ NDR notifications.
+    """
+    # 1. Get all pending ACKs not yet bounce-notified
     acks = call(m, db, uid, key,
         'partner.communication.ack', 'search_read',
         [[('notice_key',     '=', NOTICE_KEY),
@@ -102,38 +178,38 @@ def _find_bounced_acks(m, db, uid, key):
         {'fields': ['id', 'partner_id', 'partner_name', 'partner_email',
                     'partner_phone', 'token']})
     if not acks:
+        log.info("No pending ACKs found — nothing to check.")
         return []
+    log.info("Pending ACKs to check: %d", len(acks))
 
-    # Find failed mail.mail records for the vote campaign
-    failed_mails = call(m, db, uid, key,
-        'mail.mail', 'search_read',
-        [[('subject', 'ilike', 'Consulta Presupuestaria 2026-2027'),
-          ('state', '=', 'exception')]],
-        {'fields': ['id', 'email_to', 'failure_reason']})
-
-    if not failed_mails:
-        log.info("No bounced mail.mail records found for the vote campaign.")
-        return []
-
-    # Build set of bounced addresses (lower-cased)
-    bounced_addrs = set()
-    for mail in failed_mails:
-        raw = mail.get('email_to', '') or ''
-        # email_to format: "Name <addr>" or just "addr"
-        import re
-        for addr in re.findall(r'[\w.+\-]+@[\w.\-]+', raw):
-            bounced_addrs.add(addr.lower())
-
-    # Match ACKs to bounced addresses
-    bounced_acks = []
+    # 2. Build email → ACK lookup (handle multi-address fields)
+    email_to_ack = {}
     for ack in acks:
-        emails = (ack.get('partner_email') or '').replace(';', ',')
-        for addr in emails.split(','):
-            if addr.strip().lower() in bounced_addrs:
-                bounced_acks.append(ack)
-                log.info("Bounce detected: %s <%s>",
-                         ack['partner_name'], addr.strip())
-                break
+        raw = (ack.get('partner_email') or '').replace(';', ',')
+        for addr in raw.split(','):
+            addr_clean = addr.strip().lower()
+            if addr_clean and '@' in addr_clean:
+                email_to_ack[addr_clean] = ack
+
+    # 3. Get bounced addresses from FreeScout soporte@
+    bounced_addrs = _extract_bounced_addrs_from_freescout(since_date)
+    if not bounced_addrs:
+        log.info("No bounce NDRs found in FreeScout soporte@ since %s.",
+                 since_date or 'ever')
+        return []
+
+    # 4. Cross-reference
+    bounced_acks = []
+    seen_ack_ids = set()
+    for addr, fs_conv_id in bounced_addrs.items():
+        ack = email_to_ack.get(addr)
+        if ack and ack['id'] not in seen_ack_ids:
+            ack['_bounce_addr']    = addr
+            ack['_bounce_fs_id']   = fs_conv_id  # the soporte@ NDR conv (for reference)
+            log.info("Bounce matched: %s <%s> (FreeScout NDR conv #%s)",
+                     ack['partner_name'], addr, fs_conv_id)
+            bounced_acks.append(ack)
+            seen_ack_ids.add(ack['id'])
 
     return bounced_acks
 
@@ -230,7 +306,7 @@ def _create_freescout_conv(ack, glenda_conv_id, live):
 
         payload = {
             'type':      1,       # email type
-            'mailboxId': FS_MAILBOX_ID,
+            'mailboxId': FS_VOTE_MAILBOX,
             'status':    'active',
             'subject':   f'[Voto WA] {name} — correo rebotó, WA iniciado',
             'customer':  {'email': email.split(',')[0].strip()},
@@ -286,16 +362,21 @@ def _update_ack(m, db, uid, key, ack_id, glenda_conv_id, fs_conv_id, live):
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-def main(live):
+def main(live, since=None):
     m, db, uid, key = _odoo_connect()
     state = _load_state()
     processed_ids = set(state.get('processed_ack_ids', []))
 
+    # Default since_date: use stored vote_send_date if not specified
+    since_date = since or state.get('vote_send_date')
+
     log.info("=" * 70)
     log.info("VOTE BOUNCE CHECKER — %s", "LIVE" if live else "DRY RUN")
+    log.info("Bounce source: FreeScout soporte@ (mailbox_id=%d)", FS_BOUNCE_MAILBOX)
+    log.info("Checking NDRs since: %s", since_date or "no date filter")
     log.info("=" * 70)
 
-    bounced = _find_bounced_acks(m, db, uid, key)
+    bounced = _find_bounced_acks(m, db, uid, key, since_date)
     # Skip already-processed
     bounced = [a for a in bounced if a['id'] not in processed_ids]
     log.info("Bounces to process: %d", len(bounced))
@@ -320,6 +401,8 @@ def main(live):
 
     if live:
         state['processed_ack_ids'] = list(processed_ids)
+        if since:
+            state['vote_send_date'] = since   # remember for future runs
         _save_state(state)
 
     log.info("Done — processed %d bounce(s).", len(bounced))
@@ -327,6 +410,10 @@ def main(live):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--live', action='store_true')
+    parser.add_argument('--live',  action='store_true',
+                        help='Actually create Glenda convs + FreeScout monitoring convs')
+    parser.add_argument('--since', default=None,
+                        help='Only check NDRs after this date (YYYY-MM-DD). '
+                             'Pass the vote send date. Stored in state file for future runs.')
     args = parser.parse_args()
-    main(live=args.live)
+    main(live=args.live, since=args.since)
