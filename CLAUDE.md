@@ -64,7 +64,7 @@
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) |
 | 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | Nómina→Reports→Pronóstico Liquidación V2; PDF + Excel |
-| 49 | PDVSA Continuity Campaign | Testing | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026 |
+| 49 | PDVSA Continuity Campaign | Production | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026; **2026-05-19:** enhanced email (+ budget proposal section, CC pagos@, Reply-To pagos@) fired to 84 ACTIVE families; ACK confirmation → parent + votacion@ |
 | 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) |
 | 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
@@ -174,11 +174,14 @@
 | hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
 | ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
-| hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
 | ueipab_ai_agent | 17.0.1.52.0 | 2026-05-19 |
-| ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
+| ueipab_attendance_report | 17.0.1.6.4 | 2026-05-19 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
+| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
+| ueipab_ari_portal | 17.0.1.0.0 | — (testing only) |
+| ohrms_loan | 17.0.1.0.0 | — (testing only) |
+| ohrms_loan_accounting | 17.0.1.0.0 | — (testing only) |
 
 ### Production Environment
 
@@ -186,7 +189,6 @@
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| hrms_dashboard | 17.0.1.0.2 | Installed |
 | ueipab_attendance_report | 17.0.1.6.4 | Deployed 2026-05-18 — default 44 payroll employees; resend skips acknowledged; queue emails (no timeout); ACK CC → recursoshumanos@ — **Pending:** PDVSA bulk send (71 partners), [runbook](documentation/PDVSA_DEPLOY_FRIDAY_20260515.md) Steps 6–8 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
