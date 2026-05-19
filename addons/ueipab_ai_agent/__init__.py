@@ -71,6 +71,18 @@ def _load_api_configs(env):
         except Exception as e:
             _logger.warning("AI Agent: Could not load Claude config: %s", e)
 
+    # Load FreeScout config
+    fs_config_path = _find_config('freescout_api.json')
+    if fs_config_path:
+        try:
+            with open(fs_config_path, 'r') as f:
+                fs_cfg = json.load(f)
+            ICP.set_param('ai_agent.freescout_api_url', fs_cfg.get('api_url', ''))
+            ICP.set_param('ai_agent.freescout_api_key', fs_cfg.get('api_key', ''))
+            _logger.info("AI Agent: FreeScout config loaded from %s", fs_config_path)
+        except Exception as e:
+            _logger.warning("AI Agent: Could not load FreeScout config: %s", e)
+
     # Set dry_run default
     if not ICP.get_param('ai_agent.dry_run'):
         ICP.set_param('ai_agent.dry_run', 'True')

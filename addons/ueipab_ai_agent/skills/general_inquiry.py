@@ -901,6 +901,8 @@ class GeneralInquirySkill:
             "- Votación: 22–26 de mayo por correo electrónico. Un voto por familia.\n"
             "- Presentación completa: https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA\n"
             "- Si el representante no recibió su enlace de votación: indicarle que escriba a pagos@ueipab.edu.ve.\n"
+            + self._get_voting_wa_block(conversation)
+            +
             "SESIONES VIRTUALES DE PRESENTACIÓN (AÚN NO REALIZADAS — son el 19 y 20 de mayo):\n"
             "- 1ra Sesión: Lunes 19 de mayo, 3:00–4:00 p.m. (hora Venezuela)\n"
             "  Enlace Google Meet: https://meet.google.com/dxk-yyjr-jzg\n"
@@ -1134,8 +1136,8 @@ class GeneralInquirySkill:
         )
 
     def _extract_visible_text(self, ai_response):
-        """Strip ACTION markers from the response before sending to customer."""
-        text = re.sub(r'ACTION:\w+[^\n]*', '', ai_response)
+        """Strip all ACTION:* markers from the response before sending to customer."""
+        text = re.sub(r'\n?ACTION:\w+[^\n]*', '', ai_response)
         return text.strip()
 
     def _get_base_url(self, conversation):
@@ -1173,6 +1175,97 @@ class GeneralInquirySkill:
         bcv_rate = self._get_bcv_rate_from_context(conversation)
         return self._format_balance_message(balance, bcv_rate)
 
+    def _get_voting_wa_block(self, conversation):
+        """Return voting-via-WA system prompt block during the 2026-05-21/26 window."""
+        from datetime import date as _date
+        today = _date.today()
+        if not (_date(2026, 5, 21) <= today <= _date(2026, 5, 26)):
+            return ''
+        return (
+            "VOTACIÓN PRESUPUESTARIA VÍA WHATSAPP (activa 21-26 mayo 2026):\n"
+            "Si el representante dice que no recibió el correo, que quiere votar, o que su\n"
+            "correo rebotó — puede votar directamente aquí:\n"
+            "1. Preséntale brevemente las opciones si no las conoce:\n"
+            "   Opción A: $218,88/mes (+10,89%) | Opción B: $236,58/mes (+19,86%)\n"
+            "2. Pregunta: '¿Cuál es su opción, A o B?'\n"
+            "3. Cuando confirme claramente, responde con:\n"
+            "   '✅ Su voto por Opción A/B ha quedado registrado. ¡Gracias por participar!'\n"
+            "   Y añade al final: ACTION:RECORD_VOTE:A (o :B)\n"
+            "4. SOLO para representantes identificados. Si no está identificado, pide cédula primero.\n"
+            "5. NO emitas ACTION:RECORD_VOTE si el representante no ha confirmado explícitamente.\n"
+            "ACTION:RECORD_VOTE es un marcador interno — el representante NO lo ve.\n"
+        )
+
+    def _handle_record_vote(self, conversation, ai_response, context):
+        """Record a WA vote when ACTION:RECORD_VOTE:A|B is found in the AI response."""
+        match = re.search(r'ACTION:RECORD_VOTE:([AB])\b', ai_response, re.IGNORECASE)
+        if not match:
+            return
+        option   = match.group(1).upper()
+        decision = 'continuing' if option == 'A' else 'leaving'
+
+        # Find pending ACK by partner_id first, phone fallback
+        Ack = conversation.env['partner.communication.ack'].sudo()
+        ack = None
+        if conversation.partner_id:
+            ack = Ack.search([
+                ('notice_key', '=', 'budget_consulta_2026_2027'),
+                ('partner_id', '=', conversation.partner_id.id),
+                ('state',      '=', 'pending'),
+            ], limit=1)
+        if not ack and conversation.phone:
+            ack = Ack.search([
+                ('notice_key',    '=', 'budget_consulta_2026_2027'),
+                ('partner_phone', '=', conversation.phone),
+                ('state',         '=', 'pending'),
+            ], limit=1)
+        if not ack:
+            _logger.warning("RECORD_VOTE: no pending ACK for conv %d", conversation.id)
+            return
+
+        from datetime import datetime as _dt
+        notes = (
+            f"WhatsApp (Glenda) — conv #{conversation.id} — "
+            f"{_dt.now().strftime('%d/%m/%Y %H:%M')}"
+        )
+        ack._record_decision(decision=decision, channel='whatsapp', notes=notes)
+        _logger.info("RECORD_VOTE: conv %d → Opción %s recorded for %s",
+                     conversation.id, option, ack.partner_name)
+
+        # Best-effort: close the FreeScout monitoring conversation
+        if ack.freescout_conv_id:
+            self._close_freescout_vote_conv(conversation, ack, option)
+
+    def _close_freescout_vote_conv(self, conversation, ack, option):
+        """Add internal note + close the FreeScout votacion@ conv for this ACK."""
+        try:
+            import requests as _req
+            from datetime import datetime as _dt
+            icp     = conversation.env['ir.config_parameter'].sudo()
+            fs_url  = icp.get_param('ai_agent.freescout_api_url', '').rstrip('/')
+            fs_key  = icp.get_param('ai_agent.freescout_api_key', '')
+            if not fs_url or not fs_key:
+                return
+            headers = {'X-FreeScout-API-Key': fs_key,
+                       'Content-Type': 'application/json',
+                       'Accept': 'application/json'}
+            fs_id   = int(ack.freescout_conv_id)
+            dt      = _dt.now().strftime('%d/%m/%Y %H:%M')
+            note    = (
+                f'✅ <strong>Voto registrado vía WhatsApp</strong><br>'
+                f'Opción <strong>{option}</strong> — {ack.partner_name} — {dt}<br>'
+                f'Glenda conv #{conversation.id}'
+            )
+            _req.post(f'{fs_url}/conversations/{fs_id}/threads',
+                      json={'type': 'note', 'text': note, 'user': 10},
+                      headers=headers, timeout=10)
+            _req.put(f'{fs_url}/conversations/{fs_id}',
+                     json={'status': 'closed', 'byUser': 10},
+                     headers=headers, timeout=10)
+            _logger.info("FreeScout conv %s closed — Opción %s", fs_id, option)
+        except Exception as e:
+            _logger.warning("Could not close FreeScout vote conv: %s", e)
+
     def _handle_log_feedback(self, conversation, ai_response, context):
         """Create ai.agent.feedback record if ACTION:LOG_FEEDBACK marker is present."""
         match = re.search(
@@ -1196,6 +1289,9 @@ class GeneralInquirySkill:
         # Log calibration feedback if present (before stripping markers)
         if context.get('is_calibration_tester'):
             self._handle_log_feedback(conversation, ai_response, context)
+
+        # Record WA vote if present (before stripping markers)
+        self._handle_record_vote(conversation, ai_response, context)
 
         # Check for balance query — resolve and append to visible text before other actions
         balance_msg = self._handle_balance_action(conversation, ai_response, context)

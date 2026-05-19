@@ -39,7 +39,8 @@ class PartnerCommunicationAck(models.Model):
     recorded_by  = fields.Many2one('res.users', string='Registrado por',
                                    readonly=True, ondelete='set null')
     vote_notes   = fields.Text(string='Notas de auditoría')
-    bounce_wa_sent = fields.Boolean(string='WA de rebote enviado', default=False)
+    bounce_wa_sent    = fields.Boolean(string='WA de rebote enviado', default=False)
+    freescout_conv_id = fields.Char(string='FreeScout Conv ID', readonly=True)
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -94,6 +94,8 @@
                         <group string="Sistema">
                             <field name="token"/>
                             <field name="bounce_wa_sent"/>
+                            <field name="freescout_conv_id"
+                                   invisible="not freescout_conv_id"/>
                             <field name="partner_phone"
                                    invisible="not partner_phone"/>
                         </group>
