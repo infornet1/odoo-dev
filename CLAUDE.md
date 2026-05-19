@@ -189,7 +189,7 @@
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| ueipab_attendance_report | 17.0.1.6.6 | Deployed 2026-05-19 — Comunicados a Representantes moved to AI Agent → Operaciones |
+| ueipab_attendance_report | 17.0.1.6.8 | Deployed 2026-05-19 — vote audit fields (partner_phone/vote_channel/recorded_by/vote_notes/bounce_wa_sent); staff wizard; open-form button |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
