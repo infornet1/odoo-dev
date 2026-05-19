@@ -84,6 +84,31 @@ class PartnerCommunicationAck(models.Model):
             vals['recorded_by'] = user_id
         self.write(vals)
 
+        # Auto-confirm PDVSA continuity when a budget vote is cast.
+        # Voting on the 2026-2027 budget implicitly confirms the family
+        # intends to continue next school year — both options mean staying.
+        if self.notice_key == 'budget_consulta_2026_2027' and self.partner_id:
+            pdvsa_ack = self.env['partner.communication.ack'].sudo().search([
+                ('notice_key', '=', 'pdvsa_continuacion_2026_2027'),
+                ('partner_id', '=', self.partner_id.id),
+                ('state',      '=', 'pending'),
+            ], limit=1)
+            if pdvsa_ack:
+                option = 'A' if decision == 'continuing' else 'B'
+                ts     = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+                pdvsa_notes = (
+                    f"Auto-confirmado {ts}: representante participó en la "
+                    f"Consulta Presupuestaria 2026-2027 (Opción {option}) vía "
+                    f"{channel or 'email_link'}. Votar implica intención de "
+                    f"continuidad para el próximo año escolar."
+                )
+                pdvsa_ack._record_decision(
+                    decision='continuing',
+                    channel=channel,
+                    notes=pdvsa_notes,
+                    user_id=user_id,
+                )
+
     def action_mark_continuing(self):
         for rec in self:
             if rec.state == 'pending':
