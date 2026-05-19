@@ -4,6 +4,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-19 — PDVSA Campaign: Enhanced Email + Budget Proposal Section
+
+**Type:** Email campaign | **Script:** `scripts/send_pdvsa_communication.py` pattern | **Env:** Production (DB_UEIPAB)
+
+### What was sent
+
+Enhanced version of the PDVSA continuity email fired to **84 ACTIVE families** (Industry=Yes, Status=ACTIVE from Customers spreadsheet `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`).
+
+**Enhancements over original May-15 send:**
+- New section added after 3-bullet summary: **📊 Nueva Propuesta Económica 2026-2027**
+  - Option A ($218.88) / Option B ($236.58) mini-cards
+  - Google Slides CTA → `16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+  - WhatsApp + Telegram + pagos@ query channels
+- **CC:** `pagos@ueipab.edu.ve` on every outgoing email
+- **Reply-To:** `pagos@ueipab.edu.ve` (parent replies land in pagos@ inbox)
+- Sí/No buttons use real `partner.communication.ack` tokens (83 with token, 1 mailto fallback — RAFAEL DUERTO, no Odoo partner)
+
+**ACK confirmation flow (unchanged):** when parent clicks Sí/No → confirmation email To: parent, CC: `votacion@ueipab.edu.ve`
+
+### Delivery stats
+- 71 sent / 13 still outgoing at time of check → all 84 delivered by Odoo mail queue
+- Source: Customers spreadsheet col J (email) filtered by col O=Yes + col C=ACTIVE
+
+---
+
 ## 2026-05-19 — Freescout Calibration Loop + pagos_faq Sender Filter
 
 **Type:** Script enhancements | **Files:** `scripts/pagos_faq_email_checker.py`, `scripts/glenda_daily_digest.py`
