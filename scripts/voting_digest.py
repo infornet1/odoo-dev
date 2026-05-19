@@ -29,8 +29,11 @@ PROD_CFG    = '/opt/odoo-dev/config/production.json'
 ODOO_URL    = 'https://odoo.ueipab.edu.ve'
 
 # ── CEO destination ────────────────────────────────────────────────────────────
-CEO_EMAIL   = 'gustavo.perdomo@ueipab.edu.ve'
-CEO_NAME    = 'Gustavo Perdomo'
+RECIPIENTS  = [
+    ('Gustavo Perdomo',   'gustavo.perdomo@ueipab.edu.ve'),
+    ('Arcides Arzola',    'arcides.arzola@ueipab.edu.ve'),
+    ('Alberto Perdomo',   'alberto.perdomo@ueipab.edu.ve'),
+]
 
 # ── Odoo UI deep-links ─────────────────────────────────────────────────────────
 MONITOR_URL = f'{ODOO_URL}/web#action=840&cids=1&menu_id=580'
@@ -559,11 +562,12 @@ def main(live):
                  pdvsa['continuing'], pdvsa['pending'], len(pdvsa['auto_confirmed']))
         return
 
-    # Create mail.mail via XML-RPC
+    # Create one mail.mail per recipient
+    email_to = ', '.join(f'{name} <{email}>' for name, email in RECIPIENTS)
     mail_id = models.execute_kw(db, uid, key, 'mail.mail', 'create', [[{
         'subject':    subject,
         'email_from': 'Votación UEIPAB <votacion@ueipab.edu.ve>',
-        'email_to':   f'{CEO_NAME} <{CEO_EMAIL}>',
+        'email_to':   email_to,
         'body_html':  html,
         'state':      'outgoing',
     }]])
