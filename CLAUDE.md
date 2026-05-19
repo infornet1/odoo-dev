@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-18 (v21)
+**Last Updated:** 2026-05-19 (v22)
 
 ## Core Instructions
 
@@ -87,6 +87,7 @@
 | 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` (199 families); phone/name → monthly+grades+forecast Jun–Aug+annual costs; `sync_family_billing.py` 07:30 VET |
 | 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; hourly (voting week); scores 1–5; CEO email + OdooBot DM + WA if critical |
 | 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` — 7-section HTML guide; sent to CS staff 2026-05-18 |
+| 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | `get_greeting()` structured 5-option menu; `get_system_prompt()` — audience context, menu routing, balance gate, A vs B quotation; Telegram footer on WA |
 
 ---
 
@@ -175,7 +176,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | hrms_dashboard | 17.0.1.0.2 | 2025-12-01 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.51.4 | 2026-05-18 |
+| ueipab_ai_agent | 17.0.1.52.0 | 2026-05-19 |
 | ueipab_attendance_report | 17.0.1.6.4 | 2026-05-18 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 
@@ -190,7 +191,7 @@
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.51.4 | Deployed 2026-05-18 — #68 draft/review; #69 billing enrichment; #67 Seguros Caracas live; Meet links (19–20 mayo); bot fix; 🔄 refresh |
+| ueipab_ai_agent | 17.0.1.52.0 | Deployed 2026-05-19 — #72 welcome menu; audience context; balance gate; A vs B quotation; menu routing; Telegram footer |
 
 ---
 
@@ -314,6 +315,11 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **Meet links (v51.3):** 19 mayo 3pm → `meet.google.com/dxk-yyjr-jzg`; 20 mayo 2pm → `meet.google.com/joa-hyjw-dob` — in `_INSTITUTIONAL_KNOWLEDGE`; Glenda provides links directly.
 
 **Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Claude Haiku scores `general_inquiry` convs 1–5 (accuracy, answered question, opportunities, tone). Digest → CEO email + OdooBot DM + WA if critical. State: `scripts/glenda_supervisor_state.json`. Cron: `/etc/cron.d/glenda_supervisor` — hourly voting week (`0 11-23,0,1 * * 1-5`); reduce to `0 11-23/2` (2h) or `0 15` (daily) when ready.
+
+**Glenda Welcome Menu + Budget UX (Feature #72 — v52.0):**
+- `get_greeting()`: 5-option menu (saldo / propuesta 2026-2027 / inscripcion / info general / otro) + Telegram footer on WA channel
+- `get_system_prompt()`: `audience_block` (parent-friendly routing + tone rules); `menu_block` (PRIMER CONTACTO — shows menu if first message is generic greeting); balance gate (check saldo 2025-2026 BEFORE any 2026-2027 quote); A vs B side-by-side quotation format (pending vote 26/05); emoji rule updated to allow menu numbers (1️⃣–5️⃣)
+- **No new skill** — budget consultation is a topic within `general_inquiry`
 
 ### Glenda Technical Patterns
 
