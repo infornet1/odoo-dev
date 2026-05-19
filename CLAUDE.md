@@ -247,36 +247,24 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 
 **Script:** `scripts/absence_processor.py` | **Cron:** `/etc/cron.d/absence_processor` — weekdays 06:00–17:00 VET
 
-**Two front doors, one backend:**
-- Email → parent emails soporte@ueipab.edu.ve → picked up by cron
-- WA/Telegram → parent tells Glenda → `ACTION:NOTIFY_ABSENCE:name|grade|reason` → `_handle_glenda_absence_notification()` creates Freescout conv via API → cron picks up
-
-**Per-conversation actions:** FreeScout assign→Josefina Rodriguez (user_id=8) + auto-reply→parent + internal note with teacher list + email To=josefina CC=soporte@+Arcides+David/Norka+section-teachers + OdooBot DM→Josefina + 24h follow-up DM if still open.
-
-**Teacher lookup:** `control_asistencias` DB (`profesor_seccion` JOIN `usuario` JOIN `seccion` JOIN `grado`). Credentials in `sync_control_asistencia.py`. Grade text → `id_grado` via `_GRADE_PATTERNS` regex. Section specified → CC teachers directly. Section unknown → list in note only, subdirector coordinates.
-
-**CC routing:** `soporte@` always (CEO oversight) + `arcides.arzola@` always + `norka.larosa@` (media/bachillerato) or `david.hernandez@` (preescolar/primaria) + section teachers if known.
-
-**Detection:** keyword pre-filter on subject+body → Claude Haiku extracts student/grade/level/section/reason/teacher. Fail-safe: Claude failure → skip conv (no false positives).
-
-**Processed marker:** subject prefixed `[AUSENCIA]` via FreeScout API → prevents reprocessing. State file: `scripts/absence_processor_state.json`.
+- **Email:** parent → soporte@ueipab.edu.ve → cron picks up
+- **WA/Telegram:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → `_handle_glenda_absence_notification()` → Freescout conv → cron
+- **Per-conv:** assign→Josefina (user_id=8), auto-reply parent, internal note w/ teacher list, email To=josefina CC=soporte@+Arcides+David/Norka+teachers, OdooBot DM, 24h follow-up
+- **Teacher lookup:** `control_asistencias` DB (`profesor_seccion` JOIN `usuario`). Grade → `id_grado` via `_GRADE_PATTERNS`. Section unknown → subdirector coordinates.
+- **CC routing:** `soporte@`+`arcides.arzola@` always; `norka.larosa@` (media) or `david.hernandez@` (primaria/preescolar) + section teachers if known
+- **Detection:** keyword pre-filter → Haiku extracts fields. Claude failure → skip (no false positives). Processed marker: `[AUSENCIA]` prefix. State: `absence_processor_state.json`.
 
 ### Glenda School Account Help (Feature #59)
 
-**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` — emitted by Claude when parent forgets student email or needs Akdemia access.
+**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade`
 
-**3-factor verification (in `_handle_school_account_help()`):**
-1. Conversation partner identified (phone/Telegram already proves account ownership)
-2. Cédula provided by parent must match `res.partner.vat` — mismatch → deny + redirect to soporte@
-3. Student name fuzzy-matched against Google Directory cache (`school.student_directory_json` param)
+**3-factor verification:** (1) partner identified via phone/Telegram; (2) cédula matches `res.partner.vat` (mismatch → deny + redirect soporte@); (3) student fuzzy-matched in `school.student_directory_json`.
 
-**Google Directory cache:** `scripts/sync_google_directory.py --live` populates `school.student_directory_json` in `ir.config_parameter` → `{'students': [{email, name, grade, ou}...], 'synced_at': ISO}`. Cron: `/etc/cron.d/sync_google_directory` daily 07:00 VET weekdays. Targets `https://odoo.ueipab.edu.ve` (production). **Suspended accounts are filtered out** — only `suspended=False` accounts cached. As of 2026-05-17: 224 active accounts (46 suspended accounts manually deleted from Google Workspace by admin).
+**Google Directory cache:** `scripts/sync_google_directory.py --live` → `school.student_directory_json`; cron daily 07:00 VET; 224 active accounts (suspended=False only). Targets production.
 
-**Akdemia reset link:** `https://edge.akdemia.com/login#resetPasswordModal` — always provided for password issues. For email-only recovery (no password problem), no ACTION needed — just provide the link directly.
+**Akdemia reset:** `https://edge.akdemia.com/login#resetPasswordModal`. FreeScout UNASSIGNED soporte@ (mailbox_id=3); subject `[Glenda/WA] [RESUELTO|PENDIENTE] Cuenta escolar — {student_name}`.
 
-**FreeScout ticket:** UNASSIGNED in soporte@ (mailbox_id=3). Subject `[Glenda/WA] [RESUELTO|PENDIENTE] Cuenta escolar — {student_name}`. Created even when email is found, so support team has a record.
-
-**Name matching:** exact → word-overlap (≥2 matching words). Non-match → PENDIENTE ticket + "no encontré" message. Cédula strip: removes `-`, `V/E/J/G/P` prefix before numeric comparison.
+**Name matching:** exact → word-overlap (≥2 words). Non-match → PENDIENTE. Cédula: strip `-`, `V/E/J/G/P` prefix.
 
 ### Telegram Channel (ai.agent.telegram.service)
 
@@ -296,32 +284,19 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 ### Glenda Family Billing Enrichment (Feature #69)
 
-**Cache:** `school.family_billing_json` in `ir.config_parameter` — 199 families from Customers spreadsheet. Synced by `scripts/sync_family_billing.py --live` (cron `/etc/cron.d/sync_family_billing` daily 07:30 VET).
+**Cache:** `school.family_billing_json` (199 families). Sync: `scripts/sync_family_billing.py --live` — cron daily 07:30 VET.
 
-**Lookup (in `_enrich_billing_context()`):**
-1. Phone match: normalize conv phone → match cache `phone` field
-2. Fallback: fuzzy student name match from latest inbound message (billing keywords required)
+**Lookup:** phone match → fuzzy student name (billing keywords required). **Injected block (📋 DATOS FAMILIARES):** parent, students+grades, monthly, discount, forecast (remaining months to Aug 31 × monthly), annual costs (qty × $101.58), A/B projections.
 
-**Injected block (📋 DATOS FAMILIARES):** parent name, students + grades (from `school.student_directory_json`), monthly, discount note, forecast (remaining months to Aug 31 × monthly), annual one-time costs (quantity × $101.58), Option A/B projections.
+**Annual one-time costs/student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**.
 
-**School year billing period:** ends **31 agosto 2026**. Forecast = months from `today.month+1` to August (e.g. in May → 3 months: Jun, Jul, Aug).
+**Iniciar Conversación (v51):** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately. `initial_message` skips greeting; cleared after send. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
 
-**Annual one-time costs per student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**. Multiplied by `quantity` in enrichment.
+**Meet links (v51.3):** 19 mayo 3pm → `meet.google.com/dxk-yyjr-jzg`; 20 mayo 2pm → `meet.google.com/joa-hyjw-dob`.
 
-**Iniciar Conversación wizard (v51.0):** `💾 Guardar Borrador` → draft + form review (no WA); `🚀 Iniciar Ahora` → fires immediately. `initial_message` on `ai.agent.conversation` — `action_start()` skips greeting if set, answers directly, clears after send.
+**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Haiku scores `general_inquiry` convs 1–5. Digest → CEO email + OdooBot DM + WA if critical. State: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
 
-**Bot detection guard (v51.1):** 2s speed check only fires when `last_sender == 'customer'`. Without this, `action_start()` setting `last_sender='agent'` then immediately calling `action_process_reply()` falsely triggered `silent=True`.
-
-**🔄 Actualizar (v51.2):** Button on conv form (`draft/active/waiting`). `action_refresh()` returns `act_window` for same record — reloads messages without full browser refresh.
-
-**Meet links (v51.3):** 19 mayo 3pm → `meet.google.com/dxk-yyjr-jzg`; 20 mayo 2pm → `meet.google.com/joa-hyjw-dob` — in `_INSTITUTIONAL_KNOWLEDGE`; Glenda provides links directly.
-
-**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Claude Haiku scores `general_inquiry` convs 1–5 (accuracy, answered question, opportunities, tone). Digest → CEO email + OdooBot DM + WA if critical. State: `scripts/glenda_supervisor_state.json`. Cron: `/etc/cron.d/glenda_supervisor` — hourly voting week (`0 11-23,0,1 * * 1-5`); reduce to `0 11-23/2` (2h) or `0 15` (daily) when ready.
-
-**Glenda Welcome Menu + Budget UX (Feature #72 — v52.0):**
-- `get_greeting()`: 5-option menu (saldo / propuesta 2026-2027 / inscripcion / info general / otro) + Telegram footer on WA channel
-- `get_system_prompt()`: `audience_block` (parent-friendly routing + tone rules); `menu_block` (PRIMER CONTACTO — shows menu if first message is generic greeting); balance gate (check saldo 2025-2026 BEFORE any 2026-2027 quote); A vs B side-by-side quotation format (pending vote 26/05); emoji rule updated to allow menu numbers (1️⃣–5️⃣)
-- **No new skill** — budget consultation is a topic within `general_inquiry`
+**Glenda Welcome Menu + Budget UX (Feature #72 — v52.0):** `get_greeting()` → 5-option menu (saldo/propuesta/inscripcion/info/otro) + Telegram footer on WA. `get_system_prompt()` → audience context, PRIMER CONTACTO menu, balance gate (saldo 2025-2026 first), A vs B quotation. Budget = `general_inquiry` skill.
 
 ### Glenda Technical Patterns
 
