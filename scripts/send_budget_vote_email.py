@@ -2,67 +2,180 @@
 """
 Consulta Presupuestaria 2026-2027 — Vote Email Sender
 ======================================================
-Envía el correo de votación para la propuesta presupuestaria 2026-2027
-con las opciones A ($218,88) y B ($236,58).
+Source: Google Sheets (Customers tab, col C=ACTIVE, col J=email, col L=phone)
+Writes ACK records + mail.mail to production via XML-RPC.
+Stores partner_phone on each ACK record for the bounce/WA fallback flow.
 
-Uso (Odoo shell):
+Usage:
+    python3 scripts/send_budget_vote_email.py            # dry-run
+    python3 scripts/send_budget_vote_email.py --test     # CEO preview only
+    python3 scripts/send_budget_vote_email.py --live     # full send (178)
+    python3 scripts/send_budget_vote_email.py --live --test  # CEO live
 
-  # Dry run — ver destinatarios sin crear registros
-  docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http \
-    < /opt/odoo-dev/scripts/send_budget_vote_email.py
-
-  # Prueba — solo al CEO (gustavo.perdomo@gmail.com)
-  TEST=true LIVE=true docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http \
-    < /opt/odoo-dev/scripts/send_budget_vote_email.py
-
-  # Envío real a todos los representantes
-  LIVE=true docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http \
-    < /opt/odoo-dev/scripts/send_budget_vote_email.py
+Safe to re-run — skips partners who already voted or whose email was already queued.
 """
 
-import os
+import argparse
+import logging
+import sys
 import time
+import xmlrpc.client
+import json
 
-# ── Configuración ─────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
 
-DRY_RUN    = os.environ.get('LIVE', '').lower() not in ('true', '1', 'yes')
-TEST_MODE  = os.environ.get('TEST', '').lower() in ('true', '1', 'yes')
-SEND_DELAY = float(os.environ.get('SEND_DELAY', '0.2'))
+# ── Constants ──────────────────────────────────────────────────────────────────
 
-NOTICE_KEY   = 'budget_consulta_2026_2027'
-NOTICE_LABEL = 'Consulta Presupuestaria 2026-2027'
-BASE_URL     = env['ir.config_parameter'].sudo().get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
-LOGO_URL     = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
+SPREADSHEET_ID = '1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA'
+CREDS_PATH     = '/opt/odoo-dev/config/google_sheets_credentials.json'
+PROD_CFG       = '/opt/odoo-dev/config/production.json'
 
-# CEO test recipient
+NOTICE_KEY     = 'budget_consulta_2026_2027'
+NOTICE_LABEL   = 'Consulta Presupuestaria 2026-2027'
+ODOO_URL       = 'https://odoo.ueipab.edu.ve'
+LOGO_URL       = f'{ODOO_URL}/web/image/res.company/1/logo'
+
 CEO_PARTNER_ID = 7
-CEO_TEST_EMAIL = 'gustavo.perdomo@ueipab.edu.ve'
+CEO_EMAIL      = 'gustavo.perdomo@ueipab.edu.ve'
+CEO_NAME       = 'Gustavo Perdomo'
 
-print("=" * 70)
-mode = "*** TEST — solo CEO ***" if TEST_MODE else ("*** ENVÍO REAL ***" if not DRY_RUN else "*** DRY RUN ***")
-print(f"CONSULTA PRESUPUESTARIA 2026-2027 — {mode}")
-print("=" * 70)
+SEND_DELAY     = 0.2   # seconds between sends
 
 
-# ── Partner query ──────────────────────────────────────────────────────────────
+# ── Config ─────────────────────────────────────────────────────────────────────
 
-def _get_recipients():
-    """Return list of res.partner to send the vote email to."""
-    if TEST_MODE:
-        partner = env['res.partner'].browse(CEO_PARTNER_ID)
-        return partner if partner.exists() else env['res.partner']
-
-    # All Representantes (tag 25), not Inactivo (tag 29), with email
-    return env['res.partner'].sudo().search([
-        ('active', '=', True),
-        ('email', '!=', False),
-        ('email', '!=', ''),
-        ('category_id', 'in', [25]),       # Representante
-        ('category_id', 'not in', [29]),   # exclude Inactivo
-    ])
+def _load_prod_cfg():
+    cfg = json.load(open(PROD_CFG))['production']['xmlrpc']
+    return cfg['url'], cfg['db'], cfg['user'], cfg['api_key']
 
 
-# ── Email HTML builder ────────────────────────────────────────────────────────
+# ── XML-RPC helpers ────────────────────────────────────────────────────────────
+
+def _connect():
+    url, db, user, key = _load_prod_cfg()
+    common = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/common')
+    uid    = common.authenticate(db, user, key, {})
+    if not uid:
+        raise RuntimeError('XML-RPC authentication failed')
+    models = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/object')
+    return models, db, uid, key
+
+
+def call(models, db, uid, key, model, method, args=None, kw=None):
+    return models.execute_kw(db, uid, key, model, method,
+                             args or [[]], kw or {})
+
+
+# ── Google Sheets reader ───────────────────────────────────────────────────────
+
+def _load_spreadsheet_recipients():
+    """Return list of dicts: {name, email, phone} for all ACTIVE rows."""
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
+
+    creds = Credentials.from_service_account_file(
+        CREDS_PATH, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
+    svc = build('sheets', 'v4', credentials=creds)
+    result = svc.spreadsheets().values().get(
+        spreadsheetId=SPREADSHEET_ID, range='Customers!A2:M').execute()
+    rows = result.get('values', [])
+    data = rows[1:]  # skip header row
+
+    recipients = []
+    for row in data:
+        r = (row + [''] * 13)[:13]
+        name   = r[1].strip()
+        status = r[2].strip().upper()
+        email  = r[9].strip()
+        phone  = r[11].strip()
+        if not name or status != 'ACTIVE':
+            continue
+        if not email:
+            log.warning("SKIP (no email): %s", name)
+            continue
+        recipients.append({'name': name, 'email': email, 'phone': phone})
+
+    log.info("Spreadsheet: %d ACTIVE rows loaded", len(recipients))
+    return recipients
+
+
+# ── Partner matching ───────────────────────────────────────────────────────────
+
+def _build_email_index(models, db, uid, key):
+    """Return dict of {first_email_lower: partner_id} for all active partners."""
+    partners = call(models, db, uid, key,
+        'res.partner', 'search_read',
+        [[('active', '=', True), ('email', '!=', False)]],
+        {'fields': ['id', 'email']})
+
+    index = {}
+    for p in partners:
+        raw = (p.get('email') or '').replace(';', ',')
+        for addr in raw.split(','):
+            addr = addr.strip().lower()
+            if addr:
+                index.setdefault(addr, p['id'])
+    return index
+
+
+def _find_partner(row, email_index, models, db, uid, key):
+    """Find res.partner id for a spreadsheet row. Returns None if not found."""
+    # Try each address in the email field
+    raw = row['email'].replace(';', ',')
+    for addr in raw.split(','):
+        addr = addr.strip().lower()
+        pid = email_index.get(addr)
+        if pid:
+            return pid
+
+    # Fallback: name search
+    results = call(models, db, uid, key,
+        'res.partner', 'search_read',
+        [[('name', 'ilike', row['name']), ('active', '=', True)]],
+        {'fields': ['id', 'name'], 'limit': 1})
+    if results:
+        log.warning("Email not matched — found by name: %s (id=%d)",
+                    results[0]['name'], results[0]['id'])
+        return results[0]['id']
+
+    return None
+
+
+# ── ACK record helpers ─────────────────────────────────────────────────────────
+
+def _get_existing_ack(models, db, uid, key, partner_id):
+    recs = call(models, db, uid, key,
+        'partner.communication.ack', 'search_read',
+        [[('notice_key', '=', NOTICE_KEY), ('partner_id', '=', partner_id)]],
+        {'fields': ['id', 'state', 'token', 'partner_email'], 'limit': 1})
+    return recs[0] if recs else None
+
+
+def _create_ack(models, db, uid, key, partner_id, name, email, phone):
+    return call(models, db, uid, key,
+        'partner.communication.ack', 'create', [[{
+            'notice_key':    NOTICE_KEY,
+            'notice_label':  NOTICE_LABEL,
+            'partner_id':    partner_id,
+            'partner_name':  name,
+            'partner_email': email,
+            'partner_phone': phone,
+        }]])
+
+
+def _get_token(models, db, uid, key, ack_id):
+    rec = call(models, db, uid, key,
+        'partner.communication.ack', 'read', [[ack_id]],
+        {'fields': ['token']})
+    return rec[0]['token'] if rec else None
+
+
+# ── HTML builder ───────────────────────────────────────────────────────────────
 
 def _build_html(partner_name, si_url, no_url, is_test=False):
     test_banner = (
@@ -572,86 +685,107 @@ def _build_html(partner_name, si_url, no_url, is_test=False):
 </html>"""
 
 
-# ── Send logic ────────────────────────────────────────────────────────────────
+# ── Main ───────────────────────────────────────────────────────────────────────
 
-recipients = _get_recipients()
-print(f"\nDestinatarios encontrados: {len(recipients)}")
+def main(live, test):
+    models, db, uid, key = _connect()
 
-sent = 0
-skipped = 0
+    mode = 'TEST (CEO only)' if test else ('LIVE — 178 families' if live else 'DRY RUN')
+    log.info("=" * 70)
+    log.info("CONSULTA PRESUPUESTARIA 2026-2027 — %s", mode)
+    log.info("=" * 70)
 
-for partner in recipients:
-    # Determine email address
-    email = partner.email or ''
-    if not email:
-        print(f"  SKIP {partner.name} — sin email")
-        skipped += 1
-        continue
+    # Load recipients from spreadsheet
+    if test:
+        rows = [{'name': CEO_NAME, 'email': CEO_EMAIL,
+                 'phone': '', 'partner_id': CEO_PARTNER_ID}]
+    else:
+        rows = _load_spreadsheet_recipients()
+        # Match each row to a res.partner
+        email_index = _build_email_index(models, db, uid, key)
+        total_rows = len(rows)
+        matched = []
+        for row in rows:
+            pid = _find_partner(row, email_index, models, db, uid, key)
+            if pid:
+                row['partner_id'] = pid
+                matched.append(row)
+            else:
+                log.warning("UNMATCHED — no partner found: %s <%s>",
+                            row['name'], row['email'])
+                unmatched += 1
+        rows = matched
+        log.info("Matched %d / %d rows to Odoo partners", len(rows), total_rows)
 
-    # For test mode, override email to CEO gmail
-    send_to = CEO_TEST_EMAIL if TEST_MODE else email
+    log.info("Recipients to process: %d", len(rows))
 
-    # Find or create ack record
-    ack = env['partner.communication.ack'].sudo().search([
-        ('notice_key', '=', NOTICE_KEY),
-        ('partner_id', '=', partner.id),
-    ], limit=1)
+    sent = skipped = 0
 
-    if ack and ack.state != 'pending':
-        print(f"  SKIP {partner.name} — ya votó ({ack.state})")
-        skipped += 1
-        continue
+    for row in rows:
+        name       = row['name']
+        email      = CEO_EMAIL if test else row['email']
+        phone      = row.get('phone', '')
+        partner_id = row['partner_id']
 
-    if DRY_RUN:
-        print(f"  DRY  {partner.name} <{send_to}>")
-        continue
+        # Check existing ACK
+        ack = _get_existing_ack(models, db, uid, key, partner_id)
 
-    if not ack:
-        ack = env['partner.communication.ack'].sudo().create({
-            'notice_key':    NOTICE_KEY,
-            'notice_label':  NOTICE_LABEL,
-            'partner_id':    partner.id,
-            'partner_name':  partner.name,
-            'partner_email': send_to,
-        })
+        if ack and ack.get('state') != 'pending':
+            log.info("  SKIP %s — already voted (%s)", name, ack['state'])
+            skipped += 1
+            continue
 
-    si_url = f"{BASE_URL}/partner-ack/{ack.token}/si"
-    no_url = f"{BASE_URL}/partner-ack/{ack.token}/no"
+        if not live:
+            log.info("  DRY  %s <%s> phone=%s", name, email, phone)
+            continue
 
-    html = _build_html(
-        partner_name=partner.name,
-        si_url=si_url,
-        no_url=no_url,
-        is_test=TEST_MODE,
-    )
+        # Create ACK if not exists
+        if not ack:
+            ack_id = _create_ack(models, db, uid, key,
+                                  partner_id, name, email, phone)
+        else:
+            ack_id = ack['id']
+            # Update partner_phone if not set
+            if phone and not ack.get('partner_phone'):
+                call(models, db, uid, key,
+                     'partner.communication.ack', 'write',
+                     [[ack_id], {'partner_phone': phone}])
 
-    env['mail.mail'].sudo().create({
-        'subject':    'Consulta Presupuestaria 2026-2027 — Ejerza su voto',
-        'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
-        'email_to':   f'{partner.name} <{send_to}>',
-        'email_cc':   'votacion@ueipab.edu.ve',
-        'reply_to':   'votacion@ueipab.edu.ve',
-        'body_html':  html,
-        'state':      'outgoing',
-    })
+        token  = _get_token(models, db, uid, key, ack_id)
+        si_url = f"{ODOO_URL}/partner-ack/{token}/si"
+        no_url = f"{ODOO_URL}/partner-ack/{token}/no"
+        html   = _build_html(name, si_url, no_url, is_test=test)
 
-    print(f"  QUEUED {partner.name} <{send_to}>")
-    sent += 1
+        call(models, db, uid, key, 'mail.mail', 'create', [[{
+            'subject':    'Consulta Presupuestaria 2026-2027 — Ejerza su voto',
+            'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
+            'email_to':   f'{name} <{email}>',
+            'email_cc':   'votacion@ueipab.edu.ve',
+            'reply_to':   'votacion@ueipab.edu.ve',
+            'body_html':  html,
+            'state':      'outgoing',
+        }]])
 
-    if SEND_DELAY:
+        log.info("  QUEUED %s <%s>", name, email)
+        sent += 1
         time.sleep(SEND_DELAY)
 
-env.cr.commit()
+    # Trigger mail queue
+    if live and sent > 0:
+        try:
+            call(models, db, uid, key, 'ir.cron', 'method_direct_trigger', [[3]])
+            log.info("✅ Mail queue triggered.")
+        except Exception as e:
+            log.warning("Could not trigger mail queue: %s", e)
 
-# Trigger mail queue
-if not DRY_RUN and sent > 0:
-    try:
-        env['ir.actions.server'].sudo().browse(3).run()
-        print("\n✅ Cola de correos disparada.")
-    except Exception:
-        env.ref('base.ir_cron_mail_scheduler_action').sudo().method_direct_trigger()
-        print("\n✅ Cola de correos disparada (cron).")
+    log.info("=" * 70)
+    log.info("QUEUED: %d  |  SKIPPED: %d", sent, skipped)
+    log.info("=" * 70)
 
-print(f"\n{'='*70}")
-print(f"ENVIADOS: {sent} | OMITIDOS: {skipped}")
-print(f"{'='*70}\n")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--live',  action='store_true', help='Actually send emails')
+    parser.add_argument('--test',  action='store_true', help='CEO preview only')
+    args = parser.parse_args()
+    main(live=args.live, test=args.test)
