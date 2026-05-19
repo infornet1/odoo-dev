@@ -344,6 +344,67 @@ def _create_freescout_conv(ack, glenda_conv_id, live):
         return None
 
 
+# ── Close soporte@ bounce conv + add audit note ────────────────────────────────
+
+def _close_soporte_bounce_conv(ack, bounce_fs_id, glenda_conv_id, vote_fs_id, live):
+    """Add internal note + close the soporte@ NDR conversation.
+    Links back to Odoo ACK record, Glenda conv, and votacion@ monitoring conv.
+    """
+    if not bounce_fs_id or bounce_fs_id == -1:
+        return
+    try:
+        fs_url, headers = _fs_headers()
+        ack_id     = ack['id']
+        name       = ack['partner_name']
+        email      = ack.get('_bounce_addr', ack.get('partner_email',''))
+        phone      = ack.get('partner_phone', '')
+
+        ack_link    = ACK_URL.format(ack_id=ack_id)
+        glenda_link = (GLENDA_URL.format(conv_id=glenda_conv_id)
+                       if glenda_conv_id and glenda_conv_id != -1 else None)
+        vote_link   = (f'{ODOO_URL}/web#id={vote_fs_id}'
+                       f'&model=ai.agent.conversation&view_type=form&cids=1'
+                       if vote_fs_id and str(vote_fs_id) != '-1' else None)
+
+        note = (
+            f'<p>✅ <strong>Rebote gestionado automáticamente — Voto WA iniciado</strong></p>'
+            f'<p>📧 Email rebotado: <strong>{email}</strong></p>'
+            f'<p>📱 WA enviado a: <strong>{phone}</strong></p>'
+            f'<hr/>'
+            f'<p><strong>🔗 Seguimiento en Odoo:</strong></p><ul>'
+            f'<li><a href="{ack_link}">Registro de voto — {name} (ACK #{ack_id})</a></li>'
+        )
+        if glenda_link:
+            note += f'<li><a href="{glenda_link}">Conversación Glenda #{glenda_conv_id}</a></li>'
+        if vote_link:
+            note += f'<li><a href="{vote_link}">Conv. monitoreo votacion@ #{vote_fs_id}</a></li>'
+        note += (
+            f'</ul>'
+            f'<p><em>No se requiere acción manual en este rebote. '
+            f'Seguimiento via FreeScout votacion@.</em></p>'
+        )
+
+        if not live:
+            log.info("  DRY: would close soporte@ conv #%s + add note", bounce_fs_id)
+            return
+
+        # Add internal note
+        requests.post(
+            f'{fs_url}/conversations/{bounce_fs_id}/threads',
+            json={'type': 'note', 'text': note, 'user': FS_BYUSER},
+            headers=headers, timeout=10)
+
+        # Close the soporte@ conv
+        requests.put(
+            f'{fs_url}/conversations/{bounce_fs_id}',
+            json={'status': 'closed', 'byUser': FS_BYUSER},
+            headers=headers, timeout=10)
+
+        log.info("  Soporte@ conv #%s — note added + closed", bounce_fs_id)
+    except Exception as e:
+        log.warning("  Could not close soporte@ conv #%s: %s", bounce_fs_id, e)
+
+
 # ── Update ACK record ──────────────────────────────────────────────────────────
 
 def _update_ack(m, db, uid, key, ack_id, glenda_conv_id, fs_conv_id, live):
@@ -393,10 +454,14 @@ def main(live, since=None):
         # 1. Create Glenda WA conversation
         glenda_conv_id = _create_glenda_conv(m, db, uid, key, ack, live)
 
-        # 2. Create FreeScout monitoring conversation
+        # 2. Create FreeScout votacion@ monitoring conversation
         fs_conv_id = _create_freescout_conv(ack, glenda_conv_id, live)
 
-        # 3. Update ACK record
+        # 3. Close soporte@ bounce conv + add audit note with Odoo hyperlinks
+        _close_soporte_bounce_conv(ack, ack.get('_bounce_fs_id'),
+                                   glenda_conv_id, fs_conv_id, live)
+
+        # 4. Update ACK record
         _update_ack(m, db, uid, key, ack['id'], glenda_conv_id, fs_conv_id, live)
 
         # Track to avoid reprocessing
