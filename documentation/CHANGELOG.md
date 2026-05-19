@@ -4,6 +4,28 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-19 — Freescout Calibration Loop + pagos_faq Sender Filter
+
+**Type:** Script enhancements | **Files:** `scripts/pagos_faq_email_checker.py`, `scripts/glenda_daily_digest.py`
+
+### pagos_faq_email_checker.py — Automated email filter
+
+Added `SYSTEM_SENDERS` blocklist and `_AUTO_SUBJECT_RE` pattern to stop wasted Claude calls on system noise:
+- **Sender blocklist:** `mailer-daemon`, `noreply`, `finanzas@ueipab.edu.ve`, `pagos@` (circular), `soporte@`, `recursoshumanos@`
+- **Subject patterns:** BCV rate updates (`tasa bcv`), DSN failures, out-of-office, auto-replies, Glenda-loop escalations, payment marketing
+- Filtered convs are added to `processed_ids` so they are not re-checked on the next 10-min run
+
+### glenda_daily_digest.py — Freescout escalation outcomes section
+
+New 6th section added between escalations and suspicious activity:
+- **Chips:** escalaciones hoy / FAQ respondidas / FAQ escaladas / abiertas >24h
+- **Table:** each Glenda-generated Freescout conv — subject, status badge, time to first human reply, clickable link
+- **Stale block:** convs open >24h shown in red; ✓ green if all resolved
+- Subject line now includes FAQ count: `· 4FAQ ✓`
+- Data source: `pymysql` direct query to local Freescout MySQL (same server as the script)
+
+---
+
 ## 2026-05-19 — Freescout Cron Intervals: Near-Real-Time Response
 
 **Type:** Infrastructure / Cron | **Scope:** `/etc/cron.d/` (host crons, not git-tracked)

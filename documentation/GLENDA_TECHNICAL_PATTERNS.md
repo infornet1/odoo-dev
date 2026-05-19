@@ -66,7 +66,9 @@ Reference for all Glenda-specific implementation details. See also [AI_AGENT_MOD
 
 - **Script:** `scripts/glenda_daily_digest.py`
 - **Cron:** `/etc/cron.d/glenda_daily_digest` daily 07:00 VET (`0 11 * * *` UTC) → `gustavo.perdomo@ueipab.edu.ve`
-- **5 sections:** KPIs, by-skill table, topic frequency (12 categories), escalations, suspicious activity (same phone >3 convs / tokens >600 / 01:00-05:00 VET / turns >18)
+- **6 sections:** KPIs, by-skill table, topic frequency (12 categories), escalations, **Freescout outcomes** (new 2026-05-19), suspicious activity
+- **Freescout section:** escalaciones hoy / FAQ respondidas / FAQ escaladas / abiertas >24h chips + per-conv table with clickable FS links + stale >24h warning. Uses `pymysql` direct to local Freescout DB.
+- Subject line includes FAQ count: `[Glenda] Reporte Diario DD/MM — N conv · N resueltas · $X.XXX Claude · NFAQ ✓`
 - **Manual run:** `python3 scripts/glenda_daily_digest.py --env production [--date YYYY-MM-DD] [--dry-run]`
 - **Delivery:** `mail.mail` state=outgoing — Odoo scheduler sends within minutes
 
