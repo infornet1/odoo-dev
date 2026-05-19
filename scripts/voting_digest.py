@@ -83,6 +83,26 @@ def _fetch_votes(models, db, uid, key):
     return records
 
 
+def _fetch_pdvsa(models, db, uid, key):
+    """Fetch PDVSA continuity campaign state including auto-confirmed via budget vote."""
+    records = call(models, db, uid, key,
+        'partner.communication.ack', 'search_read',
+        [[('notice_key', '=', 'pdvsa_continuacion_2026_2027')]],
+        {'fields': ['id', 'partner_name', 'state', 'ack_date',
+                    'vote_channel', 'vote_notes']})
+    total      = len(records)
+    continuing = sum(1 for r in records if r['state'] == 'continuing')
+    leaving    = sum(1 for r in records if r['state'] == 'leaving')
+    pending    = sum(1 for r in records if r['state'] == 'pending')
+    auto_conf  = [r for r in records
+                  if (r.get('vote_notes') or '').startswith('Auto-confirmado')]
+    return {
+        'total': total, 'continuing': continuing,
+        'leaving': leaving, 'pending': pending,
+        'auto_confirmed': auto_conf,
+    }
+
+
 def _tally(records):
     total     = len(records)
     by_state  = {'continuing': 0, 'leaving': 0, 'pending': 0}
@@ -161,7 +181,7 @@ def _bar(pct, color, width=280):
     )
 
 
-def _build_html(t, recent_delta, state):
+def _build_html(t, recent_delta, state, pdvsa=None):
     now_str  = datetime.now().strftime('%d/%m/%Y %H:%M VET')
     last_str = state.get('last_send', '—')
 
@@ -434,6 +454,44 @@ def _build_html(t, recent_delta, state):
     </td>
   </tr>
 
+  <!-- PDVSA continuity section -->
+  <tr>
+    <td style="padding:0 28px 0;">
+      <div style="border-top:2px solid #e8edf3;margin:4px 0;"></div>
+      <div style="padding:14px 0 4px;">
+        <div style="font-size:13px;font-weight:bold;color:#1a2c5b;margin-bottom:10px;">
+          🏭 Campaña Continuidad PDVSA — pdvsa_continuacion_2026_2027
+        </div>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td width="33%" style="text-align:center;padding:6px 4px;">
+              <div style="font-size:28px;font-weight:bold;color:#2e7d32;">{pdvsa['continuing']}</div>
+              <div style="font-size:11px;color:#666;">Continuarán</div>
+            </td>
+            <td width="33%" style="text-align:center;padding:6px 4px;
+                border-left:1px solid #eee;border-right:1px solid #eee;">
+              <div style="font-size:28px;font-weight:bold;color:#e65100;">{pdvsa['pending']}</div>
+              <div style="font-size:11px;color:#666;">Sin respuesta</div>
+            </td>
+            <td width="33%" style="text-align:center;padding:6px 4px;">
+              <div style="font-size:28px;font-weight:bold;color:#1a2c5b;">{pdvsa['leaving']}</div>
+              <div style="font-size:11px;color:#666;">No continuarán</div>
+            </td>
+          </tr>
+        </table>
+        {f'''
+        <div style="margin-top:10px;background:#e8f5e9;border-left:3px solid #4caf50;
+                    border-radius:0 6px 6px 0;padding:8px 12px;font-size:12px;color:#1b5e20;">
+          <strong>✅ Auto-confirmados vía voto presupuestario ({len(pdvsa['auto_confirmed'])}):</strong><br/>
+          { " · ".join(a["partner_name"] for a in pdvsa["auto_confirmed"]) }
+        </div>''' if pdvsa['auto_confirmed'] else ''}
+        <div style="font-size:11px;color:#aaa;margin-top:6px;">
+          Deadline: 08 junio 2026 12:30 p.m. · Total: {pdvsa['total']} familias
+        </div>
+      </div>
+    </td>
+  </tr>
+
   <!-- CTA button -->
   <tr>
     <td style="padding:20px 28px 24px;text-align:center;">
@@ -490,13 +548,15 @@ def main(live):
         f"/ Pend:{t['pending']} | {goal_tag} (+{delta} nuevos)"
     )
 
-    html = _build_html(t, delta, state)
+    pdvsa = _fetch_pdvsa(models, db, uid, key)
+    html  = _build_html(t, delta, state, pdvsa=pdvsa)
 
+    pdvsa = _fetch_pdvsa(models, db, uid, key)
     if not live:
         log.info("DRY RUN — would send: %s", subject)
-        log.info("A=%d B=%d Pending=%d Voted=%d/%d",
-                 t['continuing'], t['leaving'], t['pending'],
-                 t['voted'], t['total'])
+        log.info("A=%d B=%d Pending=%d Voted=%d/%d | PDVSA continuing=%d pending=%d auto=%d",
+                 t['continuing'], t['leaving'], t['pending'], t['voted'], t['total'],
+                 pdvsa['continuing'], pdvsa['pending'], len(pdvsa['auto_confirmed']))
         return
 
     # Create mail.mail via XML-RPC
