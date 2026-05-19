@@ -78,7 +78,7 @@ def _fetch_votes(models, db, uid, key):
     records = call(models, db, uid, key,
         'partner.communication.ack', 'search_read',
         [[('notice_key', '=', NOTICE_KEY)]],
-        {'fields': ['state', 'vote_channel', 'ack_date', 'partner_name',
+        {'fields': ['id', 'state', 'vote_channel', 'ack_date', 'partner_name',
                     'partner_email', 'recorded_by']})
     return records
 
@@ -209,7 +209,11 @@ def _build_html(t, recent_delta, state):
     if voted_records:
         voted_rows = ''.join(
             f'<tr style="border-bottom:1px solid #f0f0f0;">'
-            f'<td style="padding:5px 8px;font-size:12px;color:#333;">{r["partner_name"]}</td>'
+            f'<td style="padding:5px 8px;font-size:12px;">'
+            f'<a href="{ODOO_URL}/web#id={r["id"]}&cids=1&action=840'
+            f'&model=partner.communication.ack&view_type=form"'
+            f' style="color:#2471a3;text-decoration:none;font-weight:bold;"'
+            f' target="_blank">{r["partner_name"]}</a></td>'
             f'<td style="padding:5px 8px;font-size:11px;color:#888;">{r["partner_email"]}</td>'
             f'<td style="padding:5px 8px;font-size:12px;font-weight:bold;'
             f'color:{"#1a2c5b" if r["state"]=="continuing" else "#6c3483"};">'
