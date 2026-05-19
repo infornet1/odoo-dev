@@ -159,7 +159,7 @@ def _get_existing_ack(models, db, uid, key, partner_id):
 
 
 def _create_ack(models, db, uid, key, partner_id, name, email, phone):
-    return call(models, db, uid, key,
+    result = call(models, db, uid, key,
         'partner.communication.ack', 'create', [[{
             'notice_key':    NOTICE_KEY,
             'notice_label':  NOTICE_LABEL,
@@ -168,6 +168,7 @@ def _create_ack(models, db, uid, key, partner_id, name, email, phone):
             'partner_email': email,
             'partner_phone': phone,
         }]])
+    return result[0] if isinstance(result, list) else result
 
 
 def _get_token(models, db, uid, key, ack_id):
@@ -205,10 +206,15 @@ def _create_glenda_vote_conv(models, db, uid, key, name, phone, partner_id):
     if partner_id:
         conv_vals['partner_id'] = partner_id
 
-    conv_id = call(models, db, uid, key,
+    result = call(models, db, uid, key,
         'ai.agent.conversation', 'create', [[conv_vals]])
-    call(models, db, uid, key,
-        'ai.agent.conversation', 'action_start', [[conv_id]])
+    conv_id = result[0] if isinstance(result, list) else result
+    try:
+        call(models, db, uid, key,
+             'ai.agent.conversation', 'action_start', [[conv_id]])
+    except Exception as e:
+        if 'cannot marshal None' not in str(e) and 'NoneType' not in str(e):
+            raise
     return conv_id
 
 
@@ -756,6 +762,22 @@ def main(live, test):
 
     log.info("Recipients to process: %d", len(rows))
 
+    # Build set of emails already in the mail queue (idempotency guard)
+    already_queued = set()
+    if live and not test:
+        queued_mails = call(models, db, uid, key,
+            'mail.mail', 'search_read',
+            [[('subject', 'ilike', 'Consulta Presupuestaria 2026-2027'),
+              ('state', 'in', ['outgoing', 'sent'])]],
+            {'fields': ['email_to'], 'limit': 500})
+        import re as _re
+        for mail in queued_mails:
+            for addr in _re.findall(r'[\w.+\-]+@[\w.\-]+', mail.get('email_to','') or ''):
+                already_queued.add(addr.lower())
+        if already_queued:
+            log.info("Idempotency guard: %d addresses already in mail queue — will skip",
+                     len(already_queued))
+
     sent = skipped = glenda_direct = 0
 
     for row in rows:
@@ -809,6 +831,14 @@ def main(live, test):
                 call(models, db, uid, key,
                      'partner.communication.ack', 'write',
                      [[ack_id], {'partner_phone': phone}])
+
+        # Skip if any of this partner's addresses already queued
+        partner_addrs = set(a.strip().lower()
+            for a in email.replace(';',',').split(',') if a.strip())
+        if already_queued & partner_addrs:
+            log.info("  SKIP %s — email already in queue", name)
+            skipped += 1
+            continue
 
         token  = _get_token(models, db, uid, key, ack_id)
         si_url = f"{ODOO_URL}/partner-ack/{token}/si"

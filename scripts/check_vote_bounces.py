@@ -248,11 +248,17 @@ def _create_glenda_conv(m, db, uid, key, ack, live):
                  ack['partner_name'], ack['partner_phone'])
         return -1  # sentinel for dry-run
 
-    conv_id = call(m, db, uid, key,
+    result = call(m, db, uid, key,
         'ai.agent.conversation', 'create', [[conv_vals]])
+    conv_id = result[0] if isinstance(result, list) else result
     # action_start() processes initial_message → sends WA to parent
-    call(m, db, uid, key,
-        'ai.agent.conversation', 'action_start', [[conv_id]])
+    # Returns None which XML-RPC can't marshal — catch and ignore
+    try:
+        call(m, db, uid, key,
+             'ai.agent.conversation', 'action_start', [[conv_id]])
+    except Exception as e:
+        if 'cannot marshal None' not in str(e) and 'NoneType' not in str(e):
+            raise
     log.info("  Glenda conv #%d created + started for %s",
              conv_id, ack['partner_name'])
     return conv_id
