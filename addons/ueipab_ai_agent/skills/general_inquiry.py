@@ -820,12 +820,13 @@ class GeneralInquirySkill:
                 f"- Puedes ser completamente transparente: confirmar que eres una IA, "
                 f"reconocer limitaciones, explicar cómo funciona el sistema.\n"
                 f"- Si {first} menciona 'tengo una sugerencia', 'mejorar', 'debería poder', "
-                f"'no entendiste', 'fallo en', o similares, captura la sugerencia al final "
-                f"de tu respuesta con el marcador interno:\n"
-                f"  ACTION:LOG_FEEDBACK:categoria|texto_de_la_sugerencia\n"
+                f"'no entendiste', 'fallo en', o similares, captura la sugerencia en una SOLA LÍNEA "
+                f"al final de tu respuesta con el marcador interno:\n"
+                f"  ACTION:LOG_FEEDBACK:categoria|texto_de_la_sugerencia_en_una_sola_linea\n"
                 f"  Categorías válidas: flujo, respuesta, idioma, asistencia, conocimiento, tecnico, otro\n"
                 f"  Ejemplo: ACTION:LOG_FEEDBACK:flujo|Debería poder retomar una conversación anterior sin empezar de cero\n"
-                f"- Agradece siempre la sugerencia calurosamente.\n"
+                f"  IMPORTANTE: el texto debe ir en UNA SOLA LÍNEA sin saltos de línea dentro del marcador.\n"
+                f"- Agradece brevemente la sugerencia. Aplica igual la regla de NO terminar con '¿Hay algo más?'.\n"
                 f"- Si {first} quiere probar un escenario específico (ej: 'actúa como si fuera un representante'), "
                 f"entra en ese rol naturalmente y demuestra tus capacidades.\n"
                 f"- ACTION:LOG_FEEDBACK es un marcador interno. {first} NO lo verá.\n\n"
@@ -1024,17 +1025,20 @@ class GeneralInquirySkill:
             "no a Mariana.\n"
             "REGLAS DE COMUNICACIÓN (basadas en retroalimentación de usuarios):\n"
             "- Un solo mensaje por turno: consolida toda tu respuesta en un único mensaje. Nunca envíes dos mensajes seguidos sobre el mismo tema.\n"
+            "- PROHIBIDO terminar cualquier respuesta con '¿Hay algo más en lo que pueda ayudarte?', "
+            "'¿Puedo ayudarte en algo más?', '¿Necesitas algo más?' o variantes similares. "
+            "Si respondiste la consulta, para ahí. El representante sabe que puede escribirte de nuevo.\n"
             "- DESPEDIDA — REGLA ESTRICTA: cuando el cliente envíe cualquiera de estas frases o similares: "
             "'gracias', 'hasta luego', 'hasta pronto', 'feliz día', 'buenas noches', 'nos vemos', 'adiós', "
             "'chao', 'no es todo', 'eso es todo', 'listo', 'ya es todo', 'muchas gracias', 'mil gracias', "
             "'que tengas', 'que tenga', 'igualmente' — responde con UNA SOLA LÍNEA de cierre y NADA MÁS. "
             "PROHIBIDO: añadir preguntas de seguimiento, ofrecer más ayuda, repetir el saludo, ni enviar "
             "mensajes adicionales. La conversación termina ahí.\n"
-            "  ❌ MAL: '¡Hasta pronto! ¿Puedo ayudarte en algo más hoy? ¡Que tengas un excelente día! ¡Cuídate mucho!'\n"
+            "  ❌ MAL: '¡Hasta pronto! ¿Puedo ayudarte en algo más hoy? ¡Que tengas un excelente día!'\n"
             "  ✅ BIEN: '¡Hasta pronto!'\n"
-            "  ❌ MAL: 'Fue un placer. Si necesitas algo más, aquí estaré. ¡Hasta luego! ¡Que tengas un gran día!'\n"
+            "  ❌ MAL: 'Fue un placer. Si necesitas algo más, aquí estaré. ¡Hasta luego!'\n"
             "  ✅ BIEN: '¡Con mucho gusto! ¡Hasta luego!'\n"
-            "- No insistas después del cierre: si el cliente no ha dicho explícitamente adiós pero el tema claramente terminó (responde 'ok', 'listo', 'entendido', 'perfecto'), responde brevemente y espera — no generes más preguntas.\n"
+            "- No insistas después del cierre: si el cliente no ha dicho explícitamente adiós pero el tema claramente terminó ('ok', 'listo', 'entendido', 'perfecto'), responde brevemente y espera — no generes más preguntas.\n"
             + (
                 "- DEMORAS EN WHATSAPP — REGLA OBLIGATORIA: WhatsApp tiene una demora estructural "
                 "de hasta 5 minutos entre mensajes (el sistema revisa de forma periódica). "
@@ -1172,8 +1176,8 @@ class GeneralInquirySkill:
     def _handle_log_feedback(self, conversation, ai_response, context):
         """Create ai.agent.feedback record if ACTION:LOG_FEEDBACK marker is present."""
         match = re.search(
-            r'ACTION:LOG_FEEDBACK:(\w+)\|(.+?)(?=\nACTION:|\Z)',
-            ai_response, re.MULTILINE | re.DOTALL
+            r'ACTION:LOG_FEEDBACK:(\w+)\|([^\n]+)',
+            ai_response, re.MULTILINE
         )
         if not match:
             return
