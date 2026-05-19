@@ -50,10 +50,16 @@
               action="action_create_collection_standalone"
               sequence="5"/>
 
+    <menuitem id="menu_ai_agent_comunicados"
+              name="Comunicados a Representantes"
+              parent="menu_ai_agent_operations"
+              action="ueipab_attendance_report.action_partner_communication_ack"
+              sequence="6"/>
+
     <menuitem id="menu_ai_agent_calibration"
               name="Programa Calibración"
               parent="menu_ai_agent_operations"
-              sequence="5"/>
+              sequence="7"/>
 
     <menuitem id="menu_ai_agent_feedback"
               name="Sugerencias"
