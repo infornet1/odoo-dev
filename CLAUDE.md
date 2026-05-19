@@ -175,8 +175,8 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.54.1 | 2026-05-19 |
-| ueipab_attendance_report | 17.0.1.6.6 | 2026-05-19 |
+| ueipab_ai_agent | 17.0.1.55.0 | 2026-05-19 |
+| ueipab_attendance_report | 17.0.1.6.9 | 2026-05-19 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
 | ueipab_ari_portal | 17.0.1.0.0 | — (testing only) |
@@ -189,11 +189,11 @@
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| ueipab_attendance_report | 17.0.1.6.8 | Deployed 2026-05-19 — vote audit fields (partner_phone/vote_channel/recorded_by/vote_notes/bounce_wa_sent); staff wizard; open-form button |
+| ueipab_attendance_report | 17.0.1.6.9 | Deployed 2026-05-19 — freescout_conv_id field; vote wizard; open-form button |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.54.1 | Deployed 2026-05-19 — inscription pre-flight + aspirantes del exterior + dedup Telegram footer + no "¿Hay algo más?" rule + LOG_FEEDBACK regex fix |
+| ueipab_ai_agent | 17.0.1.55.0 | Deployed 2026-05-19 — ACTION:RECORD_VOTE + voting window prompt + FreeScout close on WA vote + FS config in ir.config_parameter |
 
 ---
 
