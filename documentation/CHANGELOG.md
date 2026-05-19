@@ -17,7 +17,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 **Technical:** `pagos_faq_email_checker` now wrapped with `flock -n /tmp/lock.pagos_faq_checker` (previously had no overlap guard — safe at 30 min, required at 5 min).
 
-**Reverting after voting:** Reduce `pagos_faq_email_checker` back to `*/10` or `*/15` after 26/05 results.
+**Permanent change** — fast response is better UX year-round for all pagos@ FAQ topics (not just budget voting).
 
 ---
 
