@@ -308,9 +308,8 @@ def _base_html(body_content: str, title_override: str = None) -> str:
 <div class="wrapper">
   <!-- Header -->
   <div class="header">
-    <div class="logo-wrap">
-      <img src="{LOGO_URL}" alt="UEIPAB Logo">
-    </div>
+    <img src="{LOGO_URL}" alt="UEIPAB Logo" width="72" height="72"
+         style="width:72px;height:72px;border-radius:50%;display:block;margin:0 auto 12px;border:3px solid rgba(255,255,255,0.3);object-fit:cover;">
     <h1>Control de Asistencia</h1>
     <p>U.E.I.P.A.B.</p>
   </div>
