@@ -95,7 +95,8 @@ def _tally(records):
         s = r.get('state', 'pending')
         by_state[s] = by_state.get(s, 0) + 1
 
-        ch = r.get('vote_channel') or ('unknown' if s != 'pending' else None)
+        # Records voted before audit fields (v6.7) have no channel — default to email_link
+        ch = r.get('vote_channel') or ('email_link' if s != 'pending' else None)
         if ch:
             by_channel[ch] = by_channel.get(ch, 0) + 1
 
