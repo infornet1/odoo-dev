@@ -111,19 +111,32 @@ def _tally(records):
             except Exception:
                 pass
 
-    voted = by_state['continuing'] + by_state['leaving']
+    voted   = by_state['continuing'] + by_state['leaving']
+    goal    = (total // 2) + 1          # 50%+1 of eligible families
+    leading = max(by_state['continuing'], by_state['leaving'])
+    leading_option = 'A' if by_state['continuing'] >= by_state['leaving'] else 'B'
+    votes_needed   = max(0, goal - leading)
+    pct_to_goal    = min(100, round(leading / goal * 100)) if goal else 0
+    goal_reached   = leading >= goal
+
     return {
-        'total':        total,
-        'voted':        voted,
-        'continuing':   by_state['continuing'],
-        'leaving':      by_state['leaving'],
-        'pending':      by_state['pending'],
-        'by_channel':   by_channel,
-        'recent':       recent,
-        'pct_a':        round(by_state['continuing'] / voted * 100) if voted else 0,
-        'pct_b':        round(by_state['leaving']    / voted * 100) if voted else 0,
-        'pct_voted':    round(voted / total * 100) if total else 0,
-        '_all_records': records,
+        'total':          total,
+        'voted':          voted,
+        'continuing':     by_state['continuing'],
+        'leaving':        by_state['leaving'],
+        'pending':        by_state['pending'],
+        'by_channel':     by_channel,
+        'recent':         recent,
+        'pct_a':          round(by_state['continuing'] / voted * 100) if voted else 0,
+        'pct_b':          round(by_state['leaving']    / voted * 100) if voted else 0,
+        'pct_voted':      round(voted / total * 100) if total else 0,
+        'goal':           goal,
+        'leading':        leading,
+        'leading_option': leading_option,
+        'votes_needed':   votes_needed,
+        'pct_to_goal':    pct_to_goal,
+        'goal_reached':   goal_reached,
+        '_all_records':   records,
     }
 
 
@@ -332,6 +345,42 @@ def _build_html(t, recent_delta, state):
         </tr>
       </table>
 
+      <!-- Goal tracker -->
+      {"" if t['goal_reached'] else f'''
+      <div style="margin-top:20px;background:#fff8e1;border:1px solid #ffe082;
+                  border-radius:8px;padding:14px 18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:bold;color:#e65100;">
+            🎯 Meta de aprobación — Opción {t["leading_option"]}
+          </span>
+          <span style="font-size:12px;color:#e65100;font-weight:bold;">
+            {t["leading"]} / {t["goal"]} votos ({t["pct_to_goal"]}%)
+          </span>
+        </div>
+        <div style="background:#ffe0b2;border-radius:4px;height:14px;width:100%;">
+          <div style="background:{"#e65100" if t["pct_to_goal"] < 50 else "#f57c00" if t["pct_to_goal"] < 80 else "#ff8f00"};
+                      border-radius:4px;height:14px;width:{t["pct_to_goal"]}%;"></div>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#bf360c;text-align:center;">
+          Faltan <strong>{t["votes_needed"]}</strong> votos para alcanzar la mayoría simple
+          ({t["goal"]} = 50%+1 de {t["total"]} familias)
+        </div>
+      </div>
+      '''}
+      {"" if not t['goal_reached'] else f'''
+      <div style="margin-top:20px;background:#e8f5e9;border:2px solid #66bb6a;
+                  border-radius:8px;padding:14px 18px;text-align:center;">
+        <div style="font-size:22px;">✅</div>
+        <div style="font-size:15px;font-weight:bold;color:#1b5e20;margin-top:4px;">
+          ¡META ALCANZADA! Opción {t["leading_option"]} tiene mayoría simple
+        </div>
+        <div style="font-size:12px;color:#2e7d32;margin-top:4px;">
+          {t["leading"]} votos ≥ {t["goal"]} (50%+1 de {t["total"]} familias)
+        </div>
+      </div>
+      '''}
+
       <!-- Progress bar voted / total -->
       <div style="margin-top:16px;">
         <div style="display:flex;justify-content:space-between;
@@ -432,9 +481,13 @@ def main(live):
         log.info("No new votes since last run — skipping send.")
         return
 
+    goal_tag = (
+        f"✅ META A:{t['continuing']}" if t['goal_reached']
+        else f"🎯 faltan {t['votes_needed']} para meta"
+    )
     subject = (
-        f"🗳️ Votación 2026-2027 — A:{t['continuing']} / B:{t['leaving']} "
-        f"/ Pend:{t['pending']} (+{delta} nuevos)"
+        f"🗳️ Votación — A:{t['continuing']} / B:{t['leaving']} "
+        f"/ Pend:{t['pending']} | {goal_tag} (+{delta} nuevos)"
     )
 
     html = _build_html(t, delta, state)
