@@ -1,9 +1,9 @@
 # PDVSA Continuity Campaign — Período 2026-2027
 
-**Status:** Testing complete ✅ — Production deploy pending Friday 2026-05-15
+**Status:** Production live ✅ — 84 families emailed 2026-05-19 (enhanced send)
 **See also:** [Representante campaign](REPRESENTANTE_CONTINUITY_CAMPAIGN.md) — same infrastructure, letter pending
-**Created:** 2026-05-11
-**Module:** `ueipab_attendance_report` v17.0.1.6.0
+**Created:** 2026-05-11 | **Updated:** 2026-05-19
+**Module:** `ueipab_attendance_report` v17.0.1.6.5
 **Script:** `scripts/send_pdvsa_communication.py`
 **Deploy runbook:** [PDVSA_DEPLOY_FRIDAY_20260515.md](PDVSA_DEPLOY_FRIDAY_20260515.md)
 
@@ -167,16 +167,20 @@ docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
 
 ## Production Deployment
 
-**Target: Friday 2026-05-15, ~9:00 AM VET**
+**Deployed:** 2026-05-15 (initial, 71 partners) + 2026-05-19 (enhanced re-send, 84 partners)
 
 See full step-by-step runbook: **[PDVSA_DEPLOY_FRIDAY_20260515.md](PDVSA_DEPLOY_FRIDAY_20260515.md)**
 
-Summary:
-1. Backup DB_UEIPAB
-2. Copy + upgrade `ueipab_attendance_report` v17.0.1.5.2 → v17.0.1.6.0
-3. Add `partner-ack` to prod nginx location regex
-4. Test send to partner id=7 (Gustavo, `gustavo.perdomo@ueipab.edu.ve`)
-5. Full blast — **71 partners**
+### 2026-05-19 Enhanced Re-Send
+
+Email enhanced with **📊 Nueva Propuesta Económica 2026-2027** section:
+- Option A ($218.88) / Option B ($236.58) mini-cards
+- Google Slides CTA → `16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA`
+- WhatsApp + Telegram + pagos@ query channels
+- **CC:** `pagos@ueipab.edu.ve` | **Reply-To:** `pagos@ueipab.edu.ve`
+- Source: Customers spreadsheet col O=Yes + col C=ACTIVE → **84 families**
+- Delivery: 71 sent / 13 outgoing at check → all 84 delivered by mail queue
+- 1 mailto fallback — RAFAEL DUERTO (no Odoo partner)
 
 ---
 
@@ -184,37 +188,61 @@ Summary:
 
 ### Capability 2 — WA Reminder Blast (Script)
 
-**Status:** Pending implementation
+**Status:** Messages approved — script pending implementation
 **Target run date:** June 3–5, 2026 (3–5 days before deadline)
 
 Script: `scripts/send_pdvsa_wa_reminders.py` (to be created)
 
 **Logic:**
 1. Connect to Odoo via XML-RPC (prod env file)
-2. Query `partner.communication.ack` → `state=pending` + `sent_date < now - 7 days` + `notice_key = pdvsa_continuacion_2026_2027`
+2. Query `partner.communication.ack` → `state=pending` + `notice_key = pdvsa_continuacion_2026_2027`
 3. For each: look up `res.partner.mobile` (fallback `phone`), normalize to `+58` format
-4. Send WA via MassivaMóvil with direct YES/NO deep-links
+4. Send WA via MassivaMóvil — Message 1 on first send; Message 2 as final reminder
 5. Respect 120 s anti-spam delay between sends
 
-**WA message template:**
+---
+
+#### Mensaje 1 — Anuncio principal (send after / alongside email)
+
 ```
-Hola {first_name} 👋
+Hola 👋 Estimado(a) representante,
 
-Le recordamos que tiene pendiente confirmar su continuidad en el
-*Colegio Andrés Bello* para el período 2026-2027.
+Le escribimos para informarle que acaba de recibir un correo importante de nuestra parte con el asunto:
 
-📅 *Fecha límite: lunes 08 de junio a las 12:30 p.m.*
+📧 "¿Continuará en el Colegio 2026-2027? + Propuesta Económica"
 
-Por favor confirme su decisión:
-✅ Continuaré → {si_url}
-❌ No continuaré → {no_url}
+En él encontrará información sobre los cambios en la política de descuento para colaboradores PDVSA/Petropiar a partir del 1° de septiembre de 2026, así como la propuesta económica del nuevo período escolar.
 
-¿Preguntas? Escríbanos a votacion@ueipab.edu.ve
+Le pedimos que lo revise con calma y confirme su decisión antes del *lunes 08 de junio de 2026 a las 12:30 p.m.*
+
+📌 No lo encuentra? Revise su carpeta de *spam* o escríbanos aquí.
+
+ℹ️ *Nota:* Se evaluarán *Casos Especiales* para familias con estudiantes de méritos destacados (académico, deportivo, artístico). Si es su caso, indíquelo a votacion@ueipab.edu.ve
+
+Instituto Privado "Andrés Bello" 🏫
 ```
 
-**Coverage:** 65 of 74 testing partners have mobile. Production TBD.
+---
 
-**Run command:**
+#### Mensaje 2 — Recordatorio final (send June 5–6, days before deadline)
+
+```
+⏰ Recordatorio — *08 de junio, fecha límite*
+
+Estimado(a) representante, le recordamos que aún está a tiempo de responder la encuesta sobre su continuidad en el Colegio Andrés Bello para el período *2026-2027*.
+
+Busque en su correo el mensaje de *votacion@ueipab.edu.ve* y haga clic en el enlace de respuesta.
+
+¿No lo recibió o necesita ayuda? Escríbame aquí y le reenvío su enlace personal 🙏
+
+_Fecha límite: lunes 08/06/2026 · 12:30 pm_
+```
+
+---
+
+**Coverage:** Production: 84 families emailed; mobile coverage TBD (query `res.partner.mobile` on tag 26).
+
+**Run command (once script is built):**
 ```bash
 LIVE=true python3 /opt/odoo-dev/scripts/send_pdvsa_wa_reminders.py --env production
 ```
@@ -257,12 +285,12 @@ def _build_pdvsa_survey_context(self):
 
 | Component | Status |
 |---|---|
-| `partner.communication.ack` model | ✅ Testing |
-| Public ACK routes `/partner-ack/` | ✅ Testing (nginx updated) |
-| HR tracking view | ✅ Testing |
-| Send script (email, 3-button design) | ✅ Testing — 4 iterations, final v4 sent |
+| `partner.communication.ack` model | ✅ Production |
+| Public ACK routes `/partner-ack/` | ✅ Production (nginx updated) |
+| HR tracking view | ✅ Production |
+| Send script (email, 3-button + budget section) | ✅ Production — 84 families sent 2026-05-19 |
 | CC `votacion@` on outbound + ACK | ✅ Verified |
-| School logo in email header | ✅ `dev.ueipab.edu.ve/flyers/ueipab_logo.png` |
-| Production deploy | ⏳ **Friday 2026-05-15** |
-| Capability 2 — WA reminders | ⏳ Implement before Jun 3 |
+| School logo in email header | ✅ Production |
+| notice_key-aware confirmation pages (v6.5) | ✅ Production 2026-05-19 |
+| Capability 2 — WA messages | ✅ Messages approved — script pending (run Jun 3–5) |
 | Capability 3 — Glenda stats | ⏳ Pending |
