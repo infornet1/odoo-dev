@@ -485,7 +485,7 @@ Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) t
 
 ### Budget Consultation 2026-2027 (Feature #60)
 
-**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 30min; markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`.
+**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 5min weekdays+weekends 06:00–21:00 VET (bumped from 30min 2026-05-19); markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si|no`.
 
 ---
 

@@ -468,7 +468,7 @@ When a customer replies at any point, `reminder_count` resets to 0.
 
 Bridge script that detects when customers reply to verification emails in Freescout and auto-resolves conversations.
 
-**Script:** `scripts/ai_agent_email_checker.py`
+**Script:** `scripts/ai_agent_email_checker.py` | **Cron:** every 5 min (bumped from 15 min 2026-05-19)
 
 **Flow:**
 1. Query Odoo for conversations with `verification_email_sent_date` set + state=`waiting`
@@ -488,8 +488,8 @@ Bridge script that detects when customers reply to verification emails in Freesc
 # Manual
 python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py
 
-# Cron (every 15 minutes)
-*/15 * * * * python3 /opt/odoo-dev/scripts/ai_agent_email_checker.py >> /var/log/ai_agent_email_checker.log 2>&1
+# Cron (every 5 minutes, flock-protected)
+5,10,15,20,25,30,35,40,45,50,55,0 * * * * root flock -n /tmp/lock.ai_email_checker bash -c '...'
 ```
 
 **Configuration:** Same as `daily_bounce_processor.py` (Odoo XML-RPC + Freescout MySQL credentials via pymysql). `DRY_RUN=True` by default.

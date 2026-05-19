@@ -4,6 +4,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-19 — Freescout Cron Intervals: Near-Real-Time Response
+
+**Type:** Infrastructure / Cron | **Scope:** `/etc/cron.d/` (host crons, not git-tracked)
+
+### Changes
+
+| Cron | Before | After | Reason |
+|---|---|---|---|
+| `pagos_faq_email_checker` | 30 min, Mon–Fri only | **5 min, Mon–Sun 06:00–21:00 VET** | Voting period — parents email evenings/weekends; 30 min unacceptable for FAQ auto-reply |
+| `ai_agent_email_checker` | 15 min (4×/hour) | **5 min (12×/hour)** | Align with escalation bridge; bounce customers waiting for verification |
+
+**Technical:** `pagos_faq_email_checker` now wrapped with `flock -n /tmp/lock.pagos_faq_checker` (previously had no overlap guard — safe at 30 min, required at 5 min).
+
+**Reverting after voting:** Reduce `pagos_faq_email_checker` back to `*/10` or `*/15` after 26/05 results.
+
+---
+
 ## 2026-05-19 — ueipab_ai_agent v52.0: Glenda Welcome Menu + Budget UX
 
 **Module:** `ueipab_ai_agent` | **Environments:** Both (testing + production)
