@@ -98,7 +98,11 @@ _BUDGET_KNOWLEDGE = (
     "- Promedio general: 15,80 puntos en Media General\n"
     "- Campeón intermunicipal en Tenis de Mesa, subcampeona en Ajedrez\n"
     "- Primeros en Venezuela en implementar enciclopedia digital Edugogo\n"
-    "INCENTIVO ESPECIAL: Si el representante se auto-inscribe usando Glenda y Akdemia, recibirá un bono sorpresa de descuento en la inscripción.\n"
+    "INCENTIVO ESPECIAL — DESCUENTO GLENDA + AKDEMIA (13%):\n"
+    "Si el representante se auto-inscribe usando Glenda y Akdemia, recibe 13% de descuento\n"
+    "sobre la inscripción anticipada: $187,51 × 0,87 = *$163,13* (ahorro de $24,38).\n"
+    "Menciona este beneficio activamente cuando el representante pregunte por inscripción,\n"
+    "costos o cuando vote vía WhatsApp durante la consulta presupuestaria.\n"
 )
 
 # Shared institutional knowledge block (same content as bounce_resolution)
@@ -1203,6 +1207,13 @@ class GeneralInquirySkill:
             "Pronto pago (días 1-10): $224,75 · Costo anual: $3.075,55\n"
             "\n"
             "Ambas incluyen los mismos servicios educativos STEAM+G.\n"
+            "\n"
+            "🎉 *Inscripción anticipada* (hasta el 31 de julio):\n"
+            "Inscripción $187,51 + mensualidad septiembre $197,38.\n"
+            "Aplica para ambas opciones. Requiere 2025-2026 saldado.\n"
+            "\n"
+            "💡 *Descuento extra del 13%* al inscribirse por Glenda + Akdemia:\n"
+            "Inscripción desde *$163,13* (ahorro de $24,38). ¡Solo por este canal!\n"
             "\n"
             "*¿Cuál es su preferencia, A o B?*\n"
             "---\n"
