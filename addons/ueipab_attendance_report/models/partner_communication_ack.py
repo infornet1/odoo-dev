@@ -16,6 +16,7 @@ class PartnerCommunicationAck(models.Model):
                                    required=True, ondelete='cascade', index=True)
     partner_name  = fields.Char(string='Nombre', readonly=True)
     partner_email = fields.Char(string='Email', readonly=True)
+    partner_phone = fields.Char(string='Teléfono WA', readonly=True)
     token        = fields.Char(string='Token', copy=False, index=True, readonly=True)
     state        = fields.Selection([
         ('pending',     'Pendiente'),
@@ -27,6 +28,18 @@ class PartnerCommunicationAck(models.Model):
     ack_ip       = fields.Char(string='IP', readonly=True)
     days_pending = fields.Integer(string='Días sin respuesta',
                                   compute='_compute_days_pending')
+
+    # ── Audit trail ────────────────────────────────────────────────────────────
+    vote_channel = fields.Selection([
+        ('email_link', 'Enlace de correo'),
+        ('whatsapp',   'WhatsApp (Glenda)'),
+        ('phone',      'Teléfono (staff)'),
+        ('in_person',  'Presencial'),
+    ], string='Canal de voto', readonly=True)
+    recorded_by  = fields.Many2one('res.users', string='Registrado por',
+                                   readonly=True, ondelete='set null')
+    vote_notes   = fields.Text(string='Notas de auditoría')
+    bounce_wa_sent = fields.Boolean(string='WA de rebote enviado', default=False)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -57,18 +70,35 @@ class PartnerCommunicationAck(models.Model):
         base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         return f"{base}/partner-ack/{self.token}/no"
 
+    def _record_decision(self, decision, channel=None, notes=None, user_id=None):
+        """Central write method used by controller, wizard, and Glenda handler."""
+        vals = {
+            'state':        decision,
+            'ack_date':     fields.Datetime.now(),
+            'vote_channel': channel or 'email_link',
+        }
+        if notes:
+            vals['vote_notes'] = notes
+        if user_id:
+            vals['recorded_by'] = user_id
+        self.write(vals)
+
     def action_mark_continuing(self):
         for rec in self:
             if rec.state == 'pending':
-                rec.write({'state': 'continuing', 'ack_date': fields.Datetime.now(),
-                           'ack_ip': 'manual-hr'})
+                rec._record_decision('continuing', channel='in_person',
+                                     user_id=self.env.user.id)
 
     def action_mark_leaving(self):
         for rec in self:
             if rec.state == 'pending':
-                rec.write({'state': 'leaving', 'ack_date': fields.Datetime.now(),
-                           'ack_ip': 'manual-hr'})
+                rec._record_decision('leaving', channel='in_person',
+                                     user_id=self.env.user.id)
 
     def action_reset_pending(self):
         for rec in self:
-            rec.write({'state': 'pending', 'ack_date': False, 'ack_ip': False})
+            rec.write({
+                'state': 'pending', 'ack_date': False, 'ack_ip': False,
+                'vote_channel': False, 'recorded_by': False,
+                'vote_notes': False, 'bounce_wa_sent': False,
+            })

@@ -43,7 +43,12 @@ class PartnerAckController(http.Controller):
         if ack.state != 'pending':
             return self._respond(self._page_already_done(ack))
         ip = self._client_ip()
-        ack.write({'state': decision, 'ack_date': datetime.datetime.now(), 'ack_ip': ip})
+        ack.write({
+            'state':        decision,
+            'ack_date':     datetime.datetime.now(),
+            'ack_ip':       ip,
+            'vote_channel': 'email_link',
+        })
         _logger.info('partner_ack: %s decision=%s ip=%s', ack.partner_name, decision, ip)
         self._send_ack_confirmation(ack, decision)
         if decision == 'continuing':

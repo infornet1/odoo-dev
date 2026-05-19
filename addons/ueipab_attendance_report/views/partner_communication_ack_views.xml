@@ -21,13 +21,21 @@
                 <field name="notice_key"   optional="hide"/>
                 <field name="partner_name"/>
                 <field name="partner_email"/>
-                <field name="sent_date"    optional="show"/>
+                <field name="partner_phone" optional="hide"/>
+                <field name="sent_date"     optional="show"/>
                 <field name="state" widget="badge"
                        decoration-warning="state == 'pending'"
                        decoration-success="state == 'continuing'"
                        decoration-info="state == 'leaving'"/>
+                <field name="vote_channel" widget="badge"
+                       decoration-info="vote_channel == 'email_link'"
+                       decoration-success="vote_channel == 'whatsapp'"
+                       decoration-warning="vote_channel in ('phone','in_person')"
+                       optional="show"/>
+                <field name="recorded_by"  optional="show"/>
                 <field name="ack_date"     optional="show"/>
                 <field name="days_pending" optional="show"/>
+                <field name="bounce_wa_sent" optional="hide"/>
             </tree>
         </field>
     </record>
@@ -38,10 +46,10 @@
         <field name="arch" type="xml">
             <form string="Comunicado a Representante">
                 <header>
-                    <button name="action_mark_continuing" string="Marcar: Continuará"
+                    <button name="action_mark_continuing" string="✅ Registrar: Opción A"
                             type="object" class="btn-primary"
                             invisible="state != 'pending'"/>
-                    <button name="action_mark_leaving" string="Marcar: No continuará"
+                    <button name="action_mark_leaving" string="🔵 Registrar: Opción B"
                             type="object"
                             invisible="state != 'pending'"/>
                     <button name="action_reset_pending" string="Reiniciar a Pendiente"
@@ -60,19 +68,29 @@
                             <field name="partner_id"/>
                             <field name="partner_name"/>
                             <field name="partner_email"/>
+                            <field name="partner_phone"/>
                         </group>
                     </group>
                     <group>
-                        <group string="Estado">
+                        <group string="Votación">
                             <field name="sent_date"/>
                             <field name="ack_date"/>
                             <field name="ack_ip"/>
+                            <field name="vote_channel" widget="badge"
+                                   decoration-info="vote_channel == 'email_link'"
+                                   decoration-success="vote_channel == 'whatsapp'"
+                                   decoration-warning="vote_channel in ('phone','in_person')"/>
+                            <field name="recorded_by"/>
                             <field name="days_pending"
                                    invisible="state != 'pending'"/>
                         </group>
-                        <group string="Token">
+                        <group string="Sistema">
                             <field name="token"/>
+                            <field name="bounce_wa_sent"/>
                         </group>
+                    </group>
+                    <group string="Notas de auditoría">
+                        <field name="vote_notes" nolabel="1"/>
                     </group>
                 </sheet>
             </form>
@@ -89,15 +107,26 @@
                 <field name="notice_key"/>
                 <filter string="Pendientes"      name="pending"
                         domain="[('state','=','pending')]"/>
-                <filter string="Continuarán"     name="continuing"
+                <filter string="Opción A"        name="continuing"
                         domain="[('state','=','continuing')]"/>
-                <filter string="No continuarán"  name="leaving"
+                <filter string="Opción B"        name="leaving"
                         domain="[('state','=','leaving')]"/>
+                <separator/>
+                <filter string="Enlace de correo" name="ch_email"
+                        domain="[('vote_channel','=','email_link')]"/>
+                <filter string="WhatsApp"         name="ch_whatsapp"
+                        domain="[('vote_channel','=','whatsapp')]"/>
+                <filter string="Teléfono/Presencial" name="ch_staff"
+                        domain="[('vote_channel','in',['phone','in_person'])]"/>
+                <filter string="WA de rebote enviado" name="bounce_sent"
+                        domain="[('bounce_wa_sent','=',True)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Campaña"  name="group_notice"
                             context="{'group_by':'notice_key'}"/>
                     <filter string="Decisión" name="group_state"
                             context="{'group_by':'state'}"/>
+                    <filter string="Canal"    name="group_channel"
+                            context="{'group_by':'vote_channel'}"/>
                 </group>
             </search>
         </field>
