@@ -330,8 +330,12 @@ See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) f
 - **Employee default:** `_get_payroll_employees()` — latest closed `hr.payslip.run` employees (e.g. MAYO15 = 44). Fallback: `contract_ids.state='open'`. Wizard file: `ueipab_attendance_report/wizard/hr_attendance_report_wizard.py`
 - **Resend skips acknowledged:** `action_resend_reports()` domain includes `('state','!=','acknowledged')` + guard in `_send_emails()`. Never re-emails employees who already confirmed.
 - **No UI timeout:** `force_send=False` in `_send_emails()` — emails queue as `state='outgoing'`, mail queue cron delivers. Before: 44 × 2.5s = 110s → HTTP worker killed. After: <1s return.
-- **ACK CC (v6.4):** `attendance_ack.py` `_notify_rrhh()` — every time an employee confirms via `/attendance-ack/<token>`, a `mail.mail` is queued to `recursoshumanos@ueipab.edu.ve` with employee name, period, datetime, and IP.
+- **Mail queue cron:** id=3 "Mail: Email Queue Manager" in production. `force_send=False` means emails wait for next scheduled run. If immediate delivery needed, trigger manually: `models.execute_kw(db, uid, key, 'ir.cron', 'method_direct_trigger', [[3]])`. Sent `mail.mail` records are deleted from table on success (0 results = all sent).
+- **ACK CC (v6.4):** `attendance_ack.py` `_notify_rrhh()` — fires when employee confirms via `/attendance-ack/<token>` only. CC to `recursoshumanos@ueipab.edu.ve` is on ACK confirmation, NOT on reminder send.
 - **States:** `draft` → `sent` (queued) → `acknowledged` (confirmed via token link). `is_historical` records auto-acknowledged on create.
+- **ORM query fields:** `date_from`, `date_to`, `month` (int), `year` (int), `quincena` (`'1'`/`'2'`). NOT `period_start`/`period_end` — those don't exist and raise `ValueError`.
+- **Production email template:** id=53 "Attendance Report - Quincenal" (`ueipab_attendance_report.email_template_attendance_report`).
+- **Test account exclusion:** "Administrador 3Dv" has two duplicate `hr.employee` records (ids 574 and 764, both `tdv.devs@gmail.com`, no dept/job). Exclude from all attendance sends: `('employee_id','not in',[574,764])`.
 
 ### WA & Email Invoice Reminder
 
