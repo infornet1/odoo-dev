@@ -25,16 +25,20 @@ class ARIExcelGenerator(models.AbstractModel):
 
     # Cell mapping for the official SENIAT AR-I template
     CELL_MAP = {
+        # Header: form identifier (top-right merged area Q4:AB4)
+        'form_title': 'Q4',
+
         # Section 1-3: Personal Info
         'name': 'A14',
         'cedula_tipo': 'I14',
         'cedula_numero': 'K14',
         'rif_tipo': 'S14',
-        'rif_numero': 'T14',
+        # rif digits are written individually to T14:AB14 (9 cells, one per digit)
 
-        # Section 4: Employers
+        # Section 4: Employers (empresa_a includes company RIF inline)
         'empresa_a': 'A18',
         'empresa_b': 'A20',
+        # G18:O18 is the employer-c slot — repurposed for additional employer c
         'empresa_c': 'G18',
         'empresa_d': 'G20',
 
@@ -43,6 +47,9 @@ class ARIExcelGenerator(models.AbstractModel):
         'var_junio': 'S19',
         'var_septiembre': 'U19',
         'var_diciembre': 'W19',
+
+        # Section 6: Año Gravable
+        'fiscal_year': 'Z18',
 
         # Section A: Income
         'income_a': 'C26',
@@ -77,6 +84,9 @@ class ARIExcelGenerator(models.AbstractModel):
         'lugar': 'B88',
         'fecha': 'E88',
     }
+
+    # Individual RIF digit cells (T14 through AB14, left to right)
+    _RIF_DIGIT_CELLS = ['T14', 'U14', 'V14', 'W14', 'X14', 'Y14', 'Z14', 'AA14', 'AB14']
 
     @api.model
     def _get_template_path(self):
@@ -114,10 +124,19 @@ class ARIExcelGenerator(models.AbstractModel):
         wb = openpyxl.load_workbook(template_path)
         ws = wb.active
 
+        # Rename sheet to canonical name
+        ws.title = 'AR-I'
+
         # Get employee data
         employee = ari_record.employee_id
         contract = ari_record.contract_id
         company = ari_record.company_id or self.env.company
+
+        # --- HEADER: form identifier ---
+        ws[self.CELL_MAP['form_title']] = 'AR-I'
+
+        # --- SECTION 6: Año Gravable ---
+        ws[self.CELL_MAP['fiscal_year']] = ari_record.fiscal_year or date.today().year
 
         # --- FILL PERSONAL INFO (Sections 1-3) ---
         ws[self.CELL_MAP['name']] = employee.name or ''
@@ -140,10 +159,10 @@ class ARIExcelGenerator(models.AbstractModel):
         except ValueError:
             ws[self.CELL_MAP['cedula_numero']] = cedula_numero
 
-        # Parse RIF (if available, otherwise use cedula)
+        # Parse RIF — derive from cedula when no dedicated rif field exists
         rif = getattr(employee, 'rif', None) or ''
         if not rif and cedula:
-            rif = cedula  # Use cedula as RIF if not specified
+            rif = cedula
         rif_tipo = 'V'
         rif_numero = ''
         if rif:
@@ -155,13 +174,17 @@ class ARIExcelGenerator(models.AbstractModel):
                 rif_numero = rif.replace('-', '').replace('.', '')
 
         ws[self.CELL_MAP['rif_tipo']] = rif_tipo
-        try:
-            ws[self.CELL_MAP['rif_numero']] = int(rif_numero) if rif_numero else ''
-        except ValueError:
-            ws[self.CELL_MAP['rif_numero']] = rif_numero
+        # Write RIF digits one per cell across T14:AB14 (9 digit slots)
+        rif_padded = rif_numero.zfill(9) if rif_numero else '000000000'
+        for idx, cell_coord in enumerate(self._RIF_DIGIT_CELLS):
+            ws[cell_coord] = int(rif_padded[idx]) if idx < len(rif_padded) else 0
 
         # --- FILL EMPLOYERS (Section 4) ---
-        ws[self.CELL_MAP['empresa_a']] = company.name or 'U.E.I.P. AGUSTIN BRICEÑO'
+        # Include company RIF inline with the name (no dedicated cell in template)
+        company_name = company.name or 'U.E.I.P. AGUSTIN BRICEÑO'
+        company_vat = company.vat or ''
+        empresa_a_text = f'{company_name}  RIF: {company_vat}' if company_vat else company_name
+        ws[self.CELL_MAP['empresa_a']] = empresa_a_text
         ws[self.CELL_MAP['empresa_b']] = ari_record.employer_b_name or ''
         ws[self.CELL_MAP['empresa_c']] = ari_record.employer_c_name or ''
         ws[self.CELL_MAP['empresa_d']] = ari_record.employer_d_name or ''

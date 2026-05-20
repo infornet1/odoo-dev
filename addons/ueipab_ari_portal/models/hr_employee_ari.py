@@ -751,9 +751,9 @@ class HrEmployeeARI(models.Model):
     def _check_fiscal_year(self):
         current_year = fields.Date.today().year
         for rec in self:
-            if rec.fiscal_year < current_year - 1 or rec.fiscal_year > current_year + 1:
+            if rec.fiscal_year < current_year - 1 or rec.fiscal_year > current_year:
                 raise ValidationError(_(
-                    'Fiscal year must be within one year of current year.'
+                    'El año gravable debe ser el año en curso o el año anterior.'
                 ))
 
     @api.constrains('deduction_housing', 'deduction_housing_type', 'ut_value')

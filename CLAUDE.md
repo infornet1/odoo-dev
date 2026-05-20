@@ -64,7 +64,7 @@
 | 46 | Glenda Daily Executive Digest | Production | Script + Cron | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 47 | Employee Private Info Request | Production | `ueipab_hr_employee` | [Docs](documentation/EMPLOYEE_INFO_REQUEST.md) |
 | 48 | Liquidación V2 Forecast | Production | `ueipab_payroll_enhancements` | Nómina→Reports→Pronóstico Liquidación V2; PDF + Excel |
-| 49 | PDVSA Continuity Campaign | Production | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026; 2026-05-19: enhanced email + budget section fired to 84 ACTIVE families; CC pagos@; Reply-To pagos@; ACK → parent + votacion@ |
+| 49 | PDVSA Continuity Campaign | Production | `ueipab_attendance_report` | [Docs](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) — deadline 08-Jun-2026 |
 | 50 | Representante Continuity Campaign | Pending (letter not ready) | `ueipab_attendance_report` | [Docs](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) |
 | 51 | Glenda Auto Draft Payment (WA) | Production | `ueipab_ai_agent` | [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 52 | Pagos@ Email Receipt Processor | Production | Script | `scripts/pagos_receipt_processor.py` — [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
@@ -75,20 +75,20 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; deep-link `EMP_{id}` |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py`; see Key Technical Patterns |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP`; see Key Technical Patterns |
-| 60 | Budget Consultation 2026-2027 | Production | `ueipab_ai_agent` + Script | price gate lifted 2026-05-18; vote email script ready (`scripts/send_budget_vote_email.py`); 226 recipients; results 26-May; [Docs](documentation/BUDGET_VOTE_EMAIL.md) |
+| 60 | Budget Consultation 2026-2027 | Production | `ueipab_ai_agent` + Script | price gate lifted; [Docs](documentation/BUDGET_VOTE_EMAIL.md) |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
 | 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules + PDF; Jun 1 Primaria / Jun 2 Media General |
-| 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` — 279 sent 2026-05-17; `--live` to resend |
-| 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → explains polling delay + recommends Telegram; WA-channel only (v47.5) |
-| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com; blast 2026-05-18 (322 recipients) |
-| 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on every ACK (v6.4) |
-| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve; asesora Johanna Hernández https://wa.me/584248340051 |
-| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `💾 Guardar Borrador` + `🚀 Iniciar Ahora`; `initial_message` on conv — skips greeting |
-| 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json` (199 families); phone/name → monthly+grades+forecast Jun–Aug+annual costs; `sync_family_billing.py` 07:30 VET |
-| 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; hourly (voting week); scores 1–5; CEO email + OdooBot DM + WA if critical |
-| 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` — 7-section HTML guide; sent to CS staff 2026-05-18 |
-| 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | `get_greeting()` structured 5-option menu; `get_system_prompt()` — audience context, menu routing, balance gate, A vs B quotation; Telegram footer on WA |
-| 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py` — injects last 1-2 resolved convs (7-day window) into system prompt; enables follow-up continuity without re-greeting |
+| 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` |
+| 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → recommends Telegram; WA-channel only |
+| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com |
+| 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on ACK |
+| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve |
+| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `initial_message` skips greeting |
+| 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json`; `sync_family_billing.py` 07:30 VET; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical |
+| 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` |
+| 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | 5-option menu; balance gate; A vs B quotation; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
+| 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 resolved convs injected (7-day window) |
 
 ---
 
@@ -161,40 +161,20 @@
 
 ## Module Versions
 
-### Odoo Base Container
+**Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
 
-| Environment | Image | Build | Odoo Commit | Updated |
-|-------------|-------|-------|-------------|---------|
-| Testing | `odoo:17.0` | `17.0-20260504` | `d66bb0d7` | 2026-05-10 |
-| Production | `odoo:17.0` | `17.0-20260504` | `d66bb0d7` | 2026-05-10 |
-
-### Testing Environment
-
-| Module | Version | Last Update |
-|--------|---------|-------------|
-| hr_payroll_community | 17.0.1.0.0 | 2025-11-28 |
-| ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
-| ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
-| ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.56.0 | 2026-05-20 |
-| ueipab_attendance_report | 17.0.1.6.10 | 2026-05-20 |
-| ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
-| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
-| ueipab_ari_portal | 17.0.1.0.0 | — (testing only) |
-| ohrms_loan | 17.0.1.0.0 | — (testing only) |
-| ohrms_loan_accounting | 17.0.1.0.0 | — (testing only) |
-
-### Production Environment
-
-| Module | Version | Status |
-|--------|---------|--------|
-| ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
-| ueipab_hr_contract | 17.0.2.0.0 | Current |
-| ueipab_attendance_report | 17.0.1.6.10 | Deployed 2026-05-20 |
-| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
-| ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
-| ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.56.0 | Deployed 2026-05-20 — `_get_prior_conversation_summary()`: prior conv history (7-day window) injected into system prompt for follow-up continuity |
+| Module | Version | Notes |
+|--------|---------|-------|
+| hr_payroll_community | 17.0.1.0.0 | testing only |
+| ueipab_payroll_enhancements | 17.0.1.70.2 | both |
+| ueipab_hr_contract | 17.0.2.0.0 | both |
+| ueipab_bounce_log | 17.0.1.4.0 | both |
+| ueipab_ai_agent | 17.0.1.56.0 | both |
+| ueipab_attendance_report | 17.0.1.6.10 | both |
+| ueipab_hr_employee | 17.0.1.3.0 | both |
+| ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
+| ueipab_ari_portal | 17.0.1.1.0 | testing only |
+| ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 
 ---
 
@@ -293,13 +273,7 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Iniciar Conversación (v51):** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately. `initial_message` skips greeting; cleared after send. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
 
-**Meet links (v51.3):** 19 mayo 3pm → `meet.google.com/dxk-yyjr-jzg`; 20 mayo 2pm → `meet.google.com/joa-hyjw-dob`.
-
-**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Haiku scores `general_inquiry` convs 1–5. Digest → CEO email + OdooBot DM + WA if critical. State: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
-
-**Glenda Welcome Menu + Budget UX (Feature #72 — v52.0):** `get_greeting()` → 5-option menu (saldo/propuesta/inscripcion/info/otro) + Telegram footer on WA. `get_system_prompt()` → audience context, PRIMER CONTACTO menu, balance gate (saldo 2025-2026 first), A vs B quotation. Budget = `general_inquiry` skill.
-
-**Glenda Prior Conversation History (Feature #73 — v56.0):** `_get_prior_conversation_summary(conversation)` static method in `GeneralInquirySkill`. Called from `get_context()` as `prior_history` key; injected in `get_system_prompt()` after `contact_ctx`. Queries last 1-2 resolved convs (7-day window) for same contact — match priority: `telegram_chat_id` > identified `partner_id` > `phone`. Returns `HISTORIAL PREVIO` block with "hace X min/h/días" timestamps + up to 4 message snippets (150 chars each). Directive tells Claude to skip welcome menu and answer directly when message continues a prior topic. Returns `''` (no cost) when no history exists.
+**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; state: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
 
 ### Glenda Technical Patterns
 

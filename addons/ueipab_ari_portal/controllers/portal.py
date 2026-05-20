@@ -5,6 +5,8 @@ AR-I Portal Controller
 Handles employee self-service portal for AR-I declarations.
 """
 
+from datetime import date as dt_date
+
 from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
@@ -126,6 +128,7 @@ class ARIPortal(CustomerPortal):
                 monthly = contract.ueipab_salary_v2
             estimated_income = monthly * 16  # 12 months + 4 months bonuses
 
+        current_year = dt_date.today().year
         values = {
             'employee': employee,
             'contract': contract,
@@ -133,6 +136,8 @@ class ARIPortal(CustomerPortal):
             'page_name': 'ari_new',
             'error': {},
             'error_message': [],
+            'current_year': current_year,
+            'available_years': [current_year - 1, current_year],
         }
         return request.render('ueipab_ari_portal.portal_ari_form', values)
 
@@ -167,8 +172,7 @@ class ARIPortal(CustomerPortal):
         # Prepare values
         vals = {
             'employee_id': employee.id,
-            'fiscal_year': int(post.get('fiscal_year', request.env.cr.execute(
-                "SELECT EXTRACT(YEAR FROM CURRENT_DATE)::INT") or 2025)),
+            'fiscal_year': int(post.get('fiscal_year', dt_date.today().year)),
             'variation_month': post.get('variation_month', 'january'),
             'is_variation': post.get('is_variation') == 'on',
             'income_employer_primary': float(post.get('income_employer_primary', 0)),
