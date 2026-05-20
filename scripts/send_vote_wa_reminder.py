@@ -152,22 +152,20 @@ def load_pdvsa_excluded_phones(db, uid, key, models):
 # ── Build blast list ──────────────────────────────────────────────────────────
 
 def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
-                     pdvsa_excl_phones, pdvsa_excl_emails, target_phone=None):
+                     pdvsa_excl_phones, pdvsa_excl_emails,
+                     followup=False, target_phone=None):
     to_blast = []
     skipped_voted, skipped_wa_done, skipped_no_ack, skipped_pdvsa = 0, 0, 0, 0
 
     for sr in sheet_rows:
-        # Single-phone filter for testing
         if target_phone and sr['phone'] != target_phone:
             continue
 
-        # Exclude PDVSA families that haven't confirmed continuity
+        # Exclude PDVSA families that confirmed leaving
         if sr['phone'] in pdvsa_excl_phones:
-            log.info("PDVSA-excl (phone): %s", sr['name'])
             skipped_pdvsa += 1
             continue
         if any(em in pdvsa_excl_emails for em in sr['emails']):
-            log.info("PDVSA-excl (email): %s", sr['name'])
             skipped_pdvsa += 1
             continue
 
@@ -189,14 +187,19 @@ def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
             skipped_voted += 1
             continue
 
-        if ack.get('bounce_wa_sent'):
-            log.info("WA already sent to %s — skipping", sr['name'])
-            skipped_wa_done += 1
-            continue
-
         if not ack.get('token'):
             log.warning("No token on ACK id=%s for %s — skipping", ack['id'], sr['name'])
             continue
+
+        if followup:
+            # Follow-up: only those who already got the first WA and still haven't voted
+            if not ack.get('bounce_wa_sent'):
+                continue
+        else:
+            # Initial blast: skip anyone who already received the first WA
+            if ack.get('bounce_wa_sent'):
+                skipped_wa_done += 1
+                continue
 
         to_blast.append({
             'name':    sr['name'],
@@ -205,9 +208,10 @@ def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
             'ack_id':  ack['id'],
         })
 
+    mode = "follow-up" if followup else "initial"
     log.info(
-        "Blast list: %d to send | %d voted | %d WA done | %d PDVSA-excl | %d no ACK",
-        len(to_blast), skipped_voted, skipped_wa_done, skipped_pdvsa, skipped_no_ack,
+        "[%s] Blast list: %d to send | %d voted | %d WA done | %d PDVSA-excl | %d no ACK",
+        mode, len(to_blast), skipped_voted, skipped_wa_done, skipped_pdvsa, skipped_no_ack,
     )
     return to_blast
 
@@ -216,18 +220,40 @@ def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
 
 def build_message(name, token):
     first = name.split()[0].capitalize()
+    link_a   = f'{ODOO_BASE_URL}/partner-ack/{token}/si'
+    link_b   = f'{ODOO_BASE_URL}/partner-ack/{token}/no'
+    slides   = 'https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA'
+    telegram = 'https://t.me/GlendaUeipabBot'
+    return (
+        f"Hola {first} 👋\n\n"
+        f"Soy *Glenda*, la asistente virtual del Colegio Andrés Bello.\n\n"
+        f"Le escribo porque aún no hemos recibido su voto en la "
+        f"*Consulta Presupuestaria 2026-2027* y nos gustaría contar con su opinión.\n\n"
+        f"📊 Puede revisar la propuesta completa aquí:\n{slides}\n\n"
+        f"¿Desea votar ahora? Seleccione su preferencia:\n\n"
+        f"✅ *Opción A* — $218.88/mes\n{link_a}\n\n"
+        f"✅ *Opción B* — $236.58/mes\n{link_b}\n\n"
+        f"⏰ La consulta cierra el *26 de mayo a las 12:30pm*.\n\n"
+        f"¿Tiene preguntas? Estoy disponible en Telegram para una respuesta más rápida 👇\n"
+        f"{telegram}\n\n"
+        f"¡Gracias por su participación! 🙏"
+    )
+
+
+def build_followup_message(name, token):
+    """Shorter nudge for parents who received the first blast but haven't voted yet."""
+    first  = name.split()[0].capitalize()
     link_a = f'{ODOO_BASE_URL}/partner-ack/{token}/si'
     link_b = f'{ODOO_BASE_URL}/partner-ack/{token}/no'
     return (
-        f"Hola {first} 👋\n\n"
-        f"Soy *Glenda*, el asistente del Colegio Andrés Bello.\n\n"
-        f"Aún no hemos recibido su voto en la *Consulta Presupuestaria 2026-2027*. "
-        f"¡Su participación es muy importante!\n\n"
-        f"Vote haciendo clic en su preferencia:\n\n"
+        f"Hola {first} 👋 Soy *Glenda* del Colegio Andrés Bello.\n\n"
+        f"Le recuerdo que su voto en la *Consulta Presupuestaria* "
+        f"aún está pendiente. ¡Queda poco tiempo!\n\n"
+        f"⏰ *Cierra el 26 de mayo a las 12:30pm*\n\n"
+        f"Vote aquí:\n"
         f"✅ *Opción A* — $218.88/mes\n{link_a}\n\n"
         f"✅ *Opción B* — $236.58/mes\n{link_b}\n\n"
-        f"⏰ La consulta cierra el *23 de mayo*.\n\n"
-        f"Si tiene preguntas, escríbame aquí 😊"
+        f"¡Gracias! 🙏"
     )
 
 
@@ -268,15 +294,17 @@ def mark_wa_sent(db, uid, key, models, ack_id, dry_run):
 
 def main():
     parser = argparse.ArgumentParser(description='Vote WA reminder blast')
-    parser.add_argument('--live', action='store_true', help='Actually send (default: dry run)')
-    parser.add_argument('--phone', metavar='584XXXXXXXXX', help='Test single phone number')
+    parser.add_argument('--live',     action='store_true', help='Actually send (default: dry run)')
+    parser.add_argument('--followup', action='store_true', help='Follow-up mode: nudge those who got 1st WA but still pending')
+    parser.add_argument('--phone',    metavar='584XXXXXXXXX', help='Test single phone number')
     args = parser.parse_args()
 
     dry_run = not args.live
+    mode_label = "FOLLOW-UP" if args.followup else "INITIAL BLAST"
     if dry_run:
-        log.info("=== DRY RUN — pass --live to send ===")
+        log.info("=== DRY RUN [%s] — pass --live to send ===", mode_label)
     else:
-        log.info("=== LIVE MODE ===")
+        log.info("=== LIVE MODE [%s] ===", mode_label)
 
     wa_cfg                        = load_wa_config()
     db, uid, key, models          = load_odoo()
@@ -286,6 +314,7 @@ def main():
     to_blast                      = build_blast_list(
         sheet_rows, ack_by_email, ack_by_phone,
         pdvsa_excl_ph, pdvsa_excl_em,
+        followup=args.followup,
         target_phone=args.phone,
     )
 
@@ -302,10 +331,12 @@ def main():
         log.info("Starting in 5s — Ctrl+C to abort...")
         time.sleep(5)
 
+    msg_builder = build_followup_message if args.followup else build_message
+
     sent_ok, sent_fail = 0, 0
     for i, entry in enumerate(to_blast, 1):
         name, phone, token, ack_id = entry['name'], entry['phone'], entry['token'], entry['ack_id']
-        msg = build_message(name, token)
+        msg = msg_builder(name, token)
 
         log.info("[%d/%d] %s — %s", i, total, name, phone)
         if dry_run:
