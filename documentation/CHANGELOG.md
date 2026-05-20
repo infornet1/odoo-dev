@@ -4,6 +4,13 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-20 — DMARC p=reject → p=quarantine (Akdemia DKIM fix pending)
+
+- **Problem:** Akdemia sends notification emails FROM `@ueipab.edu.ve` via SendGrid IP `50.31.44.87` (`em.akdemia.com`). DMARC for `ueipab.edu.ve` was `p=reject pct=100`. Google Workspace rejected all 4 recipients with `550 5.7.26 Unauthenticated email`. Root cause: (1) SPF alignment fails — Return-Path `@em.akdemia.com` ≠ org domain `ueipab.edu.ve`; (2) no DKIM signing for `ueipab.edu.ve` from Akdemia/SendGrid. Adding Akdemia's IP to SPF alone cannot fix DMARC alignment.
+- **Immediate fix:** Changed DigitalOcean DMARC record (id=1818865872) from `p=reject` → `p=quarantine`. Akdemia emails now land in recipients' spam instead of being hard-rejected. TTL=3600s propagation within 1h.
+- **Permanent fix required:** Set up DKIM domain authentication in Akdemia/SendGrid dashboard for `ueipab.edu.ve` → receive 3 CNAME records → add to DigitalOcean → verify → revert DMARC to `p=reject`.
+- **Note:** SPF upgrade to `-all` must NOT proceed until DKIM is confirmed working.
+
 ## 2026-05-20 — Attendance check_out Auto-fill via Router 2 WiFi Log
 
 **Script:** `scripts/attendance_daily_alert.py` — evening mode enhanced (no version bump, host script)

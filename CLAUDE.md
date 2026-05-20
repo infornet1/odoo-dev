@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-20 (v24)
+**Last Updated:** 2026-05-20 (v25)
 
 ## Core Instructions
 
@@ -356,6 +356,8 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 ### DMARC Report Processor
 
 See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md). Script: `scripts/dmarc_report_processor.py`; cron 10:30 UTC daily. Source: FreeScout `finanzas@` (mailbox_id=5). IP classes: `good`/`third_party`/`unknown`. Alert: unknown IPs with dkim/spf=pass → OdooBot DM. Akdemia SendGrid `50.31.44.87` = `third_party` (expected). SPF upgrade to `-all` planned ~2026-05-27.
+
+**⚠️ DMARC status (2026-05-20):** Policy changed `p=reject` → `p=quarantine` (DigitalOcean record id=1818865872) because Akdemia sends emails FROM `@ueipab.edu.ve` via SendGrid (`em.akdemia.com`) without DKIM signing for `ueipab.edu.ve`. SPF alignment also fails (Return-Path: `@em.akdemia.com` ≠ `ueipab.edu.ve`). Akdemia emails now land in spam instead of being hard-rejected. **Pending permanent fix:** set up DKIM domain authentication in Akdemia/SendGrid for `ueipab.edu.ve` → add 3 CNAME records to DigitalOcean → revert DMARC to `p=reject`. DO NOT upgrade SPF to `-all` until DKIM is working.
 
 ### HTML Email / WA Broadcast Templates (ad-hoc)
 
