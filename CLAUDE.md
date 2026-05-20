@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-20 (v23)
+**Last Updated:** 2026-05-20 (v24)
 
 ## Core Instructions
 
@@ -304,6 +304,30 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 ### Glenda Technical Patterns
 
 See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) for full reference on: Silent Timeout/Quiet Hours, OdooBot Bridge (Discuss), Auto Draft Payment / Journal Map, BCV Rate Context, Invoice Balance Query, Daily Executive Digest, Quotation Engine & Enrollment info.
+
+### Attendance Daily Alert + check_out Auto-fill (scripts/attendance_daily_alert.py)
+
+**Script:** `scripts/attendance_daily_alert.py` | **Crons:** `/etc/cron.d/attendance_daily_alert`
+- `30 11 * * 1-5` — morning mode 11:30 VET (recap yesterday)
+- `30 23 * * 1-5` — evening mode 23:30 VET (auto-fill today)
+
+**Morning mode (11:30 VET):** checks yesterday's records — no attendance, missing exit, < 5h worked. Sends HTML email to employee CC recursoshumanos@. Special-schedule employees (571/606/610) skip absent + short-hours checks.
+
+**Evening mode (23:30 VET):** for employees with `check_in` but no `check_out` today:
+1. Loads `email → {hotspot_usernames}` from `payroll_db.wifi_hotspot_users` (same DB as `sync_mikrotik_attendance.py`)
+2. **One SSH call** to Router 2 (HapAC3 at `172.28.10.10` via ZeroTier): `/ log print where topics~"hotspot" and message~"logged out" and time>="DATE 06:00:00" and time<="DATE 18:00:00"` (~30s scan of 32k-entry in-memory log)
+3. Python filters results by employee username → picks latest logout per employee
+4. **WiFi logout found + < 20:00 VET + after check_in** → write `check_out = WiFi time` (e.g. 13:12 VET)
+5. **Fallback** (no WiFi data / not mapped) → write `check_out = 14:00 VET (18:00 UTC)`
+6. No email sent in either case. Special-schedule employees (571/606/610) skipped entirely.
+
+**State file:** `scripts/attendance_daily_alert_state.json` — keys `morning_DATE_EMPID` / `evening_DATE_EMPID`. Entries > 14 days pruned on each run.
+
+**Router log retention:** 32,800 entries in-memory, goes back ~1 month (Router 2, `memory-lines` effectively unlimited). VET timezone confirmed (America/Caracas).
+
+**WiFi coverage:** 8/45 employees currently have mappings in `wifi_hotspot_users`. Expand by adding rows with `user_category='odoo_user', enabled=1`. Both `nlarosa` (laptop) and `celnlarosa` (cell) map to the same employee — latest logout wins.
+
+**SolarWinds Observability** (formerly Papertrail) — token in `/home/ftpuser/odoo-dev/trail.txt`. API: `GET https://api.na-01.cloud.solarwinds.com/v1/logs?filter=USERNAME&limit=N` with `Authorization: Bearer TOKEN`. Only capturing logs from 2026-05-20 onwards — not a reliable historical source yet.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 

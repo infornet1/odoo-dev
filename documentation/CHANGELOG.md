@@ -4,6 +4,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-20 — Attendance check_out Auto-fill via Router 2 WiFi Log
+
+**Script:** `scripts/attendance_daily_alert.py` — evening mode enhanced (no version bump, host script)
+
+- **Phase 1 (earlier today):** Evening cron replaced "missing check_out" email alert with silent auto-fill. Instead of sending an email to the employee, writes `check_out = 14:00 VET (18:00 UTC)` directly on the `hr.attendance` record via Odoo XML-RPC. No email sent.
+- **Phase 2 (this session):** Auto-fill now uses the employee's **actual WiFi departure time** from Router 2 (HapAC3) hotspot log when available:
+  - One SSH call (sshpass → ZeroTier `172.28.10.10`) queries all hotspot `logged out` events during school hours (06:00–18:00 VET) in a single router command
+  - Python filters results per employee using `payroll_db.wifi_hotspot_users` username mapping (same table as `sync_mikrotik_attendance.py`)
+  - WiFi logout time used if found and before 20:00 VET; otherwise 14:00 VET fallback
+  - Router in-memory log has 32,800 entries (~1 month of history); query takes ~30s (linear scan — acceptable for nightly background cron)
+- **Norka La Rosa (May 19):** WiFi showed device left at 13:12 VET (2 min after kiosk check-in at 13:10 VET). Auto-fill will write 13:12 instead of 14:00 for employees with WiFi mappings.
+- **SolarWinds Observability API** researched: `GET /v1/logs?filter=USERNAME` with Bearer token works but only has data from today onwards (remote logging recently activated).
+
 ## 2026-05-20 — Glenda Prior Conversation History (v56.0)
 
 **Feature #73** — `ueipab_ai_agent` 17.0.1.56.0
