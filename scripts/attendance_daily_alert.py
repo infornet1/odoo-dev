@@ -14,8 +14,12 @@ Two modes:
     Special-schedule employees (571, 606, 610) skip absent + short-hours checks.
 
   evening  (19:30 VET = 23:30 UTC) — after sync crons (22:30 + 22:35 UTC)
-    • Has check_in today but check_out is still False → "Registro de salida pendiente"
-    Special-schedule employees are skipped entirely.
+    • Has check_in today but check_out is still False AND check_in < 14:00 VET:
+      → AUTO-FILLS check_out = 14:00 VET (18:00 UTC) on the hr.attendance record.
+      → No email sent to the employee.
+    • Has check_in today but check_out is still False AND check_in >= 14:00 VET:
+      → Skipped silently (edge case — late check-in, not safe to auto-fill).
+    Special-schedule employees (571, 606, 610) are skipped entirely.
 
 Excluded employees:
   • IDs 574 and 764 (test accounts, tdv.devs@gmail.com)
@@ -57,6 +61,7 @@ EXCLUDE_EMPLOYEE_IDS = {574, 764}        # test accounts — Administrador 3Dv
 SPECIAL_SCHEDULE_IDS = {571, 606, 610}   # maintenance / security — non-standard hours
 
 MIN_WORKED_HOURS = 5.0                   # below this → short-hours alert
+AUTO_CHECKOUT_VET_HOUR = 14              # 14:00 VET = 18:00 UTC — school day end for auto-fill
 
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RRHH_EMAIL = 'recursoshumanos@ueipab.edu.ve'
@@ -483,6 +488,20 @@ def trigger_mail_queue():
     except Exception as e:
         logger.warning("Failed to trigger mail queue: %s", e)
 
+
+def auto_fill_checkout(att_id: int, checkout_utc_str: str) -> bool:
+    """Write check_out on an hr.attendance record. Returns True on success."""
+    if DRY_RUN:
+        logger.info("  [DRY] Would write check_out=%s on attendance id=%d",
+                    checkout_utc_str, att_id)
+        return True
+    try:
+        odoo_execute('hr.attendance', 'write', [[att_id], {'check_out': checkout_utc_str}])
+        return True
+    except Exception as e:
+        logger.error("  Failed to auto-fill check_out on attendance id=%d: %s", att_id, e)
+        return False
+
 # ============================================================================
 # Evening mode: missing check-out
 # ============================================================================
@@ -495,30 +514,27 @@ def run_evening(employees, state, holidays):
         logger.info("Today (%s) is a holiday — skipping evening check", target)
         return 0
 
-    employee_ids = [e['id'] for e in employees]
-    emp_map = {e['id']: e for e in employees}
+    # Auto-checkout time: 14:00 VET = 18:00 UTC
+    checkout_dt      = datetime(target.year, target.month, target.day,
+                                AUTO_CHECKOUT_VET_HOUR, 0, 0) + VET_OFFSET
+    checkout_utc_str = checkout_dt.strftime('%Y-%m-%d %H:%M:%S')
 
-    attendance = get_attendance_for_date(employee_ids, target)
+    employee_ids = [e['id'] for e in employees]
+    attendance   = get_attendance_for_date(employee_ids, target)
     logger.info("  Attendance records found today: %d", len(attendance))
 
-    sent = 0
+    filled = 0
     for emp in employees:
         emp_id   = emp['id']
         emp_name = emp['name']
-        emp_email = emp.get('work_email') or ''
 
-        # Skip special schedule for evening entirely
+        # Skip special schedule employees entirely (non-standard hours)
         if emp_id in SPECIAL_SCHEDULE_IDS:
             logger.debug("  %s — special schedule, skipping evening", emp_name)
             continue
 
-        if not emp_email:
-            logger.warning("  %s — no work_email, cannot send", emp_name)
-            continue
-
         rec = attendance.get(emp_id)
         if not rec:
-            # No attendance at all today — no check-out issue to flag
             continue
 
         check_in_utc = rec.get('check_in')
@@ -527,30 +543,37 @@ def run_evening(employees, state, holidays):
         if not check_in_utc:
             continue
 
-        # Only alert if check_in exists AND check_out is missing/False
+        # Only process if check_out is missing
         if check_out and check_out is not False:
             continue
 
         state_key = f"evening_{target}_{emp_id}"
         if not TEST_EMAIL and state_key in state:
-            logger.info("  %s — already alerted this evening (%s), skipping",
-                        emp_name, state[state_key])
+            logger.debug("  %s — already processed this evening, skipping", emp_name)
+            continue
+
+        # Guard: check_in must be before the auto-checkout cutoff.
+        # If someone checked in at or after 14:00 VET, auto-filling 14:00 would be
+        # invalid (check_out <= check_in). Skip silently — no email, no fill.
+        if check_in_utc >= checkout_utc_str:
+            logger.info("  %s — check_in (%s UTC) at or after cutoff (%s UTC), skipping",
+                        emp_name, check_in_utc[:16], checkout_utc_str[:16])
             continue
 
         check_in_vet = utc_to_vet(check_in_utc)
-        subject      = f"⏰ Registro de salida pendiente — {target.strftime('%d/%m/%Y')}"
-        body_html    = build_evening_email(emp_name, check_in_vet, target)
+        att_id = rec['id']
 
-        logger.info("  ALERT evening: %s <%s> check_in=%s check_out=missing",
-                    emp_name, emp_email,
-                    check_in_vet.strftime('%H:%M') if check_in_vet else '?')
+        logger.info("  AUTO-FILL: %s — check_in=%s VET → check_out=14:00 VET (att id=%d)",
+                    emp_name,
+                    check_in_vet.strftime('%H:%M') if check_in_vet else '?',
+                    att_id)
 
-        queue_email(emp_email, subject, body_html)
-        if not DRY_RUN and not TEST_EMAIL:
-            state[state_key] = datetime.now().isoformat()
-        sent += 1
+        if auto_fill_checkout(att_id, checkout_utc_str):
+            if not DRY_RUN and not TEST_EMAIL:
+                state[state_key] = datetime.now().isoformat()
+            filled += 1
 
-    return sent
+    return filled
 
 # ============================================================================
 # Morning mode: yesterday's recap
@@ -719,13 +742,12 @@ def main():
 
     # Run the selected mode
     if mode == 'morning':
-        sent = run_morning(employees, state, holidays)
+        count = run_morning(employees, state, holidays)
+        if count > 0:
+            trigger_mail_queue()
     else:
-        sent = run_evening(employees, state, holidays)
-
-    # Trigger mail queue if any emails were queued
-    if sent > 0:
-        trigger_mail_queue()
+        count = run_evening(employees, state, holidays)
+        # Evening mode auto-fills attendance records — no emails, no mail queue needed
 
     # Save state
     save_state(state)
@@ -735,7 +757,10 @@ def main():
     print('SUMMARY')
     print('=' * 65)
     print(f"  Mode     : {mode}")
-    print(f"  Sent     : {sent} email(s)")
+    if mode == 'morning':
+        print(f"  Sent     : {count} email(s)")
+    else:
+        print(f"  Auto-filled : {count} check_out record(s) → 14:00 VET")
     print(f"  DRY_RUN  : {DRY_RUN}")
     print()
 
