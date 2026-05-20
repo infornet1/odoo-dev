@@ -14,11 +14,14 @@ Two modes:
     Special-schedule employees (571, 606, 610) skip absent + short-hours checks.
 
   evening  (19:30 VET = 23:30 UTC) — after sync crons (22:30 + 22:35 UTC)
-    • Has check_in today but check_out is still False AND check_in < 14:00 VET:
-      → AUTO-FILLS check_out = 14:00 VET (18:00 UTC) on the hr.attendance record.
-      → No email sent to the employee.
-    • Has check_in today but check_out is still False AND check_in >= 14:00 VET:
-      → Skipped silently (edge case — late check-in, not safe to auto-fill).
+    • Has check_in today but check_out is still False AND check_in < resolved checkout:
+      → Queries Router 2 (HapAC3) via SSH for the employee's last WiFi 'logged out'
+        event today (uses wifi_hotspot_users username mapping from payroll_db).
+      → If WiFi logout found and < 20:00 VET: AUTO-FILLS with that exact time.
+      → If not found (not on WiFi / no mapping): AUTO-FILLS with 14:00 VET fallback.
+      → No email sent in either case.
+    • Has check_in today but check_out is still False AND check_in >= resolved checkout:
+      → Skipped silently (edge case — late check-in, WiFi data before check-in, etc.).
     Special-schedule employees (571, 606, 610) are skipped entirely.
 
 Excluded employees:
@@ -45,6 +48,8 @@ import argparse
 import json
 import logging
 import os
+import re
+import subprocess
 import xmlrpc.client
 from datetime import date, datetime, timedelta
 
@@ -62,6 +67,19 @@ SPECIAL_SCHEDULE_IDS = {571, 606, 610}   # maintenance / security — non-standa
 
 MIN_WORKED_HOURS = 5.0                   # below this → short-hours alert
 AUTO_CHECKOUT_VET_HOUR = 14              # 14:00 VET = 18:00 UTC — school day end for auto-fill
+WIFI_LOGOUT_CAP_HOUR = 20               # ignore WiFi logouts at or after 20:00 VET
+
+# Mikrotik Router 2 (HapAC3) — hotspot session log source
+MIKROTIK_HOST = '172.28.10.10'          # ZeroTier VPN address
+MIKROTIK_USER = 'odooapi'
+MIKROTIK_PASS = 'Steam*1'
+
+# WiFi username mapping DB (payroll_db — same DB as sync_mikrotik_attendance)
+WIFI_DB = {
+    'host': 'localhost', 'port': 3306,
+    'user': 'bcv_script', 'password': 'oCurrency*1',
+    'database': 'payroll_db', 'charset': 'utf8mb4',
+}
 
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RRHH_EMAIL = 'recursoshumanos@ueipab.edu.ve'
@@ -489,6 +507,97 @@ def trigger_mail_queue():
         logger.warning("Failed to trigger mail queue: %s", e)
 
 
+def _load_wifi_email_to_usernames() -> dict:
+    """Return {work_email_lower: {username, ...}} from wifi_hotspot_users table.
+
+    Both the laptop username (e.g. 'nlarosa') and cell username ('celnlarosa')
+    are included so we capture whichever device was last seen on the hotspot.
+    Returns an empty dict on any DB error — callers fall back to fixed 14:00.
+    """
+    import pymysql
+    mapping = {}
+    try:
+        conn = pymysql.connect(**WIFI_DB)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT hotspot_username, odoo_login
+                    FROM wifi_hotspot_users
+                    WHERE user_category = 'odoo_user' AND enabled = 1
+                """)
+                for username, email in cur.fetchall():
+                    if username and email:
+                        mapping.setdefault(email.lower(), set()).add(username.lower())
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.warning("WiFi DB lookup failed — checkout will use fixed fallback: %s", e)
+    return mapping
+
+
+def _router_ssh(command: str) -> str:
+    """Run a RouterOS command via SSH and return stdout. Empty string on failure."""
+    try:
+        result = subprocess.run(
+            ['sshpass', '-p', MIKROTIK_PASS,
+             'ssh',
+             '-o', 'StrictHostKeyChecking=no',
+             '-o', 'ConnectTimeout=10',
+             '-o', 'LogLevel=ERROR',
+             f'{MIKROTIK_USER}@{MIKROTIK_HOST}',
+             command],
+            capture_output=True, text=True, timeout=60,
+        )
+        return result.stdout
+    except Exception as e:
+        logger.warning("Mikrotik SSH error: %s", e)
+        return ''
+
+
+def _get_all_wifi_logouts(username_set: set, target_vet_date: date) -> dict:
+    """One SSH call to Router 2 to find the last 'logged out' event per username today.
+
+    Queries ALL hotspot logout events during school hours and filters by username
+    on the Python side.  This is faster than building a long OR condition in
+    the router query (Mikrotik scans ~32k log entries linearly regardless).
+
+    Router timestamps are in VET (America/Caracas — confirmed).
+    Returns {username_lower: last_logout_vet_datetime}.
+    """
+    if not username_set:
+        return {}
+
+    # Broad query: all hotspot logouts during school hours.
+    # Python filters to the relevant usernames — avoids a long router-side OR clause.
+    date_str = target_vet_date.strftime('%Y-%m-%d')
+    cmd = (
+        f'/ log print where topics~"hotspot"'
+        f' and message~"logged out"'
+        f' and time>="{date_str} 06:00:00"'
+        f' and time<="{date_str} 18:00:00"'
+    )
+
+    output = _router_ssh(cmd)
+    result = {}
+
+    for line in output.splitlines():
+        line = line.strip()
+        # Line format: "2026-05-19 13:12:59 hotspot,info,debug nlarosa (192.168.10.x): logged out..."
+        m = re.match(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+\S+\s+(\w+)\s', line)
+        if not m:
+            continue
+        try:
+            ts       = datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
+            username = m.group(2).lower()
+            if username in username_set:
+                if username not in result or ts > result[username]:
+                    result[username] = ts
+        except ValueError:
+            pass
+
+    return result
+
+
 def auto_fill_checkout(att_id: int, checkout_utc_str: str) -> bool:
     """Write check_out on an hr.attendance record. Returns True on success."""
     if DRY_RUN:
@@ -514,62 +623,98 @@ def run_evening(employees, state, holidays):
         logger.info("Today (%s) is a holiday — skipping evening check", target)
         return 0
 
-    # Auto-checkout time: 14:00 VET = 18:00 UTC
-    checkout_dt      = datetime(target.year, target.month, target.day,
-                                AUTO_CHECKOUT_VET_HOUR, 0, 0) + VET_OFFSET
-    checkout_utc_str = checkout_dt.strftime('%Y-%m-%d %H:%M:%S')
+    # Fixed fallback checkout: 14:00 VET = 18:00 UTC
+    fallback_vet     = datetime(target.year, target.month, target.day,
+                                AUTO_CHECKOUT_VET_HOUR, 0, 0)
+    fallback_utc_str = (fallback_vet + VET_OFFSET).strftime('%Y-%m-%d %H:%M:%S')
 
     employee_ids = [e['id'] for e in employees]
     attendance   = get_attendance_for_date(employee_ids, target)
     logger.info("  Attendance records found today: %d", len(attendance))
 
-    filled = 0
+    # ── Pre-scan: identify candidates and load WiFi data in one shot ──────────
+
+    # Load email → {username, ...} mapping from payroll DB
+    wifi_email_map = _load_wifi_email_to_usernames()
+    logger.info("  WiFi username map: %d email mappings loaded", len(wifi_email_map))
+
+    # Identify employees who need auto-fill to gather their WiFi usernames
+    candidates = []
+    all_wifi_usernames = set()
     for emp in employees:
-        emp_id   = emp['id']
-        emp_name = emp['name']
-
-        # Skip special schedule employees entirely (non-standard hours)
-        if emp_id in SPECIAL_SCHEDULE_IDS:
-            logger.debug("  %s — special schedule, skipping evening", emp_name)
+        if emp['id'] in SPECIAL_SCHEDULE_IDS:
             continue
-
-        rec = attendance.get(emp_id)
-        if not rec:
+        rec = attendance.get(emp['id'])
+        if not rec or not rec.get('check_in'):
             continue
-
-        check_in_utc = rec.get('check_in')
-        check_out    = rec.get('check_out')
-
-        if not check_in_utc:
+        co = rec.get('check_out')
+        if co and co is not False:
             continue
-
-        # Only process if check_out is missing
-        if check_out and check_out is not False:
-            continue
-
-        state_key = f"evening_{target}_{emp_id}"
+        state_key = f"evening_{target}_{emp['id']}"
         if not TEST_EMAIL and state_key in state:
-            logger.debug("  %s — already processed this evening, skipping", emp_name)
             continue
+        candidates.append(emp)
+        email = (emp.get('work_email') or '').lower()
+        all_wifi_usernames.update(wifi_email_map.get(email, set()))
 
-        # Guard: check_in must be before the auto-checkout cutoff.
-        # If someone checked in at or after 14:00 VET, auto-filling 14:00 would be
-        # invalid (check_out <= check_in). Skip silently — no email, no fill.
-        if check_in_utc >= checkout_utc_str:
-            logger.info("  %s — check_in (%s UTC) at or after cutoff (%s UTC), skipping",
-                        emp_name, check_in_utc[:16], checkout_utc_str[:16])
-            continue
+    # One SSH call to Router 2 for all affected usernames
+    wifi_logouts = {}
+    if all_wifi_usernames:
+        logger.info("  Querying Router 2 WiFi log for %d username(s)...",
+                    len(all_wifi_usernames))
+        wifi_logouts = _get_all_wifi_logouts(all_wifi_usernames, target)
+        logger.info("  WiFi logout events found: %d username(s)", len(wifi_logouts))
+    else:
+        logger.info("  No WiFi usernames mapped — all will use fallback 14:00 VET")
 
+    # ── Main loop: auto-fill each candidate ───────────────────────────────────
+
+    filled = 0
+    for emp in candidates:
+        emp_id       = emp['id']
+        emp_name     = emp['name']
+        rec          = attendance[emp_id]
+        check_in_utc = rec['check_in']
+        att_id       = rec['id']
         check_in_vet = utc_to_vet(check_in_utc)
-        att_id = rec['id']
 
-        logger.info("  AUTO-FILL: %s — check_in=%s VET → check_out=14:00 VET (att id=%d)",
+        # Determine checkout from WiFi last-seen or fallback
+        email          = (emp.get('work_email') or '').lower()
+        emp_usernames  = wifi_email_map.get(email, set())
+
+        # Find latest WiFi logout across all of this employee's usernames
+        wifi_logout_vet = None
+        for uname in emp_usernames:
+            t = wifi_logouts.get(uname)
+            if t and (wifi_logout_vet is None or t > wifi_logout_vet):
+                wifi_logout_vet = t
+
+        # Resolve checkout time
+        if (wifi_logout_vet
+                and wifi_logout_vet.hour < WIFI_LOGOUT_CAP_HOUR
+                and check_in_utc < (wifi_logout_vet + VET_OFFSET).strftime('%Y-%m-%d %H:%M:%S')):
+            checkout_utc_str = (wifi_logout_vet + VET_OFFSET).strftime('%Y-%m-%d %H:%M:%S')
+            checkout_display = wifi_logout_vet.strftime('%H:%M')
+            source           = f"WiFi logout {checkout_display} VET"
+        else:
+            checkout_utc_str = fallback_utc_str
+            checkout_display = f"{AUTO_CHECKOUT_VET_HOUR:02d}:00"
+            source           = "fallback 14:00 VET"
+
+        # Final guard: check_in must still be before the resolved checkout
+        if check_in_utc >= checkout_utc_str:
+            logger.info("  %s — check_in (%s UTC) at or after checkout (%s UTC) [%s], skipping",
+                        emp_name, check_in_utc[:16], checkout_utc_str[:16], source)
+            continue
+
+        logger.info("  AUTO-FILL: %s — check_in=%s → check_out=%s VET [%s] (att id=%d)",
                     emp_name,
                     check_in_vet.strftime('%H:%M') if check_in_vet else '?',
-                    att_id)
+                    checkout_display, source, att_id)
 
         if auto_fill_checkout(att_id, checkout_utc_str):
             if not DRY_RUN and not TEST_EMAIL:
+                state_key = f"evening_{target}_{emp_id}"
                 state[state_key] = datetime.now().isoformat()
             filled += 1
 
