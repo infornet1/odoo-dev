@@ -334,11 +334,20 @@ def main():
 
     msg_builder = build_followup_message if args.followup else build_message
 
-    sent_ok, sent_fail = 0, 0
+    sent_ok, sent_fail, skipped_live = 0, 0, 0
     for i, entry in enumerate(to_blast, 1):
         name, phone, token, ack_id = entry['name'], entry['phone'], entry['token'], entry['ack_id']
-        msg = msg_builder(name, token)
 
+        # Live re-check: skip if parent voted since the blast list was built
+        if not dry_run:
+            fresh = models.execute_kw(db, uid, key, 'partner.communication.ack', 'read',
+                [[ack_id]], {'fields': ['state']})[0]
+            if fresh['state'] in ('continuing', 'leaving'):
+                log.info("[%d/%d] SKIP (voted since start): %s", i, total, name)
+                skipped_live += 1
+                continue
+
+        msg = msg_builder(name, token)
         log.info("[%d/%d] %s — %s", i, total, name, phone)
         if dry_run:
             log.info("  DRY  message preview:\n%s", msg[:200] + "...")
@@ -357,7 +366,8 @@ def main():
             log.info("  Waiting %ds anti-spam...", ANTISPAM_SECS)
             time.sleep(ANTISPAM_SECS)
 
-    log.info("Done — sent: %d | failed: %d | dry_run: %s", sent_ok, sent_fail, dry_run)
+    log.info("Done — sent: %d | failed: %d | skipped-voted-mid-run: %d | dry_run: %s",
+             sent_ok, sent_fail, skipped_live, dry_run)
 
 
 if __name__ == '__main__':
