@@ -10,7 +10,7 @@ Usage:
 
 Cron: /etc/cron.d/voting_digest
   Every 15 min, 06:00–22:00 VET (10:00–02:00 UTC), 21–26 May 2026:
-  */15 10-23,0,1 21,22,23,24,25,26 5 * root python3 /opt/odoo-dev/scripts/voting_digest.py --live \
+  */15 10-23,0,1 19,20,21,22,23,24,25,26 5 * root python3 /opt/odoo-dev/scripts/voting_digest.py --live \
     >> /var/log/voting_digest.log 2>&1
 """
 import os, sys, json, logging, argparse, xmlrpc.client
