@@ -4,6 +4,19 @@ Reference for all Glenda-specific implementation details. See also [AI_AGENT_MOD
 
 ---
 
+## Prior Conversation History (Feature #73)
+
+- **Method:** `_get_prior_conversation_summary(conversation)` — `@staticmethod` in `GeneralInquirySkill` (`skills/general_inquiry.py`)
+- **Called from:** `get_context()` as `prior_history` key → injected in `get_system_prompt()` right after `contact_ctx`
+- **Purpose:** When a contact opens a new conversation (after a resolved one), Glenda receives the last 1–2 exchanges as context so she can answer follow-up questions without re-greeting or showing the welcome menu.
+- **Match priority:** `telegram_chat_id` → identified `partner_id` (not a placeholder) → `phone`
+- **Window:** resolved conversations in the last 7 days; up to 2 convs; up to 4 message snippets per conv (150 chars each)
+- **Output format:** `HISTORIAL PREVIO CON ESTE CONTACTO` block with "hace X min/h/días" timestamps + `[Representante]`/`[Glenda]` tagged snippets + directive to Claude to skip welcome menu if message continues a prior topic
+- **No-op path:** returns `''` when no qualifying history exists — zero prompt bloat, zero cost impact
+- **Trigger example:** Gaby asks "Eso es con pronto pago?" 2 min after a resolved inscription conversation — Glenda now sees the $187.51 context and answers directly instead of firing the welcome menu
+
+---
+
 ## Silent Timeout + Proactive Quiet Hours (Feature #55)
 
 - **`send_reminders` field on `ai.agent.skill`** (Boolean, default True) — if False, `_cron_check_timeouts` skips all `_send_reminder()` calls and closes the conversation silently via `action_timeout()` after one `reminder_interval_hours` window (24h for general_inquiry). No WA messages sent.

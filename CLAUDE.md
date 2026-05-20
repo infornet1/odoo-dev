@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-19 (v22)
+**Last Updated:** 2026-05-20 (v23)
 
 ## Core Instructions
 
@@ -88,6 +88,7 @@
 | 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; hourly (voting week); scores 1–5; CEO email + OdooBot DM + WA if critical |
 | 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` — 7-section HTML guide; sent to CS staff 2026-05-18 |
 | 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | `get_greeting()` structured 5-option menu; `get_system_prompt()` — audience context, menu routing, balance gate, A vs B quotation; Telegram footer on WA |
+| 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py` — injects last 1-2 resolved convs (7-day window) into system prompt; enables follow-up continuity without re-greeting |
 
 ---
 
@@ -175,8 +176,8 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | 2025-11-26 |
 | ueipab_bounce_log | 17.0.1.4.0 | 2026-02-14 |
-| ueipab_ai_agent | 17.0.1.55.3 | 2026-05-19 |
-| ueipab_attendance_report | 17.0.1.6.9 | 2026-05-19 |
+| ueipab_ai_agent | 17.0.1.56.0 | 2026-05-20 |
+| ueipab_attendance_report | 17.0.1.6.10 | 2026-05-20 |
 | ueipab_hr_employee | 17.0.1.3.0 | 2026-05-13 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | — |
 | ueipab_ari_portal | 17.0.1.0.0 | — (testing only) |
@@ -189,11 +190,11 @@
 |--------|---------|--------|
 | ueipab_payroll_enhancements | 17.0.1.70.2 | Deployed 2026-05-16 |
 | ueipab_hr_contract | 17.0.2.0.0 | Current |
-| ueipab_attendance_report | 17.0.1.6.9 | Deployed 2026-05-19 — freescout_conv_id field; vote wizard; open-form button |
+| ueipab_attendance_report | 17.0.1.6.10 | Deployed 2026-05-20 |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | Installed |
 | ueipab_hr_employee | 17.0.1.3.0 | Deployed 2026-05-13 |
 | ueipab_bounce_log | 17.0.1.4.0 | Deployed 2026-05-10 |
-| ueipab_ai_agent | 17.0.1.55.3 | Deployed 2026-05-19 — ACTION:RECORD_VOTE; voting WA prompt (21-26 May) with Slides link + $174.95 Glenda discount; FreeScout close on vote; FS config in ir.config_parameter; no-email→Glenda WA |
+| ueipab_ai_agent | 17.0.1.56.0 | Deployed 2026-05-20 — `_get_prior_conversation_summary()`: prior conv history (7-day window) injected into system prompt for follow-up continuity |
 
 ---
 
@@ -297,6 +298,8 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py` — Haiku scores `general_inquiry` convs 1–5. Digest → CEO email + OdooBot DM + WA if critical. State: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
 
 **Glenda Welcome Menu + Budget UX (Feature #72 — v52.0):** `get_greeting()` → 5-option menu (saldo/propuesta/inscripcion/info/otro) + Telegram footer on WA. `get_system_prompt()` → audience context, PRIMER CONTACTO menu, balance gate (saldo 2025-2026 first), A vs B quotation. Budget = `general_inquiry` skill.
+
+**Glenda Prior Conversation History (Feature #73 — v56.0):** `_get_prior_conversation_summary(conversation)` static method in `GeneralInquirySkill`. Called from `get_context()` as `prior_history` key; injected in `get_system_prompt()` after `contact_ctx`. Queries last 1-2 resolved convs (7-day window) for same contact — match priority: `telegram_chat_id` > identified `partner_id` > `phone`. Returns `HISTORIAL PREVIO` block with "hace X min/h/días" timestamps + up to 4 message snippets (150 chars each). Directive tells Claude to skip welcome menu and answer directly when message continues a prior topic. Returns `''` (no cost) when no history exists.
 
 ### Glenda Technical Patterns
 
@@ -460,7 +463,7 @@ Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) t
 
 ### Environment Status
 
-**Production:** `dry_run=False`, `active_db=DB_UEIPAB`, v51.4. WA poll 5min. Telegram webhook `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill switch: `ai_agent.telegram_enabled=False`.
+**Production:** `dry_run=False`, `active_db=DB_UEIPAB`, v56.0. WA poll 5min. Telegram webhook `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill switch: `ai_agent.telegram_enabled=False`.
 
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook `dev.ueipab.edu.ve`.
 

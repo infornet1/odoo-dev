@@ -4,6 +4,31 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-20 — Glenda Prior Conversation History (v56.0)
+
+**Feature #73** — `ueipab_ai_agent` 17.0.1.56.0
+
+- **Problem:** When a contact sent a follow-up message after a resolved conversation (even 2 min later), Glenda started fresh with the welcome menu, saying "No veo una consulta anterior." Root cause: the state machine correctly creates a new conversation on each inbound message after `resolved`, but the new conv had zero context.
+- **Fix:** New static method `_get_prior_conversation_summary(conversation)` in `GeneralInquirySkill` (skills/general_inquiry.py).
+  - Called from `get_context()` → `prior_history` key → injected in `get_system_prompt()` after `contact_ctx`.
+  - Queries last 1–2 resolved conversations in the last 7 days for the same contact.
+  - Match priority: `telegram_chat_id` → identified `partner_id` → `phone`.
+  - Returns a compact `HISTORIAL PREVIO` block: "hace X min/h/días" + up to 4 message snippets (150 chars each per message).
+  - Directive to Claude: if the message continues a prior topic, answer directly — no welcome menu, no re-greeting.
+  - Returns `''` when no history found (no prompt bloat, zero cost impact).
+- **Example:** Gaby (conv #121) asked "Eso es con pronto pago?" 2 min after conv #120 (inscription quote). Previously Glenda re-greeted. Now Glenda will see the $187.51 context and answer directly.
+- **Deployed:** both testing + production, both on 17.0.1.56.0.
+
+## 2026-05-20 — Freescout Orphaned Conversation Cleanup
+
+- **Issue diagnosed:** 64 conversations across all mailboxes had `state=3` (soft-deleted) but `status=1` (active), causing them to appear in active counts as ghost entries.
+- **Root cause:** scripts that soft-delete conversations (BCV checker, bounce processor, etc.) set `state=3` but leave `status=active` instead of closing.
+- **Breakdown:** pagos@=11, soporte@=17, recursoshumanos@=4, finanzas@=13, compras@=0, afterschool@=2, votacion@=17.
+- **Fix:** closed all 64 via `PUT /api/conversations/{id}` with `{"status":"closed","byUser":1}` — 0 failures.
+- **Note:** BCV rate emails will recur (BCV script sends to both finanzas@ + pagos@, 3×/day). Long-term fix: remove pagos@ from BCV recipients or add close-on-delete logic to the checkers.
+
+---
+
 ## 2026-05-19 — Budget Vote Email + AI Agent Enhancements
 
 ### ueipab_ai_agent v17.0.1.53.0 — Optional partner + Placeholder badge

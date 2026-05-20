@@ -697,6 +697,84 @@ class GeneralInquirySkill:
 
         return None, None
 
+    @staticmethod
+    def _get_prior_conversation_summary(conversation):
+        """Return a compact summary of the last 1-2 resolved conversations for this contact.
+
+        Injected into the system prompt so Glenda can maintain continuity when a contact
+        opens a new conversation shortly after a previous one (e.g. a follow-up question
+        2 minutes later) or returns days later without re-introducing themselves.
+
+        Match priority: telegram_chat_id > identified partner_id > phone.
+        Window: resolved conversations in the last 7 days with at least 1 message.
+        """
+        from datetime import datetime, timedelta
+
+        cutoff = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+
+        Conversation = conversation.env['ai.agent.conversation']
+        base_domain = [
+            ('id', '!=', conversation.id),
+            ('state', '=', 'resolved'),
+            ('create_date', '>=', cutoff),
+        ]
+
+        if conversation.telegram_chat_id:
+            domain = base_domain + [('telegram_chat_id', '=', conversation.telegram_chat_id)]
+        elif (conversation.partner_id
+                and not conversation.partner_id.name.startswith('Consulta WhatsApp')):
+            domain = base_domain + [('partner_id', '=', conversation.partner_id.id)]
+        elif conversation.phone:
+            domain = base_domain + [('phone', '=', conversation.phone)]
+        else:
+            return ''
+
+        prior_convs = Conversation.search(domain, order='create_date desc', limit=2)
+        if not prior_convs:
+            return ''
+
+        now_utc = datetime.utcnow()
+        lines = []
+
+        for pc in prior_convs:
+            content_msgs = [m for m in pc.agent_message_ids.sorted('timestamp') if m.body]
+            if not content_msgs:
+                continue
+
+            delta_secs = int((now_utc - pc.create_date).total_seconds())
+            if delta_secs < 3600:
+                ago = f"hace {delta_secs // 60} minuto(s)"
+            elif delta_secs < 86400:
+                ago = f"hace {delta_secs // 3600} hora(s)"
+            elif delta_secs < 172800:
+                ago = "ayer"
+            else:
+                ago = f"hace {delta_secs // 86400} días"
+
+            snippets = []
+            for m in content_msgs[:6]:
+                tag = "Representante" if m.direction == 'inbound' else "Glenda"
+                text = (m.body or '').replace('\n', ' ')[:150]
+                snippets.append(f"  [{tag}]: {text}")
+                if len(snippets) >= 4:
+                    break
+
+            if snippets:
+                lines.append(f"— Conversación {ago}:")
+                lines.extend(snippets)
+
+        if not lines:
+            return ''
+
+        return (
+            "\nHISTORIAL PREVIO CON ESTE CONTACTO (últimos 7 días):\n"
+            + "\n".join(lines) + "\n"
+            + "► Si el mensaje actual parece continuar un tema anterior "
+            "(referencia a 'eso', 'ese precio', 'lo que dijiste', pregunta sin contexto propio), "
+            "responde directamente usando ese historial. "
+            "No repitas el saludo genérico ni el menú de bienvenida.\n"
+        )
+
     def get_context(self, conversation):
         cfg = self._get_agent_config(conversation)
         partner = conversation.partner_id
@@ -715,6 +793,7 @@ class GeneralInquirySkill:
             'balance':                   balance,
             'bcv':                       self._get_bcv_context(conversation),
             'billing_enrichment':        self._enrich_billing_context(conversation),
+            'prior_history':             self._get_prior_conversation_summary(conversation),
             'is_calibration_tester':     bool(calibration_employee),
             'calibration_employee_name': calibration_employee.name if calibration_employee else '',
             'calibration_employee_id':   calibration_employee.id if calibration_employee else False,
@@ -837,6 +916,7 @@ class GeneralInquirySkill:
             )
 
         billing_enrichment = context.get('billing_enrichment', '')
+        prior_history = context.get('prior_history', '')
 
         audience_block = (
             "CONTEXTO DE AUDIENCIA:\n"
@@ -889,6 +969,7 @@ class GeneralInquirySkill:
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx
+            + prior_history
             + "\nFLYERS DISPONIBLES (imágenes informativas que puedes enviar):\n"
             + flyer_list + "\n"
             + "\nINSTRUCCIONES:\n"
