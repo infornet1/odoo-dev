@@ -134,7 +134,7 @@ def load_pdvsa_excluded_phones(db, uid, key, models):
     excluded_emails = set()
     excluded_count  = 0
     for a in pdvsa_acks:
-        if a['state'] != 'continuing':   # pending or leaving
+        if a['state'] == 'leaving':   # confirmed not returning next year
             if a.get('partner_phone'):
                 excluded_phones.add(a['partner_phone'].strip())
             if a.get('partner_email'):
@@ -144,8 +144,8 @@ def load_pdvsa_excluded_phones(db, uid, key, models):
             excluded_count += 1
 
     confirmed_count = sum(1 for a in pdvsa_acks if a['state'] == 'continuing')
-    log.info("PDVSA: %d confirmed continuing (include), %d not confirmed (exclude)",
-             confirmed_count, excluded_count)
+    log.info("PDVSA: %d leaving (exclude) | %d continuing+pending (include)",
+             excluded_count, len(pdvsa_acks) - excluded_count)
     return excluded_phones, excluded_emails
 
 
