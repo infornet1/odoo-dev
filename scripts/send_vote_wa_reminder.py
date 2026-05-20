@@ -103,10 +103,21 @@ def load_sheet_recipients():
     return recipients
 
 
+def load_skill_id(db, uid, key, models):
+    """Return the database ID of the general_inquiry skill."""
+    rows = models.execute_kw(db, uid, key, 'ai.agent.skill', 'search_read',
+        [[['code', '=', 'general_inquiry']]],
+        {'fields': ['id', 'name'], 'limit': 1})
+    if not rows:
+        raise RuntimeError("general_inquiry skill not found in Odoo — is ueipab_ai_agent installed?")
+    log.info("Skill general_inquiry id=%d", rows[0]['id'])
+    return rows[0]['id']
+
+
 def load_acks(db, uid, key, models):
     acks = models.execute_kw(db, uid, key, 'partner.communication.ack', 'search_read',
         [[['notice_key', '=', NOTICE_KEY]]],
-        {'fields': ['id', 'partner_email', 'partner_phone', 'partner_name',
+        {'fields': ['id', 'partner_id', 'partner_email', 'partner_phone', 'partner_name',
                     'state', 'token', 'bounce_wa_sent'], 'limit': 0})
     by_email, by_phone = {}, {}
     for a in acks:
@@ -202,10 +213,11 @@ def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
                 continue
 
         to_blast.append({
-            'name':    sr['name'],
-            'phone':   sr['phone'],
-            'token':   ack['token'],
-            'ack_id':  ack['id'],
+            'name':       sr['name'],
+            'phone':      sr['phone'],
+            'token':      ack['token'],
+            'ack_id':     ack['id'],
+            'partner_id': ack['partner_id'][0] if ack.get('partner_id') else False,
         })
 
     mode = "follow-up" if followup else "initial"
@@ -284,6 +296,52 @@ def send_whatsapp(wa_cfg, phone, message, dry_run):
         return False
 
 
+def create_agent_conversation(db, uid, key, models, entry, msg, skill_id, dry_run):
+    """
+    Create an ai.agent.conversation in 'waiting' state so Glenda handles replies.
+    The WA message has already been sent directly — this creates the tracking record.
+    State='waiting' means: outbound message sent, waiting for parent to reply.
+    """
+    if dry_run:
+        log.info("  DRY  would create ai.agent.conversation for %s", entry['name'])
+        return None
+
+    if not entry.get('partner_id'):
+        log.warning("  No partner_id for %s — skipping conversation creation", entry['name'])
+        return None
+
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Check for an existing open conversation on this phone to avoid duplicates
+    existing = models.execute_kw(db, uid, key, 'ai.agent.conversation', 'search',
+        [[['phone', '=', entry['phone']],
+          ['state', 'in', ('draft', 'active', 'waiting')],
+          ['channel', '=', 'whatsapp']]])
+    if existing:
+        log.info("  Existing open conv id=%s for %s — skipping creation", existing[0], entry['name'])
+        return existing[0]
+
+    conv_id = models.execute_kw(db, uid, key, 'ai.agent.conversation', 'create', [{
+        'partner_id':        entry['partner_id'],
+        'phone':             entry['phone'],
+        'channel':           'whatsapp',
+        'skill_id':          skill_id,
+        'state':             'waiting',
+        'last_sender':       'agent',
+        'last_message_date': now,
+    }])
+
+    # Log the outbound message so the conversation has context
+    models.execute_kw(db, uid, key, 'ai.agent.message', 'create', [{
+        'conversation_id': conv_id,
+        'direction':       'outbound',
+        'body':            msg,
+    }])
+
+    log.info("  Created ai.agent.conversation id=%d for %s", conv_id, entry['name'])
+    return conv_id
+
+
 def mark_wa_sent(db, uid, key, models, ack_id, dry_run):
     if dry_run:
         return
@@ -309,6 +367,7 @@ def main():
 
     wa_cfg                        = load_wa_config()
     db, uid, key, models          = load_odoo()
+    skill_id                      = load_skill_id(db, uid, key, models)
     sheet_rows                    = load_sheet_recipients()
     ack_by_email, ack_by_phone    = load_acks(db, uid, key, models)
     pdvsa_excl_ph, pdvsa_excl_em  = load_pdvsa_excluded_phones(db, uid, key, models)
@@ -357,6 +416,7 @@ def main():
         ok = send_whatsapp(wa_cfg, phone, msg, dry_run)
         if ok:
             mark_wa_sent(db, uid, key, models, ack_id, dry_run)
+            create_agent_conversation(db, uid, key, models, entry, msg, skill_id, dry_run)
             sent_ok += 1
         else:
             sent_fail += 1
