@@ -130,40 +130,55 @@ def load_acks(db, uid, key, models):
     return by_email, by_phone
 
 
-def load_pdvsa_excluded_phones(db, uid, key, models):
+def load_pdvsa_data(db, uid, key, models):
     """
-    Return set of phones for PDVSA families that have NOT confirmed continuity.
-    These families are uncertain/leaving — no point spending WA tokens on them
-    for the budget vote since they may not be at the school next year.
-    Only PDVSA families with state='continuing' are safe to include.
+    Returns:
+      excluded_phones, excluded_emails  — state='leaving' (confirmed not returning)
+      pending_by_phone                  — state='pending' phone → pdvsa_token
+                                          These families need BOTH budget vote + continuity ask
     """
     pdvsa_acks = models.execute_kw(db, uid, key, 'partner.communication.ack', 'search_read',
         [[['notice_key', '=', PDVSA_NOTICE_KEY]]],
-        {'fields': ['partner_phone', 'partner_email', 'partner_name', 'state'], 'limit': 0})
+        {'fields': ['partner_id', 'partner_phone', 'partner_email', 'partner_name',
+                    'state', 'token'], 'limit': 0})
 
-    excluded_phones = set()
-    excluded_emails = set()
-    excluded_count  = 0
+    excluded_phones   = set()
+    excluded_emails   = set()
+    pending_by_pid    = {}   # partner_id → pdvsa_token (primary match)
+    pending_by_email  = {}   # email → pdvsa_token (fallback)
+    leaving_count = pending_count = 0
+
     for a in pdvsa_acks:
-        if a['state'] == 'leaving':   # confirmed not returning next year
-            if a.get('partner_phone'):
-                excluded_phones.add(a['partner_phone'].strip())
+        phone = (a.get('partner_phone') or '').strip()
+        pid   = a['partner_id'][0] if a.get('partner_id') else None
+
+        if a['state'] == 'leaving':
+            if phone:
+                excluded_phones.add(phone)
             if a.get('partner_email'):
                 for em in a['partner_email'].lower().split(';'):
                     excluded_emails.add(em.strip())
-            log.info("PDVSA exclude (%s): %s", a['state'], a.get('partner_name','?'))
-            excluded_count += 1
+            leaving_count += 1
 
-    confirmed_count = sum(1 for a in pdvsa_acks if a['state'] == 'continuing')
-    log.info("PDVSA: %d leaving (exclude) | %d continuing+pending (include)",
-             excluded_count, len(pdvsa_acks) - excluded_count)
-    return excluded_phones, excluded_emails
+        elif a['state'] == 'pending' and a.get('token'):
+            if pid:
+                pending_by_pid[pid] = a['token']
+            if a.get('partner_email'):
+                for em in a['partner_email'].lower().split(';'):
+                    pending_by_email[em.strip()] = a['token']
+            pending_count += 1
+
+    log.info("PDVSA: %d leaving (exclude) | %d pending (dual-ask msg) | %d confirmed",
+             leaving_count, pending_count,
+             len(pdvsa_acks) - leaving_count - pending_count)
+    return excluded_phones, excluded_emails, pending_by_pid, pending_by_email
 
 
 # ── Build blast list ──────────────────────────────────────────────────────────
 
 def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
                      pdvsa_excl_phones, pdvsa_excl_emails,
+                     pdvsa_pending_by_pid, pdvsa_pending_by_email,
                      followup=False, target_phone=None):
     to_blast = []
     skipped_voted, skipped_wa_done, skipped_no_ack, skipped_pdvsa = 0, 0, 0, 0
@@ -212,12 +227,23 @@ def build_blast_list(sheet_rows, ack_by_email, ack_by_phone,
                 skipped_wa_done += 1
                 continue
 
+        # Tag PDVSA pending families so they get the dual-ask message
+        # Match by partner_id first (most reliable), then by email
+        pid = ack['partner_id'][0] if ack.get('partner_id') else None
+        pdvsa_token = pdvsa_pending_by_pid.get(pid)
+        if not pdvsa_token:
+            for em in sr['emails']:
+                pdvsa_token = pdvsa_pending_by_email.get(em)
+                if pdvsa_token:
+                    break
+
         to_blast.append({
-            'name':       sr['name'],
-            'phone':      sr['phone'],
-            'token':      ack['token'],
-            'ack_id':     ack['id'],
-            'partner_id': ack['partner_id'][0] if ack.get('partner_id') else False,
+            'name':        sr['name'],
+            'phone':       sr['phone'],
+            'token':       ack['token'],
+            'ack_id':      ack['id'],
+            'partner_id':  ack['partner_id'][0] if ack.get('partner_id') else False,
+            'pdvsa_token': pdvsa_token,   # None for non-PDVSA / already-confirmed PDVSA
         })
 
     mode = "follow-up" if followup else "initial"
@@ -248,6 +274,41 @@ def build_message(name, token):
         f"✅ *Opción B* — $236.58/mes\n{link_b}\n\n"
         f"⏰ La consulta cierra el *26 de mayo a las 12:30pm*.\n\n"
         f"¿Tiene preguntas? Estoy disponible en Telegram para una respuesta más rápida 👇\n"
+        f"{telegram}\n\n"
+        f"¡Gracias por su participación! 🙏"
+    )
+
+
+def build_pdvsa_message(name, budget_token, pdvsa_token):
+    """
+    Message for PDVSA families still pending on the continuity campaign.
+    Covers both asks in one message: budget vote + continuity confirmation.
+    """
+    first    = name.split()[0].capitalize()
+    link_a   = f'{ODOO_BASE_URL}/partner-ack/{budget_token}/si'
+    link_b   = f'{ODOO_BASE_URL}/partner-ack/{budget_token}/no'
+    pdvsa_si = f'{ODOO_BASE_URL}/partner-ack/{pdvsa_token}/si'
+    pdvsa_no = f'{ODOO_BASE_URL}/partner-ack/{pdvsa_token}/no'
+    slides   = 'https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA'
+    telegram = 'https://t.me/GlendaUeipabBot'
+    return (
+        f"Hola {first} 👋\n\n"
+        f"Soy *Glenda*, la asistente virtual del Colegio Andrés Bello.\n\n"
+        f"Le escribimos gentilmente para informarle que ya puede votar sobre la "
+        f"*Consulta Presupuestaria 2026-2027* y nos gustaría contar con su participación "
+        f"mediante el voto.\n\n"
+        f"📊 Puede revisar la propuesta completa aquí:\n{slides}\n\n"
+        f"¿Desea votar ahora? Seleccione su preferencia:\n\n"
+        f"✅ *Opción A* — $218.88/mes\n{link_a}\n\n"
+        f"✅ *Opción B* — $236.58/mes\n{link_b}\n\n"
+        f"——\n\n"
+        f"📌 *Adicionalmente:* aún no hemos recibido su confirmación sobre si "
+        f"continuará con nosotros el próximo año escolar.\n\n"
+        f"¿Continuará en el Colegio Andrés Bello en 2026-2027?\n\n"
+        f"👍 *Sí, continuaré*\n{pdvsa_si}\n\n"
+        f"👎 *No continuaré*\n{pdvsa_no}\n\n"
+        f"⏰ La consulta presupuestaria cierra el *26 de mayo a las 12:30pm*.\n\n"
+        f"¿Tiene preguntas? Estoy en Telegram para una respuesta más rápida 👇\n"
         f"{telegram}\n\n"
         f"¡Gracias por su participación! 🙏"
     )
@@ -370,10 +431,11 @@ def main():
     skill_id                      = load_skill_id(db, uid, key, models)
     sheet_rows                    = load_sheet_recipients()
     ack_by_email, ack_by_phone    = load_acks(db, uid, key, models)
-    pdvsa_excl_ph, pdvsa_excl_em  = load_pdvsa_excluded_phones(db, uid, key, models)
+    pdvsa_excl_ph, pdvsa_excl_em, pdvsa_pend_pid, pdvsa_pend_em = load_pdvsa_data(db, uid, key, models)
     to_blast                      = build_blast_list(
         sheet_rows, ack_by_email, ack_by_phone,
         pdvsa_excl_ph, pdvsa_excl_em,
+        pdvsa_pend_pid, pdvsa_pend_em,
         followup=args.followup,
         target_phone=args.phone,
     )
@@ -391,8 +453,6 @@ def main():
         log.info("Starting in 5s — Ctrl+C to abort...")
         time.sleep(5)
 
-    msg_builder = build_followup_message if args.followup else build_message
-
     sent_ok, sent_fail, skipped_live = 0, 0, 0
     for i, entry in enumerate(to_blast, 1):
         name, phone, token, ack_id = entry['name'], entry['phone'], entry['token'], entry['ack_id']
@@ -406,7 +466,14 @@ def main():
                 skipped_live += 1
                 continue
 
-        msg = msg_builder(name, token)
+        # Pick message: follow-up nudge / PDVSA dual-ask / standard
+        if args.followup:
+            msg = build_followup_message(name, token)
+        elif entry.get('pdvsa_token'):
+            msg = build_pdvsa_message(name, token, entry['pdvsa_token'])
+            log.info("[%d/%d] PDVSA dual-ask: %s — %s", i, total, name, phone)
+        else:
+            msg = build_message(name, token)
         log.info("[%d/%d] %s — %s", i, total, name, phone)
         if dry_run:
             log.info("  DRY  message preview:\n%s", msg[:200] + "...")
