@@ -1,0 +1,193 @@
+# partner.communication.ack — Form UX Improvements
+
+**Status:** Pending implementation  
+**Module:** `ueipab_attendance_report`  
+**View file:** `views/partner_communication_ack_views.xml`  
+**Identified:** 2026-05-20 during Budget Vote campaign monitoring  
+**Blocked by:** WA blast running in background (safe to implement after blast completes ~18:43 VET)
+
+---
+
+## Context
+
+Identified while reviewing record id=204 (MARIANA MADERA, `leaving`, voted via email_link 2026-05-20 14:20).
+The form is used by HR to monitor and manage the budget vote campaign (`budget_consulta_2026_2027`) and
+the PDVSA continuity campaign (`pdvsa_continuacion_2026_2027`). These are critical business processes —
+UX clarity directly affects data integrity.
+
+---
+
+## Issues & Fixes
+
+### 🔴 HIGH PRIORITY
+
+#### 1. `leaving` decoration color is wrong (tree view)
+**Current:** `decoration-info` (blue) — signals neutral/informational  
+**Problem:** A family that won't continue is at-risk. Blue is misleading.  
+**Fix:** Change to `decoration-danger` (red)
+
+```xml
+<!-- BEFORE -->
+decoration-info="state == 'leaving'"
+
+<!-- AFTER -->
+decoration-danger="state == 'leaving'"
+```
+
+Same fix needed on the `state` badge widget in the tree.
+
+---
+
+#### 2. No confirmation on "Reiniciar a Pendiente"
+**Current:** One click immediately resets a confirmed vote — no warning.  
+**Problem:** Accidental resets are irreversible and corrupt audit data.  
+**Fix:** Add `confirm` attribute.
+
+```xml
+<!-- BEFORE -->
+<button name="action_reset_pending" string="Reiniciar a Pendiente"
+        type="object"
+        invisible="state == 'pending'"/>
+
+<!-- AFTER -->
+<button name="action_reset_pending" string="Reiniciar a Pendiente"
+        type="object"
+        invisible="state == 'pending'"
+        confirm="¿Está seguro de que desea reiniciar este voto? Esta acción elimina el registro de decisión del representante y no se puede deshacer."/>
+```
+
+---
+
+#### 3. No outcome banner — HR doesn't know what the state means
+**Current:** Only a statusbar badge (`pending`/`continuing`/`leaving`).  
+**Problem:** HR users don't immediately understand the business impact of each state.  
+**Fix:** Add a colored alert div at the top of the sheet.
+
+```xml
+<div class="alert alert-danger mb-3"
+     invisible="state != 'leaving'">
+    <strong>⚠️ Esta familia ha seleccionado NO continuar.</strong>
+    Opción B — $236.58/mes. Requiere seguimiento.
+</div>
+<div class="alert alert-success mb-3"
+     invisible="state != 'continuing'">
+    <strong>✅ Esta familia continuará el próximo año escolar.</strong>
+    Opción A — $218.88/mes.
+</div>
+<div class="alert alert-warning mb-3"
+     invisible="state != 'pending'">
+    <strong>⏳ Pendiente de respuesta.</strong>
+    El representante aún no ha votado.
+</div>
+```
+
+---
+
+### 🟡 MEDIUM PRIORITY
+
+#### 4. Raw `token` exposed in form
+**Current:** UUID token visible in "Sistema" group — anyone with HR access can copy it and vote on behalf of a family.  
+**Fix:** Wrap in a `groups="base.group_system"` invisible group or collapse by default.
+
+```xml
+<!-- Only show token to system admins -->
+<field name="token" groups="base.group_system"/>
+```
+
+---
+
+#### 5. `partner_phone` duplicated
+**Current:** Appears in both "Representante" group (line 78) AND "Sistema" group (line 99).  
+**Fix:** Remove from "Sistema" group — keep only in "Representante".
+
+```xml
+<!-- REMOVE this from the Sistema group -->
+<field name="partner_phone" invisible="not partner_phone"/>
+```
+
+---
+
+#### 6. `statusbar` implies linear workflow — wrong widget
+**Current:** `pending → continuing → leaving` looks like a progression.  
+**Problem:** `continuing` and `leaving` are parallel alternatives (Opción A or B), not sequential steps.  
+**Fix:** Replace statusbar with a `widget="badge"` field or remove it entirely — state is already shown in the outcome banner (fix #3).
+
+```xml
+<!-- CONSIDER replacing statusbar with readonly badge -->
+<field name="state" widget="badge"
+       decoration-warning="state == 'pending'"
+       decoration-success="state == 'continuing'"
+       decoration-danger="state == 'leaving'"
+       readonly="1"/>
+```
+
+---
+
+#### 7. `ack_ip` in wrong group
+**Current:** IP address shown in "Votación" group alongside `sent_date` and `ack_date`.  
+**Problem:** An IP address has no meaning to an HR user. It creates noise.  
+**Fix:** Move to "Sistema" group.
+
+---
+
+### 🟢 LOW PRIORITY
+
+#### 8. `vote_notes` editable after vote is cast
+**Current:** Free-text notes editable in any state.  
+**Problem:** Post-vote note edits leave no audit trail. Integrity risk.  
+**Fix:** Make readonly once voted.
+
+```xml
+<field name="vote_notes" nolabel="1"
+       readonly="state in ('continuing', 'leaving')"/>
+```
+
+---
+
+#### 9. No response time display
+**Nice to have:** Show how quickly the family responded after receiving the email.  
+**Implementation:** Computed field `response_hours = (ack_date - sent_date).hours` displayed as  
+*"Respondió 2h 15min después del envío"* — adds audit richness.  
+Requires Python field addition in `partner_communication_ack.py`.
+
+---
+
+#### 10. No smart button to partner record
+**Current:** `partner_id` shown as a Many2one field — no one-click jump to the full contact.  
+**Fix:** Add a stat button in `button_box` linking to the partner's form view.
+
+```xml
+<button name="%(base.action_res_partner_form)d"
+        type="action"
+        class="oe_stat_button"
+        icon="fa-user"
+        string="Ver Contacto"
+        context="{'default_id': partner_id}"/>
+```
+
+---
+
+## Implementation Order
+
+1. Fix #1 — `leaving` → red (2 lines, zero risk)
+2. Fix #2 — confirmation dialog (1 attribute)
+3. Fix #3 — outcome banners (most visible UX win)
+4. Fix #5 — remove duplicate `partner_phone`
+5. Fix #7 — move `ack_ip` to Sistema group
+6. Fix #4 — hide raw token
+7. Fix #6 — replace statusbar widget
+8. Fix #8 — readonly vote_notes
+9. Fix #9 — response time field (requires Python)
+10. Fix #10 — smart button to partner
+
+Fixes 1–8 are pure XML view changes — no Python, no migration, no data risk.
+Upgrade command after changes:
+```bash
+docker exec odoo-dev-web /usr/bin/odoo -d testing -u ueipab_attendance_report \
+  --stop-after-init --http-port=18069 && docker restart odoo-dev-web
+```
+
+---
+
+## Blast Progress at Time of Writing
+- 13/131 sent | 1 skipped (voted mid-run) | ETA ~18:43 VET
