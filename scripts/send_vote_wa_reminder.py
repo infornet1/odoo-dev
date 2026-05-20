@@ -227,8 +227,9 @@ def build_message(name, token):
     return (
         f"Hola {first} 👋\n\n"
         f"Soy *Glenda*, la asistente virtual del Colegio Andrés Bello.\n\n"
-        f"Le escribo porque aún no hemos recibido su voto en la "
-        f"*Consulta Presupuestaria 2026-2027* y nos gustaría contar con su opinión.\n\n"
+        f"Le escribimos gentilmente para informarle que ya puede votar sobre la "
+        f"*Consulta Presupuestaria 2026-2027* y nos gustaría contar con su participación "
+        f"mediante el voto.\n\n"
         f"📊 Puede revisar la propuesta completa aquí:\n{slides}\n\n"
         f"¿Desea votar ahora? Seleccione su preferencia:\n\n"
         f"✅ *Opción A* — $218.88/mes\n{link_a}\n\n"
