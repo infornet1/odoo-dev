@@ -199,16 +199,16 @@ def build_html(name, deep_link):
     <td style="background:linear-gradient(135deg,#0a1628 0%,#1a3a6b 100%);
                padding:28px 32px;text-align:center;">
       <img src="{LOGO_URL}" alt="Colegio Andrés Bello" width="72" height="72"
-           style="border-radius:50%;border:3px solid rgba(255,255,255,0.25);
+           style="border-radius:50%;border:3px solid #ffffff;
                   display:block;margin:0 auto 14px;"/>
-      <div style="font-size:11px;color:rgba(255,255,255,0.6);
+      <div style="font-size:11px;color:#ffffff;
                   letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">
         Colegio Andrés Bello — UEIPAB
       </div>
       <div style="font-size:20px;font-weight:800;color:#ffffff;">
         ¡Glenda ya está en Telegram!
       </div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px;">
+      <div style="font-size:13px;color:#ffffff;font-weight:600;margin-top:4px;">
         Vincula tu cuenta y recibe todo al instante — gratis
       </div>
     </td>

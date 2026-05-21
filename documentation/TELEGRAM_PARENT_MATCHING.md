@@ -1,6 +1,6 @@
 # Telegram Parent Matching & Opt-in Campaign
 
-**Status:** Phase 1 ✅ | Phase 2 ✅ (0 retroactive) | Phase 3 ✅ deployed prod | Phase 4a ✅ script ready | Phase 4b + 5 pending  
+**Status:** Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4a ✅ email script ready | Digest ✅ | Phase 4b + 5 pending  
 **Created:** 2026-05-21  
 **Business driver:** WA primary number disabled by Meta after 49 sends during Budget Vote blast — Telegram as spam-free blast channel for future campaigns
 
@@ -119,6 +119,23 @@ python3 scripts/send_telegram_optin_email.py --live     # send to all 174
 After email blast, wait 7–10 days. Send WA only to parents who received email but didn't link (no `telegram_chat_id` on partner yet). Expected: ~60–80 parents max vs 178 full blast.
 
 ---
+
+### Telegram Opt-in Digest (`scripts/telegram_optin_digest.py`) ✅ Complete
+
+Standalone daily digest tracking opt-in progress. Sent when new linkings detected (or `--force`).
+
+**Exclusion logic (3 tiers):**
+1. **Akdemia2526** — parents whose ALL students are in `5to. Año` (graduating, won't return): 7 families
+2. **PDVSA `state='leaving'`** — parents who voted No continuará (MARIA APONTE, ANDRES HERNANDEZ): 2 families
+3. Total excluded: 9 | Campaign universe: **175 parents** (169 Active + 6 Pipeline)
+
+**Employee section:** sourced from latest closed `hr.payslip.run` (MAYO15 = **44 employees**), not `hr.employee active=True` (47 — includes test/non-payroll accounts). Matches via `ai.agent.conversation channel=telegram + partner_id` OR `res.partner.telegram_chat_id`.
+
+**Email invitation (`scripts/send_telegram_optin_email.py`) ✅ Complete**
+- Recipients: Customers tab col J email, ACTIVE only, same 3-tier exclusion
+- Deep-link: `t.me/GlendaUeipabBot?start=FAM_{ack_token}` — personalized per parent
+- Template: school logo + Glenda banner + 5 advantages + CTA button + 3-step how-to
+- Header text explicitly white (`#ffffff`) — `rgba()` avoided (breaks Gmail/Outlook)
 
 ### Phase 5 — Blast script: Telegram-first channel ⏳ Pending
 **Script:** Update `send_vote_wa_reminder.py` + future campaign scripts

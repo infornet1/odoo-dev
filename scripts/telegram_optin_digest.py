@@ -181,10 +181,29 @@ def _apply_exclusions(parents, excluded_names):
 
 
 def _fetch_employee_status(models, db, uid, key):
-    """Check which active employees have linked Telegram via EMP_ deep-link or FAM_ test."""
-    emps = models.execute_kw(db, uid, key, 'hr.employee', 'search_read',
-        [[['active', '=', True]]],
-        {'fields': ['id', 'name', 'work_email', 'user_id', 'job_id'], 'limit': 200})
+    """Check which payroll employees (latest closed hr.payslip.run) have linked Telegram.
+    Source: latest closed payslip batch mirrors MAYO15 = 44 employees.
+    Fallback: active employees with open contracts.
+    """
+    # Strategy: use latest closed payslip run (same as attendance report default)
+    runs = models.execute_kw(db, uid, key, 'hr.payslip.run', 'search_read',
+        [[['state', '=', 'close']]],
+        {'fields': ['id', 'name', 'slip_ids'], 'order': 'date_end desc', 'limit': 1})
+    if runs:
+        slip_ids = runs[0]['slip_ids']
+        slips = models.execute_kw(db, uid, key, 'hr.payslip', 'search_read',
+            [[['id', 'in', slip_ids]]],
+            {'fields': ['employee_id'], 'limit': 200})
+        emp_ids = list({s['employee_id'][0] for s in slips})
+        log.info("Employees from payroll batch '%s': %d", runs[0]['name'], len(emp_ids))
+        emps = models.execute_kw(db, uid, key, 'hr.employee', 'search_read',
+            [[['id', 'in', emp_ids]]],
+            {'fields': ['id', 'name', 'work_email', 'user_id', 'job_id'], 'limit': 200})
+    else:
+        log.warning("No closed payslip run found — falling back to active employees")
+        emps = models.execute_kw(db, uid, key, 'hr.employee', 'search_read',
+            [[['active', '=', True], ['contract_ids.state', '=', 'open']]],
+            {'fields': ['id', 'name', 'work_email', 'user_id', 'job_id'], 'limit': 200})
 
     # Build user_id → partner_id map
     user_ids = [e['user_id'][0] for e in emps if e.get('user_id')]
