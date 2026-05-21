@@ -171,7 +171,7 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.8 | both |
+| ueipab_ai_agent | 17.0.1.57.12 | both |
 | ueipab_attendance_report | 17.0.1.6.15 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -220,7 +220,7 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 ### Freescout REST API (api_key + hybrid pattern)
 
 See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN.md) for full reference.
-- **Config:** `/opt/odoo-dev/config/freescout_api.json` — `api_url`, `api_key`, `webhook_secret`
+- **Config:** `ir.config_parameter` keys `ai_agent.freescout_api_url` + `ai_agent.freescout_api_key` (production). File `/opt/odoo-dev/config/freescout_api.json` is dev-only fallback — Docker container cannot read host paths. All Odoo model methods must use the param lookup first.
 - **Auth:** `X-FreeScout-API-Key` header; Conversation ID = DB primary key, NOT display number
 - **`PUT /api/conversations/{id}`** — status must be **string**; `byUser` (int) **required** on status changes
 - **`POST /api/conversations/{id}/threads`** — note: `{"type":"note","text":"<html>","user":<int>}`; `user` required
@@ -289,13 +289,23 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 ### Freescout Pagos@ Bridge (Feature #74)
 
-**`pagos_faq_email_checker.py`** — now 100% REST API (no pymysql). `get_new_conversations(processed_ids)` uses `fs_get_conversations_page()` + `fs_get_conversation_detail()`. `FS_DB` dict and `import pymysql` removed.
+**`pagos_faq_email_checker.py`** — 100% REST API (no pymysql). `get_new_conversations(processed_ids)` uses `fs_get_conversations_page()` + `fs_get_conversation_detail()`. `FS_DB` dict and `import pymysql` removed (v57.8).
 
-**`pagos_receipt_processor.py`** — Google Sheet fallback: when email-based Odoo partner lookup fails, `sheets_lookup_by_email(email)` checks `Customers!B2:J` (col B=name, col J=email) via `_load_customers_sheet()` (cached per process). If sheet returns a name, `odoo_find_partner_by_name()` does a second Odoo lookup. `build_note_no_partner()` now accepts optional `sheet_name` param — includes a "Encontrado en hoja" line in the Freescout note when there is a sheet hit. `upsert_freescout_task()` called at every non-skipped return point.
+**`pagos_receipt_processor.py`** key patterns:
+- **Email lookup:** `odoo_find_partner_by_email()` uses `ilike` (substring), not `=ilike` (exact) — Odoo stores multiple emails as `a@x.com;b@x.com` in one field; exact match fails for multi-email contacts (v57.10).
+- **Google Sheet fallback:** on email miss → `sheets_lookup_by_email(email)` checks `Customers!B2:J` (col B=name, col J=email, semicolons split per-address) → `odoo_find_partner_by_name()` Odoo lookup. `build_note_no_partner()` includes "Encontrado en hoja" when sheet hits. Spreadsheet: `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`.
+- **Advance payment detection:** `odoo_check_partner_balance()` — after `odoo_match_invoice()` returns None, checks if partner has ANY unpaid posted invoices. If balance=0 → `is_advance_payment=True` → `build_note_success()` labels "💰 Pago adelantado" instead of "reconciliar manualmente". Payment still created+confirmed via `action_post()` (v57.11).
+- **Bridge upsert:** `upsert_freescout_task()` called at every non-skipped exit (error/no_receipt/no_partner/duplicate/success).
 
-**`ai.agent.freescout.task`** — bridge model in `ueipab_ai_agent`. Fields: `fs_conv_id`, `fs_subject`, `sender_email`, `partner_id`, `sheet_match`, `status` (pending/identified/no_partner/no_receipt/duplicate/success/error), `extracted_json`, `payment_odoo_id`, `retry_count`, `last_processed_at`, `notes`, `fs_url` (computed). UI: AI Agent → Operaciones → Pagos Freescout; default filter "Requieren revisión". `action_reprocess()` button re-fetches FS conv, resolves partner (uses form `partner_id` if manually set), posts note, updates status. `action_open_freescout()` opens conv in new tab.
+**`ai.agent.freescout.task`** — bridge model in `ueipab_ai_agent`. Fields: `fs_conv_id`, `fs_subject`, `sender_email`, `partner_id`, `sheet_match`, `status` (pending/identified/no_partner/no_receipt/duplicate/success/error), `extracted_json`, `payment_odoo_id`, `retry_count`, `last_processed_at`, `notes`, `fs_url` (computed). UI: AI Agent → Operaciones → Pagos Freescout; default filter "Requieren revisión".
 
-**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` ir.config_parameter (email→name JSON). Cron: daily 11:30 UTC (07:30 VET). Used by `general_inquiry.py` `_get_customers_sheet_context()` to hint Glenda when partner placeholder emails match sheet entries.
+**`action_reprocess()` on the bridge model (v57.11/v57.12):**
+- Re-fetches FS conv via API; resolves partner via manually-set `partner_id` or `ilike` email search.
+- **Advance payment path** (outstanding invoices = 0): extracts `src="..."` image URL from thread body → GPT-4o-mini Vision → receipt JSON → `_create_confirm_payment()` creates+posts `account.payment` via ORM (uses `ai_agent.payment_journal_map` param). Freescout note includes `→ Abrir pago en Odoo` hyperlink.
+- **`_parse_monto(v)`**: normalises Venezuelan comma-decimal amounts (`'85039,58'` → `85039.58`, `'85.039,58'` → `85039.58`) before `float()` — GPT Vision returns amounts in local format (v57.12).
+- **`_load_fs_config()`**: reads `ai_agent.freescout_api_url` + `ai_agent.freescout_api_key` from `ir.config_parameter`; falls back to file paths `/opt/odoo-dev/config/freescout_api.json` and `/etc/odoo/freescout_api.json` for dev only (v57.9). Same pattern applies to the two Freescout calls in `ai_agent_conversation.py` (`_handle_glenda_absence_notification` and `_create_school_account_fs_ticket`).
+
+**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` ir.config_parameter (email→name JSON, semicolons split). Cron: daily 11:30 UTC (07:30 VET). Used by `general_inquiry.py` `_get_customers_sheet_context()` for unidentified contact name hints. Run once with `TARGET_ENV=production --live` to seed.
 
 ### Glenda Technical Patterns
 
