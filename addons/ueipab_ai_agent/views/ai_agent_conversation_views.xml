@@ -51,6 +51,12 @@
                             type="object" class="btn-secondary"
                             invisible="state not in ('active', 'waiting', 'draft')"
                             title="Recargar mensajes y estado de la conversación"/>
+                    <button name="action_resume_conversation"
+                            string="▶️ Retomar Conversación"
+                            type="object" class="btn-primary"
+                            invisible="state != 'active' or not silent"
+                            confirm="¿Reanudar esta conversación? Glenda responderá al último mensaje del contacto."
+                            title="Limpia el silencio automático y re-envía el último mensaje a Claude"/>
                     <button name="action_force_resolve" string="Resolver Manualmente"
                             type="object" class="btn-secondary"
                             invisible="state not in ('active', 'waiting')"
@@ -84,6 +90,7 @@
                             <field name="last_reminder_date"/>
                             <field name="create_date" string="Fecha Creacion"/>
                             <field name="resolved_date"/>
+                            <field name="silent" widget="boolean_toggle" string="Silenciada"/>
                         </group>
                     </group>
                     <!-- Draft review: show initial message before firing -->

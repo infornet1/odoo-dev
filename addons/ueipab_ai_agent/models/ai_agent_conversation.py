@@ -2074,6 +2074,39 @@ class AiAgentConversation(models.Model):
         self.write({'state': 'waiting'})
         self.message_post(body=_("Conversacion reabierta para reintento."))
 
+    def action_resume_conversation(self):
+        """Un-silence a silenced active conversation and re-fire Claude with the last inbound message.
+
+        Use when Glenda was auto-silenced (bot-speed detection or rate limit) but the contact
+        is a legitimate user. Clears the silent flag and immediately re-processes the last
+        inbound message so the contact gets a response without needing to retype.
+        """
+        self.ensure_one()
+        if self.state != 'active':
+            raise UserError(_("Solo se puede retomar conversaciones activas."))
+
+        # Clear silent flag
+        self.write({'silent': False})
+        self.message_post(body=_("🔄 Conversación reanudada manualmente — silencio removido."))
+
+        # Find last inbound message to re-fire
+        last_inbound = self.env['ai.agent.message'].search([
+            ('conversation_id', '=', self.id),
+            ('direction', '=', 'inbound'),
+        ], order='timestamp desc', limit=1)
+
+        if last_inbound and last_inbound.body:
+            _logger.info(
+                "Conv %d: resuming — re-firing last inbound: %r",
+                self.id, last_inbound.body[:60],
+            )
+            self.action_process_reply(
+                message_text=last_inbound.body,
+                wa_message_id=0,
+            )
+        else:
+            _logger.info("Conv %d: resumed (no last inbound to re-fire)", self.id)
+
     def _send_reminder(self):
         """Send a WhatsApp reminder to the customer."""
         self.ensure_one()
