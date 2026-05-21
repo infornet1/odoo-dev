@@ -8,12 +8,16 @@ class StartConversationWizard(models.TransientModel):
     _name = 'ai.agent.start.conversation.wizard'
     _description = 'Start AI Agent Conversation'
 
+    channel = fields.Selection([
+        ('whatsapp', 'WhatsApp'),
+        ('telegram', 'Telegram'),
+    ], string='Canal', default='whatsapp', required=True)
     skill_id = fields.Many2one('ai.agent.skill', required=True, string='Skill')
     partner_id = fields.Many2one(
         'res.partner', string='Contacto',
-        help='Opcional. Si se deja en blanco se buscará o creará un contacto '
-             'provisional a partir del número de teléfono.')
-    phone = fields.Char('Telefono WhatsApp', required=True)
+        help='Opcional para WhatsApp (se crea un contacto provisional si se deja vacío). '
+             'Obligatorio para enviar invitación de Telegram.')
+    phone = fields.Char('Teléfono WhatsApp', required=True)
     initial_message = fields.Text(
         'Mensaje del representante',
         help='Opcional: pega aquí el mensaje que el representante envió por otro canal '
@@ -148,3 +152,59 @@ class StartConversationWizard(models.TransientModel):
         self._link_bounce_log(conversation)
         conversation.action_start()
         return self._open_conversation(conversation)
+
+    def action_send_telegram_invite(self):
+        """Send the parent a WhatsApp message with the Telegram bot deep-link."""
+        self.ensure_one()
+        if not self.partner_id:
+            raise UserError(_("Seleccione un contacto para enviar la invitación de Telegram."))
+        if not self.phone:
+            raise UserError(_("El contacto no tiene teléfono WhatsApp registrado."))
+
+        partner = self.partner_id
+        if partner.telegram_chat_id:
+            raise UserError(_(
+                "%s ya tiene Telegram vinculado. No es necesario enviar la invitación."
+            ) % partner.name)
+
+        icp = self.env['ir.config_parameter'].sudo()
+
+        # Reuse existing opt-in token or create one
+        ack = self.env['partner.communication.ack'].sudo().search([
+            ('notice_key', '=', 'telegram_optin_glenda'),
+            ('partner_id', '=', partner.id),
+        ], limit=1)
+        if not ack:
+            ack = self.env['partner.communication.ack'].sudo().create({
+                'notice_key': 'telegram_optin_glenda',
+                'notice_label': 'Invitación Telegram Glenda',
+                'partner_id': partner.id,
+                'partner_phone': self.phone,
+            })
+
+        bot_username = icp.get_param('ai_agent.telegram_bot_username', 'GlendaUeipabBot')
+        deep_link = f"https://t.me/{bot_username}?start=FAM_{ack.token}"
+
+        first_name = partner.name.split()[0] if partner.name else partner.name
+        msg = (
+            f"📲 ¡Hola, {first_name}! Te invitamos a escribirle a Glenda, "
+            f"el asistente virtual de UEIPAB, también por Telegram.\n\n"
+            f"Es instantáneo, sin la restricción de 24 horas de WhatsApp y "
+            f"completamente gratuito.\n\n"
+            f"Toca este enlace para vincular tu cuenta:\n{deep_link}\n\n"
+            f"Solo pulsa *Iniciar* y Glenda te recibirá de inmediato. 🤖"
+        )
+
+        wa_service = self.env['ai.agent.whatsapp.service']
+        wa_service.send_message(self.phone, msg)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Invitación enviada'),
+                'message': _('Invitación de Telegram enviada a %s por WhatsApp.') % partner.name,
+                'type': 'success',
+                'sticky': False,
+            },
+        }

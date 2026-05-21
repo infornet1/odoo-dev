@@ -63,6 +63,45 @@ class AiAgentTelegramService(models.AbstractModel):
         """Show 'Glenda is typing…' indicator while Claude processes."""
         return self._api('sendChatAction', {'chat_id': chat_id, 'action': action})
 
+    def send_message_with_menu(self, chat_id, text, keyboard_rows, one_time=True):
+        """Send a message with a reply keyboard (tappable buttons).
+
+        keyboard_rows: list of lists where each item is either:
+          - a plain string  → regular text button (tap sends that string as a message)
+          - a dict          → special button, e.g. {'text': '📱 …', 'request_contact': True}
+        one_time=True collapses the keyboard after the first tap.
+        """
+        processed = [
+            [btn if isinstance(btn, dict) else {'text': btn} for btn in row]
+            for row in keyboard_rows
+        ]
+        return self._api('sendMessage', {
+            'chat_id':    chat_id,
+            'text':       text,
+            'parse_mode': 'HTML',
+            'reply_markup': {
+                'keyboard':          processed,
+                'one_time_keyboard': one_time,
+                'resize_keyboard':   True,
+            },
+        })
+
+    def send_contact_request(self, chat_id, prompt_text):
+        """Send a standalone contact-share button (re-offer after refusal or mid-conversation)."""
+        return self.send_message_with_menu(
+            chat_id,
+            prompt_text,
+            [
+                [{'text': '📱 Compartir mi número', 'request_contact': True}],
+                ['✍️ Prefiero escribir mi cédula'],
+            ],
+            one_time=True,
+        )
+
+    def set_my_commands(self, commands):
+        """Register bot commands visible in the Telegram '/' menu. Call once per deploy."""
+        return self._api('setMyCommands', {'commands': commands})
+
     # ── Files ────────────────────────────────────────────────────────────────
 
     def get_file(self, file_id):
@@ -90,6 +129,10 @@ class AiAgentTelegramService(models.AbstractModel):
             'drop_pending_updates': True,
         })
         _logger.info("Telegram setWebhook → %s: %s", url, result)
+        # Register bot commands so parents see /vincular in the Telegram command menu
+        self.set_my_commands([
+            {'command': 'vincular', 'description': 'Vincular mi número de teléfono'},
+        ])
         return result
 
     def delete_webhook(self):

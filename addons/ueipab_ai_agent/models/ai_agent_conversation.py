@@ -1203,7 +1203,14 @@ class AiAgentConversation(models.Model):
             if payload.startswith('FAM_'):
                 self._handle_telegram_parent_start(chat_id, payload, first_name, dry_run)
                 return
-            # Plain /start (no token) — send welcome and fall through to normal conversation
+                # Plain /start (no token) — send interactive welcome menu and wait for first reply
+            self._send_telegram_welcome_menu(chat_id, first_name, dry_run)
+            return
+
+        # /vincular — re-offer phone sharing (handles accidental refusal)
+        if text == '/vincular':
+            self._send_telegram_phone_request(chat_id, dry_run)
+            return
 
         # Build attachment if user sent a photo (e.g. payment receipt)
         extra_attachments = []
@@ -1230,6 +1237,134 @@ class AiAgentConversation(models.Model):
             wa_message_id=0,
             extra_attachments=extra_attachments or None,
         )
+
+    @api.model
+    def _send_telegram_welcome_menu(self, chat_id, first_name='', dry_run=False):
+        """Send an interactive reply-keyboard welcome to a plain /start with no deep-link token.
+
+        No conversation is created here — the parent's first real tap/message triggers it.
+        The reply keyboard sends tappable buttons; each tap delivers its label as a plain
+        text message, so the existing action_process_reply flow handles it unchanged.
+        """
+        from ..skills import get_ve_greeting
+        name   = (first_name or '').strip()
+        saludo = get_ve_greeting()
+        greeting = name or 'Representante'
+
+        text = (
+            f"{saludo}, <b>{greeting}</b>! 👋\n\n"
+            f"Soy <b>Glenda</b>, asistente virtual del "
+            f"<b>Colegio Andrés Bello</b>.\n\n"
+            f"Para mostrarte tu información de cuenta al instante, comparte tu número "
+            f"con el botón de abajo — o elige una opción del menú."
+        )
+        keyboard = [
+            [{'text': '📱 Compartir mi número (recomendado)', 'request_contact': True}],
+            ["1️⃣  Mi estado de cuenta / saldo"],
+            ["2️⃣  Propuesta económica 2026-2027"],
+            ["3️⃣  Inscripción anticipada y matrícula"],
+            ["4️⃣  Información general (horarios, uniformes)"],
+            ["5️⃣  Otro asunto"],
+        ]
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would send Telegram welcome menu to chat_id=%s", chat_id)
+            return
+
+        tg = self.env['ai.agent.telegram.service']
+        tg.send_message_with_menu(chat_id, text, keyboard)
+        _logger.info("Telegram: welcome menu sent to chat_id=%s (%s)", chat_id, greeting)
+
+    @api.model
+    def _send_telegram_phone_request(self, chat_id, dry_run=False):
+        """Re-offer the contact-share button (triggered by /vincular or Glenda mid-conversation)."""
+        prompt = (
+            "📱 Para ver tu información de cuenta sin escribir nada, comparte tu número "
+            "de teléfono de forma segura con el botón de abajo.\n\n"
+            "Si prefieres, escríbeme tu cédula (ej. <code>V-12345678</code>) "
+            "o usa el comando /vincular en cualquier momento."
+        )
+        if dry_run:
+            _logger.info("DRY_RUN: Would send phone request to chat_id=%s", chat_id)
+            return
+        tg = self.env['ai.agent.telegram.service']
+        tg.send_contact_request(chat_id, prompt)
+
+    @api.model
+    def _handle_telegram_contact_share(self, chat_id, phone_raw, first_name=''):
+        """Handle a Telegram contact share (message.contact from the phone-sharing button).
+
+        Tries multiple phone formats against res.partner phone/mobile.
+        On match: writes telegram_chat_id to the real partner, updates any active
+        conversation's partner_id so context is immediately enriched.
+        On no match: tells the parent and suggests cédula fallback.
+        """
+        icp     = self.env['ir.config_parameter'].sudo()
+        dry_run = icp.get_param('ai_agent.dry_run', 'True').lower() == 'true'
+        tg      = self.env['ai.agent.telegram.service']
+
+        # Build candidate phone formats from the E.164 number Telegram provides
+        digits = _re.sub(r'\D', '', phone_raw or '')
+        candidates = []
+        if digits:
+            candidates.append(phone_raw)           # as-is from Telegram (+584125551234)
+            candidates.append(f'+{digits}')        # normalised international
+            if digits.startswith('58') and len(digits) == 12:
+                local = '0' + digits[2:]           # 04125551234
+                candidates.append(local)
+                candidates.append(f'+58 {digits[2:5]} {digits[5:]}')  # +58 412 5551234
+            candidates.append(digits)              # raw digits
+
+        partner = None
+        if candidates:
+            Partner = self.env['res.partner'].sudo()
+            for c in candidates:
+                partner = Partner.search(
+                    ['|', ('phone', '=', c), ('mobile', '=', c)], limit=1)
+                if partner:
+                    break
+
+        _logger.info(
+            "Telegram contact share: chat_id=%s phone=%r candidates=%s → partner=%s",
+            chat_id, phone_raw, candidates, partner.name if partner else 'NOT FOUND',
+        )
+
+        if dry_run:
+            _logger.info("DRY_RUN: contact share match=%s", partner.name if partner else None)
+            return
+
+        if partner:
+            # Write telegram_chat_id to the real partner
+            if not partner.telegram_chat_id:
+                partner.write({'telegram_chat_id': chat_id})
+
+            # Promote any active conversation for this chat_id to the real partner
+            active_conv = self.search([
+                ('telegram_chat_id', '=', chat_id),
+                ('state', 'in', ('draft', 'active', 'waiting')),
+            ], limit=1)
+            if active_conv and active_conv.partner_id.id != partner.id:
+                active_conv.sudo().write({'partner_id': partner.id})
+                _logger.info(
+                    "Telegram contact share: promoted conv %d partner → %s",
+                    active_conv.id, partner.name,
+                )
+
+            first = (first_name or partner.name.split()[0]).strip().capitalize()
+            tg.send_message(chat_id, (
+                f"✅ ¡Listo, <b>{first}</b>! Tu número quedó vinculado a tu perfil "
+                f"en el colegio.\n\n"
+                f"Ahora puedo mostrarte tu estado de cuenta, mensualidades y más "
+                f"sin que tengas que escribir datos adicionales. ¿En qué te ayudo hoy?"
+            ))
+        else:
+            tg.send_message(chat_id, (
+                "No encontré tu número en nuestro sistema. Esto puede pasar si está "
+                "registrado con un formato diferente.\n\n"
+                "Escríbeme tu cédula (ej. <code>V-12345678</code>) y te busco de "
+                "inmediato, o comunícate con soporte@ueipab.edu.ve para "
+                "actualizar tu teléfono de contacto."
+            ))
 
     @api.model
     def _handle_telegram_employee_start(self, chat_id, payload, first_name, dry_run=False):
@@ -1384,10 +1519,16 @@ class AiAgentConversation(models.Model):
             _logger.error("Telegram: general_inquiry skill not found")
             return None
 
-        # Re-use partner from a previous Telegram conversation for this chat_id
+        # Re-use partner from a previous Telegram conversation for this chat_id.
+        # Prefer the real partner (telegram_chat_id written by Option-A auto-link) over
+        # any placeholder — breaks the chain of new placeholders for identified contacts.
         prev = self.search([('telegram_chat_id', '=', chat_id)],
                            limit=1, order='create_date desc')
-        if prev and prev.partner_id:
+        real_partner = self.env['res.partner'].sudo().search(
+            [('telegram_chat_id', '=', chat_id)], limit=1)
+        if real_partner:
+            partner = real_partner
+        elif prev and prev.partner_id:
             partner = prev.partner_id
         else:
             # Create a placeholder partner; the skill will identify them during the conversation

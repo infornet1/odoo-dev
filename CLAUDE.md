@@ -83,7 +83,7 @@
 | 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on ACK |
 | 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve |
-| 68 | Manual WA Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; `initial_message` skips greeting |
+| 68 | Manual WA/Telegram Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; Canal toggle WhatsApp/Telegram (v57.5); Telegram mode: contact mandatory, sends FAM_ invite via WA; `initial_message` skips greeting (WA only) |
 | 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json`; `sync_family_billing.py` 07:30 VET; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical |
 | 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` |
@@ -170,7 +170,7 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.4 | both |
+| ueipab_ai_agent | 17.0.1.57.7 | both |
 | ueipab_attendance_report | 17.0.1.6.15 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -264,6 +264,16 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Monitoring URL:** `https://odoo.ueipab.edu.ve/web#action=830&cids=1&menu_id=569` → filter by Canal=Telegram; group by Canal available.
 
+**Welcome menu on plain `/start` (v57.6):** `_send_telegram_inbound()` intercepts bare `/start` (no EMP_/FAM_ token) → calls `_send_telegram_welcome_menu()` → sends reply keyboard with 6 rows: contact-share button (top, `request_contact=True`) + 5 text options. No conversation created yet — fires on the parent's first real tap/message. `send_message_with_menu()` accepts both plain strings and dicts per button.
+
+**Phone contact sharing → auto-link (v57.7):** Parent taps "📱 Compartir mi número" → Telegram sends `message.contact` (not `message.text`) → webhook routes to `_handle_telegram_contact_share()`. Tries multiple phone formats (E.164, `+58…`, `0…`) against `res.partner.phone`/`mobile`. Match → writes `partner.telegram_chat_id = chat_id` + promotes any active conversation's `partner_id` to real partner. No match → asks for cédula fallback.
+
+**`/vincular` command (v57.7):** Registered via `set_my_commands()` (visible in Telegram `/` menu). Handled in `_handle_telegram_inbound()` → calls `_send_telegram_phone_request()` → resends contact-share button. Fires `set_my_commands` automatically on `set_webhook()`. Re-offer UX for parents who tapped "Don't Allow" by mistake.
+
+**Option A auto-link via cédula (v57.6):** `_find_partner_by_cedula()` in `general_inquiry.py` — after confirming a match, if `conversation.channel=='telegram'` and `partner.telegram_chat_id` is unset, writes it. `_get_or_create_telegram_conversation()` prefers `res.partner.telegram_chat_id` lookup over previous-conv placeholder chain.
+
+**Wizard Telegram invite (v57.5):** Canal = Telegram in "Iniciar Conversación" → `partner_id` required → creates `partner.communication.ack` with `notice_key='telegram_optin_glenda'` → sends WA with `t.me/GlendaUeipabBot?start=FAM_{token}`. Guard: `partner.telegram_chat_id` already set → error (already linked). Token reused if ack exists.
+
 ### Glenda Family Billing Enrichment (Feature #69)
 
 **Cache:** `school.family_billing_json` (199 families). Sync: `scripts/sync_family_billing.py --live` — cron daily 07:30 VET.
@@ -272,7 +282,7 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Annual one-time costs/student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**.
 
-**Iniciar Conversación (v51):** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately. `initial_message` skips greeting; cleared after send. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
+**Iniciar Conversación (v57.5):** Canal toggle WhatsApp/Telegram at top. **WhatsApp:** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately; `initial_message` skips greeting; cleared after send. **Telegram:** `partner_id` required; `phone` auto-fills from partner; `📲 Enviar Invitación Telegram` sends FAM_ link via WA. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
 
 **Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; state: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
 

@@ -31,11 +31,22 @@ class TelegramWebhookController(http.Controller):
             # photo: list of PhotoSize objects (sorted smallest→largest by Telegram)
             photos   = message.get('photo')
             document = message.get('document')
+            contact  = message.get('contact')
 
             _logger.info(
-                "Telegram inbound: chat_id=%s name=%r text=%r photo=%s",
-                chat_id, first_name, text[:60], bool(photos),
+                "Telegram inbound: chat_id=%s name=%r text=%r photo=%s contact=%s",
+                chat_id, first_name, text[:60], bool(photos), bool(contact),
             )
+
+            # Contact share (parent tapped "📱 Compartir mi número")
+            if contact:
+                phone_raw = contact.get('phone_number', '')
+                request.env['ai.agent.conversation'].sudo()._handle_telegram_contact_share(
+                    chat_id    = chat_id,
+                    phone_raw  = phone_raw,
+                    first_name = first_name,
+                )
+                return {}
 
             request.env['ai.agent.conversation'].sudo()._handle_telegram_inbound(
                 chat_id   = chat_id,

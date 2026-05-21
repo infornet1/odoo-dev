@@ -5,14 +5,17 @@
         <field name="name">ai.agent.start.conversation.wizard.form</field>
         <field name="model">ai.agent.start.conversation.wizard</field>
         <field name="arch" type="xml">
-            <form string="Iniciar Conversacion WhatsApp">
+            <form string="Iniciar Conversación">
                 <group>
+                    <field name="channel" widget="radio" options="{'horizontal': true}"/>
                     <field name="skill_id"/>
                     <field name="partner_id"
-                           placeholder="Opcional — déjalo en blanco si el número no está en Odoo"/>
+                           required="channel == 'telegram'"
+                           placeholder="Obligatorio para Telegram / Opcional para WhatsApp"/>
                     <field name="phone"/>
                 </group>
-                <group string="Mensaje del representante (opcional)">
+                <group string="Mensaje del representante (opcional)"
+                       invisible="channel == 'telegram'">
                     <field name="initial_message" nolabel="1" colspan="2"
                            placeholder="Pega aquí el mensaje original del representante recibido por otro canal (correo, WA distinto, presencial). Glenda lo procesará automáticamente tras el saludo."
                            widget="text"/>
@@ -24,10 +27,17 @@
                 <footer>
                     <button name="action_save_draft" string="💾 Guardar Borrador"
                             type="object" class="btn-secondary"
+                            invisible="channel == 'telegram'"
                             help="Crea la conversación en borrador para revisar antes de enviar"/>
                     <button name="action_start" string="🚀 Iniciar Ahora"
                             type="object" class="btn-primary"
+                            invisible="channel == 'telegram'"
                             help="Crea la conversación y envía el mensaje a WhatsApp de inmediato"/>
+                    <button name="action_send_telegram_invite"
+                            string="📲 Enviar Invitación Telegram"
+                            type="object" class="btn-primary"
+                            invisible="channel != 'telegram'"
+                            help="Envía al representante un mensaje de WhatsApp con el enlace para vincular su cuenta de Telegram con Glenda"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
@@ -37,7 +47,7 @@
 
     <!-- Standalone action — opens wizard directly from AI Agent menu -->
     <record id="action_start_conversation_standalone" model="ir.actions.act_window">
-        <field name="name">Iniciar Conversación WhatsApp</field>
+        <field name="name">Iniciar Conversación</field>
         <field name="res_model">ai.agent.start.conversation.wizard</field>
         <field name="view_mode">form</field>
         <field name="view_id" ref="start_conversation_wizard_view_form"/>

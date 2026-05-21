@@ -596,6 +596,16 @@ class GeneralInquirySkill:
         partner = Partner.search([('vat', '=', raw)], limit=1)
         if not partner:
             partner = Partner.search([('vat', 'ilike', raw[-7:])], limit=1)
+
+        # Option-A auto-link: cédula confirmed identity → write telegram_chat_id to real partner
+        if partner and conversation.channel == 'telegram' and conversation.telegram_chat_id:
+            if not partner.telegram_chat_id:
+                partner.write({'telegram_chat_id': conversation.telegram_chat_id})
+                _logger.info(
+                    "Telegram auto-link: partner %s (%d) ← chat_id %s (via cédula)",
+                    partner.name, partner.id, conversation.telegram_chat_id,
+                )
+
         return partner or None
 
     def _format_balance_message(self, balance, bcv_rate=None):

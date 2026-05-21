@@ -123,9 +123,9 @@ BODY = """<!DOCTYPE html>
             <div style="width:36px;height:36px;background:#0a1628;border-radius:50%;
                         color:#C8A951;font-size:16px;font-weight:800;
                         line-height:36px;text-align:center;margin:0 auto 10px;">2</div>
-            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Llena el Formulario</p>
+            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Elige Canal</p>
             <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
-              Selecciona Skill, Contacto y Teléfono WhatsApp
+              Selecciona <strong>WhatsApp</strong> o <strong>Telegram</strong>, luego Skill, Contacto y Teléfono
             </p>
           </td>
           <td width="4%" style="text-align:center;color:#C8A951;font-size:20px;
@@ -149,8 +149,8 @@ BODY = """<!DOCTYPE html>
                         line-height:36px;text-align:center;margin:0 auto 10px;">4</div>
             <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Elegir Acción</p>
             <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
-              💾 <strong>Guardar Borrador</strong> para revisar primero<br/>
-              🚀 <strong>Iniciar Ahora</strong> para enviar de inmediato
+              <strong>WhatsApp:</strong> 💾 Borrador · 🚀 Iniciar<br/>
+              <strong>Telegram:</strong> 📲 Enviar Invitación
             </p>
           </td>
         </tr>
@@ -164,7 +164,7 @@ BODY = """<!DOCTYPE html>
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        2 · Guardar Borrador vs Iniciar Ahora
+        2 · Guardar Borrador vs Iniciar Ahora (WhatsApp)
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -222,13 +222,163 @@ BODY = """<!DOCTYPE html>
     </td>
   </tr>
 
-  <!-- ── SECTION 3: WHAT GLENDA KNOWS ── -->
+  <!-- ── SECTION 3: TELEGRAM INVITATION ── -->
+  <tr>
+    <td style="background:#f0f4ff;padding:28px 40px;">
+      <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
+                text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
+                padding-bottom:8px;">
+        3 · Invitar a un Representante a Telegram
+      </p>
+      <p style="margin:0 0 16px;font-size:13px;color:#374151;line-height:1.6;">
+        Si un representante te contactó por otro canal (presencial, correo, otro número),
+        puedes invitarle a usar <strong>@GlendaUeipabBot</strong> en Telegram con un solo clic.
+        Telegram es <em>instantáneo</em>, sin la restricción de 24 horas de WhatsApp, y gratuito.
+      </p>
+      <!-- Steps -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:18px;">
+        <tr>
+          <td width="22%" style="text-align:center;vertical-align:top;padding:0 4px;">
+            <div style="width:36px;height:36px;background:#1a3a6b;border-radius:50%;
+                        color:#C8A951;font-size:16px;font-weight:800;
+                        line-height:36px;text-align:center;margin:0 auto 10px;">1</div>
+            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Canal = Telegram</p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
+              En el formulario, selecciona <strong>Telegram</strong> en el campo Canal
+            </p>
+          </td>
+          <td width="4%" style="text-align:center;color:#C8A951;font-size:20px;vertical-align:middle;">›</td>
+          <td width="22%" style="text-align:center;vertical-align:top;padding:0 4px;">
+            <div style="width:36px;height:36px;background:#1a3a6b;border-radius:50%;
+                        color:#C8A951;font-size:16px;font-weight:800;
+                        line-height:36px;text-align:center;margin:0 auto 10px;">2</div>
+            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Selecciona Contacto</p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
+              El contacto Odoo es <strong>obligatorio</strong> — el teléfono se llena automáticamente
+            </p>
+          </td>
+          <td width="4%" style="text-align:center;color:#C8A951;font-size:20px;vertical-align:middle;">›</td>
+          <td width="22%" style="text-align:center;vertical-align:top;padding:0 4px;">
+            <div style="width:36px;height:36px;background:#1a3a6b;border-radius:50%;
+                        color:#C8A951;font-size:16px;font-weight:800;
+                        line-height:36px;text-align:center;margin:0 auto 10px;">3</div>
+            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Enviar Invitación</p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
+              Haz clic en <strong>📲 Enviar Invitación Telegram</strong> — llega por WhatsApp con el enlace al bot
+            </p>
+          </td>
+          <td width="4%" style="text-align:center;color:#C8A951;font-size:20px;vertical-align:middle;">›</td>
+          <td width="22%" style="text-align:center;vertical-align:top;padding:0 4px;">
+            <div style="width:36px;height:36px;background:#1a3a6b;border-radius:50%;
+                        color:#C8A951;font-size:16px;font-weight:800;
+                        line-height:36px;text-align:center;margin:0 auto 10px;">4</div>
+            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0a1628;">Representante Conectado</p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.5;">
+              Toca el enlace, pulsa <em>Iniciar</em> en Telegram y queda vinculado automáticamente
+            </p>
+          </td>
+        </tr>
+      </table>
+      <!-- Benefits -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+        <tr>
+          <td width="31%" style="background:#f0f9ff;border-radius:10px;border:1px solid #bae6fd;
+                                  padding:14px 12px;text-align:center;vertical-align:top;">
+            <div style="font-size:22px;margin-bottom:6px;">⚡</div>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#0369a1;">Instantáneo</p>
+            <p style="margin:0;font-size:10px;color:#64748b;">Glenda responde en segundos — sin esperar el cron de 5 min de WA</p>
+          </td>
+          <td width="2%"></td>
+          <td width="31%" style="background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;
+                                  padding:14px 12px;text-align:center;vertical-align:top;">
+            <div style="font-size:22px;margin-bottom:6px;">🔓</div>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#15803d;">Sin Límite 24h</p>
+            <p style="margin:0;font-size:10px;color:#64748b;">Glenda puede escribir al representante en cualquier momento</p>
+          </td>
+          <td width="2%"></td>
+          <td width="31%" style="background:#fefce8;border-radius:10px;border:1px solid #fde68a;
+                                  padding:14px 12px;text-align:center;vertical-align:top;">
+            <div style="font-size:22px;margin-bottom:6px;">💸</div>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#b45309;">Sin Créditos WA</p>
+            <p style="margin:0;font-size:10px;color:#64748b;">Telegram es gratuito — solo necesitan la app instalada</p>
+          </td>
+        </tr>
+      </table>
+      <!-- Note -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+        <tr>
+          <td style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;
+                     padding:12px 16px;">
+            <p style="margin:0;font-size:12px;color:#1e40af;line-height:1.6;">
+              💡 <strong>Nota:</strong> Si el representante ya tiene Telegram vinculado, el sistema mostrará
+              un aviso automático y no enviará la invitación nuevamente.
+              Puedes verificar revisando el campo <em>Telegram Chat ID</em> en su ficha de contacto en Odoo.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Parent-initiated flow -->
+      <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#0a1628;">
+        📲 Cuando el representante abre el bot por su cuenta
+      </p>
+      <p style="margin:0 0 12px;font-size:12px;color:#374151;line-height:1.6;">
+        Si un representante encuentra <strong>@GlendaUeipabBot</strong> directamente en Telegram
+        y pulsa <em>Iniciar</em>, verá un menú de bienvenida con un botón especial para
+        compartir su número de teléfono:
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+        <tr>
+          <td width="48%" style="background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;
+                                  padding:14px 16px;vertical-align:top;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#0369a1;">
+              📱 Compartir mi número (recomendado)
+            </p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.6;">
+              El representante toca el botón → Telegram muestra una confirmación nativa del sistema →
+              si acepta, Glenda vincula su cuenta automáticamente y lo identifica en Odoo.
+              <strong>Una sola vez, sin escribir nada.</strong>
+            </p>
+          </td>
+          <td width="4%"></td>
+          <td width="48%" style="background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;
+                                  padding:14px 16px;vertical-align:top;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#64748b;">
+              1️⃣–5️⃣ Opciones de texto
+            </p>
+            <p style="margin:0;font-size:11px;color:#64748b;line-height:1.6;">
+              Si prefiere no compartir su número, puede tocar cualquier opción del menú
+              y Glenda la atiende normalmente. Puede proporcionar su cédula más adelante
+              si necesita ver su saldo.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- /vincular re-offer -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;
+                     padding:12px 16px;">
+            <p style="margin:0;font-size:12px;color:#78350f;line-height:1.6;">
+              🔁 <strong>¿El representante rechazó compartir su número por error?</strong>
+              No hay problema — puede escribir el comando <code>/vincular</code> en cualquier momento
+              dentro del chat con Glenda y el botón de compartir reaparecerá inmediatamente.
+              También puede proporcionarle su cédula directamente si lo prefiere.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── SECTION 4: WHAT GLENDA KNOWS ── -->
   <tr>
     <td style="background:#f8faff;padding:28px 40px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        3 · Lo que Glenda Sabe
+        4 · Lo que Glenda Sabe
       </p>
       <p style="margin:0 0 16px;font-size:13px;color:#374151;">
         Glenda consulta el sistema automáticamente y responde con datos reales. No hace falta que el cliente
@@ -307,13 +457,13 @@ BODY = """<!DOCTYPE html>
     </td>
   </tr>
 
-  <!-- ── SECTION 4: CONVERSATION STATES ── -->
+  <!-- ── SECTION 5: CONVERSATION STATES ── -->
   <tr>
     <td style="background:#ffffff;padding:28px 40px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        4 · Estados de la Conversación
+        5 · Estados de la Conversación
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -375,13 +525,13 @@ BODY = """<!DOCTYPE html>
     </td>
   </tr>
 
-  <!-- ── SECTION 5: REFRESH + MONITORING ── -->
+  <!-- ── SECTION 6: REFRESH + MONITORING ── -->
   <tr>
     <td style="background:#f8faff;padding:28px 40px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        5 · Seguimiento en Tiempo Real
+        6 · Seguimiento en Tiempo Real
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -421,13 +571,13 @@ BODY = """<!DOCTYPE html>
     </td>
   </tr>
 
-  <!-- ── SECTION 6: WHEN TO INTERVENE ── -->
+  <!-- ── SECTION 7: WHEN TO INTERVENE ── -->
   <tr>
     <td style="background:#ffffff;padding:28px 40px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        6 · Cuándo Intervenir Manualmente
+        7 · Cuándo Intervenir Manualmente
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -464,13 +614,13 @@ BODY = """<!DOCTYPE html>
     </td>
   </tr>
 
-  <!-- ── SECTION 7: QUICK TIPS ── -->
+  <!-- ── SECTION 8: QUICK TIPS ── -->
   <tr>
     <td style="background:#f8faff;padding:28px 40px 20px;">
       <p style="margin:0 0 18px;font-size:16px;font-weight:800;color:#0a1628;
                 text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #C8A951;
                 padding-bottom:8px;">
-        7 · Tips Rápidos
+        8 · Tips Rápidos
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -496,6 +646,16 @@ BODY = """<!DOCTYPE html>
         <tr>
           <td style="padding:6px 0;font-size:12px;color:#374151;line-height:1.6;">
             ✅ <strong>Haz clic en 🔄 Actualizar</strong> para ver si el cliente ya respondió, en lugar de recargar la página.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-size:12px;color:#374151;line-height:1.6;">
+            ✅ <strong>Invita a Telegram</strong> a representantes que preguntan con frecuencia — es más rápido y no consume créditos de WhatsApp. Usa Canal = Telegram en el formulario de inicio.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-size:12px;color:#374151;line-height:1.6;">
+            ✅ Si un representante dice que rechazó compartir su número por error, indícale que escriba <strong>/vincular</strong> en el chat con Glenda — el botón reaparece de inmediato.
           </td>
         </tr>
       </table>
