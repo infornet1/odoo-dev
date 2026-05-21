@@ -63,8 +63,11 @@ def _save_state(s):
 
 # ── Data ───────────────────────────────────────────────────────────────────────
 
+INCLUDE_STATUSES = {'ACTIVE', 'PIPELINE'}
+
+
 def _load_sheet_parents():
-    """Load ACTIVE parents from Google Sheet Customers tab — same source as all campaign scripts."""
+    """Load ACTIVE + PIPELINE parents from Google Sheet Customers tab."""
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
@@ -81,12 +84,13 @@ def _load_sheet_parents():
         name   = r[1].strip()
         status = r[2].strip().upper()
         emails_raw = r[9].strip()
-        if not name or status != 'ACTIVE':
+        if not name or status not in INCLUDE_STATUSES:
             continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
-        parents.append({'name': name, 'emails': emails})
+        parents.append({'name': name, 'emails': emails, 'status': status})
 
-    log.info("Sheet: %d ACTIVE parents loaded", len(parents))
+    counts = {s: sum(1 for p in parents if p['status'] == s) for s in INCLUDE_STATUSES}
+    log.info("Sheet: %d parents loaded %s", len(parents), counts)
     return parents
 
 
@@ -120,11 +124,13 @@ def _fetch_status(models, db, uid, key):
                 'name':             p['name'],
                 'email':            p['emails'][0] if p['emails'] else '—',
                 'telegram_chat_id': partner['telegram_chat_id'],
+                'status':           p['status'],
             })
         else:
             unlinked.append({
-                'name':  p['name'],
-                'email': p['emails'][0] if p['emails'] else '—',
+                'name':   p['name'],
+                'email':  p['emails'][0] if p['emails'] else '—',
+                'status': p['status'],
             })
 
     total = len(sheet_parents)
@@ -148,10 +154,16 @@ def _build_html(status, delta, state):
     pct      = status['pct']
     pct_bar  = max(4, pct)
 
+    def _status_badge(s):
+        color = '#2e7d32' if s == 'ACTIVE' else '#e65100'
+        bg    = '#e8f5e9' if s == 'ACTIVE' else '#fff3e0'
+        return (f'<span style="font-size:9px;font-weight:bold;color:{color};'
+                f'background:{bg};padding:1px 5px;border-radius:4px;">{s}</span>')
+
     linked_rows = ''.join(
         f'<tr style="border-bottom:1px solid #f0f0f0;">'
         f'<td style="padding:5px 8px;font-size:12px;font-weight:bold;color:#0d47a1;">'
-        f'{p["name"]}</td>'
+        f'{p["name"]} {_status_badge(p.get("status",""))}</td>'
         f'<td style="padding:5px 8px;font-size:11px;color:#888;">{p.get("email") or "—"}</td>'
         f'<td style="padding:5px 8px;font-size:11px;color:#aaa;font-family:monospace;">'
         f'{p["telegram_chat_id"]}</td>'
@@ -164,7 +176,8 @@ def _build_html(status, delta, state):
 
     unlinked_rows = ''.join(
         f'<tr style="border-bottom:1px solid #f0f0f0;">'
-        f'<td style="padding:4px 8px;font-size:12px;color:#555;">{p["name"]}</td>'
+        f'<td style="padding:4px 8px;font-size:12px;color:#555;">'
+        f'{p["name"]} {_status_badge(p.get("status",""))}</td>'
         f'<td style="padding:4px 8px;font-size:11px;color:#999;">{p.get("email") or "—"}</td>'
         f'</tr>'
         for p in unlinked[:20]
@@ -317,8 +330,10 @@ def main(live, force):
     last_linked = state.get('last_linked', -1)
     delta       = len(status['linked']) - max(last_linked, 0)
 
-    log.info("Telegram opt-in — linked:%d/%d | delta:+%d",
-             len(status['linked']), status['total'], delta)
+    active_total   = sum(1 for p in status['linked'] + status['unlinked'] if p.get('status') == 'ACTIVE')
+    pipeline_total = sum(1 for p in status['linked'] + status['unlinked'] if p.get('status') == 'PIPELINE')
+    log.info("Telegram opt-in — linked:%d/%d (active:%d pipeline:%d) | delta:+%d",
+             len(status['linked']), status['total'], active_total, pipeline_total, delta)
 
     if last_linked >= 0 and delta == 0 and not force:
         log.info("No new linkings since last run — skipping send.")
