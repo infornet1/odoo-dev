@@ -111,9 +111,10 @@ python3 scripts/send_telegram_optin_email.py --test     # CEO preview only
 python3 scripts/send_telegram_optin_email.py --live     # send to all 174
 ```
 
-**Preview sent:** 2026-05-21 to gustavo.perdomo@ueipab.edu.ve (mail.mail id=5909) — awaiting review.
+**Preview sent:** 2026-05-21 to gustavo.perdomo@ueipab.edu.ve (mail.mail id=5928) — template approved.
 
-**When to fire:** After vote results (May 26) or whenever approved. Phase 3 (FAM_ handler) must be deployed first.
+**Status: ⏳ PENDING** — live blast not yet fired. Awaiting go-ahead after vote results (May 26).
+Phase 3 (FAM_ handler) already deployed. Run: `python3 scripts/send_telegram_optin_email.py --live`
 
 #### Phase 4b — WA follow-up blast (after email, smaller list)
 After email blast, wait 7–10 days. Send WA only to parents who received email but didn't link (no `telegram_chat_id` on partner yet). Expected: ~60–80 parents max vs 178 full blast.
