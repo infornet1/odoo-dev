@@ -124,8 +124,9 @@ class AiAgentFreescoutTask(models.Model):
             partner = partner_rows[0] if partner_rows else None
 
         if not partner and customer_email:
+            # Use ilike (substring) — Odoo may store multiple emails as 'a@x.com;b@x.com'
             partner_rows = self.env['res.partner'].sudo().search_read(
-                [('email', '=ilike', customer_email), ('customer_rank', '>', 0)],
+                [('email', 'ilike', customer_email), ('customer_rank', '>', 0)],
                 ['id', 'name', 'email', 'vat', 'child_ids'], limit=1)
             partner = partner_rows[0] if partner_rows else None
 

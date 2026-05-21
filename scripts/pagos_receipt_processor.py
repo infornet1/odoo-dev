@@ -268,11 +268,12 @@ def notify_ceo_wa(msg):
 
 
 def odoo_find_partner_by_email(email):
-    """Find res.partner by email (exact match, customer only)."""
+    """Find res.partner by email. Uses ilike (substring) to handle multi-email fields
+    where Odoo stores 'email1;email2' in a single field."""
     if not email:
         return None
     rows = odoo_search_read('res.partner',
-        [('email', '=ilike', email.strip().lower()), ('customer_rank', '>', 0)],
+        [('email', 'ilike', email.strip()), ('customer_rank', '>', 0)],
         ['id', 'name', 'email', 'vat', 'child_ids'], limit=1)
     return rows[0] if rows else None
 
