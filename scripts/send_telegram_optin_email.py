@@ -470,6 +470,7 @@ def main():
             'subject':    subject,
             'email_from': 'Colegio Andrés Bello <soporte@ueipab.edu.ve>',
             'email_to':   matched_email,
+            'reply_to':   'soporte@ueipab.edu.ve',
             'body_html':  html,
             'state':      'outgoing',
         }]])
