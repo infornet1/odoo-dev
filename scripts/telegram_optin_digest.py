@@ -38,7 +38,7 @@ RECIPIENTS = [
     ('Gustavo Perdomo', 'gustavo.perdomo@ueipab.edu.ve'),
 ]
 
-LAST_GRADE = '5to Año'   # single-student families in this grade excluded from campaign
+LAST_GRADE = '5to. Año'  # single-student families in this grade excluded from campaign
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -67,75 +67,63 @@ def _save_state(s):
 INCLUDE_STATUSES = {'ACTIVE', 'PIPELINE'}
 
 
-def _load_quinto_excluded(models, db, uid, key):
-    """Return set of parent names (uppercase) with only one child in LAST_GRADE."""
-    import re
-
-    p1 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
-        [[['key', '=', 'school.family_billing_json']]], {'fields': ['value'], 'limit': 1})
-    p2 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
-        [[['key', '=', 'school.student_directory_json']]], {'fields': ['value'], 'limit': 1})
-    if not p1 or not p2:
-        return set()
-
-    families = json.loads(p1[0]['value']).get('families', [])
-    students = json.loads(p2[0]['value']).get('students', [])
-
-    def tok(n):
-        n2 = unicodedata.normalize('NFD', n.lower())
-        n2 = ''.join(c for c in n2 if unicodedata.category(c) != 'Mn')
-        return set(re.sub(r'[^a-z ]', '', n2).split())
-
-    last_grade = [s for s in students if s.get('grade') == LAST_GRADE]
-
-    def is_last_grade(billing_name):
-        bn = tok(billing_name)
-        for s in last_grade:
-            words = s['name'].split()
-            if len(words) >= 2:
-                def _n(w):
-                    w2 = unicodedata.normalize('NFD', w.lower())
-                    return re.sub(r'[^a-z]', '', ''.join(c for c in w2 if unicodedata.category(c) != 'Mn'))
-                last1 = _n(words[-1])
-                last2 = _n(words[-2])
-                first = _n(words[0])
-                if last1 in bn and last2 in bn and first in bn:
-                    return True
-        return False
+def _load_quinto_excluded_from_sheet(svc):
+    """Return set of parent names (uppercase) where ALL grades in cols U-Z are LAST_GRADE.
+    Source: Google Sheet Customers tab cols U-Z (grades per student per row).
+    """
+    rows = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Customers!A2:Z').execute().get('values', [])
+    data = rows[1:]  # row 2 is the 'Grades' sub-header
 
     excluded = set()
-    for f in families:
-        if f.get('quantity') == 1 and len(f.get('students', [])) == 1:
-            if is_last_grade(f['students'][0]):
-                excluded.add(f['parent_name'].upper())
+    for row in data:
+        r      = (row + [''] * 26)[:26]
+        name   = r[1].strip()
+        status = r[2].strip().upper()
+        if not name or status not in INCLUDE_STATUSES:
+            continue
+        grades = [r[i].strip() for i in range(20, 26)
+                  if r[i].strip() and r[i].strip() != '#N/A']
+        if grades and all(g.lower() == LAST_GRADE.lower() for g in grades):
+            excluded.add(name.upper())
+
+    log.info("Sheet: %d families excluded (all students in %s)", len(excluded), LAST_GRADE)
     return excluded
 
 
 def _load_sheet_parents():
-    """Load ACTIVE + PIPELINE parents from Google Sheet Customers tab."""
+    """Load ACTIVE + PIPELINE parents from Google Sheet Customers tab (cols A-Z).
+    Excludes families where ALL students are in LAST_GRADE (cols U-Z).
+    """
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
     creds = Credentials.from_service_account_file(
         GSHEET_CREDS, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
     svc  = build('sheets', 'v4', credentials=creds)
+
+    # Build exclusion set from cols U-Z before loading parents
+    excluded = _load_quinto_excluded_from_sheet(svc)
+
     rows = svc.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
-    data = rows[1:]  # skip header row
+        spreadsheetId=SHEET_ID, range='Customers!A2:Z').execute().get('values', [])
+    data = rows[1:]  # skip grades sub-header row
 
     parents = []
     for row in data:
-        r      = (row + [''] * 13)[:13]
+        r      = (row + [''] * 26)[:26]
         name   = r[1].strip()
         status = r[2].strip().upper()
         emails_raw = r[9].strip()
         if not name or status not in INCLUDE_STATUSES:
             continue
+        if name.upper() in excluded:
+            continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
         parents.append({'name': name, 'emails': emails, 'status': status})
 
     counts = {s: sum(1 for p in parents if p['status'] == s) for s in INCLUDE_STATUSES}
-    log.info("Sheet: %d parents loaded %s", len(parents), counts)
+    log.info("Sheet: %d parents loaded after exclusion %s", len(parents), counts)
     return parents
 
 
@@ -204,8 +192,7 @@ def _fetch_employee_status(models, db, uid, key):
 
 def _fetch_status(models, db, uid, key):
     """Match ACTIVE+PIPELINE sheet parents (excl. 5to Año only) to res.partner."""
-    excluded      = _load_quinto_excluded(models, db, uid, key)
-    sheet_parents = _apply_exclusions(_load_sheet_parents(), excluded)
+    sheet_parents = _load_sheet_parents()
 
     # Build email → partner lookup from Odoo
     all_emails = [e for p in sheet_parents for e in p['emails']]
