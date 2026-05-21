@@ -54,9 +54,9 @@
                     <button name="action_resume_conversation"
                             string="▶️ Retomar Conversación"
                             type="object" class="btn-primary"
-                            invisible="state != 'active' or not silent"
-                            confirm="¿Reanudar esta conversación? Glenda responderá al último mensaje del contacto."
-                            title="Limpia el silencio automático y re-envía el último mensaje a Claude"/>
+                            invisible="state not in ('active', 'resolved', 'failed', 'timeout')"
+                            confirm="¿Retomar esta conversación? Glenda responderá al último mensaje del contacto."
+                            title="Re-activa y re-envía el último mensaje a Claude"/>
                     <button name="action_force_resolve" string="Resolver Manualmente"
                             type="object" class="btn-secondary"
                             invisible="state not in ('active', 'waiting')"

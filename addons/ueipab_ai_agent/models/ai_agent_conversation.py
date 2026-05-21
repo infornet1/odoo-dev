@@ -2075,19 +2075,21 @@ class AiAgentConversation(models.Model):
         self.message_post(body=_("Conversacion reabierta para reintento."))
 
     def action_resume_conversation(self):
-        """Un-silence a silenced active conversation and re-fire Claude with the last inbound message.
+        """Re-activate any conversation and re-fire Claude with the last inbound message.
 
-        Use when Glenda was auto-silenced (bot-speed detection or rate limit) but the contact
-        is a legitimate user. Clears the silent flag and immediately re-processes the last
-        inbound message so the contact gets a response without needing to retype.
+        Works for: active (silenced), resolved, failed, timeout.
+        Resets state to active, clears silent flag, re-processes last inbound message
+        so the contact gets a response without needing to retype.
         """
         self.ensure_one()
-        if self.state != 'active':
-            raise UserError(_("Solo se puede retomar conversaciones activas."))
 
-        # Clear silent flag
+        # Re-activate if not already active
+        if self.state != 'active':
+            self.write({'state': 'active', 'resolved_date': False})
+
+        # Always clear silent flag
         self.write({'silent': False})
-        self.message_post(body=_("🔄 Conversación reanudada manualmente — silencio removido."))
+        self.message_post(body=_("▶️ Conversación retomada manualmente — Glenda re-procesando."))
 
         # Find last inbound message to re-fire
         last_inbound = self.env['ai.agent.message'].search([
@@ -2097,7 +2099,7 @@ class AiAgentConversation(models.Model):
 
         if last_inbound and last_inbound.body:
             _logger.info(
-                "Conv %d: resuming — re-firing last inbound: %r",
+                "Conv %d: resumed — re-firing last inbound: %r",
                 self.id, last_inbound.body[:60],
             )
             self.action_process_reply(
