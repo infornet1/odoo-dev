@@ -75,7 +75,10 @@ def load_customers_sheet():
         name  = row[0].strip() if len(row) > 0 else ''
         email = row[8].strip().lower() if len(row) > 8 else ''
         if email and name:
-            data[email] = name
+            for addr in email.split(';'):
+                addr = addr.strip()
+                if addr:
+                    data[addr] = name
         else:
             skipped += 1
 
