@@ -45,6 +45,22 @@ Both testing and production confirmed in sync across all 7 custom modules:
 
 ---
 
+## 2026-05-21 — Resume Conversation Button (ueipab_ai_agent v57.2)
+
+**Feature:** `action_resume_conversation()` + "▶️ Retomar Conversación" button on `ai.agent.conversation` form.
+
+**Problem solved:** Conv 258 (Luis Albert, Telegram) — rapid messages ("Hola", "1", "Mi estado de Cuenta" < 2s apart) triggered bot-speed auto-silence. Glenda logged all 9 subsequent inbound messages but suppressed replies. Previously required manual `write({'silent': False})` + shell re-trigger.
+
+**Implementation:**
+- `action_resume_conversation()`: sets `silent=False`, posts audit note, finds last inbound message, calls `action_process_reply()` to re-fire Claude immediately
+- Button visible only when `state=active AND silent=True` — no false positives
+- Confirm dialog before firing
+- `silent` boolean toggle field added to Seguimiento group in form (previously only in tree view)
+
+**Also added:** `silent` field visible in conversation form Seguimiento group.
+
+---
+
 ## 2026-05-21 — Telegram Invitation Email Blast (165 parents) + First FAM_ Link
 
 **Blast fired:** `send_telegram_optin_email.py --live` → 165 ACTIVE parents, personalized FAM_ deep-link per parent. Cron trigger timed out (504) but all 165 queued and delivered via mail queue cron.
