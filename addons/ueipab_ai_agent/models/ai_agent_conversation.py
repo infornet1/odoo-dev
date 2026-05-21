@@ -974,14 +974,21 @@ class AiAgentConversation(models.Model):
         phone_or_id  = self.phone or self.telegram_chat_id or ''
 
         icp = self.env['ir.config_parameter'].sudo()
-        try:
-            fs_config = _json.load(open('/opt/odoo-dev/config/freescout_api.json'))
-        except Exception:
-            _logger.error("Absence notify: cannot read freescout_api.json")
+        fs_api_url = icp.get_param('ai_agent.freescout_api_url', '')
+        fs_api_key = icp.get_param('ai_agent.freescout_api_key', '')
+        if not (fs_api_url and fs_api_key):
+            for _path in ['/opt/odoo-dev/config/freescout_api.json', '/etc/odoo/freescout_api.json']:
+                try:
+                    _cfg = _json.load(open(_path))
+                    fs_api_url = _cfg.get('api_url', '')
+                    fs_api_key = _cfg.get('api_key', '')
+                    if fs_api_url and fs_api_key:
+                        break
+                except Exception:
+                    pass
+        if not (fs_api_url and fs_api_key):
+            _logger.error("Absence notify: Freescout API not configured")
             return
-
-        fs_api_url = fs_config['api_url']
-        fs_api_key = fs_config['api_key']
         headers = {'X-FreeScout-API-Key': fs_api_key, 'Content-Type': 'application/json'}
 
         channel_label = 'WhatsApp' if channel == 'whatsapp' else 'Telegram'
@@ -1129,14 +1136,23 @@ class AiAgentConversation(models.Model):
         import requests as _req
         from datetime import datetime as _dt
 
-        try:
-            fs_config = _json.load(open('/opt/odoo-dev/config/freescout_api.json'))
-        except Exception:
-            _logger.error("School account FS ticket: cannot read freescout_api.json")
+        _icp2 = self.env['ir.config_parameter'].sudo()
+        fs_api_url = _icp2.get_param('ai_agent.freescout_api_url', '')
+        _fs_key2   = _icp2.get_param('ai_agent.freescout_api_key', '')
+        if not (fs_api_url and _fs_key2):
+            for _path2 in ['/opt/odoo-dev/config/freescout_api.json', '/etc/odoo/freescout_api.json']:
+                try:
+                    _cfg2 = _json.load(open(_path2))
+                    fs_api_url = _cfg2.get('api_url', '')
+                    _fs_key2   = _cfg2.get('api_key', '')
+                    if fs_api_url and _fs_key2:
+                        break
+                except Exception:
+                    pass
+        if not (fs_api_url and _fs_key2):
+            _logger.error("School account FS ticket: Freescout API not configured")
             return
-
-        fs_api_url = fs_config['api_url']
-        headers    = {'X-FreeScout-API-Key': fs_config['api_key'], 'Content-Type': 'application/json'}
+        headers = {'X-FreeScout-API-Key': _fs_key2, 'Content-Type': 'application/json'}
 
         partner = self.partner_id
         parent_name  = (partner.name if partner and not partner.name.startswith('Consulta WhatsApp')

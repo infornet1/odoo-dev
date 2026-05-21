@@ -56,17 +56,37 @@ class AiAgentFreescoutTask(models.Model):
         }
 
     def _load_fs_config(self):
-        """Load Freescout API config from JSON file. Returns (headers, api_url)."""
-        try:
-            with open('/opt/odoo-dev/config/freescout_api.json') as f:
-                fs_cfg = json.load(f)
-        except Exception as e:
-            raise UserError(_(f"No se pudo cargar config Freescout: {e}"))
+        """Load Freescout API config. ir.config_parameter first, file fallback for dev."""
+        icp = self.env['ir.config_parameter'].sudo()
+        api_url = icp.get_param('ai_agent.freescout_api_url', '')
+        api_key = icp.get_param('ai_agent.freescout_api_key', '')
+
+        if not (api_url and api_key):
+            for path in [
+                '/opt/odoo-dev/config/freescout_api.json',
+                '/etc/odoo/freescout_api.json',
+            ]:
+                try:
+                    with open(path) as f:
+                        cfg = json.load(f)
+                    api_url = cfg.get('api_url', '')
+                    api_key = cfg.get('api_key', '')
+                    if api_url and api_key:
+                        break
+                except Exception:
+                    pass
+
+        if not (api_url and api_key):
+            raise UserError(_(
+                "Freescout API no configurado. Agregue ai_agent.freescout_api_url "
+                "y ai_agent.freescout_api_key en Ajustes → Parámetros del Sistema."
+            ))
+
         headers = {
-            'X-FreeScout-API-Key': fs_cfg['api_key'],
+            'X-FreeScout-API-Key': api_key,
             'Content-Type': 'application/json',
         }
-        return headers, fs_cfg['api_url']
+        return headers, api_url
 
     def action_reprocess(self):
         """Re-fetch the Freescout conv and re-run the payment extraction pipeline."""
