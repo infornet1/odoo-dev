@@ -162,6 +162,7 @@
 ## Module Versions
 
 **Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
+**Last sync verified:** 2026-05-21 — all modules in sync ✓
 
 | Module | Version | Notes |
 |--------|---------|-------|
