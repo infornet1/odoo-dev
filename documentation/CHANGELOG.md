@@ -27,7 +27,12 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 - Outcome banner for Opción B changed from `alert-danger` to `alert-info`
 - Rationale: both A and B are valid confirmed decisions; only `pending` (yellow) signals action needed
 
-**Fixes 9–10 still pending (require Python):** `response_hours` computed field + smart button to partner.
+**v1.6.14 — Fixes 9–10 (Python):**
+- `response_time` computed `Char` field: `@api.depends('sent_date','ack_date','state')` — formats delta as *"Respondió Xh Ymin después del envío"* (days/hours/minutes). Only visible in form when voted. Hidden via `invisible="not response_time"`.
+- `action_open_partner()` method returns `act_window` to `res.partner` form with `res_id=partner_id.id`.
+- `button_box` `invisible` moved from the box to the individual tablet button — partner stat button always visible.
+
+**⚠️ Structural note:** `partner.communication.ack` is misplaced in `ueipab_attendance_report`. Pending refactor → `ueipab_ai_agent` or new `ueipab_campaigns`. See [ACK_FORM_UX_IMPROVEMENTS.md](ACK_FORM_UX_IMPROVEMENTS.md) for full file list.
 
 ---
 

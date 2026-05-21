@@ -170,7 +170,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.56.0 | both |
-| ueipab_attendance_report | 17.0.1.6.13 | both |
+| ueipab_attendance_report | 17.0.1.6.14 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.1.0 | testing only |

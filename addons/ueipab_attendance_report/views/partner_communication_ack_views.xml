@@ -76,14 +76,24 @@
                         <strong>⏳ Pendiente de respuesta.</strong>
                         El representante aún no ha votado.
                     </div>
-                    <div class="oe_button_box" name="button_box"
-                         invisible="state != 'pending'">
+                    <div class="oe_button_box" name="button_box">
+                        <!-- Fix #10: smart button to partner form -->
+                        <button name="action_open_partner"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-user"
+                                invisible="not partner_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Ver Contacto</span>
+                            </div>
+                        </button>
                         <button name="action_open_vote_form_url"
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-external-link"
-                                string="Abrir formulario\nde voto (tablet)"
-                                title="Abre el formulario público para voto presencial"/>
+                                string="Abrir formulario&#10;de voto (tablet)"
+                                title="Abre el formulario público para voto presencial"
+                                invisible="state != 'pending'"/>
                     </div>
                     <group>
                         <group string="Campaña">
@@ -101,6 +111,9 @@
                         <group string="Votación">
                             <field name="sent_date"/>
                             <field name="ack_date"/>
+                            <!-- Fix #9: response time display -->
+                            <field name="response_time"
+                                   invisible="not response_time"/>
                             <field name="vote_channel" widget="badge"
                                    decoration-info="vote_channel == 'email_link'"
                                    decoration-success="vote_channel == 'whatsapp'"

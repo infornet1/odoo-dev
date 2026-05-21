@@ -178,10 +178,32 @@ Requires Python field addition in `partner_communication_ack.py`.
 | 6 | Replace `statusbar` widget with `badge` | ✅ v1.6.11 |
 | 7 | Move `ack_ip` to Sistema group | ✅ v1.6.11 |
 | 8 | `vote_notes` readonly after vote cast | ✅ v1.6.11 |
-| 9 | `response_hours` computed field (Python) | ⏳ Pending |
-| 10 | Smart button → partner form (Python + XML) | ⏳ Pending |
+| 9 | `response_time` computed field — *"Respondió 2h 15min después del envío"* | ✅ v1.6.14 |
+| 10 | Smart button → partner form (`oe_stat_button`) | ✅ v1.6.14 |
 
 **Additional fixes (2026-05-21):**
 - State labels renamed: `"Continuará"` → `"Opción A"` / `"No continuará"` → `"Opción B"` — v1.6.12
 - Opción B color: `decoration-danger` (red) → `decoration-info` (blue) — both A and B are valid decisions — v1.6.13
 - Outcome banners: generic text, no campaign-specific language — works for both budget vote and PDVSA campaigns
+
+---
+
+## ⚠️ Structural Note — Pending Refactor
+
+**`partner.communication.ack` is misplaced in `ueipab_attendance_report`.**
+
+The model, views, controller, and wizard were first created here for convenience, but the module has no conceptual ownership of campaign acknowledgments. The model serves:
+- Budget Consultation 2026-2027 (AI Agent / Glenda campaign)
+- PDVSA Continuity Campaign (AI Agent / Glenda campaign)
+- Representante Continuity Campaign (planned)
+
+**Correct home:** `ueipab_ai_agent` (already owns all campaign logic) or a new dedicated `ueipab_campaigns` module.
+
+**Files to relocate:**
+- `models/partner_communication_ack.py`
+- `views/partner_communication_ack_views.xml`
+- `controllers/partner_ack.py`
+- `wizard/vote_assist_wizard.py` + `views/vote_assist_wizard_views.xml`
+- Security rules in `security/ir.model.access.csv`
+
+**Migration required** (model is in production DB). Low urgency — zero functional impact until refactor is done.

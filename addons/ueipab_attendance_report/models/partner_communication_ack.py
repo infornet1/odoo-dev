@@ -26,8 +26,10 @@ class PartnerCommunicationAck(models.Model):
     sent_date    = fields.Datetime(string='Enviado', default=fields.Datetime.now)
     ack_date     = fields.Datetime(string='Respondido', readonly=True)
     ack_ip       = fields.Char(string='IP', readonly=True)
-    days_pending = fields.Integer(string='Días sin respuesta',
-                                  compute='_compute_days_pending')
+    days_pending  = fields.Integer(string='Días sin respuesta',
+                                   compute='_compute_days_pending')
+    response_time = fields.Char(string='Tiempo de respuesta',
+                                compute='_compute_response_time')
 
     # ── Audit trail ────────────────────────────────────────────────────────────
     vote_channel = fields.Selection([
@@ -60,6 +62,22 @@ class PartnerCommunicationAck(models.Model):
                 rec.days_pending = 0
             else:
                 rec.days_pending = (now - rec.sent_date).days
+
+    @api.depends('sent_date', 'ack_date', 'state')
+    def _compute_response_time(self):
+        for rec in self:
+            if rec.state == 'pending' or not rec.sent_date or not rec.ack_date:
+                rec.response_time = ''
+                continue
+            total_min = int((rec.ack_date - rec.sent_date).total_seconds() / 60)
+            days, remainder = divmod(total_min, 1440)
+            hours, minutes  = divmod(remainder, 60)
+            if days > 0:
+                rec.response_time = f"Respondió {days}d {hours}h después del envío"
+            elif hours > 0:
+                rec.response_time = f"Respondió {hours}h {minutes}min después del envío"
+            else:
+                rec.response_time = f"Respondió {minutes}min después del envío"
 
     def _get_si_url(self):
         self.ensure_one()
@@ -140,6 +158,17 @@ class PartnerCommunicationAck(models.Model):
             'type': 'ir.actions.act_url',
             'url':  url,
             'target': 'new',
+        }
+
+    def action_open_partner(self):
+        self.ensure_one()
+        return {
+            'type':      'ir.actions.act_window',
+            'name':      self.partner_name or 'Contacto',
+            'res_model': 'res.partner',
+            'res_id':    self.partner_id.id,
+            'view_mode': 'form',
+            'target':    'current',
         }
 
     def action_reset_pending(self):
