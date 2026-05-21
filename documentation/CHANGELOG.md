@@ -45,6 +45,16 @@ Both testing and production confirmed in sync across all 7 custom modules:
 
 ---
 
+## 2026-05-21 — Vote Reminder Email + Bounce Cleanup Round 2
+
+**Vote reminder:** 89 pending parents received a vote reminder email (subject: `[Recordatorio] Consulta Presupuestaria 2026-2027 - Tu voto esta pendiente`). Same original vote template with orange banner "RECORDATORIO — cierra el viernes 23 de mayo". Same ACK tokens — no reset, links vote directly. Queued via `mail.mail state=outgoing` + cron id=3 triggered via docker exec (web timeout workaround). All 89 confirmed sent (outgoing=0 after trigger).
+
+**Vote status at send time:** A:84 / B:4 / Pending:89 / Total:178 / Participation: 49.4%
+
+**Bounce cleanup Round 2:** 5 new DSN convs (45710, 45713, 45714, 45715, 45716) from repeated bounce notifications on already-cleaned addresses (annibelmartinez32@, dcontrerasperez82@, domin.anuel0608@, tampa.navarro@). No Odoo/Sheet action needed — all 4 addresses already removed in Round 1. Closed via Freescout API only.
+
+---
+
 ## 2026-05-21 — Voting Digest: PDVSA "No continuarán" Detail Breakdown
 
 **Script:** `scripts/voting_digest.py`

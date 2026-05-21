@@ -220,3 +220,4 @@ for cid in conv_ids_to_close:
 | Date | Campaign | Bounced Emails Removed | Convs Closed |
 |---|---|---|---|
 | 2026-05-21 | Budget Vote 2026-2027 | annibelmartinez32@gmail.com, domin.anuel0608@gmail.com, dcontrerasperez82@gmail.com, williamjose.velasquezgonzalez@gmail.com, lacruzde@pdvsa.com | 24 (9 Failure + 15 Delay) |
+| 2026-05-21 Round 2 | Budget Vote 2026-2027 (re-notifications) | Same addresses — already removed in Round 1. No Odoo/Sheet action. | 5 (3 Failure + 2 Delay) — close only |
