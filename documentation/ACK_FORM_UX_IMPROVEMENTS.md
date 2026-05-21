@@ -1,10 +1,9 @@
 # partner.communication.ack — Form UX Improvements
 
-**Status:** Pending implementation  
+**Status:** Fixes 1–8 deployed v17.0.1.6.13 (2026-05-21) | Fixes 9–10 pending  
 **Module:** `ueipab_attendance_report`  
 **View file:** `views/partner_communication_ack_views.xml`  
 **Identified:** 2026-05-20 during Budget Vote campaign monitoring  
-**Blocked by:** WA blast running in background (safe to implement after blast completes ~18:43 VET)
 
 ---
 
@@ -167,27 +166,22 @@ Requires Python field addition in `partner_communication_ack.py`.
 
 ---
 
-## Implementation Order
+## Implementation Status
 
-1. Fix #1 — `leaving` → red (2 lines, zero risk)
-2. Fix #2 — confirmation dialog (1 attribute)
-3. Fix #3 — outcome banners (most visible UX win)
-4. Fix #5 — remove duplicate `partner_phone`
-5. Fix #7 — move `ack_ip` to Sistema group
-6. Fix #4 — hide raw token
-7. Fix #6 — replace statusbar widget
-8. Fix #8 — readonly vote_notes
-9. Fix #9 — response time field (requires Python)
-10. Fix #10 — smart button to partner
+| # | Fix | Status |
+|---|-----|--------|
+| 1 | `leaving` decoration → `info` (blue, not red) | ✅ v1.6.13 |
+| 2 | Confirm dialog on "Reiniciar a Pendiente" | ✅ v1.6.11 |
+| 3 | Outcome banners (colored alert divs) | ✅ v1.6.11 |
+| 4 | Hide raw `token` from non-admins | ✅ v1.6.11 |
+| 5 | Remove duplicate `partner_phone` from Sistema | ✅ v1.6.11 |
+| 6 | Replace `statusbar` widget with `badge` | ✅ v1.6.11 |
+| 7 | Move `ack_ip` to Sistema group | ✅ v1.6.11 |
+| 8 | `vote_notes` readonly after vote cast | ✅ v1.6.11 |
+| 9 | `response_hours` computed field (Python) | ⏳ Pending |
+| 10 | Smart button → partner form (Python + XML) | ⏳ Pending |
 
-Fixes 1–8 are pure XML view changes — no Python, no migration, no data risk.
-Upgrade command after changes:
-```bash
-docker exec odoo-dev-web /usr/bin/odoo -d testing -u ueipab_attendance_report \
-  --stop-after-init --http-port=18069 && docker restart odoo-dev-web
-```
-
----
-
-## Blast Progress at Time of Writing
-- 13/131 sent | 1 skipped (voted mid-run) | ETA ~18:43 VET
+**Additional fixes (2026-05-21):**
+- State labels renamed: `"Continuará"` → `"Opción A"` / `"No continuará"` → `"Opción B"` — v1.6.12
+- Opción B color: `decoration-danger` (red) → `decoration-info` (blue) — both A and B are valid decisions — v1.6.13
+- Outcome banners: generic text, no campaign-specific language — works for both budget vote and PDVSA campaigns

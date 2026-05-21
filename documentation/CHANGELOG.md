@@ -4,6 +4,33 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-21 — partner.communication.ack Form & List UX (`ueipab_attendance_report` v1.6.11→v1.6.13)
+
+**Context:** Budget Vote 2026-2027 campaign monitoring surfaced 10 UX issues in the ACK form/list view used for both the budget vote and PDVSA continuity campaigns.
+
+**v1.6.11 — 8 pure-XML fixes:**
+- Fix #1: `leaving` row decoration changed from `decoration-info` (blue) to `decoration-danger` (red) — later revised to `decoration-info` in v1.6.13
+- Fix #2: Added `confirm` dialog to "Reiniciar a Pendiente" button — prevents accidental vote resets
+- Fix #3: Added colored outcome banners at top of form sheet (green=A, blue=B, yellow=pending)
+- Fix #4: `token` field restricted to `base.group_system` — prevents HR users from copying tokens to vote on behalf of families
+- Fix #5: Removed duplicate `partner_phone` from Sistema group (was also in Representante group)
+- Fix #6: Replaced `statusbar` widget with `badge` — A/B are parallel choices, not sequential steps
+- Fix #7: Moved `ack_ip` from Votación group to Sistema group — no meaning to HR users
+- Fix #8: `vote_notes` readonly once state is `continuing` or `leaving` — audit integrity
+
+**v1.6.12 — State label rename:**
+- `('continuing', 'Continuará')` → `('continuing', 'Opción A')` — model-level, applies everywhere (badges, reports, exports)
+- `('leaving', 'No continuará')` → `('leaving', 'Opción B')` — "No continuará" was PDVSA-specific; both campaigns use A/B terminology
+
+**v1.6.13 — Color correction:**
+- Opción B (`leaving`) changed from `decoration-danger` (red) to `decoration-info` (blue) in tree rows, state badge, and form header
+- Outcome banner for Opción B changed from `alert-danger` to `alert-info`
+- Rationale: both A and B are valid confirmed decisions; only `pending` (yellow) signals action needed
+
+**Fixes 9–10 still pending (require Python):** `response_hours` computed field + smart button to partner.
+
+---
+
 ## 2026-05-20 — DMARC p=reject → p=quarantine (Akdemia DKIM fix pending)
 
 - **Problem:** Akdemia sends notification emails FROM `@ueipab.edu.ve` via SendGrid IP `50.31.44.87` (`em.akdemia.com`). DMARC for `ueipab.edu.ve` was `p=reject pct=100`. Google Workspace rejected all 4 recipients with `550 5.7.26 Unauthenticated email`. Root cause: (1) SPF alignment fails — Return-Path `@em.akdemia.com` ≠ org domain `ueipab.edu.ve`; (2) no DKIM signing for `ueipab.edu.ve` from Akdemia/SendGrid. Adding Akdemia's IP to SPF alone cannot fix DMARC alignment.

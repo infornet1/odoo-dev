@@ -52,11 +52,30 @@
                             invisible="state != 'pending'"/>
                     <button name="action_reset_pending" string="Reiniciar a Pendiente"
                             type="object"
-                            invisible="state == 'pending'"/>
-                    <field name="state" widget="statusbar"
-                           statusbar_visible="pending,continuing,leaving"/>
+                            invisible="state == 'pending'"
+                            confirm="¿Está seguro de que desea reiniciar este voto? Esta acción elimina el registro de decisión del representante y no se puede deshacer."/>
+                    <field name="state" widget="badge"
+                           decoration-warning="state == 'pending'"
+                           decoration-success="state == 'continuing'"
+                           decoration-info="state == 'leaving'"
+                           readonly="1"/>
                 </header>
                 <sheet>
+                    <!-- Fix #3: outcome banners -->
+                    <div class="alert alert-info mb-3"
+                         invisible="state != 'leaving'">
+                        <strong>ℹ️ Decisión registrada: Opción B.</strong>
+                        Requiere seguimiento.
+                    </div>
+                    <div class="alert alert-success mb-3"
+                         invisible="state != 'continuing'">
+                        <strong>✅ Decisión registrada: Opción A.</strong>
+                    </div>
+                    <div class="alert alert-warning mb-3"
+                         invisible="state != 'pending'">
+                        <strong>⏳ Pendiente de respuesta.</strong>
+                        El representante aún no ha votado.
+                    </div>
                     <div class="oe_button_box" name="button_box"
                          invisible="state != 'pending'">
                         <button name="action_open_vote_form_url"
@@ -82,7 +101,6 @@
                         <group string="Votación">
                             <field name="sent_date"/>
                             <field name="ack_date"/>
-                            <field name="ack_ip"/>
                             <field name="vote_channel" widget="badge"
                                    decoration-info="vote_channel == 'email_link'"
                                    decoration-success="vote_channel == 'whatsapp'"
@@ -92,16 +110,16 @@
                                    invisible="state != 'pending'"/>
                         </group>
                         <group string="Sistema">
-                            <field name="token"/>
+                            <field name="token" groups="base.group_system"/>
                             <field name="bounce_wa_sent"/>
+                            <field name="ack_ip"/>
                             <field name="freescout_conv_id"
                                    invisible="not freescout_conv_id"/>
-                            <field name="partner_phone"
-                                   invisible="not partner_phone"/>
                         </group>
                     </group>
                     <group string="Notas de auditoría">
-                        <field name="vote_notes" nolabel="1"/>
+                        <field name="vote_notes" nolabel="1"
+                               readonly="state in ('continuing', 'leaving')"/>
                     </group>
                 </sheet>
             </form>

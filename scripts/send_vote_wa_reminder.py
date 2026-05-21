@@ -420,6 +420,7 @@ def main():
     parser.add_argument('--live',     action='store_true', help='Actually send (default: dry run)')
     parser.add_argument('--followup', action='store_true', help='Follow-up mode: nudge those who got 1st WA but still pending')
     parser.add_argument('--phone',    metavar='584XXXXXXXXX', help='Test single phone number')
+    parser.add_argument('--limit',    type=int, default=0, metavar='N', help='Stop after N successful sends (0 = no limit)')
     args = parser.parse_args()
 
     dry_run = not args.live
@@ -488,6 +489,9 @@ def main():
             mark_wa_sent(db, uid, key, models, ack_id, dry_run)
             create_agent_conversation(db, uid, key, models, entry, msg, skill_id, dry_run)
             sent_ok += 1
+            if args.limit and sent_ok >= args.limit:
+                log.info("Limit of %d successful sends reached — stopping.", args.limit)
+                break
         else:
             sent_fail += 1
 

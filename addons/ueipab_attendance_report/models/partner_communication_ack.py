@@ -20,8 +20,8 @@ class PartnerCommunicationAck(models.Model):
     token        = fields.Char(string='Token', copy=False, index=True, readonly=True)
     state        = fields.Selection([
         ('pending',     'Pendiente'),
-        ('continuing',  'Continuará'),
-        ('leaving',     'No continuará'),
+        ('continuing',  'Opción A'),
+        ('leaving',     'Opción B'),
     ], string='Decisión', default='pending', required=True)
     sent_date    = fields.Datetime(string='Enviado', default=fields.Datetime.now)
     ack_date     = fields.Datetime(string='Respondido', readonly=True)
