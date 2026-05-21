@@ -11,3 +11,4 @@ from . import ai_agent_feedback
 from . import hr_notice_ack_calibration
 from . import mail_bot_glenda
 from . import ai_agent_telegram_service
+from . import res_partner
