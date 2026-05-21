@@ -36,8 +36,9 @@ LOGO_URL     = f'{ODOO_URL}/web/image/res.company/1/logo'
 
 RECIPIENTS = [
     ('Gustavo Perdomo', 'gustavo.perdomo@ueipab.edu.ve'),
-    ('Arcides Arzola',  'arcides.arzola@ueipab.edu.ve'),
 ]
+
+LAST_GRADE = '5to Año'   # single-student families in this grade excluded from campaign
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -66,6 +67,45 @@ def _save_state(s):
 INCLUDE_STATUSES = {'ACTIVE', 'PIPELINE'}
 
 
+def _load_quinto_excluded(models, db, uid, key):
+    """Return set of parent names (uppercase) with only one child in LAST_GRADE."""
+    import re
+
+    p1 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
+        [[['key', '=', 'school.family_billing_json']]], {'fields': ['value'], 'limit': 1})
+    p2 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
+        [[['key', '=', 'school.student_directory_json']]], {'fields': ['value'], 'limit': 1})
+    if not p1 or not p2:
+        return set()
+
+    families = json.loads(p1[0]['value']).get('families', [])
+    students = json.loads(p2[0]['value']).get('students', [])
+
+    def tok(n):
+        return set(re.sub(r'[^a-záéíóúüñ ]', '', n.lower()).split())
+
+    last_grade = [s for s in students if s.get('grade') == LAST_GRADE]
+
+    def is_last_grade(billing_name):
+        bn = tok(billing_name)
+        for s in last_grade:
+            words = s['name'].split()
+            if len(words) >= 2:
+                last1 = re.sub(r'[^a-záéíóúüñ]', '', words[-1].lower())
+                last2 = re.sub(r'[^a-záéíóúüñ]', '', words[-2].lower())
+                first = re.sub(r'[^a-záéíóúüñ]', '', words[0].lower())
+                if last1 in bn and last2 in bn and first in bn:
+                    return True
+        return False
+
+    excluded = set()
+    for f in families:
+        if f.get('quantity') == 1 and len(f.get('students', [])) == 1:
+            if is_last_grade(f['students'][0]):
+                excluded.add(f['parent_name'].upper())
+    return excluded
+
+
 def _load_sheet_parents():
     """Load ACTIVE + PIPELINE parents from Google Sheet Customers tab."""
     from google.oauth2.service_account import Credentials
@@ -92,6 +132,15 @@ def _load_sheet_parents():
     counts = {s: sum(1 for p in parents if p['status'] == s) for s in INCLUDE_STATUSES}
     log.info("Sheet: %d parents loaded %s", len(parents), counts)
     return parents
+
+
+def _apply_exclusions(parents, excluded_names):
+    """Remove single-5to-Año families from parent list."""
+    filtered = [p for p in parents if p['name'].upper() not in excluded_names]
+    skipped  = len(parents) - len(filtered)
+    if skipped:
+        log.info("Excluded %d %s-only single-student families", skipped, LAST_GRADE)
+    return filtered
 
 
 def _fetch_employee_status(models, db, uid, key):
@@ -149,8 +198,9 @@ def _fetch_employee_status(models, db, uid, key):
 
 
 def _fetch_status(models, db, uid, key):
-    """Match ACTIVE sheet parents to res.partner and check telegram_chat_id."""
-    sheet_parents = _load_sheet_parents()
+    """Match ACTIVE+PIPELINE sheet parents (excl. 5to Año only) to res.partner."""
+    excluded      = _load_quinto_excluded(models, db, uid, key)
+    sheet_parents = _apply_exclusions(_load_sheet_parents(), excluded)
 
     # Build email → partner lookup from Odoo
     all_emails = [e for p in sheet_parents for e in p['emails']]

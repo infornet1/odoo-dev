@@ -45,6 +45,7 @@ NOTICE_KEY   = 'budget_consulta_2026_2027'
 
 PROD_CFG = '/opt/odoo-dev/config/production.json'
 GSHEET_CREDS = '/opt/odoo-dev/config/google_sheets_credentials.json'
+LAST_GRADE = '5to Año'   # single-student families in this grade are excluded
 
 
 # ── Odoo connection ────────────────────────────────────────────────────────────
@@ -76,7 +77,48 @@ def load_ack_tokens(models, db, uid, key):
 
 # ── Google Sheet ───────────────────────────────────────────────────────────────
 
-def load_sheet_recipients():
+def load_quinto_excluded(models, db, uid, key):
+    """Return set of parent names (uppercase) with a single student in LAST_GRADE to exclude."""
+    import re
+
+    p1 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
+        [[['key', '=', 'school.family_billing_json']]], {'fields': ['value'], 'limit': 1})
+    p2 = models.execute_kw(db, uid, key, 'ir.config_parameter', 'search_read',
+        [[['key', '=', 'school.student_directory_json']]], {'fields': ['value'], 'limit': 1})
+    if not p1 or not p2:
+        return set()
+
+    families = json.loads(p1[0]['value']).get('families', [])
+    students = json.loads(p2[0]['value']).get('students', [])
+
+    def tok(n):
+        return set(re.sub(r'[^a-záéíóúüñ ]', '', n.lower()).split())
+
+    last_grade_students = [s for s in students if s.get('grade') == LAST_GRADE]
+
+    def is_last_grade(billing_name):
+        bn = tok(billing_name)
+        for s in last_grade_students:
+            words = s['name'].split()
+            if len(words) >= 2:
+                last1 = re.sub(r'[^a-záéíóúüñ]', '', words[-1].lower())
+                last2 = re.sub(r'[^a-záéíóúüñ]', '', words[-2].lower())
+                first = re.sub(r'[^a-záéíóúüñ]', '', words[0].lower())
+                if last1 in bn and last2 in bn and first in bn:
+                    return True
+        return False
+
+    excluded = set()
+    for f in families:
+        if f.get('quantity') == 1 and len(f.get('students', [])) == 1:
+            if is_last_grade(f['students'][0]):
+                excluded.add(f['parent_name'].upper())
+
+    log.info('Excluded %s-only single-student families: %d', LAST_GRADE, len(excluded))
+    return excluded
+
+
+def load_sheet_recipients(excluded_names=None):
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
@@ -87,7 +129,9 @@ def load_sheet_recipients():
         spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
     data = rows[1:]  # skip header row
 
+    excluded_names = excluded_names or set()
     recipients = []
+    skipped = 0
     for row in data:
         r = (row + [''] * 13)[:13]
         name       = r[1].strip()
@@ -95,11 +139,15 @@ def load_sheet_recipients():
         emails_raw = r[9].strip()
         if not name or status != 'ACTIVE':
             continue
+        if name.upper() in excluded_names:
+            log.info('[SKIP] %s — single student in %s', name, LAST_GRADE)
+            skipped += 1
+            continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
         if emails:
             recipients.append({'name': name, 'emails': emails, 'primary_email': emails[0]})
 
-    log.info('Sheet: %d ACTIVE rows with email', len(recipients))
+    log.info('Sheet: %d ACTIVE recipients (skipped %d %s-only)', len(recipients), skipped, LAST_GRADE)
     return recipients
 
 
@@ -335,8 +383,9 @@ def build_html(name, deep_link):
 
 def main():
     models, db, uid, key, odoo_url = connect_odoo()
-    token_map = load_ack_tokens(models, db, uid, key)
-    recipients = load_sheet_recipients()
+    token_map      = load_ack_tokens(models, db, uid, key)
+    excluded_names = load_quinto_excluded(models, db, uid, key)
+    recipients     = load_sheet_recipients(excluded_names=excluded_names)
 
     mode = 'DRY RUN' if DRY_RUN else ('TEST' if TEST_ONLY else 'LIVE')
     log.info('=== %s MODE ===', mode)
