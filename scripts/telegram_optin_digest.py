@@ -94,6 +94,60 @@ def _load_sheet_parents():
     return parents
 
 
+def _fetch_employee_status(models, db, uid, key):
+    """Check which active employees have linked Telegram via EMP_ deep-link or FAM_ test."""
+    emps = models.execute_kw(db, uid, key, 'hr.employee', 'search_read',
+        [[['active', '=', True]]],
+        {'fields': ['id', 'name', 'work_email', 'user_id', 'job_id'], 'limit': 200})
+
+    # Build user_id → partner_id map
+    user_ids = [e['user_id'][0] for e in emps if e.get('user_id')]
+    users = models.execute_kw(db, uid, key, 'res.users', 'search_read',
+        [[['id', 'in', user_ids]]],
+        {'fields': ['id', 'partner_id'], 'limit': 200})
+    user_to_partner = {u['id']: u['partner_id'][0] for u in users if u.get('partner_id')}
+
+    emp_partner_ids = list(user_to_partner.values())
+
+    # Source 1: Telegram conversations linked to employee partner
+    tg_convs = models.execute_kw(db, uid, key, 'ai.agent.conversation', 'search_read',
+        [[['channel', '=', 'telegram'], ['partner_id', 'in', emp_partner_ids]]],
+        {'fields': ['partner_id', 'telegram_chat_id'], 'limit': 500})
+    conv_linked_partners = {
+        c['partner_id'][0] for c in tg_convs if c.get('partner_id')
+    }
+
+    # Source 2: res.partner.telegram_chat_id directly
+    if emp_partner_ids:
+        partners = models.execute_kw(db, uid, key, 'res.partner', 'search_read',
+            [[['id', 'in', emp_partner_ids], ['telegram_chat_id', '!=', False]]],
+            {'fields': ['id', 'telegram_chat_id'], 'limit': 200})
+        direct_linked_partners = {p['id'] for p in partners}
+    else:
+        direct_linked_partners = set()
+
+    all_linked_partners = conv_linked_partners | direct_linked_partners
+
+    linked   = []
+    unlinked = []
+    for e in emps:
+        uid_val    = e['user_id'][0] if e.get('user_id') else None
+        partner_id = user_to_partner.get(uid_val) if uid_val else None
+        job        = e['job_id'][1] if e.get('job_id') else '—'
+        entry = {'name': e['name'], 'email': e.get('work_email') or '—', 'job': job}
+        if partner_id and partner_id in all_linked_partners:
+            linked.append(entry)
+        else:
+            unlinked.append(entry)
+
+    return {
+        'total':    len(emps),
+        'linked':   linked,
+        'unlinked': unlinked,
+        'pct':      round(len(linked) / len(emps) * 100) if emps else 0,
+    }
+
+
 def _fetch_status(models, db, uid, key):
     """Match ACTIVE sheet parents to res.partner and check telegram_chat_id."""
     sheet_parents = _load_sheet_parents()
@@ -145,7 +199,7 @@ def _fetch_status(models, db, uid, key):
 
 # ── HTML ───────────────────────────────────────────────────────────────────────
 
-def _build_html(status, delta, state):
+def _build_html(status, delta, state, emp_status=None):
     now_str  = datetime.now().strftime('%d/%m/%Y %H:%M VET')
     last_str = state.get('last_send', '—')
     linked   = status['linked']
@@ -304,6 +358,66 @@ def _build_html(status, delta, state):
     </td>
   </tr>
 
+  <!-- Employee section -->
+  {f"""
+  <tr>
+    <td style="padding:0 28px 24px;">
+      <div style="border-top:2px solid #e8edf3;margin:4px 0 16px;"></div>
+      <div style="font-size:13px;font-weight:bold;color:#1a2c5b;margin-bottom:10px;">
+        👥 Empleados — Telegram vinculado
+      </div>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td width="33%" style="text-align:center;padding:0 6px;">
+            <div style="background:#e8f5e9;border:2px solid #a5d6a7;border-radius:10px;padding:12px 8px;">
+              <div style="font-size:11px;font-weight:bold;color:#1b5e20;margin-bottom:2px;">VINCULADOS</div>
+              <div style="font-size:32px;font-weight:bold;color:#2e7d32;">{emp_status['linked'].__len__()}</div>
+              <div style="font-size:11px;color:#388e3c;">{emp_status['pct']}%</div>
+            </div>
+          </td>
+          <td width="33%" style="text-align:center;padding:0 6px;">
+            <div style="background:#fff8e1;border:2px solid #ffe082;border-radius:10px;padding:12px 8px;">
+              <div style="font-size:11px;font-weight:bold;color:#e65100;margin-bottom:2px;">SIN VINCULAR</div>
+              <div style="font-size:32px;font-weight:bold;color:#e65100;">{emp_status['unlinked'].__len__()}</div>
+              <div style="font-size:11px;color:#e65100;">{100-emp_status['pct']}%</div>
+            </div>
+          </td>
+          <td width="33%" style="text-align:center;padding:0 6px;">
+            <div style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:10px;padding:12px 8px;">
+              <div style="font-size:11px;font-weight:bold;color:#4a148c;margin-bottom:2px;">TOTAL</div>
+              <div style="font-size:32px;font-weight:bold;color:#6a1b9a;">{emp_status['total']}</div>
+              <div style="font-size:11px;color:#6a1b9a;">empleados</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+      {"" if not emp_status['linked'] else f'''
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;font-weight:bold;color:#2e7d32;margin-bottom:6px;">
+          ✅ Empleados vinculados ({len(emp_status["linked"])})
+        </div>
+        <table cellpadding="0" cellspacing="0" width="100%"
+               style="border:1px solid #c8e6c9;border-radius:6px;overflow:hidden;">
+          <thead>
+            <tr style="background:#e8f5e9;">
+              <th style="padding:5px 8px;text-align:left;font-size:11px;color:#1b5e20;">Nombre</th>
+              <th style="padding:5px 8px;text-align:left;font-size:11px;color:#1b5e20;">Cargo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {"".join(
+              "<tr style='border-bottom:1px solid #f0f0f0;'>"
+              f"<td style='padding:4px 8px;font-size:12px;color:#1a2c5b;'>{e['name']}</td>"
+              f"<td style='padding:4px 8px;font-size:11px;color:#666;'>{e['job']}</td>"
+              "</tr>"
+              for e in emp_status["linked"]
+            )}
+          </tbody>
+        </table>
+      </div>''' }
+    </td>
+  </tr>""" if emp_status else ""}
+
   <!-- Footer -->
   <tr>
     <td style="background:#f8f9fa;padding:12px 24px;text-align:center;
@@ -324,24 +438,27 @@ def _build_html(status, delta, state):
 
 def main(live, force):
     models, db, uid, key = _connect()
-    state  = _load_state()
-    status = _fetch_status(models, db, uid, key)
+    state      = _load_state()
+    status     = _fetch_status(models, db, uid, key)
+    emp_status = _fetch_employee_status(models, db, uid, key)
 
     last_linked = state.get('last_linked', -1)
     delta       = len(status['linked']) - max(last_linked, 0)
 
     active_total   = sum(1 for p in status['linked'] + status['unlinked'] if p.get('status') == 'ACTIVE')
     pipeline_total = sum(1 for p in status['linked'] + status['unlinked'] if p.get('status') == 'PIPELINE')
-    log.info("Telegram opt-in — linked:%d/%d (active:%d pipeline:%d) | delta:+%d",
-             len(status['linked']), status['total'], active_total, pipeline_total, delta)
+    log.info("Telegram opt-in — parents:%d/%d (active:%d pipeline:%d) | empl:%d/%d | delta:+%d",
+             len(status['linked']), status['total'], active_total, pipeline_total,
+             len(emp_status['linked']), emp_status['total'], delta)
 
     if last_linked >= 0 and delta == 0 and not force:
         log.info("No new linkings since last run — skipping send.")
         return
 
-    html    = _build_html(status, delta, state)
+    html    = _build_html(status, delta, state, emp_status=emp_status)
     subject = (
-        f"✈️ Telegram Opt-in — {len(status['linked'])}/{status['total']} vinculados"
+        f"✈️ Telegram Opt-in — Padres:{len(status['linked'])}/{status['total']}"
+        f" | Empl:{len(emp_status['linked'])}/{emp_status['total']}"
         f"{f' (+{delta} nuevos)' if delta > 0 else ''}"
     )
 
