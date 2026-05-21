@@ -4,6 +4,34 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-21 — Bounce Email Cleanup — Budget Vote 2026-2027 Campaign
+
+**Procedure doc:** [BOUNCE_EMAIL_CLEANUP_PROCEDURE.md](BOUNCE_EMAIL_CLEANUP_PROCEDURE.md)
+
+Post-campaign bounce cleanup triggered by 24 DSN conversations (9 Failure + 15 Delay) landing in Freescout `soporte@` inbox (mailbox_id=3).
+
+**5 unique confirmed bounced emails identified and removed:**
+
+| Customer | Bounced Email | Action |
+|---|---|---|
+| ANNIBEL MARTINEZ | annibelmartinez32@gmail.com | Cleared from Odoo + Sheet row 20 |
+| DANIEL DOMINGUEZ | domin.anuel0608@gmail.com | Stripped from Odoo + Sheet row 46 (2 good emails kept) |
+| DIANA CONTRERAS | dcontrerasperez82@gmail.com | Cleared from Odoo + Sheet row 54 |
+| WILLIANS VELASQUEZ | williamjose.velasquezgonzalez@gmail.com | Cleared from Odoo + Sheet row 169 |
+| DANNEYSE LA CRUZ | lacruzde@pdvsa.com | Stripped from Odoo only (not in Customers sheet) |
+
+**Actions taken:**
+1. Google Sheet Customers tab col J — bounced emails removed, cells flagged 🔴 red
+2. Google Sheet BounceEmail tab — created from scratch; headers + 5 data rows (Date / Customer Name / Bounced Email / Source / Status in separate columns)
+3. Odoo PROD `res.partner` — 5 partners cleaned (testing was clean, no action needed)
+4. Freescout — 24 DSN conversations closed via `PUT /api/conversations/{id}` with `status=closed, byUser=1`
+
+**Key triage decision:** `tampa.navarro@gmail.com` — Delay-only (no Failure DSN ever), previously resolved twice (`[RESUELTO-AI]`). Not removed from Odoo/Sheet — 3 active delay convs closed only.
+
+**SSH router convs 45508–45512** — NOT touched (MikroTik system alerts, unrelated to bounce emails).
+
+---
+
 ## 2026-05-21 — partner.communication.ack Form & List UX (`ueipab_attendance_report` v1.6.11→v1.6.13)
 
 **Context:** Budget Vote 2026-2027 campaign monitoring surfaced 10 UX issues in the ACK form/list view used for both the budget vote and PDVSA continuity campaigns.

@@ -522,6 +522,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 ### Bounce Processing & Pipelines
 - [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
+- [Bounce Email Cleanup Procedure](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) — manual campaign bounce cleanup: Freescout API → Odoo contacts → Google Sheet → BounceEmail tab log
 - [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
 - [Freescout API Migration Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
