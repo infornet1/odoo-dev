@@ -179,7 +179,7 @@ Requires Python field addition in `partner_communication_ack.py`.
 | 7 | Move `ack_ip` to Sistema group | ✅ v1.6.11 |
 | 8 | `vote_notes` readonly after vote cast | ✅ v1.6.11 |
 | 9 | `response_time` computed field — *"Respondió 2h 15min después del envío"* | ✅ v1.6.14 |
-| 10 | Smart button → partner form (`oe_stat_button`) | ✅ v1.6.14 |
+| 10 | Smart button → partner form (`oe_stat_button`) | ✅ v1.6.15 (bug fix) |
 
 **Additional fixes (2026-05-21):**
 - State labels renamed: `"Continuará"` → `"Opción A"` / `"No continuará"` → `"Opción B"` — v1.6.12

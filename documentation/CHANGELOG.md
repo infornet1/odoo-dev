@@ -34,6 +34,9 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 **⚠️ Structural note:** `partner.communication.ack` is misplaced in `ueipab_attendance_report`. Pending refactor → `ueipab_ai_agent` or new `ueipab_campaigns`. See [ACK_FORM_UX_IMPROVEMENTS.md](ACK_FORM_UX_IMPROVEMENTS.md) for full file list.
 
+**v1.6.15 — Owl rendering bug fix:**
+- `oe_stat_button` with inner `<div class="o_stat_info">` causes `UncaughtPromiseError` in Odoo 17 Owl — arbitrary inner HTML not supported in stat buttons. Fixed by replacing with flat `string=` attribute on both buttons. Also removed `&#10;` newline entity from button string (not safe in Odoo view XML attributes).
+
 ---
 
 ## 2026-05-20 — DMARC p=reject → p=quarantine (Akdemia DKIM fix pending)
