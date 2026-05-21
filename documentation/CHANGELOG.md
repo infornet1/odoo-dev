@@ -4,6 +4,21 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-21 — Voting Digest: PDVSA "No continuarán" Detail Breakdown
+
+**Script:** `scripts/voting_digest.py`
+
+Enhanced the PDVSA Continuity Campaign section of the 15-min vote digest email to show a full breakdown of families who selected "No continuarán" (state=`leaving`).
+
+**Changes:**
+- `_fetch_pdvsa()`: added `partner_email` to fetched fields; added `leaving_detail` list (full records for `state='leaving'`) to returned dict
+- `_build_html()`: added orange alert block below the 3-box PDVSA count row when `leaving_detail` is non-empty — shows a table with representante name (clickable link to Odoo ACK form) and email(s); hidden when no families have left
+- Current "No continuarán": **MARIA APONTE** (apontemarivic + apontemarivict) and **ANDRES HERNANDEZ** (miregamboab + andresmhernandez)
+
+No cron, schema, or dependency changes.
+
+---
+
 ## 2026-05-21 — Bounce Email Cleanup — Budget Vote 2026-2027 Campaign
 
 **Procedure doc:** [BOUNCE_EMAIL_CLEANUP_PROCEDURE.md](BOUNCE_EMAIL_CLEANUP_PROCEDURE.md)

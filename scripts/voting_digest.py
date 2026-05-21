@@ -91,18 +91,20 @@ def _fetch_pdvsa(models, db, uid, key):
     records = call(models, db, uid, key,
         'partner.communication.ack', 'search_read',
         [[('notice_key', '=', 'pdvsa_continuacion_2026_2027')]],
-        {'fields': ['id', 'partner_name', 'state', 'ack_date',
+        {'fields': ['id', 'partner_name', 'partner_email', 'state', 'ack_date',
                     'vote_channel', 'vote_notes']})
-    total      = len(records)
-    continuing = sum(1 for r in records if r['state'] == 'continuing')
-    leaving    = sum(1 for r in records if r['state'] == 'leaving')
-    pending    = sum(1 for r in records if r['state'] == 'pending')
-    auto_conf  = [r for r in records
-                  if (r.get('vote_notes') or '').startswith('Auto-confirmado')]
+    total          = len(records)
+    continuing     = sum(1 for r in records if r['state'] == 'continuing')
+    leaving        = sum(1 for r in records if r['state'] == 'leaving')
+    pending        = sum(1 for r in records if r['state'] == 'pending')
+    auto_conf      = [r for r in records
+                      if (r.get('vote_notes') or '').startswith('Auto-confirmado')]
+    leaving_detail = [r for r in records if r['state'] == 'leaving']
     return {
         'total': total, 'continuing': continuing,
         'leaving': leaving, 'pending': pending,
         'auto_confirmed': auto_conf,
+        'leaving_detail': leaving_detail,
     }
 
 
@@ -488,6 +490,35 @@ def _build_html(t, recent_delta, state, pdvsa=None):
           <strong>✅ Auto-confirmados vía voto presupuestario ({len(pdvsa['auto_confirmed'])}):</strong><br/>
           { " · ".join(a["partner_name"] for a in pdvsa["auto_confirmed"]) }
         </div>''' if pdvsa['auto_confirmed'] else ''}
+        {f"""
+        <div style="margin-top:12px;background:#fff3e0;border-left:3px solid #e65100;
+                    border-radius:0 6px 6px 0;padding:10px 12px;">
+          <div style="font-size:12px;font-weight:bold;color:#bf360c;margin-bottom:8px;">
+            🚨 No continuarán ({pdvsa['leaving']}) — requieren seguimiento
+          </div>
+          <table cellpadding="0" cellspacing="0" width="100%"
+                 style="border:1px solid #ffccbc;border-radius:4px;overflow:hidden;font-size:11px;">
+            <thead>
+              <tr style="background:#ffccbc;">
+                <th style="padding:4px 8px;text-align:left;color:#bf360c;">Representante</th>
+                <th style="padding:4px 8px;text-align:left;color:#bf360c;">Email(s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(
+                f'<tr style="border-top:1px solid #ffe0b2;">'
+                f'<td style="padding:5px 8px;font-weight:bold;color:#333;">'
+                f'<a href="{ODOO_URL}/web#id={r["id"]}&cids=1&action=840'
+                f'&model=partner.communication.ack&view_type=form"'
+                f' style="color:#1a2c5b;text-decoration:none;" target="_blank">'
+                f'{r["partner_name"]}</a></td>'
+                f'<td style="padding:5px 8px;color:#555;">{r.get("partner_email") or "—"}</td>'
+                f'</tr>'
+                for r in pdvsa['leaving_detail']
+              )}
+            </tbody>
+          </table>
+        </div>""" if pdvsa['leaving_detail'] else ''}
         <div style="font-size:11px;color:#aaa;margin-top:6px;">
           Deadline: 08 junio 2026 12:30 p.m. · Total: {pdvsa['total']} familias
         </div>
