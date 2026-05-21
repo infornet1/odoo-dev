@@ -2811,3 +2811,55 @@ class AiAgentConversation(models.Model):
                 except Exception:
                     _logger.exception(
                         "Ack reminder: failed to auto-resolve conv #%d", conv.id)
+
+    @api.model
+    def _cron_resolve_voted_conversations(self):
+        """Auto-resolve open WA/Telegram conversations where the parent already voted.
+
+        Runs every 5 min. Matches open conversations (active/waiting) against
+        partner.communication.ack records with state in (continuing, leaving).
+        Matching: phone (WA) or partner_id (Telegram/identified).
+        Campaign key read from ir.config_parameter — defaults to budget_consulta_2026_2027.
+        """
+        if not self._is_active_environment():
+            return
+
+        icp = self.env['ir.config_parameter'].sudo()
+        notice_key = icp.get_param(
+            'ai_agent.voted_conv_resolve_notice_key',
+            'budget_consulta_2026_2027',
+        )
+
+        # Fetch voted ACKs
+        voted_acks = self.env['partner.communication.ack'].sudo().search([
+            ('notice_key', '=', notice_key),
+            ('state', 'in', ['continuing', 'leaving']),
+        ])
+        if not voted_acks:
+            return
+
+        voted_phones     = {a.partner_phone.strip() for a in voted_acks if a.partner_phone}
+        voted_partner_ids = {a.partner_id.id for a in voted_acks if a.partner_id}
+
+        # Find open conversations matching voted parents
+        open_convs = self.search([('state', 'in', ['active', 'waiting'])])
+        to_resolve = self.env['ai.agent.conversation']
+        for conv in open_convs:
+            phone = (conv.phone or '').strip()
+            if phone and phone in voted_phones:
+                to_resolve |= conv
+            elif conv.partner_id and conv.partner_id.id in voted_partner_ids:
+                to_resolve |= conv
+
+        if not to_resolve:
+            return
+
+        _logger.info(
+            "Voted-conv cron: resolving %d conversation(s) for parents who voted (%s)",
+            len(to_resolve), notice_key,
+        )
+        for conv in to_resolve:
+            try:
+                conv.write({'state': 'resolved'})
+            except Exception:
+                _logger.exception("Voted-conv cron: failed to resolve conv #%d", conv.id)
