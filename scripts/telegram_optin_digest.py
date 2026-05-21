@@ -27,18 +27,17 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-STATE_FILE = os.path.join(os.path.dirname(__file__), 'telegram_optin_digest_state.json')
-PROD_CFG   = '/opt/odoo-dev/config/production.json'
-ODOO_URL   = 'https://odoo.ueipab.edu.ve'
-LOGO_URL   = f'{ODOO_URL}/web/image/res.company/1/logo'
+STATE_FILE   = os.path.join(os.path.dirname(__file__), 'telegram_optin_digest_state.json')
+PROD_CFG     = '/opt/odoo-dev/config/production.json'
+GSHEET_CREDS = '/opt/odoo-dev/config/google_sheets_credentials.json'
+SHEET_ID     = '1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA'
+ODOO_URL     = 'https://odoo.ueipab.edu.ve'
+LOGO_URL     = f'{ODOO_URL}/web/image/res.company/1/logo'
 
 RECIPIENTS = [
     ('Gustavo Perdomo', 'gustavo.perdomo@ueipab.edu.ve'),
     ('Arcides Arzola',  'arcides.arzola@ueipab.edu.ve'),
 ]
-
-# Representante tag IDs
-REP_TAG_IDS = [25, 26]  # 25=Representante, 26=Representante PDVSA
 
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -64,18 +63,74 @@ def _save_state(s):
 
 # ── Data ───────────────────────────────────────────────────────────────────────
 
+def _load_sheet_parents():
+    """Load ACTIVE parents from Google Sheet Customers tab — same source as all campaign scripts."""
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
+
+    creds = Credentials.from_service_account_file(
+        GSHEET_CREDS, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
+    svc  = build('sheets', 'v4', credentials=creds)
+    rows = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
+    data = rows[1:]  # skip header row
+
+    parents = []
+    for row in data:
+        r      = (row + [''] * 13)[:13]
+        name   = r[1].strip()
+        status = r[2].strip().upper()
+        emails_raw = r[9].strip()
+        if not name or status != 'ACTIVE':
+            continue
+        emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
+        parents.append({'name': name, 'emails': emails})
+
+    log.info("Sheet: %d ACTIVE parents loaded", len(parents))
+    return parents
+
+
 def _fetch_status(models, db, uid, key):
-    """Return all Representante partners with/without telegram_chat_id."""
-    partners = models.execute_kw(db, uid, key, 'res.partner', 'search_read',
-        [[('category_id', 'in', REP_TAG_IDS)]],
-        {'fields': ['id', 'name', 'email', 'telegram_chat_id'], 'limit': 0})
+    """Match ACTIVE sheet parents to res.partner and check telegram_chat_id."""
+    sheet_parents = _load_sheet_parents()
 
-    linked   = [p for p in partners if p.get('telegram_chat_id')]
-    unlinked = [p for p in partners if not p.get('telegram_chat_id')]
-    pct      = round(len(linked) / len(partners) * 100) if partners else 0
+    # Build email → partner lookup from Odoo
+    all_emails = [e for p in sheet_parents for e in p['emails']]
+    # Search in batches to avoid huge domain
+    partner_map = {}  # email → partner record
+    for i in range(0, len(all_emails), 100):
+        batch = all_emails[i:i+100]
+        rows  = models.execute_kw(db, uid, key, 'res.partner', 'search_read',
+            [[('email', 'in', batch)]],
+            {'fields': ['id', 'name', 'email', 'telegram_chat_id'], 'limit': 200})
+        for r in rows:
+            for em in (r['email'] or '').lower().split(';'):
+                partner_map[em.strip()] = r
 
+    linked   = []
+    unlinked = []
+    for p in sheet_parents:
+        partner = None
+        for em in p['emails']:
+            if em in partner_map:
+                partner = partner_map[em]
+                break
+        if partner and partner.get('telegram_chat_id'):
+            linked.append({
+                'name':             p['name'],
+                'email':            p['emails'][0] if p['emails'] else '—',
+                'telegram_chat_id': partner['telegram_chat_id'],
+            })
+        else:
+            unlinked.append({
+                'name':  p['name'],
+                'email': p['emails'][0] if p['emails'] else '—',
+            })
+
+    total = len(sheet_parents)
+    pct   = round(len(linked) / total * 100) if total else 0
     return {
-        'total':    len(partners),
+        'total':    total,
         'linked':   linked,
         'unlinked': unlinked,
         'pct':      pct,
