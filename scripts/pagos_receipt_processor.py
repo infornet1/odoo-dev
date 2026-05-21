@@ -448,6 +448,18 @@ def odoo_match_invoice(partner_id, child_ids, monto, moneda, bcv_rate):
     return best
 
 
+def odoo_check_partner_balance(partner_id, child_ids):
+    """Return True if partner has any unpaid posted invoices (i.e. non-zero balance)."""
+    all_ids = [partner_id] + (child_ids or [])
+    rows = odoo_search_read('account.move', [
+        ('partner_id', 'in', all_ids),
+        ('move_type', '=', 'out_invoice'),
+        ('state', '=', 'posted'),
+        ('payment_state', 'in', ('not_paid', 'partial')),
+    ], ['id'], limit=1)
+    return bool(rows)
+
+
 def odoo_check_duplicate(partner_id, referencia):
     """Return existing payment name if duplicate found (last 4 ref digits, 30-day window)."""
     if not referencia:
@@ -898,7 +910,9 @@ def build_note_duplicate(partner_name, existing_payment_name, receipt, conv_numb
     )
 
 def build_note_success(partner_name, receipt, payment_id, odoo_url,
-                        matched_invoice, bcv_rate, conv_number, base_url='https://odoo.ueipab.edu.ve'):
+                        matched_invoice, bcv_rate, conv_number,
+                        base_url='https://odoo.ueipab.edu.ve',
+                        is_advance_payment=False):
     banco  = receipt.get('banco') or '—'
     monto  = receipt.get('monto')
     moneda = (receipt.get('moneda') or 'VES').upper()
@@ -914,7 +928,6 @@ def build_note_success(partner_name, receipt, payment_id, odoo_url,
         monto_usd = float(monto) / bcv_rate
         bcv_line = f'<p>Equiv. USD: <b>${monto_usd:,.2f}</b> (BCV {bcv_rate:,.2f})</p>'
 
-    inv_line = '<p>⚠️ No se encontró factura correspondiente — reconciliar manualmente.</p>'
     if matched_invoice:
         mtype = {'exact': 'Coincidencia exacta', 'partial': 'Pago parcial'}.get(
             matched_invoice['match_type'], matched_invoice['match_type'])
@@ -923,6 +936,13 @@ def build_note_success(partner_name, receipt, payment_id, odoo_url,
             f'<p>Factura: <a href="{inv_url}"><b>{matched_invoice["name"]}</b></a> · '
             f'Pendiente: <b>${matched_invoice["residual"]:,.2f}</b> · {mtype}</p>'
         )
+    elif is_advance_payment:
+        inv_line = (
+            '<p>💰 <b>Pago adelantado</b> — cliente sin facturas pendientes. '
+            'Registrado como adelanto para el próximo ciclo de facturación.</p>'
+        )
+    else:
+        inv_line = '<p>⚠️ No se encontró factura correspondiente — reconciliar manualmente.</p>'
 
     pay_label = f'Pago #{payment_id} confirmado' if payment_id and payment_id > 0 else 'Pago (dry run)'
 
@@ -1078,12 +1098,22 @@ def process_conversation(conv, processed_ids, api_key):
     matched    = odoo_match_invoice(
         partner['id'], child_ids,
         receipt.get('monto'), receipt.get('moneda'), bcv_rate)
+
+    # Advance payment detection: no invoice match + partner has zero outstanding balance
+    is_advance_payment = False
+    if not matched:
+        has_balance = odoo_check_partner_balance(partner['id'], child_ids)
+        is_advance_payment = not has_balance
+        if is_advance_payment:
+            logger.info("  Advance payment detected — partner has no outstanding invoices")
+
     payment_id, odoo_url = odoo_create_draft_payment(
         partner['id'], receipt, journal_id, matched, conv_subject=subject)
 
-    logger.info("  payment_id=%s journal=%d matched=%s",
+    logger.info("  payment_id=%s journal=%d matched=%s advance=%s",
                 payment_id, journal_id,
-                matched['name'] if matched else 'none')
+                matched['name'] if matched else 'none',
+                is_advance_payment)
 
     if payment_id:
         monto_str = f"{receipt.get('monto', '?')} {receipt.get('moneda', '')}"
@@ -1099,7 +1129,8 @@ def process_conversation(conv, processed_ids, api_key):
     base_url = (odoo_url or '').split('/web#')[0] or 'https://odoo.ueipab.edu.ve'
     note = build_note_success(
         partner['name'], receipt, payment_id, odoo_url,
-        matched, bcv_rate, conv_number, base_url)
+        matched, bcv_rate, conv_number, base_url,
+        is_advance_payment=is_advance_payment)
 
     try:
         fs_post_note(conv_id, note)
