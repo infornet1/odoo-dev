@@ -1,6 +1,6 @@
 # Telegram Parent Matching & Opt-in Campaign
 
-**Status:** Phase 1 complete (testing) | Phase 2 dry run complete | Phase 3–5 pending  
+**Status:** Phase 1 complete (testing v57.0) | Phase 2 dry run complete (0/61) | Phase 4a email script ready (preview sent) | Phase 3 + 4a live + 4b + 5 pending  
 **Created:** 2026-05-21  
 **Business driver:** WA primary number disabled by Meta after 49 sends during Budget Vote blast — Telegram as spam-free blast channel for future campaigns
 
@@ -87,28 +87,32 @@ WhatsApp/Meta blast vulnerabilities exposed during Budget Vote 2026-2027:
 
 ---
 
-### Phase 4 — WA opt-in blast campaign ⏳ Pending
-**Goal:** Drive parents to click the FAM_ deep-link so their Telegram chat_id gets captured.
+### Phase 4 — Opt-in campaign ⏳ Pending
 
-**Script:** New `send_telegram_optin_blast.py`
+#### Phase 4a — Email blast (first, free, zero anti-spam risk)
+**Script:** `scripts/send_telegram_optin_email.py` ✅ Ready
 
-**Message template (WA):**
+**Design:** Branded HTML email — school logo (circular header) + Glenda banner + 5 advantage bullets + personalized CTA button + 3-step how-to + WA fallback note.
+
+**Personalization:** Each parent gets `t.me/GlendaUeipabBot?start=FAM_{their_ack_token}` — one-click permanent linking.
+
+**Targets:** 174 ACTIVE rows from Google Sheets Customers tab (after bounce cleanup).  
+**Token source:** `partner.communication.ack` (notice_key=`budget_consulta_2026_2027`) — all 178 parents already have tokens.  
+**Coverage:** 268 email keys indexed — skips parents with no matching ACK token.
+
+**Usage:**
+```bash
+python3 scripts/send_telegram_optin_email.py            # dry run
+python3 scripts/send_telegram_optin_email.py --test     # CEO preview only
+python3 scripts/send_telegram_optin_email.py --live     # send to all 174
 ```
-¡Hola [nombre]! 👋
 
-Glenda, la asistente virtual del colegio, ahora también está disponible en Telegram — sin limitaciones y de forma instantánea.
+**Preview sent:** 2026-05-21 to gustavo.perdomo@ueipab.edu.ve (mail.mail id=5909) — awaiting review.
 
-Únete haciendo clic aquí:
-👉 t.me/GlendaUeipabBot?start=FAM_[token]
+**When to fire:** After vote results (May 26) or whenever approved. Phase 3 (FAM_ handler) must be deployed first.
 
-Una vez vinculado, te enviaremos recordatorios, novedades y comunicados importantes directamente por Telegram.
-
-— UEIPAB
-```
-
-**Targets:** All 178 Representante partners with `bounce_wa_sent` eligible (skip bounced emails, use WA).  
-**Anti-spam:** 120s intervals (same as vote blast) — but this is a one-time opt-in push, not a recurring blast.  
-**Fallback:** Parents without WA → receive link via email instead.
+#### Phase 4b — WA follow-up blast (after email, smaller list)
+After email blast, wait 7–10 days. Send WA only to parents who received email but didn't link (no `telegram_chat_id` on partner yet). Expected: ~60–80 parents max vs 178 full blast.
 
 ---
 
