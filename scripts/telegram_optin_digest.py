@@ -128,8 +128,10 @@ def _load_akdemia_exclusions(svc):
     return excluded
 
 
-def _load_sheet_parents():
-    """Load ACTIVE + PIPELINE parents — email from col J, exclusion from Akdemia2526."""
+def _load_sheet_parents(pdvsa_leaver_emails=None):
+    """Load ACTIVE + PIPELINE parents — email from col J.
+    Excludes: (1) Akdemia 5to. Año only families, (2) PDVSA Opción B leavers.
+    """
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
@@ -137,13 +139,15 @@ def _load_sheet_parents():
         GSHEET_CREDS, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
     svc  = build('sheets', 'v4', credentials=creds)
 
-    excluded = _load_akdemia_exclusions(svc)
+    akdemia_excl   = _load_akdemia_exclusions(svc)
+    pdvsa_excl     = pdvsa_leaver_emails or set()
 
     rows = svc.spreadsheets().values().get(
         spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
     data = rows[1:]
 
     parents = []
+    skipped_akdemia = skipped_pdvsa = 0
     for row in data:
         r          = (row + [''] * 13)[:13]
         name       = r[1].strip()
@@ -151,13 +155,19 @@ def _load_sheet_parents():
         emails_raw = r[9].strip()   # col J
         if not name or status not in INCLUDE_STATUSES:
             continue
-        if name.upper() in excluded:
-            continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
+        if name.upper() in akdemia_excl:
+            skipped_akdemia += 1
+            continue
+        if pdvsa_excl and any(e in pdvsa_excl for e in emails):
+            log.info('[SKIP-PDVSA] %s — voted No continuará', name)
+            skipped_pdvsa += 1
+            continue
         parents.append({'name': name, 'emails': emails, 'status': status})
 
     counts = {s: sum(1 for p in parents if p['status'] == s) for s in INCLUDE_STATUSES}
-    log.info("Sheet: %d parents loaded after Akdemia exclusion %s", len(parents), counts)
+    log.info("Sheet: %d parents loaded (excl. %d 5to-Año, %d PDVSA-leaver) %s",
+             len(parents), skipped_akdemia, skipped_pdvsa, counts)
     return parents
 
 
@@ -224,9 +234,25 @@ def _fetch_employee_status(models, db, uid, key):
     }
 
 
+def _fetch_pdvsa_leaver_emails(models, db, uid, key):
+    """Return lowercase email set of PDVSA parents who voted Opción B (no continuará)."""
+    rows = models.execute_kw(db, uid, key, 'partner.communication.ack', 'search_read',
+        [[['notice_key', '=', 'pdvsa_continuacion_2026_2027'], ['state', '=', 'leaving']]],
+        {'fields': ['partner_name', 'partner_email'], 'limit': 100})
+    emails = set()
+    for r in rows:
+        for em in (r.get('partner_email') or '').lower().split(';'):
+            em = em.strip()
+            if em:
+                emails.add(em)
+    log.info("PDVSA leavers: %d parents, %d emails excluded", len(rows), len(emails))
+    return emails
+
+
 def _fetch_status(models, db, uid, key):
-    """Match ACTIVE+PIPELINE sheet parents (excl. 5to Año only) to res.partner."""
-    sheet_parents = _load_sheet_parents()
+    """Match ACTIVE+PIPELINE sheet parents (excl. 5to Año + PDVSA leavers) to res.partner."""
+    pdvsa_leaver_emails = _fetch_pdvsa_leaver_emails(models, db, uid, key)
+    sheet_parents = _load_sheet_parents(pdvsa_leaver_emails=pdvsa_leaver_emails)
 
     # Build email → partner lookup from Odoo
     all_emails = [e for p in sheet_parents for e in p['emails']]

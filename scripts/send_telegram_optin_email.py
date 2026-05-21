@@ -60,6 +60,21 @@ def connect_odoo():
     return models, db, uid, key, url
 
 
+def load_pdvsa_leaver_emails(models, db, uid, key):
+    """Return lowercase email set of PDVSA parents who voted Opción B (no continuará)."""
+    rows = models.execute_kw(db, uid, key, 'partner.communication.ack', 'search_read',
+        [[['notice_key', '=', 'pdvsa_continuacion_2026_2027'], ['state', '=', 'leaving']]],
+        {'fields': ['partner_name', 'partner_email'], 'limit': 100})
+    emails = set()
+    for r in rows:
+        for em in (r.get('partner_email') or '').lower().split(';'):
+            em = em.strip()
+            if em:
+                emails.add(em)
+    log.info('PDVSA leavers: %d parents, %d emails to exclude', len(rows), len(emails))
+    return emails
+
+
 def load_ack_tokens(models, db, uid, key):
     """Return dict: email.lower() → token for all budget vote ACK records."""
     acks = models.execute_kw(db, uid, key, 'partner.communication.ack', 'search_read',
@@ -123,15 +138,19 @@ def _tok(n):
     return set(re.sub(r'[^a-z ]', '', n2).split())
 
 
-def load_sheet_recipients(svc):
-    """Load ACTIVE parents — email from col J, exclusion from Akdemia2526."""
-    excluded = load_akdemia_exclusions(svc)
+def load_sheet_recipients(svc, pdvsa_leaver_emails=None):
+    """Load ACTIVE parents — email from col J.
+    Excludes: (1) Akdemia 5to. Año only families, (2) PDVSA Opción B leavers.
+    """
+    akdemia_excl = load_akdemia_exclusions(svc)
+    pdvsa_excl   = pdvsa_leaver_emails or set()
 
     rows = svc.spreadsheets().values().get(
         spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
     data = rows[1:]
 
     recipients = []
+    skipped_ak = skipped_pdvsa = 0
     for row in data:
         r          = (row + [''] * 13)[:13]
         name       = r[1].strip()
@@ -139,14 +158,20 @@ def load_sheet_recipients(svc):
         emails_raw = r[9].strip()   # col J
         if not name or status != 'ACTIVE':
             continue
-        if name.upper() in excluded:
-            log.info('[SKIP] %s — all Akdemia students in %s', name, LAST_GRADE)
-            continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
+        if name.upper() in akdemia_excl:
+            log.info('[SKIP-5TO] %s — all Akdemia students in %s', name, LAST_GRADE)
+            skipped_ak += 1
+            continue
+        if pdvsa_excl and any(e in pdvsa_excl for e in emails):
+            log.info('[SKIP-PDVSA] %s — voted No continuará', name)
+            skipped_pdvsa += 1
+            continue
         if emails:
             recipients.append({'name': name, 'emails': emails, 'primary_email': emails[0]})
 
-    log.info('Sheet: %d ACTIVE recipients (col J email, Akdemia exclusion)', len(recipients))
+    log.info('Sheet: %d ACTIVE recipients (excl. %d 5to-Año, %d PDVSA-leaver)',
+             len(recipients), skipped_ak, skipped_pdvsa)
     return recipients
 
 
@@ -385,12 +410,13 @@ def main():
     from googleapiclient.discovery import build
 
     models, db, uid, key, odoo_url = connect_odoo()
-    token_map  = load_ack_tokens(models, db, uid, key)
+    token_map           = load_ack_tokens(models, db, uid, key)
+    pdvsa_leaver_emails = load_pdvsa_leaver_emails(models, db, uid, key)
 
     creds = Credentials.from_service_account_file(
         GSHEET_CREDS, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
     svc        = build('sheets', 'v4', credentials=creds)
-    recipients = load_sheet_recipients(svc)
+    recipients = load_sheet_recipients(svc, pdvsa_leaver_emails=pdvsa_leaver_emails)
 
     mode = 'DRY RUN' if DRY_RUN else ('TEST' if TEST_ONLY else 'LIVE')
     log.info('=== %s MODE ===', mode)
