@@ -113,8 +113,8 @@ python3 scripts/send_telegram_optin_email.py --live     # send to all 174
 
 **Preview sent:** 2026-05-21 to gustavo.perdomo@ueipab.edu.ve (mail.mail id=5928) — template approved.
 
-**Status: ⏳ PENDING** — live blast not yet fired. Awaiting go-ahead after vote results (May 26).
-Phase 3 (FAM_ handler) already deployed. Run: `python3 scripts/send_telegram_optin_email.py --live`
+**Status: ✅ FIRED 2026-05-21** — 165 ACTIVE parents blasted. First opt-in: RAIZA RENDON at 19:32 VET.
+Bug note: `votacion@` CC incorrectly included on first run — fixed for future blasts (reply_to: soporte@, no CC).
 
 #### Phase 4b — WA follow-up blast (after email, smaller list)
 After email blast, wait 7–10 days. Send WA only to parents who received email but didn't link (no `telegram_chat_id` on partner yet). Expected: ~60–80 parents max vs 178 full blast.
@@ -173,5 +173,6 @@ else:
 |---|---|---|---|---|
 | 2026-05-21 | Dry run analysis | **0/61** | 61 Telegram convs | Phase 2 complete — 0 retroactive matches; nicknames only, no phones shared |
 | 2026-05-21 | FAM_ handler live test | **1** (Gustavo id=7) | Admin test only | chat_id=950519055 captured ✅ |
-| — | Email opt-in blast (Phase 4a) | TBD | 174 active parents | Script ready — fire after approval |
+| 2026-05-21 | Email opt-in blast (Phase 4a) | **165 blasted** | 165 ACTIVE parents | First opt-in: RAIZA RENDON 19:32 VET |
 | — | WA follow-up (Phase 4b) | TBD | Non-responders to email | After 7–10 day wait |
+| — | Employee blast | TBD | 44 MAYO15 employees | Separate template needed — pending |

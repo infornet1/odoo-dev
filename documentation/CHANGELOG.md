@@ -45,6 +45,24 @@ Both testing and production confirmed in sync across all 7 custom modules:
 
 ---
 
+## 2026-05-21 — Telegram Invitation Email Blast (165 parents) + First FAM_ Link
+
+**Blast fired:** `send_telegram_optin_email.py --live` → 165 ACTIVE parents, personalized FAM_ deep-link per parent. Cron trigger timed out (504) but all 165 queued and delivered via mail queue cron.
+
+**Exclusions (9 total):**
+- 7 Akdemia 5to. Año only: ALEXIS QUILARQUE, AMIRA KHATIB, ANGELICA GOMES, CHENIANA NOGALES, JEAN CARLOS SEQUEA, MARIA NIETO, SHARIFA AL RIFAI RIFAI
+- 2 PDVSA No continuará: ANDRES HERNANDEZ, MARIA APONTE
+
+**Bug fixed post-blast:** `email_cc/reply_to: votacion@ueipab.edu.ve` incorrectly added (copy-paste from vote script). Fixed to `reply_to: soporte@ueipab.edu.ve`, no CC. Caused 165 CC copies to votacion@ inbox on this first run.
+
+**First FAM_ opt-in confirmed:** RAIZA RENDON (id=2791) clicked her invitation link at 19:32 VET → `telegram_chat_id=1441621803` written to `res.partner`. She had already voted Opc A via email_link — no double vote.
+
+**Conv 258 — Luis Albert (unidentified Telegram lead):** Glenda sent welcome menu but silenced subsequent messages (stub partner, no email/mobile). Resolved manually → next `/start` creates fresh conversation. Glenda handles unidentified contacts as potential leads (asks name/cédula naturally via `partner_found_in_odoo=False` path).
+
+**Telegram opt-in digest:** `telegram_optin_digest.py --force` shows real-time FAM_ link stats. Employee blast pending — separate template needed.
+
+---
+
 ## 2026-05-21 — Vote Reminder Email + Bounce Cleanup Round 2
 
 **Vote reminder:** 89 pending parents received a vote reminder email (subject: `[Recordatorio] Consulta Presupuestaria 2026-2027 - Tu voto esta pendiente`). Same original vote template with orange banner "RECORDATORIO — cierra el viernes 23 de mayo". Same ACK tokens — no reset, links vote directly. Queued via `mail.mail state=outgoing` + cron id=3 triggered via docker exec (web timeout workaround). All 89 confirmed sent (outgoing=0 after trigger).
