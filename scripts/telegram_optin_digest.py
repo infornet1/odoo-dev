@@ -17,7 +17,7 @@ Usage:
     python3 scripts/telegram_optin_digest.py --force    # send regardless of delta
 """
 
-import os, sys, json, logging, argparse, xmlrpc.client
+import os, sys, json, logging, argparse, unicodedata, xmlrpc.client
 from datetime import datetime, timezone
 
 logging.basicConfig(
@@ -82,7 +82,9 @@ def _load_quinto_excluded(models, db, uid, key):
     students = json.loads(p2[0]['value']).get('students', [])
 
     def tok(n):
-        return set(re.sub(r'[^a-záéíóúüñ ]', '', n.lower()).split())
+        n2 = unicodedata.normalize('NFD', n.lower())
+        n2 = ''.join(c for c in n2 if unicodedata.category(c) != 'Mn')
+        return set(re.sub(r'[^a-z ]', '', n2).split())
 
     last_grade = [s for s in students if s.get('grade') == LAST_GRADE]
 
@@ -91,9 +93,12 @@ def _load_quinto_excluded(models, db, uid, key):
         for s in last_grade:
             words = s['name'].split()
             if len(words) >= 2:
-                last1 = re.sub(r'[^a-záéíóúüñ]', '', words[-1].lower())
-                last2 = re.sub(r'[^a-záéíóúüñ]', '', words[-2].lower())
-                first = re.sub(r'[^a-záéíóúüñ]', '', words[0].lower())
+                def _n(w):
+                    w2 = unicodedata.normalize('NFD', w.lower())
+                    return re.sub(r'[^a-z]', '', ''.join(c for c in w2 if unicodedata.category(c) != 'Mn'))
+                last1 = _n(words[-1])
+                last2 = _n(words[-2])
+                first = _n(words[0])
                 if last1 in bn and last2 in bn and first in bn:
                     return True
         return False
