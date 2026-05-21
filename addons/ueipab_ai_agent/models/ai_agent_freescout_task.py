@@ -55,6 +55,27 @@ class AiAgentFreescoutTask(models.Model):
             'target': 'new',
         }
 
+    def _parse_monto(self, v):
+        """Parse Venezuelan amount string to float.
+        Handles '85039,58' (comma-decimal) and '85.039,58' (dot-thousands, comma-decimal)."""
+        if not v:
+            return 0.0
+        s = str(v).strip().replace(' ', '')
+        if ',' in s and '.' in s:
+            if s.rfind(',') > s.rfind('.'):
+                # European: . = thousands separator, , = decimal → '85.039,58' → 85039.58
+                s = s.replace('.', '').replace(',', '.')
+            else:
+                # US: , = thousands separator, . = decimal → '85,039.58' → 85039.58
+                s = s.replace(',', '')
+        elif ',' in s:
+            # Only comma → decimal separator → '85039,58' → 85039.58
+            s = s.replace(',', '.')
+        try:
+            return float(s)
+        except Exception:
+            return 0.0
+
     def _load_fs_config(self):
         """Load Freescout API config. ir.config_parameter first, file fallback for dev."""
         icp = self.env['ir.config_parameter'].sudo()
@@ -131,7 +152,7 @@ class AiAgentFreescoutTask(models.Model):
         """Create and confirm an account.payment from extracted receipt data.
         Returns (payment_id, odoo_url) or (None, None)."""
         try:
-            monto = float(receipt.get('monto', 0) or 0)
+            monto = self._parse_monto(receipt.get('monto', 0))
             if monto <= 0:
                 return None, None
 
@@ -270,7 +291,7 @@ class AiAgentFreescoutTask(models.Model):
                     partner['id'], receipt, icp)
 
             # Build advance payment note
-            monto_str = f"{float(receipt['monto']):,.2f} {receipt.get('moneda','VES')}" \
+            monto_str = f"{self._parse_monto(receipt['monto']):,.2f} {receipt.get('moneda','VES')}" \
                 if receipt and receipt.get('monto') else '—'
             banco_str  = receipt.get('banco', '—') if receipt else '—'
             ref_str    = receipt.get('referencia', '—') if receipt else '—'
