@@ -79,47 +79,74 @@ def load_ack_tokens(models, db, uid, key):
 
 # ── Google Sheet ───────────────────────────────────────────────────────────────
 
-def load_sheet_recipients(svc):
-    """Load ACTIVE parents from Google Sheet Customers tab (cols A-Z).
-    Grades are in cols U-Z — excludes rows where ALL grades are LAST_GRADE.
-    Google Sheet is the authoritative source for both parents and grades.
+def load_akdemia_exclusions(svc):
+    """Return set of parent names (uppercase) whose ALL Akdemia students are LAST_GRADE.
+    Source: Akdemia2526 tab (authoritative enrollment). Matching by last-name tokens + phone.
     """
-    rows = svc.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID, range='Customers!A2:Z').execute().get('values', [])
-    data = rows[1:]  # skip grades sub-header row
+    ak = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Akdemia2526!A3:P').execute().get('values', [])
+    ak_students = []
+    for row in ak[1:]:
+        r     = (row + [''] * 16)[:16]
+        grade = r[0].strip()
+        nombre = r[2].strip()
+        apell  = r[4].strip()
+        phone  = re.sub(r'\D', '', r[3])[-10:] if r[3] else ''
+        if grade and nombre:
+            ak_students.append({'grade': grade, 'tok': _tok(apell), 'phone': phone})
 
-    # First pass: build exclusion set from grade columns U-Z
+    cu = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
     excluded = set()
-    for row in data:
-        r      = (row + [''] * 26)[:26]
+    for row in cu[1:]:
+        r      = (row + [''] * 13)[:13]
         name   = r[1].strip()
         status = r[2].strip().upper()
+        phone1 = re.sub(r'\D', '', r[10])[-10:] if r[10] else ''
+        phone2 = re.sub(r'\D', '', r[11])[-10:] if r[11] else ''
         if not name or status != 'ACTIVE':
             continue
-        grades = [r[i].strip() for i in range(20, 26)
-                  if r[i].strip() and r[i].strip() != '#N/A']
-        if grades and all(g.lower() == LAST_GRADE.lower() for g in grades):
+        pt     = {w for w in _tok(name) if len(w) >= 4}
+        phones = {phone1, phone2} - {''}
+        matched = [s for s in ak_students
+                   if (phones & {s['phone']}) or (pt & s['tok'])]
+        if matched and all(s['grade'] == LAST_GRADE for s in matched):
             excluded.add(name.upper())
 
-    log.info('Excluded %d %s-only families from blast', len(excluded), LAST_GRADE)
+    log.info('Akdemia: %d %s-only families excluded', len(excluded), LAST_GRADE)
+    return excluded
 
-    # Second pass: build recipient list
+
+def _tok(n):
+    n2 = unicodedata.normalize('NFD', n.lower())
+    n2 = ''.join(c for c in n2 if unicodedata.category(c) != 'Mn')
+    return set(re.sub(r'[^a-z ]', '', n2).split())
+
+
+def load_sheet_recipients(svc):
+    """Load ACTIVE parents — email from col J, exclusion from Akdemia2526."""
+    excluded = load_akdemia_exclusions(svc)
+
+    rows = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
+    data = rows[1:]
+
     recipients = []
     for row in data:
-        r          = (row + [''] * 26)[:26]
+        r          = (row + [''] * 13)[:13]
         name       = r[1].strip()
         status     = r[2].strip().upper()
-        emails_raw = r[9].strip()
+        emails_raw = r[9].strip()   # col J
         if not name or status != 'ACTIVE':
             continue
         if name.upper() in excluded:
-            log.info('[SKIP] %s — all students in %s', name, LAST_GRADE)
+            log.info('[SKIP] %s — all Akdemia students in %s', name, LAST_GRADE)
             continue
         emails = [e.strip().lower() for e in emails_raw.split(';') if e.strip()]
         if emails:
             recipients.append({'name': name, 'emails': emails, 'primary_email': emails[0]})
 
-    log.info('Sheet: %d ACTIVE recipients loaded', len(recipients))
+    log.info('Sheet: %d ACTIVE recipients (col J email, Akdemia exclusion)', len(recipients))
     return recipients
 
 

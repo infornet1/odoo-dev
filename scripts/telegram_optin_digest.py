@@ -67,34 +67,69 @@ def _save_state(s):
 INCLUDE_STATUSES = {'ACTIVE', 'PIPELINE'}
 
 
-def _load_quinto_excluded_from_sheet(svc):
-    """Return set of parent names (uppercase) where ALL grades in cols U-Z are LAST_GRADE.
-    Source: Google Sheet Customers tab cols U-Z (grades per student per row).
-    """
-    rows = svc.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID, range='Customers!A2:Z').execute().get('values', [])
-    data = rows[1:]  # row 2 is the 'Grades' sub-header
+def _norm(n):
+    """Accent-strip + lowercase + tokenize."""
+    import re as _re, unicodedata as _ud
+    n2 = _ud.normalize('NFD', n.lower())
+    n2 = ''.join(c for c in n2 if _ud.category(c) != 'Mn')
+    return set(_re.sub(r'[^a-z ]', '', n2).split())
 
+
+def _load_akdemia_exclusions(svc):
+    """Return set of parent names (uppercase) whose ALL Akdemia students are in LAST_GRADE.
+    Source: Akdemia2526 tab — authoritative enrollment data.
+    Matching: parent last-name token(s) found in student apellido (col E).
+    Excludes parents only if every matched student is in LAST_GRADE.
+    Parents with no Akdemia match are included by default.
+    """
+    import re as _re
+
+    # Load Akdemia2526 students (headers on row 3 = index 0 after range start)
+    ak = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Akdemia2526!A3:P').execute().get('values', [])
+    ak_students = []
+    for row in ak[1:]:
+        r = (row + [''] * 16)[:16]
+        grade = r[0].strip()
+        nombre = r[2].strip()
+        apell  = r[4].strip()
+        phone  = _re.sub(r'\D', '', r[3])[-10:] if r[3] else ''
+        if grade and nombre:
+            ak_students.append({
+                'grade': grade,
+                'tok':   _norm(apell),
+                'phone': phone,
+            })
+
+    # Load Customers to get parent names + phones
+    cu = svc.spreadsheets().values().get(
+        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
     excluded = set()
-    for row in data:
-        r      = (row + [''] * 26)[:26]
+    for row in cu[1:]:
+        r      = (row + [''] * 13)[:13]
         name   = r[1].strip()
         status = r[2].strip().upper()
+        phone1 = _re.sub(r'\D', '', r[10])[-10:] if r[10] else ''
+        phone2 = _re.sub(r'\D', '', r[11])[-10:] if r[11] else ''
         if not name or status not in INCLUDE_STATUSES:
             continue
-        grades = [r[i].strip() for i in range(20, 26)
-                  if r[i].strip() and r[i].strip() != '#N/A']
-        if grades and all(g.lower() == LAST_GRADE.lower() for g in grades):
+
+        pt     = {w for w in _norm(name) if len(w) >= 4}
+        phones = {phone1, phone2} - {''}
+
+        matched = [s for s in ak_students
+                   if (phones & {s['phone']}) or (pt & s['tok'])]
+        if not matched:
+            continue
+        if all(s['grade'] == LAST_GRADE for s in matched):
             excluded.add(name.upper())
 
-    log.info("Sheet: %d families excluded (all students in %s)", len(excluded), LAST_GRADE)
+    log.info("Akdemia: %d families excluded (all students in %s)", len(excluded), LAST_GRADE)
     return excluded
 
 
 def _load_sheet_parents():
-    """Load ACTIVE + PIPELINE parents from Google Sheet Customers tab (cols A-Z).
-    Excludes families where ALL students are in LAST_GRADE (cols U-Z).
-    """
+    """Load ACTIVE + PIPELINE parents — email from col J, exclusion from Akdemia2526."""
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
@@ -102,19 +137,18 @@ def _load_sheet_parents():
         GSHEET_CREDS, scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
     svc  = build('sheets', 'v4', credentials=creds)
 
-    # Build exclusion set from cols U-Z before loading parents
-    excluded = _load_quinto_excluded_from_sheet(svc)
+    excluded = _load_akdemia_exclusions(svc)
 
     rows = svc.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID, range='Customers!A2:Z').execute().get('values', [])
-    data = rows[1:]  # skip grades sub-header row
+        spreadsheetId=SHEET_ID, range='Customers!A2:M').execute().get('values', [])
+    data = rows[1:]
 
     parents = []
     for row in data:
-        r      = (row + [''] * 26)[:26]
-        name   = r[1].strip()
-        status = r[2].strip().upper()
-        emails_raw = r[9].strip()
+        r          = (row + [''] * 13)[:13]
+        name       = r[1].strip()
+        status     = r[2].strip().upper()
+        emails_raw = r[9].strip()   # col J
         if not name or status not in INCLUDE_STATUSES:
             continue
         if name.upper() in excluded:
@@ -123,7 +157,7 @@ def _load_sheet_parents():
         parents.append({'name': name, 'emails': emails, 'status': status})
 
     counts = {s: sum(1 for p in parents if p['status'] == s) for s in INCLUDE_STATUSES}
-    log.info("Sheet: %d parents loaded after exclusion %s", len(parents), counts)
+    log.info("Sheet: %d parents loaded after Akdemia exclusion %s", len(parents), counts)
     return parents
 
 
