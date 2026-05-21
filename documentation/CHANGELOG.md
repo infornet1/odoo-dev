@@ -4,6 +4,40 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-21 — Telegram Parent Matching Initiative (ueipab_ai_agent v57.0→v57.1)
+
+**Docs:** [TELEGRAM_PARENT_MATCHING.md](TELEGRAM_PARENT_MATCHING.md)
+
+**Business driver:** WA primary number disabled by Meta after 49 sends during Budget Vote blast. Telegram as spam-free, free, instant alternative for future campaign blasts.
+
+**Phase 1 — `telegram_chat_id` on `res.partner` (v57.0):**
+- New `res_partner.py` model extension in `ueipab_ai_agent`
+- `telegram_chat_id = fields.Char(readonly=True, index=True)` — auto-populated, never typed
+- Visible in contact form under new "Canales Digitales" tab (`//notebook` xpath)
+- View xpath bug fixed: `//page[@name='internal']` doesn't exist in Odoo 17 → replaced with `//notebook`
+
+**Phase 2 — Dry retroactive match (0/61):**
+- Scanned 162 inbound Telegram messages across 61 conversations
+- 0 matches — parents used nicknames only, no phones shared
+- Confirms opt-in email blast is the only viable path
+
+**Phase 3 — FAM_ deep-link handler (v57.1):**
+- `_handle_telegram_parent_start()` in `ai_agent_conversation.py`
+- `/start FAM_{token}` → lookup `partner.communication.ack` by token → write `telegram_chat_id` on `res.partner` → re-link placeholder conversations → send welcome message
+- Live test 2026-05-21: Gustavo Perdomo (id=7) clicked → `telegram_chat_id=950519055` captured ✅
+
+**Phase 4a — Email opt-in blast script:**
+- `scripts/send_telegram_optin_email.py` — branded HTML, school logo + Glenda banner
+- Personalized `FAM_{token}` CTA per parent; 174 ACTIVE parents from Customers sheet
+- Preview sent to gustavo.perdomo@ueipab.edu.ve (mail id=5909) — approved
+
+**Vote digest enhancement:**
+- `voting_digest.py`: new `_fetch_telegram_status()` + Telegram section in HTML
+- Shows linked/unlinked/total Representante partners + linked names list
+- Preview sent mail id=5911 (currently 0/241 linked — no parent blast fired yet)
+
+---
+
 ## 2026-05-21 — Env Sync Verified
 
 Both testing and production confirmed in sync across all 7 custom modules:

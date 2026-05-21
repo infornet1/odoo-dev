@@ -77,6 +77,21 @@ def call(models, db, uid, key, model, method, args=None, kw=None):
 
 # ── Vote data ──────────────────────────────────────────────────────────────────
 
+def _fetch_telegram_status(models, db, uid, key):
+    """Count Representante partners (tag 25) with telegram_chat_id linked."""
+    total_reps = call(models, db, uid, key, 'res.partner', 'search_read',
+        [[('category_id', 'in', [25])]],
+        {'fields': ['id', 'name', 'telegram_chat_id'], 'limit': 0})
+    linked   = [r for r in total_reps if r.get('telegram_chat_id')]
+    unlinked = [r for r in total_reps if not r.get('telegram_chat_id')]
+    return {
+        'total':   len(total_reps),
+        'linked':  len(linked),
+        'unlinked': len(unlinked),
+        'linked_names': [r['name'] for r in linked],
+    }
+
+
 def _fetch_votes(models, db, uid, key):
     records = call(models, db, uid, key,
         'partner.communication.ack', 'search_read',
@@ -186,7 +201,7 @@ def _bar(pct, color, width=280):
     )
 
 
-def _build_html(t, recent_delta, state, pdvsa=None):
+def _build_html(t, recent_delta, state, pdvsa=None, tg_status=None):
     now_str  = datetime.now().strftime('%d/%m/%Y %H:%M VET')
     last_str = state.get('last_send', '—')
 
@@ -526,6 +541,44 @@ def _build_html(t, recent_delta, state, pdvsa=None):
     </td>
   </tr>
 
+  <!-- Telegram opt-in status -->
+  {f"""
+  <tr>
+    <td style="padding:0 28px 0;">
+      <div style="border-top:2px solid #e8edf3;margin:4px 0;"></div>
+      <div style="padding:14px 0 4px;">
+        <div style="font-size:13px;font-weight:bold;color:#0088cc;margin-bottom:10px;">
+          ✈️ Telegram Opt-in — padres vinculados
+        </div>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td width="33%" style="text-align:center;padding:6px 4px;">
+              <div style="font-size:28px;font-weight:bold;color:#0088cc;">{tg_status['linked']}</div>
+              <div style="font-size:11px;color:#666;">Vinculados</div>
+            </td>
+            <td width="33%" style="text-align:center;padding:6px 4px;
+                border-left:1px solid #eee;border-right:1px solid #eee;">
+              <div style="font-size:28px;font-weight:bold;color:#e65100;">{tg_status['unlinked']}</div>
+              <div style="font-size:11px;color:#666;">Sin vincular</div>
+            </td>
+            <td width="33%" style="text-align:center;padding:6px 4px;">
+              <div style="font-size:28px;font-weight:bold;color:#1a2c5b;">{tg_status['total']}</div>
+              <div style="font-size:11px;color:#666;">Total Repres.</div>
+            </td>
+          </tr>
+        </table>
+        {"" if not tg_status['linked_names'] else f'''
+        <div style="margin-top:10px;background:#e3f2fd;border-left:3px solid #0088cc;
+                    border-radius:0 6px 6px 0;padding:8px 12px;font-size:12px;color:#0d47a1;">
+          <strong>✅ Vinculados:</strong> { " · ".join(tg_status['linked_names']) }
+        </div>'''}
+        <div style="font-size:11px;color:#aaa;margin-top:6px;">
+          Campaña opt-in pendiente · Email blast listo · Phase 3 deployed ✓
+        </div>
+      </div>
+    </td>
+  </tr>""" if tg_status else ""}
+
   <!-- CTA button -->
   <tr>
     <td style="padding:20px 28px 24px;text-align:center;">
@@ -582,15 +635,16 @@ def main(live):
         f"/ Pend:{t['pending']} | {goal_tag} (+{delta} nuevos)"
     )
 
-    pdvsa = _fetch_pdvsa(models, db, uid, key)
-    html  = _build_html(t, delta, state, pdvsa=pdvsa)
+    pdvsa    = _fetch_pdvsa(models, db, uid, key)
+    tg_status = _fetch_telegram_status(models, db, uid, key)
+    html     = _build_html(t, delta, state, pdvsa=pdvsa, tg_status=tg_status)
 
-    pdvsa = _fetch_pdvsa(models, db, uid, key)
     if not live:
         log.info("DRY RUN — would send: %s", subject)
-        log.info("A=%d B=%d Pending=%d Voted=%d/%d | PDVSA continuing=%d pending=%d auto=%d",
+        log.info("A=%d B=%d Pending=%d Voted=%d/%d | PDVSA continuing=%d pending=%d auto=%d | TG linked=%d/%d",
                  t['continuing'], t['leaving'], t['pending'], t['voted'], t['total'],
-                 pdvsa['continuing'], pdvsa['pending'], len(pdvsa['auto_confirmed']))
+                 pdvsa['continuing'], pdvsa['pending'], len(pdvsa['auto_confirmed']),
+                 tg_status['linked'], tg_status['total'])
         return
 
     # Create one mail.mail per recipient

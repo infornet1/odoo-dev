@@ -1,6 +1,6 @@
 # Telegram Parent Matching & Opt-in Campaign
 
-**Status:** Phase 1 complete (testing v57.0) | Phase 2 dry run complete (0/61) | Phase 4a email script ready (preview sent) | Phase 3 + 4a live + 4b + 5 pending  
+**Status:** Phase 1 ✅ | Phase 2 ✅ (0 retroactive) | Phase 3 ✅ deployed prod | Phase 4a ✅ script ready | Phase 4b + 5 pending  
 **Created:** 2026-05-21  
 **Business driver:** WA primary number disabled by Meta after 49 sends during Budget Vote blast — Telegram as spam-free blast channel for future campaigns
 
@@ -70,7 +70,7 @@ WhatsApp/Meta blast vulnerabilities exposed during Budget Vote 2026-2027:
 
 ---
 
-### Phase 3 — FAM_ deep-link handler ⏳ Pending
+### Phase 3 — FAM_ deep-link handler ✅ Complete (2026-05-21 — v57.1)
 **Module:** `ueipab_ai_agent` — new handler in `telegram_webhook.py`
 
 **Flow:**
@@ -84,6 +84,10 @@ WhatsApp/Meta blast vulnerabilities exposed during Budget Vote 2026-2027:
 **Token reuse:** The existing `partner.communication.ack` token (already unique per parent per campaign) is used as the deep-link payload. No new token infrastructure needed.
 
 **Multiple campaigns:** Each campaign has its own `notice_key` and token. The handler matches whichever campaign token is active and always writes `telegram_chat_id` to the partner regardless of campaign.
+
+**Live test (2026-05-21):** Gustavo Perdomo (partner id=7) clicked FAM_ deep-link → `telegram_chat_id=950519055` written to `res.partner` ✅. Handler deployed to both testing and production (v57.1).
+
+**Vote digest integration:** `voting_digest.py` updated to include a Telegram opt-in section — shows linked/unlinked/total Representante partners + linked names. Fetches via `res.partner` with `category_id in [25]` and `telegram_chat_id != False`.
 
 ---
 
@@ -150,4 +154,6 @@ else:
 | Date | Method | Matched | Total Targets | Notes |
 |---|---|---|---|---|
 | 2026-05-21 | Dry run analysis | **0/61** | 61 Telegram convs | Phase 2 complete — 0 retroactive matches; nicknames only, no phones shared |
-| — | FAM_ opt-in blast | TBD | 178 Representantes | Phase 4 pending — WA blast required |
+| 2026-05-21 | FAM_ handler live test | **1** (Gustavo id=7) | Admin test only | chat_id=950519055 captured ✅ |
+| — | Email opt-in blast (Phase 4a) | TBD | 174 active parents | Script ready — fire after approval |
+| — | WA follow-up (Phase 4b) | TBD | Non-responders to email | After 7–10 day wait |

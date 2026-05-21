@@ -1194,11 +1194,14 @@ class AiAgentConversation(models.Model):
         if dry_run:
             _logger.info("DRY_RUN: Telegram inbound chat_id=%s text=%r", chat_id, text[:60])
 
-        # Handle /start command — may carry employee deep-link token (EMP_123)
+        # Handle /start command — may carry deep-link token (EMP_123 or FAM_uuid)
         if text.startswith('/start'):
             payload = text[len('/start'):].strip()
             if payload.startswith('EMP_'):
                 self._handle_telegram_employee_start(chat_id, payload, first_name, dry_run)
+                return
+            if payload.startswith('FAM_'):
+                self._handle_telegram_parent_start(chat_id, payload, first_name, dry_run)
                 return
             # Plain /start (no token) — send welcome and fall through to normal conversation
 
@@ -1298,6 +1301,61 @@ class AiAgentConversation(models.Model):
             f"• Políticas del colegio\n"
             f"• Y cualquier consulta institucional\n\n"
             f"¿En qué te puedo ayudar hoy?"
+        )
+
+    @api.model
+    def _handle_telegram_parent_start(self, chat_id, payload, first_name, dry_run=False):
+        """Handle /start FAM_{ack_token} deep-link — link parent's Telegram chat_id to res.partner."""
+        tg    = self.env['ai.agent.telegram.service']
+        token = payload[4:]  # strip 'FAM_'
+
+        # Look up the ACK record by token (across all campaigns)
+        ack = self.env['partner.communication.ack'].sudo().search(
+            [('token', '=', token)], limit=1)
+
+        if not ack or not ack.partner_id:
+            _logger.warning("Telegram FAM_ token=%s: no ACK record found", token)
+            tg.send_message(chat_id,
+                "¡Hola! 👋 No pude identificarte automáticamente con ese enlace.\n\n"
+                "Escríbeme tu consulta y con gusto te ayudo.")
+            return
+
+        partner = ack.partner_id.sudo()
+        first   = (partner.name or first_name or 'representante').split()[0].title()
+
+        _logger.info(
+            "Telegram FAM_ token=%s → partner=%s (id=%s) chat_id=%s",
+            token, partner.name, partner.id, chat_id,
+        )
+
+        if dry_run:
+            _logger.info("DRY_RUN: Would write telegram_chat_id=%s on partner %s",
+                         chat_id, partner.name)
+        else:
+            # Write chat_id on the real partner record
+            partner.write({'telegram_chat_id': chat_id})
+
+            # Re-link any placeholder conversations for this chat_id to the real partner
+            placeholders = self.search([
+                ('telegram_chat_id', '=', chat_id),
+                ('channel', '=', 'telegram'),
+            ])
+            if placeholders:
+                placeholders.sudo().write({'partner_id': partner.id})
+                _logger.info(
+                    "FAM_: re-linked %d conversations to partner %s",
+                    len(placeholders), partner.name,
+                )
+
+            self.env.cr.commit()
+
+        tg.send_message(chat_id,
+            f"¡Hola, {first}! 👋\n\n"
+            f"✅ Tu cuenta de Telegram quedó <b>vinculada</b> con tu perfil en el colegio.\n\n"
+            f"Soy <b>Glenda</b>, tu asistente virtual del Instituto Privado Andrés Bello. "
+            f"Ahora puedo enviarte recordatorios, comunicados y novedades directamente aquí — "
+            f"sin depender de WhatsApp.\n\n"
+            f"¿En qué te puedo ayudar hoy? 😊"
         )
 
     @api.model
