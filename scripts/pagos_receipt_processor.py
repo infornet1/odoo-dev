@@ -74,6 +74,10 @@ SYSTEM_EMAILS = {
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(SCRIPT_DIR, 'pagos_processor_state.json')
 
+SHEETS_SPREADSHEET_ID = '1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA'
+SHEETS_CREDS_PATH = '/opt/odoo-dev/config/google_sheets_credentials.json'
+_sheets_cache = None
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -271,6 +275,109 @@ def odoo_find_partner_by_email(email):
         [('email', '=ilike', email.strip().lower()), ('customer_rank', '>', 0)],
         ['id', 'name', 'email', 'vat', 'child_ids'], limit=1)
     return rows[0] if rows else None
+
+
+def _load_customers_sheet():
+    """Load Customers sheet email→name dict. Cached per process run."""
+    global _sheets_cache
+    if _sheets_cache is not None:
+        return _sheets_cache
+    try:
+        from google.oauth2.service_account import Credentials
+        from googleapiclient.discovery import build
+        creds = Credentials.from_service_account_file(
+            SHEETS_CREDS_PATH,
+            scopes=['https://www.googleapis.com/auth/spreadsheets.readonly'])
+        svc = build('sheets', 'v4', credentials=creds)
+        resp = svc.spreadsheets().values().get(
+            spreadsheetId=SHEETS_SPREADSHEET_ID,
+            range='Customers!B2:J',
+        ).execute()
+        rows = resp.get('values', [])
+        cache = {}
+        for row in rows:
+            name  = row[0].strip()  if len(row) > 0 else ''
+            email = row[8].strip().lower() if len(row) > 8 else ''
+            if email and name:
+                cache[email] = name
+        _sheets_cache = cache
+        logger.info("Customers sheet loaded: %d entries", len(cache))
+    except Exception as e:
+        logger.warning("Failed to load Customers sheet: %s", e)
+        _sheets_cache = {}
+    return _sheets_cache
+
+
+def sheets_lookup_by_email(email):
+    """Return parent name from Customers sheet for given email, or None."""
+    if not email:
+        return None
+    return _load_customers_sheet().get(email.strip().lower())
+
+
+def odoo_find_partner_by_name(name):
+    """Try to find a customer partner by full name (exact then first+last word)."""
+    if not name:
+        return None
+    rows = odoo_search_read('res.partner',
+        [('name', '=ilike', name.strip()), ('customer_rank', '>', 0)],
+        ['id', 'name', 'email', 'vat', 'child_ids'], limit=1)
+    if not rows:
+        words = name.strip().split()
+        if len(words) >= 2:
+            rows = odoo_search_read('res.partner',
+                ['&', '&', ('name', 'ilike', words[0]),
+                 ('name', 'ilike', words[-1]),
+                 ('customer_rank', '>', 0)],
+                ['id', 'name', 'email', 'vat', 'child_ids'], limit=1)
+    return rows[0] if rows else None
+
+
+def upsert_freescout_task(conv_id, status, subject='', sender_email='',
+                          partner_id=None, sheet_match=None,
+                          extracted=None, payment_odoo_id=None, notes=''):
+    """Create or update ai.agent.freescout.task in Odoo for visibility/re-trigger."""
+    try:
+        db, uid, pwd, m_obj = odoo()
+
+        existing = m_obj.execute_kw(db, uid, pwd,
+            'ai.agent.freescout.task', 'search',
+            [[('fs_conv_id', '=', conv_id)]], {'limit': 1})
+
+        vals = {
+            'fs_conv_id':        conv_id,
+            'fs_subject':        (subject or '')[:250],
+            'sender_email':      sender_email or '',
+            'status':            status,
+            'last_processed_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+        }
+        if notes:
+            vals['notes'] = notes
+        if partner_id:
+            vals['partner_id'] = partner_id
+        if sheet_match:
+            vals['sheet_match'] = sheet_match
+        if extracted:
+            vals['extracted_json'] = (json.dumps(extracted)
+                                      if isinstance(extracted, dict) else str(extracted))
+        if payment_odoo_id:
+            vals['payment_odoo_id'] = payment_odoo_id
+
+        if existing:
+            # Increment retry_count
+            current = m_obj.execute_kw(db, uid, pwd,
+                'ai.agent.freescout.task', 'read',
+                [existing, ['retry_count']])[0]
+            vals['retry_count'] = current['retry_count'] + 1
+            m_obj.execute_kw(db, uid, pwd,
+                'ai.agent.freescout.task', 'write', [existing, vals])
+        else:
+            m_obj.execute_kw(db, uid, pwd,
+                'ai.agent.freescout.task', 'create', [vals])
+
+        logger.info("  Bridge: upserted FS#%d → %s", conv_id, status)
+    except Exception as e:
+        logger.warning("  Bridge: failed to upsert FS#%d: %s", conv_id, e)
 
 
 def odoo_get_bcv_rate():
@@ -749,11 +856,17 @@ def extract_receipt(thread, api_key):
 # Note HTML builders
 # ============================================================================
 
-def build_note_no_partner(customer_email, conv_number):
+def build_note_no_partner(customer_email, conv_number, sheet_name=None):
+    sheet_line = (
+        f'<p>📋 <b>Encontrado en hoja Customers:</b> {sheet_name} '
+        f'— verificar si corresponde y registrar manualmente.</p>'
+        if sheet_name else ''
+    )
     return (
-        f'<p><b>🤖 Glenda — Cliente no identificado</b></p>'
+        f'<p><b>🤖 Glenda — Cliente no identificado en Odoo</b></p>'
         f'<p>El email <code>{customer_email}</code> no está registrado como cliente en Odoo. '
         f'Por favor verificar y registrar el pago manualmente.</p>'
+        f'{sheet_line}'
         f'<p><small>Freescout #{conv_number} · procesado automáticamente</small></p>'
     )
 
@@ -877,6 +990,8 @@ def process_conversation(conv, processed_ids, api_key):
         full_conv = fs_get_conversation(conv_id)
     except Exception as e:
         logger.error("  Failed to get conversation: %s", e)
+        upsert_freescout_task(conv_id, 'error', subject=subject,
+                              sender_email=customer_email)
         return 'error'
 
     threads = full_conv.get('_embedded', {}).get('threads', [])
@@ -901,6 +1016,9 @@ def process_conversation(conv, processed_ids, api_key):
             fs_update_subject(conv_id, new_subject)
         except Exception as e:
             logger.error("  Failed to post note: %s", e)
+        upsert_freescout_task(conv_id, 'no_receipt', subject=subject,
+                              sender_email=customer_email,
+                              partner_id=pre_fetched_partner['id'] if pre_fetched_partner else None)
         return 'no_receipt'
 
     logger.info("  Receipt: banco=%s monto=%s %s ref=%s source=%s",
@@ -910,14 +1028,26 @@ def process_conversation(conv, processed_ids, api_key):
 
     # --- Partner lookup ---
     partner = pre_fetched_partner or odoo_find_partner_by_email(customer_email)
+    sheet_name = None
+
+    if not partner:
+        sheet_name = sheets_lookup_by_email(customer_email)
+        if sheet_name:
+            logger.info("  Sheet match: '%s' → trying Odoo name lookup", sheet_name)
+            partner = odoo_find_partner_by_name(sheet_name)
+            if partner:
+                logger.info("  Partner resolved via sheet: %s (id=%d)", partner['name'], partner['id'])
+
     if not partner:
         logger.info("  Partner not found for %s", customer_email)
-        note = build_note_no_partner(customer_email, conv_number)
+        note = build_note_no_partner(customer_email, conv_number, sheet_name=sheet_name)
         try:
             fs_post_note(conv_id, note)
             fs_update_subject(conv_id, new_subject)
         except Exception as e:
             logger.error("  Failed to post note: %s", e)
+        upsert_freescout_task(conv_id, 'no_partner', subject=subject,
+                              sender_email=customer_email, sheet_match=sheet_name)
         return 'no_partner'
 
     logger.info("  Partner found: %s (id=%d)", partner['name'], partner['id'])
@@ -932,6 +1062,9 @@ def process_conversation(conv, processed_ids, api_key):
             fs_update_subject(conv_id, new_subject)
         except Exception as e:
             logger.error("  Failed to post note: %s", e)
+        upsert_freescout_task(conv_id, 'duplicate', subject=subject,
+                              sender_email=customer_email,
+                              partner_id=partner['id'], extracted=receipt)
         return 'duplicate'
 
     # --- Payment pipeline ---
@@ -970,6 +1103,10 @@ def process_conversation(conv, processed_ids, api_key):
     except Exception as e:
         logger.error("  Failed to post note/update subject: %s", e)
 
+    upsert_freescout_task(conv_id, 'success', subject=subject,
+                          sender_email=customer_email,
+                          partner_id=partner['id'], sheet_match=sheet_name,
+                          extracted=receipt, payment_odoo_id=payment_id)
     return 'processed'
 
 # ============================================================================

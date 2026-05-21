@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-20 (v25)
+**Last Updated:** 2026-05-21 (v26)
 
 ## Core Instructions
 
@@ -89,6 +89,7 @@
 | 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` |
 | 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | 5-option menu; balance gate; A vs B quotation; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 resolved convs injected (7-day window) |
+| 74 | Freescout Pagos@ Bridge | Production | `ueipab_ai_agent` + scripts | `ai.agent.freescout.task`; AI Agent → Operaciones → Pagos Freescout; re-process button; Google Sheet fallback |
 
 ---
 
@@ -170,7 +171,7 @@
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.7 | both |
+| ueipab_ai_agent | 17.0.1.57.8 | both |
 | ueipab_attendance_report | 17.0.1.6.15 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -285,6 +286,16 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **Iniciar Conversación (v57.5):** Canal toggle WhatsApp/Telegram at top. **WhatsApp:** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately; `initial_message` skips greeting; cleared after send. **Telegram:** `partner_id` required; `phone` auto-fills from partner; `📲 Enviar Invitación Telegram` sends FAM_ link via WA. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
 
 **Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; state: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
+
+### Freescout Pagos@ Bridge (Feature #74)
+
+**`pagos_faq_email_checker.py`** — now 100% REST API (no pymysql). `get_new_conversations(processed_ids)` uses `fs_get_conversations_page()` + `fs_get_conversation_detail()`. `FS_DB` dict and `import pymysql` removed.
+
+**`pagos_receipt_processor.py`** — Google Sheet fallback: when email-based Odoo partner lookup fails, `sheets_lookup_by_email(email)` checks `Customers!B2:J` (col B=name, col J=email) via `_load_customers_sheet()` (cached per process). If sheet returns a name, `odoo_find_partner_by_name()` does a second Odoo lookup. `build_note_no_partner()` now accepts optional `sheet_name` param — includes a "Encontrado en hoja" line in the Freescout note when there is a sheet hit. `upsert_freescout_task()` called at every non-skipped return point.
+
+**`ai.agent.freescout.task`** — bridge model in `ueipab_ai_agent`. Fields: `fs_conv_id`, `fs_subject`, `sender_email`, `partner_id`, `sheet_match`, `status` (pending/identified/no_partner/no_receipt/duplicate/success/error), `extracted_json`, `payment_odoo_id`, `retry_count`, `last_processed_at`, `notes`, `fs_url` (computed). UI: AI Agent → Operaciones → Pagos Freescout; default filter "Requieren revisión". `action_reprocess()` button re-fetches FS conv, resolves partner (uses form `partner_id` if manually set), posts note, updates status. `action_open_freescout()` opens conv in new tab.
+
+**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` ir.config_parameter (email→name JSON). Cron: daily 11:30 UTC (07:30 VET). Used by `general_inquiry.py` `_get_customers_sheet_context()` to hint Glenda when partner placeholder emails match sheet entries.
 
 ### Glenda Technical Patterns
 

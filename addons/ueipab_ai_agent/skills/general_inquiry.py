@@ -785,6 +785,35 @@ class GeneralInquirySkill:
             "No repitas el saludo genérico ni el menú de bienvenida.\n"
         )
 
+    def _get_customers_sheet_context(self, conversation):
+        """Return name hint from Customers sheet for unidentified Telegram/WA contacts."""
+        # Only useful when partner is a placeholder (unidentified)
+        partner = conversation.partner_id
+        if partner and not partner.name.startswith(('Consulta WhatsApp', 'Telegram ')):
+            return ''  # already identified
+
+        raw = conversation.env['ir.config_parameter'].sudo().get_param(
+            'school.customers_sheet_json', '')
+        if not raw:
+            return ''
+
+        try:
+            import json as _json
+            data = _json.loads(raw)
+        except Exception:
+            return ''
+
+        # Try to match by email stored on partner
+        email = (partner.email or '').lower() if partner else ''
+        if email and email in data:
+            name = data[email]
+            return (
+                f"HOJA CUSTOMERS: El email {email} corresponde a {name} "
+                f"según la hoja de cálculo del colegio.\n"
+            )
+
+        return ''
+
     def get_context(self, conversation):
         cfg = self._get_agent_config(conversation)
         partner = conversation.partner_id
@@ -803,6 +832,7 @@ class GeneralInquirySkill:
             'balance':                   balance,
             'bcv':                       self._get_bcv_context(conversation),
             'billing_enrichment':        self._enrich_billing_context(conversation),
+            'customers_sheet_context':   self._get_customers_sheet_context(conversation),
             'prior_history':             self._get_prior_conversation_summary(conversation),
             'is_calibration_tester':     bool(calibration_employee),
             'calibration_employee_name': calibration_employee.name if calibration_employee else '',
@@ -926,6 +956,7 @@ class GeneralInquirySkill:
             )
 
         billing_enrichment = context.get('billing_enrichment', '')
+        customers_sheet_context = context.get('customers_sheet_context', '')
         prior_history = context.get('prior_history', '')
 
         audience_block = (
@@ -976,6 +1007,7 @@ class GeneralInquirySkill:
             + self._build_bcv_block(bcv) + "\n"
             + balance_ctx + "\n"
             + billing_enrichment
+            + (customers_sheet_context if customers_sheet_context else '')
             + "CONTEXTO:\n"
             "- Esta persona escribió directamente a este número de WhatsApp sin que nosotros la hayamos contactado.\n"
             + contact_ctx

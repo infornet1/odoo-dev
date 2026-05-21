@@ -28,7 +28,6 @@ import os
 import re
 import sys
 import requests
-import pymysql
 from datetime import datetime, timedelta
 
 # ============================================================================
@@ -41,12 +40,6 @@ FS_MAILBOX_ID   = 2        # pagos@ueipab.edu.ve
 FS_INBOX_FOLDER = 25       # type=1 (Unassigned inbox)
 PROCESSED_TAG   = '[FAQ-AI]'
 ESCALATION_TAG  = '[FAQ-AI][ESCALAR]'
-
-FS_DB = dict(
-    host='localhost', user='free297', password='1gczp1S@3!',
-    database='free297', charset='utf8mb4',
-    cursorclass=pymysql.cursors.DictCursor,
-)
 
 # Senders that are always automated — never genuine parent inquiries
 SYSTEM_SENDERS = frozenset({
@@ -192,40 +185,8 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 # ============================================================================
-# FreeScout MySQL helpers
+# FreeScout REST API helpers (read)
 # ============================================================================
-
-def get_new_conversations(conn, processed_ids):
-    """Fetch active unprocessed conversations in pagos@ inbox."""
-    placeholders = ','.join(['%s'] * len(processed_ids)) if processed_ids else '0'
-    not_in = f"AND c.id NOT IN ({placeholders})" if processed_ids else ""
-    query = f"""
-        SELECT c.id, c.subject, c.created_at, c.user_id,
-               e.email AS customer_email,
-               cu.first_name, cu.last_name,
-               (SELECT t.body FROM threads t
-                WHERE t.conversation_id = c.id AND t.type = 1
-                ORDER BY t.created_at DESC LIMIT 1) AS last_body,
-               (SELECT t.`from` FROM threads t
-                WHERE t.conversation_id = c.id AND t.type = 1
-                ORDER BY t.created_at DESC LIMIT 1) AS last_from
-        FROM conversations c
-        LEFT JOIN customers cu ON c.customer_id = cu.id
-        LEFT JOIN emails e ON e.customer_id = cu.id
-        WHERE c.mailbox_id = {FS_MAILBOX_ID}
-          AND c.status = 1
-          AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-          AND c.subject NOT LIKE %s
-          AND c.subject NOT LIKE %s
-          {not_in}
-        ORDER BY c.created_at ASC
-        LIMIT 20
-    """
-    params = [f'%{PROCESSED_TAG}%', f'%[AUSENCIA]%'] + (processed_ids if processed_ids else [])
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        return cur.fetchall()
-
 
 def _is_automated(conv):
     """Return True if this looks like a system/automated email, not a parent inquiry."""
@@ -292,6 +253,82 @@ def fs_update_subject(conv_id, new_subject):
     r.raise_for_status()
     return r
 
+
+def fs_get_conversations_page(page=1):
+    headers, api_url = _fs_headers()
+    r = requests.get(
+        f"{api_url}/conversations",
+        headers=headers,
+        params={'mailboxId': FS_MAILBOX_ID, 'status': 'active', 'page': page},
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json().get('_embedded', {}).get('conversations', [])
+
+
+def fs_get_conversation_detail(conv_id):
+    headers, api_url = _fs_headers()
+    r = requests.get(f"{api_url}/conversations/{conv_id}", headers=headers, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_new_conversations(processed_ids):
+    """Fetch active unprocessed conversations in pagos@ inbox via Freescout API."""
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    processed_set = set(processed_ids)
+    candidates = []
+    page = 1
+    while True:
+        convs = fs_get_conversations_page(page)
+        if not convs:
+            break
+        for c in convs:
+            conv_id = c['id']
+            subject = c.get('subject', '')
+            if conv_id in processed_set:
+                continue
+            if subject.startswith(PROCESSED_TAG) or '[AUSENCIA]' in subject:
+                continue
+            try:
+                created = datetime.strptime(c.get('createdAt', '')[:19], '%Y-%m-%dT%H:%M:%S')
+                if created < cutoff:
+                    continue
+            except Exception:
+                pass
+            candidates.append(conv_id)
+        if len(convs) < 25:
+            break
+        page += 1
+
+    result = []
+    for conv_id in candidates[:20]:
+        try:
+            detail = fs_get_conversation_detail(conv_id)
+            threads = detail.get('_embedded', {}).get('threads', [])
+            customer_threads = [t for t in threads if t.get('type') == 'customer']
+            if customer_threads:
+                latest = max(customer_threads, key=lambda t: t.get('createdAt', ''))
+                last_body = latest.get('body', '')
+                last_from = (latest.get('createdBy') or {}).get('email', '')
+            else:
+                last_body = ''
+                last_from = ''
+            customer = detail.get('customer') or {}
+            result.append({
+                'id':             conv_id,
+                'subject':        detail.get('subject', ''),
+                'created_at':     detail.get('createdAt', ''),
+                'customer_email': customer.get('email', ''),
+                'first_name':     customer.get('firstName', ''),
+                'last_name':      customer.get('lastName', ''),
+                'last_body':      last_body,
+                'last_from':      last_from,
+            })
+        except Exception as e:
+            logger.warning("Failed to fetch conv #%d detail: %s", conv_id, e)
+    return result
+
 # ============================================================================
 # Claude Haiku
 # ============================================================================
@@ -343,11 +380,7 @@ def main():
     state = load_state()
     processed_ids = state.get('processed_conv_ids', [])
 
-    conn = pymysql.connect(**FS_DB)
-    try:
-        conversations = get_new_conversations(conn, processed_ids)
-    finally:
-        conn.close()
+    conversations = get_new_conversations(processed_ids)
 
     if not conversations:
         logger.info("No new conversations to process.")

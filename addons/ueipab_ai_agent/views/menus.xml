@@ -56,10 +56,16 @@
               action="ueipab_attendance_report.action_partner_communication_ack"
               sequence="6"/>
 
+    <menuitem id="menu_ai_agent_freescout_tasks"
+              name="Pagos Freescout"
+              parent="menu_ai_agent_operations"
+              action="ai_agent_freescout_task_action"
+              sequence="8"/>
+
     <menuitem id="menu_ai_agent_calibration"
               name="Programa Calibración"
               parent="menu_ai_agent_operations"
-              sequence="7"/>
+              sequence="9"/>
 
     <menuitem id="menu_ai_agent_feedback"
               name="Sugerencias"
