@@ -172,7 +172,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.12 | both |
-| ueipab_attendance_report | 17.0.1.6.15 | both |
+| ueipab_attendance_report | 17.0.1.6.16 (testing) / 17.0.1.6.15 (prod — pending SSH deploy) | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.1.0 | testing only |
@@ -294,6 +294,8 @@ See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) f
 Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 
 **State:** `attendance_daily_alert_state.json` — `morning_DATE_EMPID` / `evening_DATE_EMPID`; entries >14 days pruned. WiFi coverage: 8/45 employees in `payroll_db.wifi_hotspot_users`.
+
+**Correction button (2026-05-22):** `get_fix_url_for_employee(emp_id, date)` looks up the `hr.attendance.report` covering that date (`state=sent/draft`) and injects an orange "📝 Solicitar Corrección" button linking to `/attendance-fix/<token>`. Falls back to plain email card if no matching report exists. Q2 quincena reports must be generated before alerts fire for them to have tokens. CC `recursoshumanos@ueipab.edu.ve` via `mail.mail.email_cc`.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 
@@ -539,6 +541,9 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 **PENDING — Data / Contract:**
 - **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 - **Josefina Phase 2** — liquidation SLIP confirmed (done). Pending: `LIQUID_OTHER_DED_V2` rule in `LIQUID_VE_V2` to deduct $420.87 overpayment from Year 2 liquidation via `ueipab_other_deductions`. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
+
+**PENDING — Production Deploy (needs SSH key to 10.124.0.3):**
+- **`ueipab_attendance_report` v6.16** — correction form handles missing_exit days + button shows for both absent/missing_exit. Testing upgraded; production still v6.15. Deploy: `scp -r addons/ueipab_attendance_report root@10.124.0.3:/home/vision/ueipab17/addons/ && ssh root@10.124.0.3 "docker exec 0ef7d03db702_ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_attendance_report --stop-after-init && docker restart 0ef7d03db702_ueipab17"`
 
 **PENDING — Refactor:**
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — model, views, controller (`partner_ack.py`), and wizard belong in `ueipab_ai_agent` (or a new `ueipab_campaigns` module). Placed there for convenience when first built; all campaign logic lives in `ueipab_ai_agent`. Requires DB migration (model is live in production). Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md) §Structural Note.
