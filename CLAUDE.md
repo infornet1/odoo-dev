@@ -163,7 +163,7 @@
 ## Module Versions
 
 **Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
-**Last sync verified:** 2026-05-22 — all modules in sync ✓
+**Last sync verified:** 2026-05-22 (2nd pass) — all modules in sync ✓
 
 | Module | Version | Notes |
 |--------|---------|-------|
@@ -172,7 +172,7 @@
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.12 | both |
-| ueipab_attendance_report | 17.0.1.6.16 (testing) / 17.0.1.6.15 (prod — pending SSH deploy) | both |
+| ueipab_attendance_report | 17.0.1.6.17 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.1.0 | testing only |
@@ -349,8 +349,8 @@ See [EMAIL_TEMPLATES.md](documentation/EMAIL_TEMPLATES.md) for full details and 
 See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full details.
 
 **Quick Reference:**
-- Server: `10.124.0.3`
-- Container: `0ef7d03db702_ueipab17`
+- Server: `10.124.0.3` | User: `root` | Password: in `config/production.json` → `server.password`
+- Container: `ueipab17`
 - Database: `DB_UEIPAB`
 - Module Path: `/home/vision/ueipab17/addons`
 
@@ -547,8 +547,7 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 **PENDING — External / Infrastructure:**
 - **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
 
-**PENDING — Production Deploy (needs SSH key to 10.124.0.3):**
-- **`ueipab_attendance_report` v6.16** — correction form handles missing_exit days + button shows for both absent/missing_exit. Testing upgraded; production still v6.15. Deploy: `scp -r addons/ueipab_attendance_report root@10.124.0.3:/home/vision/ueipab17/addons/ && ssh root@10.124.0.3 "docker exec 0ef7d03db702_ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_attendance_report --stop-after-init && docker restart 0ef7d03db702_ueipab17"`
+**PENDING — Production Deploy:**
 
 **PENDING — Refactor:**
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — model, views, controller (`partner_ack.py`), and wizard belong in `ueipab_ai_agent` (or a new `ueipab_campaigns` module). Placed there for convenience when first built; all campaign logic lives in `ueipab_ai_agent`. Requires DB migration (model is live in production). Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md) §Structural Note.
