@@ -381,9 +381,11 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
 - **Auth:** API secret key param (not OAuth), key name `ueipab1`
 - **Primary Account (dedicated):** +584148321989 | **Backup:** +584248944898 | **Tertiary (emergency):** +584148321963
+- **⚠️ Active account as of 2026-05-22:** **BACKUP (+584248944898)** — primary broken (all sends failing at WA delivery level since msg≈76649; Massiva support ticket open). Restore: fix on Massiva dashboard → `whatsapp_account_phone=+584148321989`, `whatsapp_account_id=primary_uid`, `whatsapp_active_account=primary`, clear `whatsapp_flagged_phone/date`.
 - **Anti-spam:** Min 120s between sends
 - **Send:** `POST /api/send/whatsapp` | **Validate:** `GET /api/validate/whatsapp` | **Receive:** `GET /api/get/wa.received`
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
+- **Inbox-to-backup re-routing (2026-05-22):** When primary can receive but not send, manually poll `GET /api/get/wa.received?account=primary_uid` and resend failed outbound messages via backup uid. Then send Telegram invite as follow-up nudge.
 
 ### Claude AI API (Anthropic)
 
@@ -541,6 +543,9 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 **PENDING — Data / Contract:**
 - **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 - **Josefina Phase 2** — liquidation SLIP confirmed (done). Pending: `LIQUID_OTHER_DED_V2` rule in `LIQUID_VE_V2` to deduct $420.87 overpayment from Year 2 liquidation via `ueipab_other_deductions`. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
+
+**PENDING — External / Infrastructure:**
+- **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
 
 **PENDING — Production Deploy (needs SSH key to 10.124.0.3):**
 - **`ueipab_attendance_report` v6.16** — correction form handles missing_exit days + button shows for both absent/missing_exit. Testing upgraded; production still v6.15. Deploy: `scp -r addons/ueipab_attendance_report root@10.124.0.3:/home/vision/ueipab17/addons/ && ssh root@10.124.0.3 "docker exec 0ef7d03db702_ueipab17 /usr/bin/odoo -d DB_UEIPAB -u ueipab_attendance_report --stop-after-init && docker restart 0ef7d03db702_ueipab17"`
