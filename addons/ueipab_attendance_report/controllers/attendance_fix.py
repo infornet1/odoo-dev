@@ -325,6 +325,49 @@ class AttendanceCorrectionController(http.Controller):
                 correction.id, force_send=True,
             )
 
+        # Confirmation email to employee — CC recursoshumanos@
+        emp_email = employee.work_email or ''
+        if emp_email:
+            ci_disp_c = _fmt_12h(check_in)
+            co_disp_c = _fmt_12h(check_out) if check_out else '— no indicada'
+            att_line  = f'<br/>📎 Adjunto: <em>{att_file.filename}</em>' if att_ok else ''
+            conf_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;padding:20px 26px;">
+    <h2 style="margin:0;font-size:17px;">&#128295; Solicitud de corrección recibida</h2>
+    <p style="margin:4px 0 0;font-size:12px;opacity:.85;">Instituto Privado Andrés Bello, CA</p>
+  </div>
+  <div style="padding:22px 26px;">
+    <p style="font-size:14px;color:#333;">Estimado/a <strong>{employee.name}</strong>,</p>
+    <p style="font-size:13px;color:#555;line-height:1.6;">
+      Hemos recibido tu solicitud de corrección de asistencia. Recursos Humanos la revisará
+      antes del cierre de nómina y te notificará con el resultado.
+    </p>
+    <div style="background:#d4edda;border-left:4px solid #28a745;padding:12px 16px;
+                border-radius:4px;margin:16px 0;font-size:13px;color:#155724;line-height:1.8;">
+      &#128197; <strong>Fecha:</strong> {correction_date.strftime('%d/%m/%Y')}<br/>
+      &#9203; <strong>Entrada:</strong> {ci_disp_c} &nbsp;|&nbsp;
+              <strong>Salida:</strong> {co_disp_c}<br/>
+      &#128172; <strong>Motivo:</strong> {reason}{att_line}
+    </div>
+    <p style="font-size:12px;color:#888;margin:0;">
+      ¿Tienes otra fecha por corregir?
+      <a href="/attendance-fix/{report.ack_token}" style="color:#2471a3;">Envía otra solicitud</a>.
+    </p>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;">Cordialmente,<br/>
+      <strong>Recursos Humanos</strong> — Instituto Privado Andrés Bello, CA</p>
+  </div>
+</div></div>"""
+            request.env['mail.mail'].sudo().create({
+                'subject':    f'✅ Solicitud de corrección recibida — {correction_date.strftime("%d/%m/%Y")}',
+                'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+                'email_to':   f'"{employee.name}" <{emp_email}>',
+                'email_cc':   'recursoshumanos@ueipab.edu.ve',
+                'body_html':  conf_body,
+                'state':      'outgoing',
+            }).send()
+
         ci_disp = _fmt_12h(check_in)
         co_disp = _fmt_12h(check_out) if check_out else 'No indicada'
         att_note = f'<br/>&#128206; Adjunto: <em>{att_file.filename}</em>' if att_ok else ''
