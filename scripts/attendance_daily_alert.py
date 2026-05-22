@@ -179,6 +179,36 @@ def odoo_get_param(key, default=''):
     rows = odoo_search_read('ir.config_parameter', [('key', '=', key)], ['value'], limit=1)
     return rows[0]['value'] if rows else default
 
+
+_web_base_url = None
+
+def get_fix_url_for_employee(emp_id: int, target_date: date):
+    """Return the /attendance-fix/<token> URL for this employee's active report
+    that covers target_date, or None if no matching report exists."""
+    global _web_base_url
+    try:
+        date_str = target_date.strftime('%Y-%m-%d')
+        reports = odoo_search_read(
+            'hr.attendance.report',
+            [
+                ('employee_id', '=', emp_id),
+                ('date_from',   '<=', date_str),
+                ('date_to',     '>=', date_str),
+                ('state',       'in', ['sent', 'draft']),
+            ],
+            ['ack_token'],
+            limit=1,
+        )
+        if not reports or not reports[0].get('ack_token'):
+            return None
+        token = reports[0]['ack_token']
+        if not _web_base_url:
+            _web_base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve').rstrip('/')
+        return f"{_web_base_url}/attendance-fix/{token}"
+    except Exception as e:
+        logger.debug("get_fix_url_for_employee emp=%d: %s", emp_id, e)
+        return None
+
 # ============================================================================
 # VET time helpers
 # ============================================================================
@@ -398,10 +428,12 @@ def build_evening_email(emp_name: str, check_in_vet: datetime, target_date: date
     return _base_html(body, f'Registro de salida pendiente — {date_str}')
 
 
-def build_morning_email(emp_name: str, issues: list, target_date: date) -> str:
+def build_morning_email(emp_name: str, issues: list, target_date: date,
+                        fix_url: str = None) -> str:
     """HTML for morning recap with one or more issues.
 
     issues: list of dicts with keys: icon, label, value, detail (optional)
+    fix_url: if provided, show a direct correction button instead of plain email card
     """
     date_str = target_date.strftime('%d/%m/%Y')
     first_name = emp_name.split()[0].capitalize() if emp_name else emp_name
@@ -419,6 +451,38 @@ def build_morning_email(emp_name: str, issues: list, target_date: date) -> str:
 
     issue_count = len(issues)
     issues_label = f"{issue_count} incidencia{'s' if issue_count != 1 else ''} detectada{'s' if issue_count != 1 else ''}"
+
+    # Correction CTA — button if we have a fix URL, plain email card otherwise
+    if fix_url:
+        correction_html = f"""
+    <div class="tip-box">
+      💡 <strong>¿Este registro no es correcto?</strong><br>
+      Puedes solicitar la corrección directamente — Recursos Humanos la revisará
+      antes del cierre de nómina.
+    </div>
+    <div style="text-align:center;margin:16px 0 8px;">
+      <a href="{fix_url}"
+         style="display:inline-block;background:#e65100;color:#ffffff;
+                padding:12px 32px;font-size:14px;font-weight:700;
+                text-decoration:none;border-radius:7px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.18);">
+        📝 Solicitar Corrección
+      </a>
+    </div>
+    <p style="text-align:center;font-size:11px;color:#aaa;margin:4px 0 16px;">
+      El formulario ya tiene tus datos — solo indica el motivo y la hora correcta.
+    </p>"""
+    else:
+        correction_html = f"""
+    <div class="tip-box">
+      💡 <strong>¿Necesitas corregir tu registro?</strong><br>
+      Puedes solicitar una corrección de asistencia escribiendo a Recursos Humanos.
+      Indica la fecha, hora de entrada y/o salida correcta, y el motivo del error.
+    </div>
+    <div class="rrhh-card">
+      📧 <strong>Recursos Humanos:</strong>
+      <a href="mailto:{RRHH_EMAIL}">{RRHH_EMAIL}</a>
+    </div>"""
 
     body = f"""
   <!-- Alert banner -->
@@ -445,16 +509,7 @@ def build_morning_email(emp_name: str, issues: list, target_date: date) -> str:
       {rows_html}
     </table>
 
-    <div class="tip-box">
-      💡 <strong>¿Necesitas corregir tu registro?</strong><br>
-      Puedes solicitar una corrección de asistencia escribiendo a Recursos Humanos.
-      Indica la fecha, hora de entrada y/o salida correcta, y el motivo del error.
-    </div>
-
-    <div class="rrhh-card">
-      📧 <strong>Recursos Humanos:</strong>
-      <a href="mailto:{RRHH_EMAIL}">{RRHH_EMAIL}</a>
-    </div>
+    {correction_html}
   </div>
 """
     return _base_html(body, f'Resumen de asistencia — {date_str}')
@@ -799,8 +854,9 @@ def run_morning(employees, state, holidays):
             logger.debug("  %s — no issues for %s", emp_name, yesterday)
             continue
 
+        fix_url   = get_fix_url_for_employee(emp_id, yesterday)
         subject   = f"📋 Resumen de asistencia — {yesterday.strftime('%d/%m/%Y')}"
-        body_html = build_morning_email(emp_name, issues, yesterday)
+        body_html = build_morning_email(emp_name, issues, yesterday, fix_url=fix_url)
 
         issue_labels = ', '.join(i['label'] for i in issues if i['label'] not in ('Entrada', 'Salida'))
         if not issue_labels:
