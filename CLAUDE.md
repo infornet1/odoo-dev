@@ -540,6 +540,9 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 - **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 - **Josefina Phase 2** — liquidation SLIP confirmed (done). Pending: `LIQUID_OTHER_DED_V2` rule in `LIQUID_VE_V2` to deduct $420.87 overpayment from Year 2 liquidation via `ueipab_other_deductions`. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
 
+**PENDING — Refactor:**
+- **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — model, views, controller (`partner_ack.py`), and wizard belong in `ueipab_ai_agent` (or a new `ueipab_campaigns` module). Placed there for convenience when first built; all campaign logic lives in `ueipab_ai_agent`. Requires DB migration (model is live in production). Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md) §Structural Note.
+
 **BLOCKED — Waiting on external trigger:**
 - **Seguro Escolar 2026-2027 → Glenda** — knowledge ready, blocked until budget results published 2026-05-26. Add to `_INSTITUTIONAL_KNOWLEDGE` in `general_inquiry.py`.
 - **Representante Continuity Campaign** — script ready (`send_representante_communication.py`), blocked until letter content (LETTER_URL + BULLET_1-3 + EMAIL_HEADLINE) provided.
