@@ -193,25 +193,35 @@ class AttendanceCorrectionController(http.Controller):
               Contacte a <a href="mailto:recursoshumanos@ueipab.edu.ve">
               recursoshumanos@ueipab.edu.ve</a>.</p></div>""")
 
-        employee    = report.employee_id
-        today       = date_cls.today()
-        absent_days = [d for d in report.get_attendance_days()
-                       if d['status'] == 'absent' and d['date'] <= today]
+        employee = report.employee_id
+        today    = date_cls.today()
+        all_days = report.get_attendance_days()
+        # Include both absent AND missing_exit days — both are correctable
+        incident_days = [d for d in all_days
+                         if d['status'] in ('absent', 'missing_exit')
+                         and d['date'] <= today]
 
-        if not absent_days:
-            return _page('Sin ausencias', f"""
-              <div class="hdr"><h1>&#9989; Sin ausencias registradas</h1></div>
+        if not incident_days:
+            return _page('Sin incidencias', f"""
+              <div class="hdr"><h1>&#9989; Sin incidencias registradas</h1></div>
               <div class="body"><p>El reporte de <strong>{employee.name}</strong>
-              no tiene ausencias pendientes de corrección en este período.</p></div>""")
+              no tiene ausencias ni salidas pendientes en este período.</p></div>""")
 
         if request.httprequest.method == 'POST':
-            return self._handle_post(report, employee, absent_days, post)
+            return self._handle_post(report, employee, incident_days, post)
 
-        return self._render_form(report, employee, absent_days)
+        return self._render_form(report, employee, incident_days)
 
     # ── POST ─────────────────────────────────────────────────────────────────
 
-    def _handle_post(self, report, employee, absent_days, post):
+    def _handle_post(self, report, employee, incident_days, post):
+        # ── Decode encoded date value: "absent|2026-05-15" or "missing_exit|2026-05-15" ──
+        raw_date  = post.get('correction_date', '').strip()
+        parts     = raw_date.split('|', 1)
+        day_type  = parts[0] if len(parts) == 2 else ''
+        date_str  = parts[1] if len(parts) == 2 else ''
+        valid_map = {f"{d['status']}|{d['date']}": d for d in incident_days}
+
         # ── Time ─────────────────────────────────────────────────────────────
         ci_h  = post.get('ci_hour', '').strip()
         ci_m  = post.get('ci_min',  '00').strip()
@@ -222,6 +232,10 @@ class AttendanceCorrectionController(http.Controller):
 
         check_in  = f"{_to_24h(ci_h, ci_ap):02d}:{ci_m}" if ci_h else ''
         check_out = f"{_to_24h(co_h, co_ap):02d}:{co_m}" if co_h else ''
+
+        # For missing_exit: check_in comes from hidden field (actual recorded value)
+        if day_type == 'missing_exit' and not check_in:
+            check_in = post.get('existing_checkin', '').strip()
 
         # ── Motivo ───────────────────────────────────────────────────────────
         motivo_key    = post.get('motivo', '').strip()
@@ -236,17 +250,17 @@ class AttendanceCorrectionController(http.Controller):
         att_file = request.httprequest.files.get('attachment')
         att_ok   = att_file and att_file.filename
 
-        date_str    = post.get('correction_date', '').strip()
-        valid_dates = {str(d['date']) for d in absent_days}
         ip = (request.httprequest.headers.get('X-Forwarded-For')
               or request.httprequest.remote_addr or '')[:50]
 
         # ── Validate ─────────────────────────────────────────────────────────
         errors = []
-        if not date_str or date_str not in valid_dates:
+        if not raw_date or raw_date not in valid_map:
             errors.append("Seleccione una fecha válida de la lista.")
-        if not ci_h:
+        if day_type == 'absent' and not ci_h:
             errors.append("Seleccione la hora de entrada.")
+        if day_type == 'missing_exit' and not co_h:
+            errors.append("Seleccione la hora de salida.")
         if not motivo_key:
             errors.append("Seleccione el motivo de la incidencia.")
         if motivo_key == 'otro' and not motivo_detail:
@@ -259,7 +273,7 @@ class AttendanceCorrectionController(http.Controller):
 
         if errors:
             return self._render_form(
-                report, employee, absent_days, errors=errors, post=post,
+                report, employee, incident_days, errors=errors, post=post,
             )
 
         correction_date = date_cls.fromisoformat(date_str)
@@ -276,7 +290,7 @@ class AttendanceCorrectionController(http.Controller):
                 <p>{employee.name}</p></div>
               <div class="body"><p>Ya existe una solicitud pendiente para el
               <strong>{correction_date.strftime('%d/%m/%Y')}</strong>.<br/>
-              Recursos Humanos la revisará en breve.</p></div>""")
+              Recursos Humanos la revisar&#225; en breve.</p></div>""")
 
         correction = request.env['hr.attendance.correction'].sudo().create({
             'employee_id':          employee.id,
@@ -336,16 +350,32 @@ class AttendanceCorrectionController(http.Controller):
 
     # ── GET form ──────────────────────────────────────────────────────────────
 
-    def _render_form(self, report, employee, absent_days, errors=None, post=None):
+    def _render_form(self, report, employee, incident_days, errors=None, post=None):
         post = post or {}
 
-        # Date dropdown
+        # Build day lookup for JS: date-value → existing check_in
+        day_meta = {}
+        for d in incident_days:
+            val = f"{d['status']}|{d['date']}"
+            day_meta[val] = {
+                'type':     d['status'],
+                'checkin':  d.get('check_in_str', '') or '',
+            }
+
+        # Date dropdown — encode type|date in value for disambiguation
+        prev_date_val = post.get('correction_date', '')
         date_opts = '<option value="">— Seleccione una fecha —</option>'
-        for d in absent_days:
-            d_date = str(d['date'])
-            label  = f"{_DAYS_ES.get(d['date'].weekday(),'')} {d['date_str']} — Sin registro"
-            sel    = 'selected' if post.get('correction_date') == d_date else ''
-            date_opts += f'<option value="{d_date}" {sel}>{label}</option>'
+        for d in incident_days:
+            val   = f"{d['status']}|{d['date']}"
+            icon  = '⚠️' if d['status'] == 'missing_exit' else '❌'
+            tag   = 'Sin salida' if d['status'] == 'missing_exit' else 'Sin registro'
+            label = f"{icon} {_DAYS_ES.get(d['date'].weekday(),'')} {d['date_str']} — {tag}"
+            sel   = 'selected' if prev_date_val == val else ''
+            date_opts += f'<option value="{val}" {sel}>{label}</option>'
+
+        # JS map for dynamic form adaptation
+        import json as _json
+        js_meta = _json.dumps(day_meta)
 
         # Restore values on validation error
         ci_h  = post.get('ci_hour', '')
@@ -356,6 +386,7 @@ class AttendanceCorrectionController(http.Controller):
         co_ap = post.get('co_ampm', 'AM')
         prev_motivo  = post.get('motivo', '')
         prev_detail  = post.get('motivo_detail', '')
+        prev_checkin = post.get('existing_checkin', '')
 
         err_html = ''
         if errors:
@@ -368,17 +399,23 @@ class AttendanceCorrectionController(http.Controller):
             sel = 'selected' if key == prev_motivo else ''
             motivo_opts += f'<option value="{key}" {sel}>{label}</option>'
 
-        is_otro   = prev_motivo == 'otro'
-        det_lbl   = ('Explique el motivo <span style="color:#dc3545;">*</span>'
-                     if is_otro else
-                     'Detalles adicionales <span style="color:#888;font-size:12px;'
-                     'font-weight:400;">(opcional)</span>')
-        det_req   = 'required' if is_otro else ''
-        det_ph    = ('Describa detalladamente la razón de su ausencia…'
-                     if is_otro else
-                     'Puede agregar información adicional si lo considera necesario…')
+        is_otro = prev_motivo == 'otro'
+        det_lbl = ('Explique el motivo <span style="color:#dc3545;">*</span>'
+                   if is_otro else
+                   'Detalles adicionales <span style="color:#888;font-size:12px;'
+                   'font-weight:400;">(opcional)</span>')
+        det_req = 'required' if is_otro else ''
+        det_ph  = ('Describa detalladamente la razón de su ausencia…'
+                   if is_otro else
+                   'Puede agregar información adicional si lo considera necesario…')
 
         period = report.get_period_label()
+
+        # Determine initial form mode (absent vs missing_exit) for page load
+        init_type   = day_meta.get(prev_date_val, {}).get('type', 'absent')
+        init_checkin= day_meta.get(prev_date_val, {}).get('checkin', '') or prev_checkin
+        ci_display  = 'none' if init_type == 'missing_exit' else 'block'
+        me_display  = 'block' if init_type == 'missing_exit' else 'none'
 
         body = f"""
           <div class="hdr">
@@ -391,30 +428,52 @@ class AttendanceCorrectionController(http.Controller):
             </div>
             {err_html}
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="fix-form">
+              <input type="hidden" name="existing_checkin" id="existing_checkin"
+                     value="{init_checkin}"/>
 
               <!-- Date -->
-              <label style="{_LBL_STYLE}">Fecha con incidencia <span style="color:#dc3545;">*</span></label>
-              <select name="correction_date" required style="{_SEL_STYLE};width:100%;">
+              <label style="{_LBL_STYLE}">
+                Fecha con incidencia <span style="color:#dc3545;">*</span>
+              </label>
+              <select name="correction_date" id="correction_date" required
+                      style="{_SEL_STYLE};width:100%;" onchange="adaptForm(this.value)">
                 {date_opts}
               </select>
 
-              <!-- Check-in -->
-              <div class="section">
-                <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#2471a3;
-                          text-transform:uppercase;letter-spacing:.5px;">Hora de entrada</p>
-                {_time_row('ci','Hora de entrada <span style="color:#dc3545;">*</span>',
-                           hint='Hora aproximada en que llegó al trabajo',
-                           sel_h=ci_h, sel_m=ci_m, sel_ap=ci_ap, required=True)}
+              <!-- Missing-exit notice (shown when a ⚠️ day is selected) -->
+              <div id="me-notice" style="display:{me_display};margin-top:12px;">
+                <div class="info" id="me-info">
+                  &#9888;&#65039; Ya tiene <strong>entrada registrada</strong> a las
+                  <strong id="me-checkin">{init_checkin or '—'}</strong>.
+                  Solo indique la hora de salida correcta.
+                </div>
               </div>
 
-              <!-- Check-out -->
+              <!-- Check-in (only for absent days) -->
+              <div id="ci-section" style="display:{ci_display};">
+                <div class="section">
+                  <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#2471a3;
+                            text-transform:uppercase;letter-spacing:.5px;">Hora de entrada</p>
+                  {_time_row('ci','Hora de entrada <span style="color:#dc3545;">*</span>',
+                             hint='Hora aproximada en que llegó al trabajo',
+                             sel_h=ci_h, sel_m=ci_m, sel_ap=ci_ap, required=False)}
+                </div>
+              </div>
+
+              <!-- Check-out (always shown; required for missing_exit) -->
               <div class="section">
                 <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#2471a3;
-                          text-transform:uppercase;letter-spacing:.5px;">Hora de salida</p>
+                          text-transform:uppercase;letter-spacing:.5px;">
+                  Hora de salida
+                  <span id="co-required-badge" style="color:#dc3545;
+                        display:{'inline' if init_type=='missing_exit' else 'none'};">*</span>
+                  <span id="co-optional-badge" style="color:#888;font-size:11px;font-weight:400;
+                        display:{'none' if init_type=='missing_exit' else 'inline'};">(opcional)</span>
+                </p>
                 {_time_row('co','Hora de salida',
-                           hint='Deje «hr» si no recuerda la hora de salida',
-                           sel_h=co_h, sel_m=co_m, sel_ap=co_ap, opt_label='opcional')}
+                           hint='Deje «hr» si no recuerda la hora exacta',
+                           sel_h=co_h, sel_m=co_m, sel_ap=co_ap, required=False)}
               </div>
 
               <!-- Motivo -->
@@ -456,7 +515,22 @@ class AttendanceCorrectionController(http.Controller):
 
             <p class="note">
               Su solicitud será revisada por Recursos Humanos antes del cierre de nómina.<br/>
-              ¿Consultas? <a href="mailto:recursoshumanos@ueipab.edu.ve">recursoshumanos@ueipab.edu.ve</a>
+              ¿Consultas?
+              <a href="mailto:recursoshumanos@ueipab.edu.ve">recursoshumanos@ueipab.edu.ve</a>
             </p>
-          </div>"""
+          </div>
+          <script>
+          var _META = {js_meta};
+          function adaptForm(val) {{
+            var d = _META[val] || {{}};
+            var isME = (d.type === 'missing_exit');
+            var ci = d.checkin || '';
+            document.getElementById('existing_checkin').value = ci;
+            document.getElementById('me-notice').style.display = isME ? 'block' : 'none';
+            document.getElementById('me-checkin').textContent  = ci || '—';
+            document.getElementById('ci-section').style.display= isME ? 'none' : 'block';
+            document.getElementById('co-required-badge').style.display = isME ? 'inline' : 'none';
+            document.getElementById('co-optional-badge').style.display = isME ? 'none' : 'inline';
+          }}
+          </script>"""
         return _page('Corrección de Asistencia', body)
