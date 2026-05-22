@@ -77,19 +77,19 @@
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP`; see Key Technical Patterns |
 | 60 | Budget Consultation 2026-2027 | Production | `ueipab_ai_agent` + Script | price gate lifted; [Docs](documentation/BUDGET_VOTE_EMAIL.md) |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
-| 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Full rules + PDF; Jun 1 Primaria / Jun 2 Media General |
+| 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Jun 1 Primaria / Jun 2 Media General |
 | 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` |
 | 64 | Glenda WA→Telegram Speed Suggestion | Production | `ueipab_ai_agent` | WA slow-response → recommends Telegram; WA-channel only |
-| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u; WA https://wa.me/584148172725; almacenpariseltigre@gmail.com |
+| 65 | Glenda Almacenes París — Distintivo Escolar | Production | `ueipab_ai_agent` | ~$8–$10/u |
 | 66 | Attendance ACK → CC recursoshumanos@ | Production | `ueipab_attendance_report` | `attendance_ack.py` `_notify_rrhh()` — CC recursoshumanos@ on ACK |
-| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno; claim WA 0414-903.3738 / amis@grupov.com.ve |
-| 68 | Manual WA/Telegram Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; Canal toggle WhatsApp/Telegram (v57.5); Telegram mode: contact mandatory, sends FAM_ invite via WA; `initial_message` skips greeting (WA only) |
+| 67 | Glenda Seguro Escolar 2026-2027 | Production | `ueipab_ai_agent` | Seguros Caracas Alt.2; $30.58/alumno |
+| 68 | Manual WA/Telegram Trigger from AI Agent | Production | `ueipab_ai_agent` | AI Agent → Operaciones → Iniciar Conversación; Canal toggle WA/Telegram (v57.5) |
 | 69 | Glenda Family Billing Enrichment | Production | `ueipab_ai_agent` + Script | `school.family_billing_json`; `sync_family_billing.py` 07:30 VET; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
 | 70 | Glenda AI Supervisor | Production | Script + Cron | `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical |
 | 71 | Glenda Staff Operational Guide | Production | Script | `scripts/create_glenda_ops_guide_email.py` |
 | 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | 5-option menu; balance gate; A vs B quotation; [Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) |
-| 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 resolved convs injected (7-day window) |
-| 74 | Freescout Pagos@ Bridge | Production | `ueipab_ai_agent` + scripts | `ai.agent.freescout.task`; AI Agent → Operaciones → Pagos Freescout; re-process button; Google Sheet fallback |
+| 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 convs (7-day window) |
+| 74 | Freescout Pagos@ Bridge | Production | `ueipab_ai_agent` + scripts | `ai.agent.freescout.task`; AI Agent → Operaciones → Pagos Freescout |
 
 ---
 
@@ -230,82 +230,56 @@ See [FREESCOUT_API_MIGRATION_PLAN.md](documentation/FREESCOUT_API_MIGRATION_PLAN
 
 **Script:** `scripts/absence_processor.py` | **Cron:** `/etc/cron.d/absence_processor` — weekdays 06:00–17:00 VET
 
-- **Email:** parent → soporte@ueipab.edu.ve → cron picks up
-- **WA/Telegram:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → `_handle_glenda_absence_notification()` → Freescout conv → cron
-- **Per-conv:** assign→Josefina (user_id=8), auto-reply parent, internal note w/ teacher list, email To=josefina CC=soporte@+Arcides+David/Norka+teachers, OdooBot DM, 24h follow-up
-- **Teacher lookup:** `control_asistencias` DB (`profesor_seccion` JOIN `usuario`). Grade → `id_grado` via `_GRADE_PATTERNS`. Section unknown → subdirector coordinates.
-- **CC routing:** `soporte@`+`arcides.arzola@` always; `norka.larosa@` (media) or `david.hernandez@` (primaria/preescolar) + section teachers if known
-- **Detection:** keyword pre-filter → Haiku extracts fields. Claude failure → skip (no false positives). Processed marker: `[AUSENCIA]` prefix. State: `absence_processor_state.json`.
+- **Entry:** email parent→soporte@ OR WA/Telegram `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Freescout conv → cron
+- **Per-conv:** assign Josefina (user_id=8), CC soporte@+arcides.arzola@+norka.larosa@(media)/david.hernandez@(prim)+teachers, OdooBot DM, 24h follow-up
+- **Teacher lookup:** `control_asistencias` DB `profesor_seccion` JOIN `usuario`; grade→`id_grado` via `_GRADE_PATTERNS`
+- **Detection:** keyword pre-filter → Haiku extracts fields; failure → skip (no false positives). Marker: `[AUSENCIA]` prefix.
 
 ### Glenda School Account Help (Feature #59)
 
-**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade`
+**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` — 3-factor verify: (1) partner by phone/Telegram; (2) cédula matches `res.partner.vat` (mismatch → deny); (3) student fuzzy-matched in `school.student_directory_json`.
 
-**3-factor verification:** (1) partner identified via phone/Telegram; (2) cédula matches `res.partner.vat` (mismatch → deny + redirect soporte@); (3) student fuzzy-matched in `school.student_directory_json`.
+**Directory:** `scripts/sync_google_directory.py --live`; cron 07:00 VET; 224 active accounts. Name: exact → word-overlap ≥2. Cédula: strip `-`, `V/E/J/G/P` prefix.
 
-**Google Directory cache:** `scripts/sync_google_directory.py --live` → `school.student_directory_json`; cron daily 07:00 VET; 224 active accounts (suspended=False only). Targets production.
-
-**Akdemia reset:** `https://edge.akdemia.com/login#resetPasswordModal`. FreeScout UNASSIGNED soporte@ (mailbox_id=3); subject `[Glenda/WA] [RESUELTO|PENDIENTE] Cuenta escolar — {student_name}`.
-
-**Name matching:** exact → word-overlap (≥2 words). Non-match → PENDIENTE. Cédula: strip `-`, `V/E/J/G/P` prefix.
+**Akdemia reset:** `https://edge.akdemia.com/login#resetPasswordModal`. FS UNASSIGNED soporte@ (mailbox_id=3).
 
 ### Telegram Channel (ai.agent.telegram.service)
 
-See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for full deployment docs.
+See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for full deployment docs (welcome menu, contact sharing, `/vincular`, auto-link via cédula, wizard invite).
 
-**Critical Odoo 17 rename:** PostgreSQL tables are `discuss_channel` / `discuss_channel_member` (not `mail_channel`). Any raw SQL in `_notify_ceo_discuss()` or similar must use the new names. ORM model names are `discuss.channel` / `discuss.channel.member`.
+**Critical Odoo 17 rename:** PostgreSQL tables are `discuss_channel` / `discuss_channel_member` (not `mail_channel`). ORM: `discuss.channel` / `discuss.channel.member`.
 
-**Webhook cursor abort pattern:** `_notify_ceo_discuss()` raw SQL failure inside a webhook request aborts the PostgreSQL cursor via uncaught exception (Python try/except catches it but PG stays aborted → all subsequent queries fail). Fix: wrap all CEO notification calls with `with self.env.cr.savepoint():` so failures roll back to savepoint only.
+**Webhook cursor abort:** wrap CEO notification calls with `with self.env.cr.savepoint():` — raw SQL failure inside a webhook aborts the PG cursor; savepoint confines the rollback.
 
-**Token lookup in webhook context:** `ir.config_parameter` `@ormcache` can throw `KeyError` mid-transaction after a `create()`. `_token()` in `ai_agent_telegram_service.py` has a direct SQL fallback: `env.cr.execute("SELECT value FROM ir_config_parameter WHERE key = %s", [key])`.
+**Token lookup:** `@ormcache` throws `KeyError` after a `create()` mid-transaction. `_token()` has a direct SQL fallback: `env.cr.execute("SELECT value FROM ir_config_parameter WHERE key = %s", [key])`.
 
-**`address_home_id` not searchable:** In Odoo 17 HR, `hr.employee.address_home_id` is group-restricted and cannot be used in ORM search domains. Use `user_id.partner_id` only for partner→employee lookups.
+**`address_home_id` not searchable:** group-restricted in Odoo 17. Use `user_id.partner_id` for partner→employee lookups.
 
-**No anti-spam on Telegram:** `_send_to_user()` skips `whatsapp_service._throttle_send()` entirely for `channel='telegram'`. Replies are instant (only Claude latency ~1–5s).
-
-**Monitoring URL:** `https://odoo.ueipab.edu.ve/web#action=830&cids=1&menu_id=569` → filter by Canal=Telegram; group by Canal available.
-
-**Welcome menu on plain `/start` (v57.6):** `_send_telegram_inbound()` intercepts bare `/start` (no EMP_/FAM_ token) → calls `_send_telegram_welcome_menu()` → sends reply keyboard with 6 rows: contact-share button (top, `request_contact=True`) + 5 text options. No conversation created yet — fires on the parent's first real tap/message. `send_message_with_menu()` accepts both plain strings and dicts per button.
-
-**Phone contact sharing → auto-link (v57.7):** Parent taps "📱 Compartir mi número" → Telegram sends `message.contact` (not `message.text`) → webhook routes to `_handle_telegram_contact_share()`. Tries multiple phone formats (E.164, `+58…`, `0…`) against `res.partner.phone`/`mobile`. Match → writes `partner.telegram_chat_id = chat_id` + promotes any active conversation's `partner_id` to real partner. No match → asks for cédula fallback.
-
-**`/vincular` command (v57.7):** Registered via `set_my_commands()` (visible in Telegram `/` menu). Handled in `_handle_telegram_inbound()` → calls `_send_telegram_phone_request()` → resends contact-share button. Fires `set_my_commands` automatically on `set_webhook()`. Re-offer UX for parents who tapped "Don't Allow" by mistake.
-
-**Option A auto-link via cédula (v57.6):** `_find_partner_by_cedula()` in `general_inquiry.py` — after confirming a match, if `conversation.channel=='telegram'` and `partner.telegram_chat_id` is unset, writes it. `_get_or_create_telegram_conversation()` prefers `res.partner.telegram_chat_id` lookup over previous-conv placeholder chain.
-
-**Wizard Telegram invite (v57.5):** Canal = Telegram in "Iniciar Conversación" → `partner_id` required → creates `partner.communication.ack` with `notice_key='telegram_optin_glenda'` → sends WA with `t.me/GlendaUeipabBot?start=FAM_{token}`. Guard: `partner.telegram_chat_id` already set → error (already linked). Token reused if ack exists.
+**Monitoring:** `https://odoo.ueipab.edu.ve/web#action=830&cids=1&menu_id=569` → filter Canal=Telegram.
 
 ### Glenda Family Billing Enrichment (Feature #69)
 
-**Cache:** `school.family_billing_json` (199 families). Sync: `scripts/sync_family_billing.py --live` — cron daily 07:30 VET.
+**Cache:** `school.family_billing_json` (199 families); `scripts/sync_family_billing.py --live` — cron 07:30 VET. Lookup: phone → fuzzy student name. Injected block includes monthly, discount, forecast, annual costs (qty × $101.58 = seguro $30.58 + inglés $25 + olimpiadas $10 + enciclopedia $36).
 
-**Lookup:** phone match → fuzzy student name (billing keywords required). **Injected block (📋 DATOS FAMILIARES):** parent, students+grades, monthly, discount, forecast (remaining months to Aug 31 × monthly), annual costs (qty × $101.58), A/B projections.
+**Iniciar Conversación (v57.5):** WA: draft/send; `initial_message` skips greeting. Telegram: `partner_id` required, sends FAM_ invite via WA. `🔄 Actualizar` reloads form in-place.
 
-**Annual one-time costs/student:** seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36 = **$101.58**.
-
-**Iniciar Conversación (v57.5):** Canal toggle WhatsApp/Telegram at top. **WhatsApp:** `💾 Guardar Borrador` = draft only; `🚀 Iniciar Ahora` = fires immediately; `initial_message` skips greeting; cleared after send. **Telegram:** `partner_id` required; `phone` auto-fills from partner; `📲 Enviar Invitación Telegram` sends FAM_ link via WA. Bot detection: 2s speed check only when `last_sender=='customer'`. `🔄 Actualizar` button reloads conv form in-place.
-
-**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; state: `glenda_supervisor_state.json`. Cron: hourly voting week (`0 11-23,0,1 * * 1-5`).
+**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical.
 
 ### Freescout Pagos@ Bridge (Feature #74)
 
-**`pagos_faq_email_checker.py`** — 100% REST API (no pymysql). `get_new_conversations(processed_ids)` uses `fs_get_conversations_page()` + `fs_get_conversation_detail()`. `FS_DB` dict and `import pymysql` removed (v57.8).
+**`pagos_faq_email_checker.py`** — 100% REST API (no pymysql). `fs_get_conversations_page()` + `fs_get_conversation_detail()`.
 
 **`pagos_receipt_processor.py`** key patterns:
-- **Email lookup:** `odoo_find_partner_by_email()` uses `ilike` (substring), not `=ilike` (exact) — Odoo stores multiple emails as `a@x.com;b@x.com` in one field; exact match fails for multi-email contacts (v57.10).
-- **Google Sheet fallback:** on email miss → `sheets_lookup_by_email(email)` checks `Customers!B2:J` (col B=name, col J=email, semicolons split per-address) → `odoo_find_partner_by_name()` Odoo lookup. `build_note_no_partner()` includes "Encontrado en hoja" when sheet hits. Spreadsheet: `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`.
-- **Advance payment detection:** `odoo_check_partner_balance()` — after `odoo_match_invoice()` returns None, checks if partner has ANY unpaid posted invoices. If balance=0 → `is_advance_payment=True` → `build_note_success()` labels "💰 Pago adelantado" instead of "reconciliar manualmente". Payment still created+confirmed via `action_post()` (v57.11).
-- **Bridge upsert:** `upsert_freescout_task()` called at every non-skipped exit (error/no_receipt/no_partner/duplicate/success).
+- **Email lookup:** use `ilike` (not `=ilike`) — Odoo stores multi-email as `a@x.com;b@x.com`; exact match fails (v57.10).
+- **Google Sheet fallback:** email miss → `sheets_lookup_by_email()` checks `Customers!B2:J` → `odoo_find_partner_by_name()`. Spreadsheet: `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`.
+- **Advance payment:** invoice match fails + balance=0 → `is_advance_payment=True` → labels "💰 Pago adelantado"; payment created+confirmed via `action_post()` (v57.11).
+- **Bridge upsert:** `upsert_freescout_task()` at every non-skipped exit.
 
-**`ai.agent.freescout.task`** — bridge model in `ueipab_ai_agent`. Fields: `fs_conv_id`, `fs_subject`, `sender_email`, `partner_id`, `sheet_match`, `status` (pending/identified/no_partner/no_receipt/duplicate/success/error), `extracted_json`, `payment_odoo_id`, `retry_count`, `last_processed_at`, `notes`, `fs_url` (computed). UI: AI Agent → Operaciones → Pagos Freescout; default filter "Requieren revisión".
+**`action_reprocess()` (v57.11/v57.12):** advance-payment path → GPT-4o-mini Vision on thread image. `_parse_monto(v)`: normalises Venezuelan comma-decimal (`'85.039,58'` → `85039.58`). `_load_fs_config()`: reads `ir.config_parameter`; file fallback dev-only (same pattern in `ai_agent_conversation.py`).
 
-**`action_reprocess()` on the bridge model (v57.11/v57.12):**
-- Re-fetches FS conv via API; resolves partner via manually-set `partner_id` or `ilike` email search.
-- **Advance payment path** (outstanding invoices = 0): extracts `src="..."` image URL from thread body → GPT-4o-mini Vision → receipt JSON → `_create_confirm_payment()` creates+posts `account.payment` via ORM (uses `ai_agent.payment_journal_map` param). Freescout note includes `→ Abrir pago en Odoo` hyperlink.
-- **`_parse_monto(v)`**: normalises Venezuelan comma-decimal amounts (`'85039,58'` → `85039.58`, `'85.039,58'` → `85039.58`) before `float()` — GPT Vision returns amounts in local format (v57.12).
-- **`_load_fs_config()`**: reads `ai_agent.freescout_api_url` + `ai_agent.freescout_api_key` from `ir.config_parameter`; falls back to file paths `/opt/odoo-dev/config/freescout_api.json` and `/etc/odoo/freescout_api.json` for dev only (v57.9). Same pattern applies to the two Freescout calls in `ai_agent_conversation.py` (`_handle_glenda_absence_notification` and `_create_school_account_fs_ticket`).
+**`ai.agent.freescout.task`** — UI: AI Agent → Operaciones → Pagos Freescout. Status: pending/identified/no_partner/no_receipt/duplicate/success/error.
 
-**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` ir.config_parameter (email→name JSON, semicolons split). Cron: daily 11:30 UTC (07:30 VET). Used by `general_inquiry.py` `_get_customers_sheet_context()` for unidentified contact name hints. Run once with `TARGET_ENV=production --live` to seed.
+**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` (email→name). Cron: 11:30 UTC. Used by `_get_customers_sheet_context()` for unidentified contact hints.
 
 ### Glenda Technical Patterns
 
@@ -313,27 +287,13 @@ See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) f
 
 ### Attendance Daily Alert + check_out Auto-fill (scripts/attendance_daily_alert.py)
 
-**Script:** `scripts/attendance_daily_alert.py` | **Crons:** `/etc/cron.d/attendance_daily_alert`
-- `30 11 * * 1-5` — morning mode 11:30 VET (recap yesterday)
-- `30 23 * * 1-5` — evening mode 23:30 VET (auto-fill today)
+**Crons:** `/etc/cron.d/attendance_daily_alert`
+- `30 11 * * 1-5` — morning 11:30 VET: recap yesterday (no attendance / missing exit / <5h) → HTML email to employee CC recursoshumanos@
+- `30 23 * * 1-5` — evening 23:30 VET: employees with check_in but no check_out → one SSH call to Router 2 (`172.28.10.10` ZeroTier) → Mikrotik hotspot logout log → latest logout per employee. WiFi found + <20:00 VET + after check_in → write that time. Fallback → 14:00 VET (18:00 UTC). No email sent.
 
-**Morning mode (11:30 VET):** checks yesterday's records — no attendance, missing exit, < 5h worked. Sends HTML email to employee CC recursoshumanos@. Special-schedule employees (571/606/610) skip absent + short-hours checks.
+Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 
-**Evening mode (23:30 VET):** for employees with `check_in` but no `check_out` today:
-1. Loads `email → {hotspot_usernames}` from `payroll_db.wifi_hotspot_users` (same DB as `sync_mikrotik_attendance.py`)
-2. **One SSH call** to Router 2 (HapAC3 at `172.28.10.10` via ZeroTier): `/ log print where topics~"hotspot" and message~"logged out" and time>="DATE 06:00:00" and time<="DATE 18:00:00"` (~30s scan of 32k-entry in-memory log)
-3. Python filters results by employee username → picks latest logout per employee
-4. **WiFi logout found + < 20:00 VET + after check_in** → write `check_out = WiFi time` (e.g. 13:12 VET)
-5. **Fallback** (no WiFi data / not mapped) → write `check_out = 14:00 VET (18:00 UTC)`
-6. No email sent in either case. Special-schedule employees (571/606/610) skipped entirely.
-
-**State file:** `scripts/attendance_daily_alert_state.json` — keys `morning_DATE_EMPID` / `evening_DATE_EMPID`. Entries > 14 days pruned on each run.
-
-**Router log retention:** 32,800 entries in-memory, goes back ~1 month (Router 2, `memory-lines` effectively unlimited). VET timezone confirmed (America/Caracas).
-
-**WiFi coverage:** 8/45 employees currently have mappings in `wifi_hotspot_users`. Expand by adding rows with `user_category='odoo_user', enabled=1`. Both `nlarosa` (laptop) and `celnlarosa` (cell) map to the same employee — latest logout wins.
-
-**SolarWinds Observability** (formerly Papertrail) — token in `/home/ftpuser/odoo-dev/trail.txt`. API: `GET https://api.na-01.cloud.solarwinds.com/v1/logs?filter=USERNAME&limit=N` with `Authorization: Bearer TOKEN`. Only capturing logs from 2026-05-20 onwards — not a reliable historical source yet.
+**State:** `attendance_daily_alert_state.json` — `morning_DATE_EMPID` / `evening_DATE_EMPID`; entries >14 days pruned. WiFi coverage: 8/45 employees in `payroll_db.wifi_hotspot_users`.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 
@@ -498,12 +458,6 @@ Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) t
 **Production:** `dry_run=False`, `active_db=DB_UEIPAB`, v56.0. WA poll 5min. Telegram webhook `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill switch: `ai_agent.telegram_enabled=False`.
 
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook `dev.ueipab.edu.ve`.
-
-### Budget Consultation 2026-2027 (Feature #60)
-
-**Price gate LIFTED 2026-05-18** — budget announced. Both options freely shared. `pagos_faq_email_checker.py` cron every 10min weekdays+weekends 06:00–21:00 VET (was 30min); markers `[FAQ-AI]`/`[FAQ-AI][ESCALAR]`. Vote tracking: `partner.communication.ack`, key `budget_consulta_2026_2027`; `/partner-ack/<token>/si` = Opc A / `/partner-ack/<token>/no` = Opc B.
-
-**Vote email script:** `scripts/send_budget_vote_email.py` — 226 recipients (tag 25 Representante, not tag 29 Inactivo); `TEST=true LIVE=true` for CEO preview; `LIVE=true` for live send. Controller (`ueipab_attendance_report` v6.5) shows budget-specific confirmation pages. See [Docs](documentation/BUDGET_VOTE_EMAIL.md). Results: 26-May-2026.
 
 ---
 
