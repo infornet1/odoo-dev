@@ -25,7 +25,7 @@
 | 7 | Batch Email Template Selector | Production | `ueipab_payroll_enhancements` | - |
 | 8 | Comprobante de Pago Compacto | Production | `ueipab_payroll_enhancements` | [Docs](documentation/COMPROBANTE_DE_PAGO.md) |
 | 9 | Acuerdo Finiquito Laboral | Production | `ueipab_payroll_enhancements` | [Docs](documentation/FINIQUITO_REPORT.md) |
-| 10 | AR-I Portal | Testing | `ueipab_ari_portal` | Portal `/my/ari`; nginx whitelist includes `my` (2026-05-17) |
+| 10 | AR-I Portal | Production | `ueipab_ari_portal` | Portal `/my/ari`; nginx whitelist includes `my` (2026-05-17); deployed 2026-05-22 |
 | 11 | Payslip Acknowledgment | Production | `ueipab_payroll_enhancements` | [Docs](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) |
 | 12 | Smart Invoice Script | Testing | Script | - |
 | 13 | Recurring Invoicing | Planned | - | [Plan](documentation/RECURRING_INVOICING_IMPLEMENTATION_PLAN.md) |
@@ -148,15 +148,7 @@
 
 ## Payslip Batch Features
 
-| Feature | Description |
-|---------|-------------|
-| Date Sync | Syncs batch dates to draft payslips, auto-recomputes |
-| Total Net Payable | Includes draft payslips, supports V1/V2/Aguinaldos |
-| Exchange Rate Application | Applies rate to all payslips in batch |
-| Email Sending | Template selector, notification popup |
-| Exchange Rate Auto-Population | From latest BCV rate or last batch |
-| Advance Payment | Partial salary disbursement with % multiplier ([details](documentation/ADVANCE_PAYMENT_SYSTEM.md)) |
-| Remainder Payment | Linked to original advance batch for reconciliation |
+Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate Application + Auto-Population (BCV/last batch), Email Template Selector, Advance Payment (% multiplier, [details](documentation/ADVANCE_PAYMENT_SYSTEM.md)), Remainder Payment (linked to advance batch).
 
 ---
 
@@ -175,7 +167,7 @@
 | ueipab_attendance_report | 17.0.1.6.17 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
-| ueipab_ari_portal | 17.0.1.1.0 | testing only |
+| ueipab_ari_portal | 17.0.1.1.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 
 ---
@@ -325,7 +317,7 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 
 See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md). Script: `scripts/dmarc_report_processor.py`; cron 10:30 UTC daily. Source: FreeScout `finanzas@` (mailbox_id=5). IP classes: `good`/`third_party`/`unknown`. Alert: unknown IPs with dkim/spf=pass → OdooBot DM. Akdemia SendGrid `50.31.44.87` = `third_party` (expected). SPF upgrade to `-all` planned ~2026-05-27.
 
-**⚠️ DMARC status (2026-05-20):** Policy changed `p=reject` → `p=none` (DigitalOcean record id=1818865872) because Akdemia sends emails FROM `@ueipab.edu.ve` via SendGrid (`em.akdemia.com`, IP `50.31.44.87`) without DKIM signing for `ueipab.edu.ve`. SPF alignment also fails (Return-Path: `@em.akdemia.com` ≠ org domain `ueipab.edu.ve`). With `p=none`, DMARC is monitor-only — Akdemia emails deliver to inbox, reports still sent to `finanzas@`. **Pending permanent fix:** set up DKIM domain authentication in Akdemia/SendGrid admin → generate 3 CNAME records for `ueipab.edu.ve` → add to DigitalOcean → verify → revert DMARC to `p=reject`. DO NOT upgrade SPF to `-all` until DKIM is live and DMARC is back to `p=reject`.
+**⚠️ DMARC `p=none` since 2026-05-20 (DO record id=1818865872):** Akdemia SendGrid sends FROM `@ueipab.edu.ve` without DKIM; SPF misaligned. Monitor-only until fix: Akdemia admin → Domain Auth → 3 CNAMEs → DigitalOcean → revert to `p=reject`. **DO NOT set SPF `-all` until DKIM live.**
 
 ### HTML Email / WA Broadcast Templates (ad-hoc)
 
@@ -446,22 +438,14 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Farewell:** `resolved` conv → new conv allowed within 24h; `timeout`/`failed` → blocked
 - **Calibration:** WA + Telegram conversations both count toward bonus; feedback linked via `user_id.partner_id`
 
-### WA Poll Cron — Account Filter Note
+### WA Poll Cron / Competitor / Environment
 
-Primary account +584148321989. Poll cron uses `account_id=None` (all accounts) to catch any replies to old number.
+**WA Poll:** cron uses `account_id=None` (all accounts) to catch replies to old primary number.
 
-### Competitor/Suspicious Contact Pattern
+**Competitor risk:** Price gate is primary defence (quotes $197.38/$162.39 only). Re-trigger stuck conv: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
-**Known risk:** Competitors may contact Glenda via Telegram or WA to probe pricing.
-- **Price gate** is the primary defence — Glenda only quotes $197.38 / $162.39, never proposed budget amounts
-- **Detection signal:** immediately asks about next-year costs with no child/grade context
-- **Action:** Let Glenda handle within guardrails. Re-trigger stuck conv via shell: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
-
-### Environment Status
-
-**Production:** `dry_run=False`, `active_db=DB_UEIPAB`, v56.0. WA poll 5min. Telegram webhook `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill switch: `ai_agent.telegram_enabled=False`.
-
-**Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (locked — crons self-skip). Telegram webhook `dev.ueipab.edu.ve`.
+**Production:** `dry_run=False`, `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
+**Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (crons self-skip). Webhook: `dev.ueipab.edu.ve`.
 
 ---
 
@@ -473,62 +457,17 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 ## Documentation Index
 
-### Core Systems
-- [V2 Implementation](documentation/LIQUIDATION_V2_IMPLEMENTATION.md)
-- [V2 Revision Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md)
-- [V2 Payroll Implementation](documentation/V2_PAYROLL_IMPLEMENTATION.md)
+**Payroll/Liquidation:** [V2 Impl](documentation/LIQUIDATION_V2_IMPLEMENTATION.md) · [V2 Plan](documentation/VENEZUELAN_PAYROLL_V2_REVISION_PLAN.md) · [V2 Payroll](documentation/V2_PAYROLL_IMPLEMENTATION.md) · [Disbursement](documentation/PAYROLL_DISBURSEMENT_REPORT.md) · [Prestaciones](documentation/PRESTACIONES_INTEREST_REPORT.md) · [Relacion](documentation/RELACION_BREAKDOWN_REPORT.md) · [Finiquito](documentation/FINIQUITO_REPORT.md) · [V1 Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md) · [V2 Migration](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md) · [Requisition Est.](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md)
 
-### Reports
-- [Payroll Disbursement](documentation/PAYROLL_DISBURSEMENT_REPORT.md)
-- [Prestaciones Interest](documentation/PRESTACIONES_INTEREST_REPORT.md)
-- [Relacion Breakdown](documentation/RELACION_BREAKDOWN_REPORT.md)
-- [Finiquito Report](documentation/FINIQUITO_REPORT.md)
+**Features:** [Advance Payment](documentation/ADVANCE_PAYMENT_SYSTEM.md) · [Adelanto PS Ack](documentation/ADELANTO_PRESTACIONES_PAYMENT_RECEIPT_ACK.md) · [Comprobante](documentation/COMPROBANTE_DE_PAGO.md) · [Payslip Ack](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) · [Ack Status](documentation/PAYSLIP_ACK_STATUS_REPORT.md) · [Batch Wizard](documentation/BATCH_EMAIL_WIZARD.md) · [Email Templates](documentation/EMAIL_TEMPLATES.md) · [Cybrosys Mods](documentation/CYBROSYS_MODULE_MODIFICATIONS.md) · [Employee Info](documentation/EMPLOYEE_INFO_REQUEST.md)
 
-### Ad-hoc Queries
-- [QueryRepresentantePDVSAFalseTagCheck](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — Receivables report for Representante PDVSA customers segmented by fiscal_check flag
-- [Decreto Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) — LUIS RODRIGUEZ & NIDYA LIRA below $240 threshold
+**AI Agent / Glenda:** [Module](documentation/AI_AGENT_MODULE.md) · [Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) · [Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md) · [HR Data](documentation/GLENDA_HR_DATA_COLLECTION.md) · [Telegram](documentation/GLENDA_TELEGRAM_CHANNEL.md) · [CEO Center](documentation/CEO_COMMAND_CENTER.md) · [WA Invoice Reminder](documentation/WA_INVOICE_REMINDER_PLAN.md) · [Ack Reminder Glenda](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md)
 
-### Planned / Testing Reports
-- [Payroll Requisition Estimation Report](documentation/PAYROLL_REQUISITION_ESTIMATION_REPORT.md)
+**Ops/Infra:** [Production](documentation/PRODUCTION_ENVIRONMENT.md) · [WebSocket/Nginx](documentation/WEBSOCKET_NGINX_FIX.md) · [Finanzas Spoofing](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) · [Combined Fix](documentation/COMBINED_FIX_PROCEDURE.md) · [Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md) · [Bounce Cleanup](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) · [Akdemia Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md) · [Freescout Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
-### Features
-- [Advance Payment System](documentation/ADVANCE_PAYMENT_SYSTEM.md)
-- [Adelanto Prestaciones Payment Receipt Ack](documentation/ADELANTO_PRESTACIONES_PAYMENT_RECEIPT_ACK.md)
-- [Comprobante de Pago](documentation/COMPROBANTE_DE_PAGO.md)
-- [Payslip Acknowledgment System](documentation/PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md)
-- [Payslip Ack Status Report](documentation/PAYSLIP_ACK_STATUS_REPORT.md)
-- [Batch Email Wizard](documentation/BATCH_EMAIL_WIZARD.md)
-- [Email Templates](documentation/EMAIL_TEMPLATES.md)
-- [Cybrosys Module Modifications](documentation/CYBROSYS_MODULE_MODIFICATIONS.md)
+**Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 
-### AI Agent & Glenda
-- [AI Agent Module](documentation/AI_AGENT_MODULE.md)
-- [Glenda Telegram Channel](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; Fase 1+2 live; announcement script; deep-link EMP_{id}
-- [Glenda Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md)
-- [Glenda Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md)
-- [HR Data Collection (Glenda)](documentation/GLENDA_HR_DATA_COLLECTION.md)
-- [CEO Command Center](documentation/CEO_COMMAND_CENTER.md)
-- [WA Invoice Reminder Plan](documentation/WA_INVOICE_REMINDER_PLAN.md)
-
-### Bounce Processing & Pipelines
-- [Email Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md)
-- [Bounce Email Cleanup Procedure](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) — manual campaign bounce cleanup: Freescout API → Odoo contacts → Google Sheet → BounceEmail tab log
-- [Akdemia Data Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md)
-- [Freescout API Migration Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
-
-### School Operations
-
-See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), School Account Help (Feature #59), Budget Consultation (Feature #60) — all detailed in Key Technical Patterns above.
-
-### Infrastructure
-- [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md)
-- [Finanzas Email Spoofing Fix](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md)
-- [Combined Fix Procedure](documentation/COMBINED_FIX_PROCEDURE.md)
-- [WebSocket/Nginx Fix](documentation/WEBSOCKET_NGINX_FIX.md)
-
-### Liquidation
-- [V1 Complete Guide](documentation/LIQUIDATION_COMPLETE_GUIDE.md)
-- [V2 Migration Plan](documentation/LIQUIDACION_V2_MIGRATION_PLAN.md)
+**Ad-hoc / Legal:** [PDVSA Tag Check](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) · [Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) · [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md) · [Freescout Phone Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) · [Invoice Currency Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
 
 ### Known Issues
 
@@ -546,8 +485,6 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 
 **PENDING — External / Infrastructure:**
 - **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
-
-**PENDING — Production Deploy:**
 
 **PENDING — Refactor:**
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — model, views, controller (`partner_ack.py`), and wizard belong in `ueipab_ai_agent` (or a new `ueipab_campaigns` module). Placed there for convenience when first built; all campaign logic lives in `ueipab_ai_agent`. Requires DB migration (model is live in production). Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md) §Structural Note.
