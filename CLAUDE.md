@@ -377,7 +377,7 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Anti-spam:** Min 120s between sends
 - **Send:** `POST /api/send/whatsapp` | **Validate:** `GET /api/validate/whatsapp` | **Receive:** `GET /api/get/wa.received`
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
-- **Inbox-to-backup re-routing (2026-05-22):** When primary can receive but not send, manually poll `GET /api/get/wa.received?account=primary_uid` and resend failed outbound messages via backup uid. Then send Telegram invite as follow-up nudge.
+- **Inbox-to-backup re-routing:** Poll `GET /api/get/wa.received?account=primary_uid`; resend via backup uid; then send Telegram invite.
 
 ### Claude AI API (Anthropic)
 
@@ -444,7 +444,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 **Competitor risk:** Price gate is primary defence (quotes $197.38/$162.39 only). Re-trigger stuck conv: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
-**Production:** `dry_run=False`, `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
+**Production:** `dry_run=True` (⚠️ WA paused 2026-05-22; Telegram only), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (crons self-skip). Webhook: `dev.ueipab.edu.ve`.
 
 ---
@@ -485,6 +485,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **PENDING — External / Infrastructure:**
 - **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
+- **Glenda WA paused (2026-05-22)** — `ai_agent.dry_run=True`; poll cron skips, Telegram stays active. Restore: set `ai_agent.dry_run=False` in prod `ir.config_parameter`.
 
 **PENDING — Refactor:**
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — model, views, controller (`partner_ack.py`), and wizard belong in `ueipab_ai_agent` (or a new `ueipab_campaigns` module). Placed there for convenience when first built; all campaign logic lives in `ueipab_ai_agent`. Requires DB migration (model is live in production). Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md) §Structural Note.
