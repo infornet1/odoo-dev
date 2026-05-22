@@ -163,7 +163,7 @@
 ## Module Versions
 
 **Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
-**Last sync verified:** 2026-05-21 — all modules in sync ✓
+**Last sync verified:** 2026-05-22 — all modules in sync ✓
 
 | Module | Version | Notes |
 |--------|---------|-------|
@@ -530,10 +530,20 @@ See Feature table rows 49–67. Key patterns: Absence Processor (Feature #58), S
 
 **FIXED:** See [CHANGELOG.md](documentation/CHANGELOG.md) for full history of resolved issues.
 
-**PENDING:**
-- [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
+**PENDING — Code / Infrastructure:**
+- [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md) — `tdv_multi_currency_account`; both envs
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`; fixed upstream, update Freescout on next release
-- **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ ($191.37, gap +$48.63) y NIDYA LIRA ($228.67, gap +$11.33) — incrementar `ueipab_bonus_v2` en contratos. Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
+- **MassivaMóvil Webhook wrong Content-Type** — controller uses `type='json'` but MassivaMóvil sends form-encoded POST. Fix: change to `type='http'`, parse `request.httprequest.form.get()`, `json.loads(data)`. Currently falling back to 5-min poll cron.
+- **Internal number guard** — Gustavo's +584142337463 triggers `general_inquiry` conversations. Fix: add `ai_agent.general_inquiry_blocked_phones` param checked before creating a conversation.
+
+**PENDING — Data / Contract:**
+- **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
+- **Josefina Phase 2** — liquidation SLIP confirmed (done). Pending: `LIQUID_OTHER_DED_V2` rule in `LIQUID_VE_V2` to deduct $420.87 overpayment from Year 2 liquidation via `ueipab_other_deductions`. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
+
+**BLOCKED — Waiting on external trigger:**
+- **Seguro Escolar 2026-2027 → Glenda** — knowledge ready, blocked until budget results published 2026-05-26. Add to `_INSTITUTIONAL_KNOWLEDGE` in `general_inquiry.py`.
+- **Representante Continuity Campaign** — script ready (`send_representante_communication.py`), blocked until letter content (LETTER_URL + BULLET_1-3 + EMAIL_HEADLINE) provided.
+- **Banco Plaza API** — QA/eval phase; credentials pending from Banco Plaza team.
 
 ### Legal
 - [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md)
