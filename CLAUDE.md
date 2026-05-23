@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-21 (v26)
+**Last Updated:** 2026-05-23 (v27)
 
 ## Core Instructions
 
@@ -163,7 +163,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.12 | both |
+| ueipab_ai_agent | 17.0.1.57.14 | both |
 | ueipab_attendance_report | 17.0.1.6.17 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -348,6 +348,19 @@ See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full d
 
 ---
 
+## Dev Server Configuration
+
+**Host:** `freescout.ueipab.edu.ve` | RAM: 3.8 GB | Swap: 2 GB | Disk: 48 GB
+
+| Setting | Value | File |
+|---------|-------|------|
+| Odoo workers | **3** (reduced from 4 on 2026-05-23 — RAM pressure) | `/opt/odoo-dev/config/odoo.conf` |
+| Odoo Docker image | `odoo:17.0` build `17.0-20260504` | `docker-compose.yml` |
+
+**⚠️ Swap was fully exhausted (2026-05-23)** — OOM killer was actively killing processes. Reducing Odoo workers to 3 and viznago_api hardening resolved this. If RAM pressure returns, consider upgrading droplet.
+
+---
+
 ## Quick Commands
 
 ```bash
@@ -366,6 +379,12 @@ docker restart odoo-dev-web
 See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Script:** `scripts/daily_bounce_processor.py` (DRY_RUN default, `--live` to apply)
 - **Cron:** `/etc/cron.d/ai_agent_bounce_processor` — daily 05:00 VET, LIVE, TARGET_ENV=testing
+- **Freescout source:** REST API only (no MySQL) — scans soporte@ mailbox for DSN conversations
+- **3-tier logic:** CLEAN (Representante + permanent failure) → FLAG (temporary or non-Representante) → NOT FOUND
+- **Google Sheets** (`1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`):
+  - `Customers!J` — removes bounced email from cell + flags cell 🔴 red (TIER 1 CLEAN only)
+  - `BounceEmail` tab — appends log row per cleaned bounce: Date / Customer Name / Bounced Email / Source / Status
+- **Creds:** `config/google_sheets_credentials.json`
 
 ### WhatsApp API (MassivaMóvil)
 
@@ -374,10 +393,11 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Auth:** API secret key param (not OAuth), key name `ueipab1`
 - **Primary Account (dedicated):** +584148321989 | **Backup:** +584248944898 | **Tertiary (emergency):** +584148321963
 - **⚠️ Active account as of 2026-05-22:** **BACKUP (+584248944898)** — primary broken (all sends failing at WA delivery level since msg≈76649; Massiva support ticket open). Restore: fix on Massiva dashboard → `whatsapp_account_phone=+584148321989`, `whatsapp_account_id=primary_uid`, `whatsapp_active_account=primary`, clear `whatsapp_flagged_phone/date`.
+- **⚠️ As of 2026-05-22 `dry_run=True`:** poll cron fires every 5 min but exits before any Massiva API call — **zero messages read from primary or backup**. Parents get no reply on WA. Telegram unaffected.
 - **Anti-spam:** Min 120s between sends
 - **Send:** `POST /api/send/whatsapp` | **Validate:** `GET /api/validate/whatsapp` | **Receive:** `GET /api/get/wa.received`
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
-- **Inbox-to-backup re-routing:** Poll `GET /api/get/wa.received?account=primary_uid`; resend via backup uid; then send Telegram invite.
+- **Inbox-to-backup re-routing:** Poll `GET /api/get/wa.received?account=primary_uid`; resend via backup uid; then send Telegram invite. *(inactive while `dry_run=True`)*
 
 ### Claude AI API (Anthropic)
 
@@ -444,7 +464,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 **Competitor risk:** Price gate is primary defence (quotes $197.38/$162.39 only). Re-trigger stuck conv: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
-**Production:** `dry_run=True` (⚠️ WA paused 2026-05-22; Telegram only), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
+**Production:** `dry_run=True` (⚠️ WA paused 2026-05-22; Telegram only), `active_db=DB_UEIPAB`. `dry_run=True` now only blocks WA sends — Telegram fully unaffected (v57.13, 2026-05-23).. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (crons self-skip). Webhook: `dev.ueipab.edu.ve`.
 
 ---
@@ -463,7 +483,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **AI Agent / Glenda:** [Module](documentation/AI_AGENT_MODULE.md) · [Technical Patterns](documentation/GLENDA_TECHNICAL_PATTERNS.md) · [Overview](documentation/GLENDA_AI_AGENT_OVERVIEW.md) · [HR Data](documentation/GLENDA_HR_DATA_COLLECTION.md) · [Telegram](documentation/GLENDA_TELEGRAM_CHANNEL.md) · [CEO Center](documentation/CEO_COMMAND_CENTER.md) · [WA Invoice Reminder](documentation/WA_INVOICE_REMINDER_PLAN.md) · [Ack Reminder Glenda](documentation/PAYSLIP_ACK_REMINDER_GLENDA.md)
 
-**Ops/Infra:** [Production](documentation/PRODUCTION_ENVIRONMENT.md) · [WebSocket/Nginx](documentation/WEBSOCKET_NGINX_FIX.md) · [Finanzas Spoofing](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) · [Combined Fix](documentation/COMBINED_FIX_PROCEDURE.md) · [Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md) · [Bounce Cleanup](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) · [Akdemia Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md) · [Freescout Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
+**Ops/Infra:** [Meta WA Migration](documentation/META_CLOUD_API_MIGRATION_PLAN.md) · [Production](documentation/PRODUCTION_ENVIRONMENT.md) · [WebSocket/Nginx](documentation/WEBSOCKET_NGINX_FIX.md) · [Finanzas Spoofing](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) · [Combined Fix](documentation/COMBINED_FIX_PROCEDURE.md) · [Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md) · [Bounce Cleanup](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) · [Akdemia Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md) · [Freescout Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 

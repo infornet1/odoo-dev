@@ -269,6 +269,9 @@ class AiAgentConversation(models.Model):
         return messages
 
     def _is_dry_run(self):
+        # Telegram conversations are never dry-run — dry_run only gates WA
+        if self and len(self) == 1 and self.channel == 'telegram':
+            return False
         return self.env['ir.config_parameter'].sudo().get_param('ai_agent.dry_run', 'True').lower() == 'true'
 
     @api.model
@@ -922,11 +925,8 @@ class AiAgentConversation(models.Model):
 
         Handles dry_run internally. Returns WA message_id (int) or 0.
         """
-        if self._is_dry_run():
-            _logger.info(
-                "DRY_RUN [%s → %s]: %s",
-                self.channel, self.telegram_chat_id or self.phone, text[:80],
-            )
+        if self._is_dry_run() and self.channel != 'telegram':
+            _logger.info("DRY_RUN [WA → %s]: %s", self.phone, text[:80])
             return 0
         if self.channel == 'telegram':
             resp = self.env['ai.agent.telegram.service'].send_message(
@@ -1206,26 +1206,25 @@ class AiAgentConversation(models.Model):
         if icp.get_param('ai_agent.telegram_enabled', 'False').lower() != 'true':
             _logger.info("Telegram: disabled via ai_agent.telegram_enabled param")
             return
-        dry_run = icp.get_param('ai_agent.dry_run', 'True').lower() == 'true'
-        if dry_run:
-            _logger.info("DRY_RUN: Telegram inbound chat_id=%s text=%r", chat_id, text[:60])
+        # dry_run only gates WA — Telegram always processes normally
+        _logger.info("Telegram inbound: chat_id=%s text=%r", chat_id, text[:60])
 
         # Handle /start command — may carry deep-link token (EMP_123 or FAM_uuid)
         if text.startswith('/start'):
             payload = text[len('/start'):].strip()
             if payload.startswith('EMP_'):
-                self._handle_telegram_employee_start(chat_id, payload, first_name, dry_run)
+                self._handle_telegram_employee_start(chat_id, payload, first_name, False)
                 return
             if payload.startswith('FAM_'):
-                self._handle_telegram_parent_start(chat_id, payload, first_name, dry_run)
+                self._handle_telegram_parent_start(chat_id, payload, first_name, False)
                 return
                 # Plain /start (no token) — send interactive welcome menu and wait for first reply
-            self._send_telegram_welcome_menu(chat_id, first_name, dry_run)
+            self._send_telegram_welcome_menu(chat_id, first_name, False)
             return
 
         # /vincular — re-offer phone sharing (handles accidental refusal)
         if text == '/vincular':
-            self._send_telegram_phone_request(chat_id, dry_run)
+            self._send_telegram_phone_request(chat_id, False)
             return
 
         # Build attachment if user sent a photo (e.g. payment receipt)
@@ -1242,11 +1241,10 @@ class AiAgentConversation(models.Model):
             return
 
         # Show typing indicator while Claude thinks — cosmetic, must never block reply
-        if not dry_run:
-            try:
-                self.env['ai.agent.telegram.service'].send_chat_action(chat_id)
-            except Exception:
-                pass
+        try:
+            self.env['ai.agent.telegram.service'].send_chat_action(chat_id)
+        except Exception:
+            pass
 
         conv.action_process_reply(
             message_text=text or ('[foto]' if photos else '[documento]'),
@@ -1283,10 +1281,6 @@ class AiAgentConversation(models.Model):
             ["5️⃣  Otro asunto"],
         ]
 
-        if dry_run:
-            _logger.info("DRY_RUN: Would send Telegram welcome menu to chat_id=%s", chat_id)
-            return
-
         tg = self.env['ai.agent.telegram.service']
         tg.send_message_with_menu(chat_id, text, keyboard)
         _logger.info("Telegram: welcome menu sent to chat_id=%s (%s)", chat_id, greeting)
@@ -1300,9 +1294,6 @@ class AiAgentConversation(models.Model):
             "Si prefieres, escríbeme tu cédula (ej. <code>V-12345678</code>) "
             "o usa el comando /vincular en cualquier momento."
         )
-        if dry_run:
-            _logger.info("DRY_RUN: Would send phone request to chat_id=%s", chat_id)
-            return
         tg = self.env['ai.agent.telegram.service']
         tg.send_contact_request(chat_id, prompt)
 
@@ -1344,10 +1335,6 @@ class AiAgentConversation(models.Model):
             "Telegram contact share: chat_id=%s phone=%r candidates=%s → partner=%s",
             chat_id, phone_raw, candidates, partner.name if partner else 'NOT FOUND',
         )
-
-        if dry_run:
-            _logger.info("DRY_RUN: contact share match=%s", partner.name if partner else None)
-            return
 
         if partner:
             # Write telegram_chat_id to the real partner
@@ -1437,10 +1424,6 @@ class AiAgentConversation(models.Model):
         except Exception as exc:
             _logger.debug("Telegram employee CEO notify skipped: %s", exc)
 
-        if dry_run:
-            _logger.info("DRY_RUN: Would send welcome to %s (chat_id=%s)", emp.name, chat_id)
-            return
-
         tg.send_message(chat_id,
             f"¡Hola, {first}! 👋\n\n"
             f"Soy <b>Glenda</b>, tu asistente virtual del Instituto Privado Andrés Bello. "
@@ -1479,26 +1462,22 @@ class AiAgentConversation(models.Model):
             token, partner.name, partner.id, chat_id,
         )
 
-        if dry_run:
-            _logger.info("DRY_RUN: Would write telegram_chat_id=%s on partner %s",
-                         chat_id, partner.name)
-        else:
-            # Write chat_id on the real partner record
-            partner.write({'telegram_chat_id': chat_id})
+        # Write chat_id on the real partner record
+        partner.write({'telegram_chat_id': chat_id})
 
-            # Re-link any placeholder conversations for this chat_id to the real partner
-            placeholders = self.search([
-                ('telegram_chat_id', '=', chat_id),
-                ('channel', '=', 'telegram'),
-            ])
-            if placeholders:
-                placeholders.sudo().write({'partner_id': partner.id})
-                _logger.info(
-                    "FAM_: re-linked %d conversations to partner %s",
-                    len(placeholders), partner.name,
-                )
+        # Re-link any placeholder conversations for this chat_id to the real partner
+        placeholders = self.search([
+            ('telegram_chat_id', '=', chat_id),
+            ('channel', '=', 'telegram'),
+        ])
+        if placeholders:
+            placeholders.sudo().write({'partner_id': partner.id})
+            _logger.info(
+                "FAM_: re-linked %d conversations to partner %s",
+                len(placeholders), partner.name,
+            )
 
-            self.env.cr.commit()
+        self.env.cr.commit()
 
         tg.send_message(chat_id,
             f"¡Hola, {first}! 👋\n\n"
