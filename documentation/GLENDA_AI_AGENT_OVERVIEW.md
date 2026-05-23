@@ -557,6 +557,36 @@ Phase E — Post-Launch Optimization (PENDING)
 
 ---
 
+## Known UX Issue — Response Length ("Glenda habla mucho")
+
+**Feedback (2026-05-23):** Parents in El Tigre complain Glenda sends walls of text.
+*"Glenda habla mucho"* / *"Glenda me carga loca"* — Venezuelan slang for "she's overwhelming me."
+
+**Why this community is sensitive to message length:**
+The El Tigre parent base is under significant economic stress. Many are anxious or annoyed before
+they even write. A long reply signals the bot isn't listening; a short, direct answer signals competence.
+
+**Current production baseline (2026-05-23):** avg 468 chars/outbound message; 23% exceed 800 chars.
+
+**System prompt already has some guards** (`"parrafo corto primero"`, farewell rules) but no
+explicit line limits per response type, and the brevity rule is buried too deep in a long prompt.
+
+**Full improvement plan:** [GLENDA_UX_IMPROVEMENT_PLAN.md](GLENDA_UX_IMPROVEMENT_PLAN.md)
+— covers prompt engineering, `max_tokens` tuning, supervisor scoring, dropout analysis, and
+Venezuelan community context block.
+
+---
+
+## Quality Monitoring
+
+| Tool | What it does | Access |
+|------|-------------|--------|
+| **Glenda Supervisor** | Scores conversations 1–5 every 2h; CEO email + WA if critical | `/var/log/glenda_supervisor.log` |
+| **Production records** | 248 conversations / 542 outbound messages queryable via XML-RPC | `config/production.json` → `ai.agent.message` |
+| **Supervisor criteria** | (1) datos correctos, (2) respondió pregunta real, (3) oportunidad comercial, (4) tono+concisión, (5) no preguntas innecesarias | `scripts/glenda_supervisor.py` |
+
+---
+
 ## Key Files
 
 | File | Purpose |
