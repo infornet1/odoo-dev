@@ -53,7 +53,7 @@ class ClaudeService(models.AbstractModel):
             },
             json={
                 'model':      model or cfg['model'],
-                'max_tokens': 1024,
+                'max_tokens': 512,
                 'system':     system_prompt,
                 'messages':   messages,
             },
@@ -78,7 +78,7 @@ class ClaudeService(models.AbstractModel):
                 },
                 json={
                     'model':      model or cfg['model'],
-                    'max_tokens': 1024,
+                    'max_tokens': 512,
                     'messages':   oai_messages,
                 },
                 timeout=60,
