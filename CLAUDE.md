@@ -458,7 +458,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 **Competitor risk:** Price gate is primary defence (quotes $197.38/$162.39 only). Re-trigger stuck conv: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
-**Production:** `dry_run=True` (WA paused; Telegram unaffected, v57.13), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`.
+**Production:** `dry_run=True` (WA paused; Telegram active, v57.17), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`. `wa_primary_relay`: `--live` removed 2026-05-23.
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (crons self-skip). Webhook: `dev.ueipab.edu.ve`.
 
 ---
@@ -492,6 +492,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`; fixed upstream, update Freescout on next release
 - **MassivaMóvil Webhook wrong Content-Type** — controller uses `type='json'` but MassivaMóvil sends form-encoded POST. Fix: change to `type='http'`, parse `request.httprequest.form.get()`, `json.loads(data)`. Currently falling back to 5-min poll cron.
 - **Internal number guard** — Gustavo's +584142337463 triggers `general_inquiry` conversations. Fix: add `ai_agent.general_inquiry_blocked_phones` param checked before creating a conversation.
+- **Glenda supervisor brevity criterion** — split from tone (criterion 4); add avg char_count to digest. See [UX Plan](documentation/GLENDA_UX_IMPROVEMENT_PLAN.md).
 
 **PENDING — Data / Contract:**
 - **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
@@ -505,7 +506,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — belongs in `ueipab_ai_agent`/`ueipab_campaigns`. Requires DB migration. Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md).
 
 **BLOCKED — Waiting on external trigger:**
-- **Seguro Escolar 2026-2027 → Glenda** — knowledge ready, blocked until budget results published 2026-05-26. Add to `_INSTITUTIONAL_KNOWLEDGE` in `general_inquiry.py`.
+- **Budget results 2026-05-26** — update `general_inquiry.py` pricing to confirmed tariff + unlock Seguro Escolar in `_INSTITUTIONAL_KNOWLEDGE` + bump version + deploy prod.
 - **Representante Continuity Campaign** — script ready (`send_representante_communication.py`), blocked until letter content (LETTER_URL + BULLET_1-3 + EMAIL_HEADLINE) provided.
 - **Banco Plaza API** — QA/eval phase; credentials pending from Banco Plaza team.
 

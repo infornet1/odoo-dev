@@ -1,6 +1,6 @@
 # Glenda UX Improvement Plan — "Habla Mucho"
 
-**Status:** Planning | **Created:** 2026-05-23 | **Priority:** High
+**Status:** In Progress (v57.15–v57.17 deployed) | **Created:** 2026-05-23 | **Updated:** 2026-05-24 | **Priority:** High
 
 ## Problem Statement
 
@@ -22,29 +22,21 @@ A short, direct answer signals competence. A long answer signals avoidance.
 
 ---
 
-## Current State (Production Data — 2026-05-23)
+## Baseline (Production Data — 2026-05-24, n=250 conversations)
 
-| Metric | Value |
-|--------|-------|
-| Total conversations | 248 |
-| Total outbound messages | 542 |
-| Avg outbound message length | **468 chars** |
-| Messages > 500 chars | ~37% of last 30 |
-| Messages > 800 chars | ~23% of last 30 |
-| Max observed AI response | ~830 chars (AI-generated) |
-| Claude `max_tokens` ceiling | **1,024 tokens ≈ 800 chars** |
+| Metric | Pre-v57.15 Baseline | Target | Status |
+|--------|---------------------|--------|--------|
+| Avg first reply length | **861 chars** (median 830) | < 400 chars | Deploying |
+| First replies > 800 chars | **65%** | < 20% | Deploying |
+| First replies > 500 chars | **75%** | < 30% | Deploying |
+| Resolution rate (short first reply ≤500c) | **66%** | baseline | Measuring |
+| Resolution rate (long first reply >500c) | **45%** | — | Measuring |
+| `max_tokens` ceiling | 1,024 | **512** ✅ | Done |
+| Max single message observed | 2,506 chars | — | — |
 
-### Real examples of verbose responses
+**Key finding:** Conversations with first reply ≤500 chars resolve 21pp more often than long ones (66% vs 45%). This confirmed Angles 1+2+3 as highest priority.
 
-Glenda answering a balance query (typically > 500 chars):
-- Greets with full name + bot intro (again, even mid-conversation)
-- Restates the question before answering
-- Gives the answer
-- Adds context nobody asked for
-- Offers 3 next steps
-- Ends with... a question
-
-The system prompt already says `"parrafo corto primero"` but it's line 12 in a 200-line prompt. Claude buries it.
+**Pricing response audit (8 exchanges, pre-fix):** Promo $187 included 62%; Annual $101 included only 38%; both together 38%.
 
 ---
 
@@ -224,41 +216,48 @@ Para coordinar el pago: pagos@ueipab.edu.ve 😊"
 
 ---
 
-## Implementation Priority
+## Implementation Log
 
-| # | Action | Effort | Impact | When |
-|---|--------|--------|--------|------|
-| 1 | Add Venezuelan context block to system prompt | 30 min | High | Immediate |
-| 2 | Add explicit line limits to INSTRUCCIONES block | 1h | High | Immediate |
-| 3 | Reduce `max_tokens` 1024 → 512 | 5 min | Medium-High | Immediate |
-| 4 | Run dropout correlation query | 1h | Diagnostic | Before #1-3 ideally |
-| 5 | Update supervisor to score brevity separately | 2h | Medium | Sprint 2 |
-| 6 | Add char_count metric to supervisor digest | 1h | Medium | Sprint 2 |
-| 7 | Manual conversation audit (20–30 samples) | 2–3h | Diagnostic | If data unclear |
-| 8 | Add MAL/BIEN examples to system prompt | 2h | High | After audit |
+| # | Action | Version | Status | Date |
+|---|--------|---------|--------|------|
+| 1 | Venezuelan community context block | v57.15 | ✅ Done | 2026-05-24 |
+| 2 | Explicit line-limit rules + MAL/BIEN examples | v57.15 | ✅ Done | 2026-05-24 |
+| 3 | `max_tokens` 1024 → 512 | v57.15 | ✅ Done | 2026-05-24 |
+| 4 | Dropout correlation analysis (`glenda_dropout_analysis.py`) | — | ✅ Done | 2026-05-24 |
+| 5 | Pricing response template (promo + annual costs mandatory) | v57.16 | ✅ Done | 2026-05-24 |
+| 6 | Context-aware menu (returning contacts skip full menu) | v57.17 | ✅ Done | 2026-05-24 |
+| 7 | Supervisor brevity criterion (split from tone) | — | ⏳ Sprint 2 | — |
+| 8 | Char_count metric in supervisor digest | — | ⏳ Sprint 2 | — |
+| 9 | Weekly dropout metric snapshot (scheduled script) | — | ⏳ Sprint 2 | — |
+| 10 | Budget results content update (pricing + Seguro) | — | 🔒 2026-05-26 | — |
 
 ---
 
-## Files to Change
+## Files Changed
 
-| File | Change | Angle |
-|------|--------|-------|
-| `skills/general_inquiry.py` | Add brevity rules + Venezuelan context block | 2, 3 |
-| `models/claude_service.py` | `max_tokens` 1024 → 512 | 1 |
-| `scripts/glenda_supervisor.py` | Split brevity criterion; add char_count metric | 4, 5 |
+| File | Change | Version |
+|------|--------|---------|
+| `skills/general_inquiry.py` | Community block, line-limit rules, pricing template, context-aware menu | v57.15–17 |
+| `models/claude_service.py` | `max_tokens` 1024 → 512 (Claude + OpenAI paths) | v57.15 |
+| `scripts/glenda_dropout_analysis.py` | New — dropout correlation analysis tool | — |
+
+**Pending:**
+| File | Change | Version |
+|------|--------|---------|
+| `scripts/glenda_supervisor.py` | Split brevity criterion; add char_count metric | Sprint 2 |
 
 ---
 
 ## Success Metrics
 
-After changes are deployed, measure via supervisor log over 2 weeks:
+Measure via `glenda_dropout_analysis.py` at 2-week mark (re-run 2026-06-07):
 
-| Metric | Baseline (now) | Target |
-|--------|---------------|--------|
-| Avg outbound message length | 468 chars | < 300 chars |
-| Messages > 500 chars | ~37% | < 15% |
-| Supervisor avg score | TBD (pull from logs) | ≥ 4.0 |
-| Conversation resolution rate | TBD | +5–10% vs baseline |
+| Metric | Baseline (pre-v57.15) | Target |
+|--------|----------------------|--------|
+| Avg first reply length | 861 chars | < 450 chars |
+| First replies > 800 chars | 65% | < 25% |
+| Resolution rate (all convs) | 49% (123/250) | > 55% |
+| Pricing responses with promo + annual | 38% | > 90% |
 
 ---
 
