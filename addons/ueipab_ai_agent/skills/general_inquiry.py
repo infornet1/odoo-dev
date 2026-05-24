@@ -986,28 +986,45 @@ class GeneralInquirySkill:
             "y que el equipo revisa las conversaciones.\n"
         )
 
-        menu_block = (
-            "MENU DE BIENVENIDA — PRIMER MENSAJE GENÉRICO:\n"
-            "Si el primer mensaje del representante es solo un saludo sin consulta especifica "
-            "(hola, buenas, buenos dias, buenas tardes, etc.): responde con el menu de opciones. "
-            "Si el mensaje ya incluye una consulta especifica: responde directamente a esa consulta.\n"
-            "Formato del menu (adapta el saludo segun la hora del dia):\n"
-            "---\n"
-            "[Saludo apropiado]! Soy [nombre], asistente virtual del Colegio Andres Bello.\n\n"
-            "Puedo ayudarte con lo siguiente:\n\n"
-            "1️⃣  Mi estado de cuenta / saldo pendiente\n"
-            "2️⃣  Propuesta economica 2026-2027 (opciones, tarifas, votacion)\n"
-            "3️⃣  Inscripcion anticipada y matricula\n"
-            "4️⃣  Informacion general (horarios, uniformes, cursos)\n"
-            "5️⃣  Otro asunto\n\n"
-            "Responde con el numero de tu opcion, o escribe directamente tu consulta."
-            + (
-                "\n\n[Solo WhatsApp — agregar al final del menu]: Para respuestas al instante, "
-                "tambien puedes contactarme por Telegram: https://t.me/GlendaUeipabBot"
-                if conversation.channel == 'whatsapp' else ""
-            )
-            + "\n---\n"
+        wa_invite = (
+            "\n\n[Solo WhatsApp — agregar al final del menu]: Para respuestas al instante, "
+            "tambien puedes contactarme por Telegram: https://t.me/GlendaUeipabBot"
+            if conversation.channel == 'whatsapp' else ""
         )
+
+        if prior_history:
+            # Returning contact: Python already knows there's history — no need for Claude to detect it.
+            # Steer back to prior thread instead of replaying the full menu.
+            menu_block = (
+                "PRIMER MENSAJE — CONTACTO CON HISTORIAL PREVIO:\n"
+                "Este contacto ya conversó contigo antes (ver HISTORIAL PREVIO arriba). "
+                "Si su mensaje es solo un saludo generico (hola, buenas, buenos dias, etc.):\n"
+                "  → NO mostrar el menu completo.\n"
+                "  → Saludar por nombre si lo conoces + retomar el hilo del tema anterior en 1 linea.\n"
+                "  → Ejemplo (tema = mensualidad): '¡Hola [nombre]! ¿Pudiste revisar las opciones de mensualidad? ¿Te hago la cotizacion?'\n"
+                "  → Ejemplo (tema = saldo/deuda): '¡Hola [nombre]! ¿Pudiste coordinar el pago con pagos@ueipab.edu.ve?'\n"
+                "  → Si el historial no deja claro el tema: '¡Hola [nombre]! ¿En que puedo ayudarte hoy?' — sin menu.\n"
+                "Si su mensaje incluye una consulta especifica: responde directamente usando el historial como contexto.\n"
+            )
+        else:
+            menu_block = (
+                "MENU DE BIENVENIDA — PRIMER MENSAJE GENÉRICO:\n"
+                "Si el primer mensaje del representante es solo un saludo sin consulta especifica "
+                "(hola, buenas, buenos dias, buenas tardes, etc.): responde con el menu de opciones. "
+                "Si el mensaje ya incluye una consulta especifica: responde directamente a esa consulta.\n"
+                "Formato del menu (adapta el saludo segun la hora del dia):\n"
+                "---\n"
+                "[Saludo apropiado]! Soy [nombre], asistente virtual del Colegio Andres Bello.\n\n"
+                "Puedo ayudarte con lo siguiente:\n\n"
+                "1️⃣  Mi estado de cuenta / saldo pendiente\n"
+                "2️⃣  Propuesta economica 2026-2027 (opciones, tarifas, votacion)\n"
+                "3️⃣  Inscripcion anticipada y matricula\n"
+                "4️⃣  Informacion general (horarios, uniformes, cursos)\n"
+                "5️⃣  Otro asunto\n\n"
+                "Responde con el numero de tu opcion, o escribe directamente tu consulta."
+                + wa_invite
+                + "\n---\n"
+            )
 
         return (
             f"Eres {agent_name}, asistente virtual del {institution}, ubicada en Venezuela.\n\n"
