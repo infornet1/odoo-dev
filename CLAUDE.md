@@ -276,7 +276,7 @@ See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) f
 ### Attendance Daily Alert + check_out Auto-fill (scripts/attendance_daily_alert.py)
 
 **Crons:** `/etc/cron.d/attendance_daily_alert`
-- `30 11 * * 1-5` — morning 11:30 VET: recap yesterday (no attendance / missing exit / <5h) → HTML email to employee CC recursoshumanos@
+- `30 11 * * 1-5` — morning 11:30 VET: recap yesterday (no attendance / missing exit / <5h) → HTML email to employee CC recursoshumanos@. Skips if yesterday was a weekend (Sat/Sun) or holiday.
 - `30 23 * * 1-5` — evening 23:30 VET: employees with check_in but no check_out → one SSH call to Router 2 (`172.28.10.10` ZeroTier) → Mikrotik hotspot logout log → latest logout per employee. WiFi found + <20:00 VET + after check_in → write that time. Fallback → 14:00 VET (18:00 UTC). No email sent.
 
 Special-schedule employees (ids 571/606/610) skipped entirely in both modes.

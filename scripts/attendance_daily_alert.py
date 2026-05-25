@@ -783,6 +783,10 @@ def run_morning(employees, state, holidays):
     yesterday = today_vet() - timedelta(days=1)
     logger.info("Morning mode — recap for VET date: %s", yesterday)
 
+    if yesterday.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        logger.info("Yesterday (%s) was a weekend — skipping morning recap", yesterday)
+        return 0
+
     if yesterday in holidays:
         logger.info("Yesterday (%s) was a holiday — skipping morning recap", yesterday)
         return 0

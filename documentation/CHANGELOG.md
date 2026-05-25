@@ -4,6 +4,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-25 — Attendance Alert Weekend Skip Fix (scripts/attendance_daily_alert.py)
+
+**Bug:** Morning cron (`30 11 * * 1-5`) fired on Monday 2026-05-25, recapped Sunday 2026-05-24, and emailed ~37 employees about missing attendance on a non-working day.
+
+**Root cause:** `run_morning()` only checked the explicit `holidays` config param before proceeding. No guard against recapping a Saturday or Sunday.
+
+**Fix:** Added `if yesterday.weekday() >= 5: return 0` before the holidays check. One-line change at `scripts/attendance_daily_alert.py:run_morning()`.
+
+**Note:** Holiday handling (Venezuelan public holidays not in the config param) is a follow-up.
+
+---
+
 ## 2026-05-21 — Telegram Parent Matching Initiative (ueipab_ai_agent v57.0→v57.1)
 
 **Docs:** [TELEGRAM_PARENT_MATCHING.md](TELEGRAM_PARENT_MATCHING.md)
