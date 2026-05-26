@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-23 (v27)
+**Last Updated:** 2026-05-26 (v28)
 
 ## Core Instructions
 
@@ -163,8 +163,8 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.17 | both |
-| ueipab_attendance_report | 17.0.1.6.17 | both |
+| ueipab_ai_agent | 17.0.1.57.18 | both |
+| ueipab_attendance_report | 17.0.1.6.18 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.1.0 | both |

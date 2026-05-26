@@ -1049,14 +1049,13 @@ class GeneralInquirySkill:
             + menu_block
             + "- Entiende su consulta. Responde preguntas generales con el conocimiento institucional que tienes "
             "(medios de pago, mensualidades, fechas, información general del colegio).\n"
-            "PROPUESTA ECONÓMICA 2026-2027 — ETAPA DE CONSULTA ACTIVA:\n"
-            "La propuesta ha sido presentada oficialmente a la comunidad. Puedes y debes compartir "
-            "ambas opciones con total transparencia cuando un representante pregunte:\n"
+            "PROPUESTA ECONÓMICA 2026-2027 — RESULTADOS DISPONIBLES:\n"
+            "La consulta presupuestaria cerró el 26/05/2026. NO proceses votos.\n"
+            "Si un representante pregunta por la mensualidad, el resultado o la votación:\n"
+            "- Carta oficial de resultados: https://docs.google.com/document/d/1GSGzXLxGaaMvYtbyJuGki5KFodmpoy5OyHk0fm4e2fg/edit?usp=sharing\n"
             "- Opción A: $218,88/mes (incremento 10,89%). Pronto pago: $207,93.\n"
             "- Opción B: $236,58/mes (incremento 19,86%). Pronto pago: $224,75.\n"
-            "- Votación: 22–26 de mayo por correo electrónico. Un voto por familia.\n"
-            "- Presentación completa: https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA\n"
-            "- Si el representante no recibió su enlace de votación: indicarle que escriba a pagos@ueipab.edu.ve.\n"
+            "- Para consultas sobre la tarifa aprobada: pagos@ueipab.edu.ve.\n"
             + self._get_voting_wa_block(conversation)
             +
             "SESIONES VIRTUALES DE PRESENTACIÓN (AÚN NO REALIZADAS — son el 19 y 20 de mayo):\n"
@@ -1358,52 +1357,24 @@ class GeneralInquirySkill:
         return self._format_balance_message(balance, bcv_rate)
 
     def _get_voting_wa_block(self, conversation):
-        """Return voting-via-WA system prompt block during the 2026-05-21/26 window."""
-        from datetime import date as _date
-        today = _date.today()
-        if not (_date(2026, 5, 21) <= today <= _date(2026, 5, 26)):
-            return ''
+        """Voting period closed 2026-05-26. Direct parents to the results letter."""
         return (
-            "VOTACIÓN PRESUPUESTARIA VÍA WHATSAPP (activa 21-26 mayo 2026):\n"
-            "Si el representante dice que no recibió el correo, que quiere votar,\n"
-            "que su correo rebotó, o que desea ver la propuesta — responde así:\n"
+            "CONSULTA PRESUPUESTARIA 2026-2027 — VOTACIÓN CERRADA (26/05/2026):\n"
+            "Si el representante menciona la votación, quiere votar, o pregunta por el resultado:\n"
             "\n"
             "FORMATO DE RESPUESTA (úsalo tal cual, adaptando el nombre):\n"
             "---\n"
-            "¡Hola, [nombre]! 🗳️ Con gusto le ayudo a participar en la *Consulta "
-            "Presupuestaria 2026-2027* del Colegio Andrés Bello.\n"
+            "¡Hola, [nombre]! Gracias por su interés en la *Consulta Presupuestaria 2026-2027*.\n"
             "\n"
-            "📊 Puede revisar la propuesta completa aquí:\n"
-            "https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA\n"
+            "El período de votación concluyó hoy, 26 de mayo. Los resultados ya están "
+            "disponibles en la carta oficial del colegio:\n"
+            "📄 https://docs.google.com/document/d/1GSGzXLxGaaMvYtbyJuGki5KFodmpoy5OyHk0fm4e2fg/edit?usp=sharing\n"
             "\n"
-            "Las dos opciones son:\n"
-            "\n"
-            "*Opción A* — $218,88/mes (+10,89%)\n"
-            "Pronto pago (días 1-10): $207,93 · Costo anual: $2.845,45\n"
-            "\n"
-            "*Opción B* — $236,58/mes (+19,86%)\n"
-            "Pronto pago (días 1-10): $224,75 · Costo anual: $3.075,55\n"
-            "\n"
-            "Ambas incluyen los mismos servicios educativos STEAM+G.\n"
-            "\n"
-            "🎉 *Inscripción anticipada* (hasta el 31 de julio):\n"
-            "Inscripción $187,51 + mensualidad septiembre $197,38.\n"
-            "Aplica para ambas opciones. Requiere 2025-2026 saldado.\n"
-            "\n"
-            "💡 *Descuento especial* al inscribirse por Glenda + Akdemia:\n"
-            "Inscripción desde *$174,95* (ahorro de $12,56). ¡Solo por este canal!\n"
-            "\n"
-            "*¿Cuál es su preferencia, A o B?*\n"
+            "Para cualquier consulta adicional sobre la propuesta económica, puede escribirnos "
+            "a pagos@ueipab.edu.ve con gusto le atendemos. 🙏\n"
             "---\n"
             "\n"
-            "Cuando el representante confirme claramente su opción:\n"
-            "  '✅ Su voto por Opción A/B ha quedado registrado. ¡Gracias por participar!'\n"
-            "  Añade al final (invisible para el representante): ACTION:RECORD_VOTE:A (o :B)\n"
-            "\n"
-            "REGLAS:\n"
-            "- SOLO para representantes identificados. Si no está identificado, pide cédula primero.\n"
-            "- NO emitas ACTION:RECORD_VOTE sin confirmación explícita ('A' o 'B').\n"
-            "- ACTION:RECORD_VOTE es un marcador interno — el representante NO lo ve.\n"
+            "REGLA ESTRICTA: NO proceses ni registres ningún voto. El proceso está cerrado.\n"
         )
 
     def _handle_record_vote(self, conversation, ai_response, context):

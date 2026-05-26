@@ -15,6 +15,15 @@ _WA_RE = re.compile(r'^\+?[0-9\s\-]{7,20}$')
 # an immediate one-click ACK.
 _WA_FORM_KEYS = {'glenda_calibracion_v1'}
 
+# Notice keys that send a confirmation email to the employee on ACK.
+_EMAIL_CONFIRM_KEYS = {
+    'ari_guide_2026_v1': {
+        'subject':    '✅ Confirmaste haber leído la Guía AR-I ISLR | Colegio Andrés Bello',
+        'portal_url': 'https://odoo.ueipab.edu.ve/my/ari',
+        'label':      'Guía de Usuario — Portal AR-I ISLR',
+    },
+}
+
 
 class NoticeAckController(http.Controller):
 
@@ -37,6 +46,8 @@ class NoticeAckController(http.Controller):
 
         ip = self._client_ip()
         ack.write({'state': 'acknowledged', 'ack_date': datetime.datetime.now(), 'ack_ip': ip})
+        if ack.notice_key in _EMAIL_CONFIRM_KEYS:
+            self._send_ack_confirmation_email(ack)
         return self._respond(self._page_success(ack))
 
     # ── Glenda calibration: GET (show form) ───────────────────────────────────
@@ -125,6 +136,174 @@ class NoticeAckController(http.Controller):
         return request.make_response(
             html, headers=[('Content-Type', 'text/html; charset=utf-8')]
         )
+
+    # ── Employee ACK confirmation email ──────────────────────────────────────
+
+    def _send_ack_confirmation_email(self, ack):
+        """Send a gentle confirmation receipt to the employee + CC recursoshumanos@.
+
+        Called for notice keys listed in _EMAIL_CONFIRM_KEYS immediately after
+        the ACK is written. Best-effort — never raises.
+        """
+        try:
+            cfg        = _EMAIL_CONFIRM_KEYS[ack.notice_key]
+            emp        = ack.employee_id
+            to_email   = emp.work_email or emp.user_id.email or ''
+            if not to_email:
+                _logger.warning(
+                    "_send_ack_confirmation_email: no email for employee %s (%s)",
+                    emp.name, ack.notice_key,
+                )
+                return
+
+            dt         = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+            first_name = emp.name.split()[0].capitalize()
+            portal_url = cfg['portal_url']
+            label      = cfg['label']
+
+            body = f"""<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f4f8;">
+<tr><td align="center" style="padding:28px 12px;">
+<table width="540" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:540px;width:100%;border-radius:14px;overflow:hidden;
+              box-shadow:0 6px 32px rgba(0,0,0,0.12);">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#052e16 0%,#14532d 100%);
+               padding:32px 36px 24px;text-align:center;">
+      <div style="width:64px;height:64px;background:rgba(255,255,255,0.12);
+                  border-radius:50%;line-height:64px;font-size:32px;
+                  margin:0 auto 14px;border:2px solid #4ade80;">
+        ✅
+      </div>
+      <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#86efac;
+                letter-spacing:2px;text-transform:uppercase;">Recursos Humanos</p>
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#ffffff;">
+        Confirmación Registrada
+      </h1>
+      <p style="margin:0;font-size:13px;color:#bbf7d0;">{label}</p>
+    </td>
+  </tr>
+
+  <!-- BODY -->
+  <tr>
+    <td style="background:#ffffff;padding:30px 36px 24px;">
+      <p style="margin:0 0 18px;font-size:15px;color:#374151;line-height:1.7;">
+        Hola <strong>{first_name}</strong>, gracias por tomarte el tiempo de leer
+        la guía. Tu confirmación ha quedado <strong>registrada exitosamente</strong>
+        en el sistema.
+      </p>
+
+      <!-- Receipt card -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;
+                    margin-bottom:22px;">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #bbf7d0;">
+            <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:#64748b;
+                      text-transform:uppercase;letter-spacing:1px;">Empleado</p>
+            <p style="margin:0;font-size:14px;font-weight:700;color:#0a1628;">
+              {emp.name}
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #bbf7d0;">
+            <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:#64748b;
+                      text-transform:uppercase;letter-spacing:1px;">Documento confirmado</p>
+            <p style="margin:0;font-size:13px;color:#374151;">{label}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #bbf7d0;">
+            <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:#64748b;
+                      text-transform:uppercase;letter-spacing:1px;">Estado</p>
+            <span style="display:inline-block;background:#dcfce7;color:#15803d;
+                         font-size:12px;font-weight:700;padding:3px 12px;
+                         border-radius:20px;">✅ Leído y comprendido</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;">
+            <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:#64748b;
+                      text-transform:uppercase;letter-spacing:1px;">Fecha de confirmación</p>
+            <p style="margin:0;font-size:13px;color:#374151;">{dt}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Next step -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="margin-bottom:22px;">
+        <tr>
+          <td style="background:#fef3c7;border-left:4px solid #f59e0b;
+                     border-radius:0 8px 8px 0;padding:14px 18px;">
+            <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#78350f;">
+              📋 Próximo paso
+            </p>
+            <p style="margin:0;font-size:12px;color:#78350f;line-height:1.6;">
+              Accede al portal y completa tu declaración AR-I para el año fiscal en curso.
+              Recuerda que la fecha límite de la declaración inicial es el
+              <strong>15 de enero</strong> de cada año.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA -->
+      <div style="text-align:center;">
+        <a href="{portal_url}"
+           style="display:inline-block;background:linear-gradient(135deg,#0a1628,#1a3a6b);
+                  color:#C8A951;text-decoration:none;font-size:14px;font-weight:700;
+                  padding:13px 40px;border-radius:50px;letter-spacing:0.5px;">
+          📋 Ir al Portal AR-I
+        </a>
+      </div>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#0a1628;padding:18px 36px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#C8A951;">
+        Recursos Humanos · Colegio Andrés Bello
+      </p>
+      <p style="margin:0;font-size:11px;color:#4b6080;">
+        <a href="mailto:recursoshumanos@ueipab.edu.ve"
+           style="color:#4b6080;text-decoration:none;">
+          recursoshumanos@ueipab.edu.ve
+        </a>
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+            request.env['mail.mail'].sudo().create({
+                'subject':    cfg['subject'],
+                'email_from': 'Recursos Humanos — Colegio Andrés Bello <recursoshumanos@ueipab.edu.ve>',
+                'email_to':   to_email,
+                'email_cc':   'recursoshumanos@ueipab.edu.ve',
+                'body_html':  body,
+                'state':      'outgoing',
+            }).send()
+            _logger.info(
+                "_send_ack_confirmation_email: sent to %s (employee %s, key %s)",
+                to_email, emp.name, ack.notice_key,
+            )
+        except Exception as e:
+            _logger.warning(
+                "_send_ack_confirmation_email: failed for employee %s — %s",
+                ack.employee_id.name if ack.employee_id else '?', e,
+            )
 
     # ── Base page shell ───────────────────────────────────────────────────────
 
