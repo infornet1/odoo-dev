@@ -4,6 +4,40 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-27 — Budget Results Email Blast + Glenda v57.19
+
+### Glenda Knowledge Update (ueipab_ai_agent v57.19)
+
+Voting closed 2026-05-26 (Opción A: 108 votes, 60.7%). Updated `general_inquiry.py`:
+
+- **`_BUDGET_KNOWLEDGE`**: Rewritten — Opción B removed, voting schedule/process removed.
+  Replaced with confirmed-result block: Opción A won, prices confirmed from Sep 2026.
+- **`_INSTITUTIONAL_KNOWLEDGE`**: Removed all "preliminar / sujeta a confirmación" language.
+  Table caption → "confirmadas Opción A". Section label → "TARIFAS CONFIRMADAS 2026-2027".
+- **Early-bird promotion preserved**: $187.51 inscripción + $197.38 sept — valid until 2026-07-31.
+- **Seguro Escolar unblocked**: already present in `_INSTITUTIONAL_KNOWLEDGE` since v57.17; now officially active.
+- **`_FLYERS`**: `inscripcion` and `pronto_pago` descriptions updated to confirmed pricing.
+- Deployed to testing + production (both containers restarted).
+
+### Budget Results Email Blast
+
+**Script:** `scripts/send_budget_results_email.py`
+**Docs:** [BUDGET_RESULTS_EMAIL_BLAST.md](BUDGET_RESULTS_EMAIL_BLAST.md)
+
+- 201 emails queued to production `mail.mail` and delivered via queue cron.
+- FROM `soporte@ueipab.edu.ve` · REPLY-TO `pagos@ueipab.edu.ve`
+- Recipients: 195 from Customers sheet col J + 6 hardcoded institutional addresses.
+- **⚠️ Post-blast fix:** Status filter (ACTIVE + PIPELINE only) added after initial blast
+  inadvertently included all rows. Filter now enforced in `_load_recipients()`.
+
+### Lesson Learned — Blast Email Status Filter
+
+Always filter Customers sheet (col C) by `ACTIVE` + `PIPELINE` before any blast.
+Confirm the filter with the user before implementing. See memory:
+`feedback_blast_email_status_filter.md`.
+
+---
+
 ## 2026-05-25 — Attendance Alert Weekend Skip Fix (scripts/attendance_daily_alert.py)
 
 **Bug:** Morning cron (`30 11 * * 1-5`) fired on Monday 2026-05-25, recapped Sunday 2026-05-24, and emailed ~37 employees about missing attendance on a non-working day.

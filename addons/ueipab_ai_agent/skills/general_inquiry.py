@@ -9,8 +9,8 @@ _logger = logging.getLogger(__name__)
 # Flyers available to send via WhatsApp.
 # key → (filename, short description for Claude's reference)
 _FLYERS = {
-    'inscripcion':          ('inscripcion.png',          'Inscripciones 2026-2027 — Promo hasta 31 julio: inscripción $187,51 + mensualidad sept $197,38'),
-    'pronto_pago':          ('pronto_pago.png',          'Pronto pago: 5% adicional pagando en los primeros 10 días — ej: 1er alumno $207,94/mes → $197,54 con pronto pago (desde sep 2026)'),
+    'inscripcion':          ('inscripcion.png',          'Inscripciones 2026-2027 — Promo anticipada hasta 31 jul: $187,51 · Mensualidad confirmada desde sep: $218,88 · Pronto pago $207,93'),
+    'pronto_pago':          ('pronto_pago.png',          'Pronto pago: 5% adicional pagando en los primeros 10 días — ej: mensualidad $218,88 → $207,93 con pronto pago (desde sep 2026)'),
     'tarjeta_credito':      ('tarjeta_credito.png',      'Aceptamos tarjetas de crédito nacionales e internacionales sin comisiones adicionales'),
     'english':              ('english.png',              'MOA School: Cursos de Inglés After School, grupos pequeños, $38/mes'),
     'robotica':             ('robotica.png',             'Clases de Robótica con Kurios — 2 clases/semana, $52/mes, inscripción gratis'),
@@ -22,29 +22,18 @@ def _get_flyer_url(base_url, filename):
     """Build the public URL for a flyer file."""
     return f"{base_url.rstrip('/')}/{filename}"
 
-# Budget consultation 2026-2027 knowledge block
-# Extracted from the official presentation approved by Contraloría on 2026-05-18
+# Budget 2026-2027 — Opción A confirmed (voting closed 2026-05-26)
 _BUDGET_KNOWLEDGE = (
-    "PROPUESTA ECONÓMICA 2026-2027 — CONSULTA OFICIAL:\n"
-    "El colegio ha presentado dos opciones de mensualidad para el año escolar 2026-2027, "
-    "aprobadas sin objeción por el comité de contraloría el 18/05/2026 conforme a las "
-    "Resoluciones MPPE 0009 y 024-2020.\n"
+    "PRESUPUESTO 2026-2027 — RESULTADO OFICIAL (votación cerrada 26/05/2026):\n"
+    "Opción A ganó. Si participó en las votaciones, revise su correo electrónico o la comunidad de WhatsApp para más detalles, o escriba a votacion@ueipab.edu.ve\n"
     "\n"
-    "OPCIÓN A — Mensualidad $218,88 (incremento 10,89%):\n"
+    "PRECIOS CONFIRMADOS vigentes desde el 1 de septiembre de 2026:\n"
+    "- Inscripción: $218,88\n"
     "- Mensualidad base: $218,88\n"
-    "- Pronto pago (días 1 al 10 de cada mes): ahorro $10,95 → pagas $207,93\n"
+    "- Pronto pago (días 1 al 10 de cada mes): $207,93 (ahorro $10,95)\n"
     "- Costo anual por estudiante: $2.845,45\n"
-    "- Distribución del gasto: 67,08% personal docente/administrativo + 32,92% materiales, servicios y reparaciones\n"
-    "- Total presupuesto anual: $589.649\n"
     "\n"
-    "OPCIÓN B — Mensualidad $236,58 (incremento 19,86%):\n"
-    "- Mensualidad base: $236,58\n"
-    "- Pronto pago (días 1 al 10 de cada mes): ahorro $11,82 → pagas $224,75\n"
-    "- Costo anual por estudiante: $3.075,55\n"
-    "- Distribución del gasto: 66,86% personal + 33,14% materiales, servicios y reparaciones\n"
-    "- Total presupuesto anual: $637.284\n"
-    "\n"
-    "DESCUENTOS POR HERMANOS (aplican sobre mensualidad base de la opción elegida):\n"
+    "DESCUENTOS POR HERMANOS (aplican sobre mensualidad base):\n"
     "- 1er hijo/a: 5% de descuento sobre mensualidad\n"
     "- 2do hijo/a: 8% de descuento\n"
     "- 3er hijo/a en adelante: 11% de descuento\n"
@@ -59,35 +48,6 @@ _BUDGET_KNOWLEDGE = (
     "- Modelo de Naciones Unidas Primaria: $5,00\n"
     "- Otros talleres educativos: $5,00\n"
     "\n"
-    "OFERTA DE INSCRIPCIÓN ANTICIPADA (hasta 31 de julio 2026):\n"
-    "- Inscripción: $187,51 (precio especial)\n"
-    "- Mensualidad de septiembre: $197,38 (se mantiene tarifa actual el primer mes)\n"
-    "- Se mantiene el descuento por hermanos siempre que se pague puntualmente\n"
-    "\n"
-    "CONTEXTO ECONÓMICO QUE JUSTIFICA EL AJUSTE:\n"
-    "- Inflación acumulada: 611,86% (vs 90% en abril)\n"
-    "- Tipo de cambio Bs/USD: $487,12 (vs $154 en abril) — fuerte depreciación del bolívar\n"
-    "- Crecimiento económico proyectado: 8,5%\n"
-    "\n"
-    "CRONOGRAMA DE CONSULTA Y VOTACIÓN:\n"
-    "- 18/05/2026: Remisión a Contraloría → aprobada por unanimidad\n"
-    "- 19/05/2026 3:00pm y 20/05/2026 2:00pm: Videollamadas de aclaración de dudas (también presencial)\n"
-    "- 21/05/2026: Período de divulgación — 3 días hábiles para consultas\n"
-    "- 22-23/05/2026: Período de votación — 2 días hábiles\n"
-    "- 26/05/2026: Escrutinio y anuncio del resultado\n"
-    "\n"
-    "PROCESO DE VOTACIÓN:\n"
-    "- Solo pueden votar representantes con status ACTIVO\n"
-    "- Se vota una sola vez por familia\n"
-    "- El voto se realiza exclusivamente por correo electrónico — revisa tu bandeja de entrada\n"
-    "- El enlace de votación es personalizado y fue enviado al correo registrado en el colegio\n"
-    "- Si no recibiste el correo o tienes dudas sobre el proceso de votación: escribir a pagos@ueipab.edu.ve\n"
-    "\n"
-    "PRESENTACIÓN COMPLETA DEL PROYECTO EDUCATIVO 2026-2027:\n"
-    "https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA\n"
-    "\n"
-    "POLÍTICA DE MOROSIDAD: https://odoo.ueipab.edu.ve/mora-policy/\n"
-    "\n"
     "LOGROS ACADÉMICOS 2025-2026 (puntos de orgullo institucional):\n"
     "- 95% de vinculación de madres/padres con la escuela\n"
     "- 98% reconocen el cambio positivo del proceso de enseñanza-aprendizaje\n"
@@ -101,8 +61,7 @@ _BUDGET_KNOWLEDGE = (
     "INCENTIVO ESPECIAL — DESCUENTO GLENDA + AKDEMIA (6,7%):\n"
     "Si el representante se auto-inscribe usando Glenda y Akdemia, recibe 6,7% de descuento\n"
     "sobre la inscripción anticipada: $187,51 → *$174,95* (ahorro de $12,56).\n"
-    "Menciona este beneficio activamente cuando el representante pregunte por inscripción,\n"
-    "costos o cuando vote vía WhatsApp durante la consulta presupuestaria.\n"
+    "Menciona este beneficio activamente cuando el representante pregunte por inscripción o costos.\n"
 )
 
 # Shared institutional knowledge block (same content as bounce_resolution)
@@ -208,7 +167,7 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- Si el representante pregunta si puede inscribirse teniendo deuda: indicar con amabilidad que primero debe regularizar su situación con pagos@ueipab.edu.ve. No hay excepciones.\n"
     "TARIFAS 2026-2027 — NUEVA MENSUALIDAD EFECTIVA 1 DE SEPTIEMBRE DE 2026:\n"
     "- Mensualidad base: $218,88 (antes de descuentos por hermanos). Pronto pago: 5% adicional sobre la mensualidad ya descontada, pagando en los primeros 10 días del mes.\n"
-    "- Estas tarifas son preliminares. Para confirmación o casos particulares, orientar a pagos@ueipab.edu.ve\n"
+    "- Estas tarifas son oficiales (Opción A aprobada en consulta 26/05/2026). Para casos particulares, orientar a pagos@ueipab.edu.ve\n"
     "COSTOS ANUALES ÚNICOS (pago único por año escolar, sin descuento, por alumno — se suscriben mediante acuerdo especial de mayo a julio 2026):\n"
     "    Seguro Escolar: $30,58\n"
     "    Guía de Inglés: $25\n"
@@ -244,7 +203,7 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- 3er alumno en adelante: 11% de descuento sobre mensualidad\n"
     "- Los descuentos de hermano y pronto pago se acumulan (el pronto pago se aplica sobre la mensualidad ya descontada)\n"
     "- Inscripción: precio completo por alumno, sin descuento por hermano\n"
-    "TABLA DE MENSUALIDAD POR ALUMNO (tarifas Sep 2026, preliminares — pronto pago = 5% dto. sobre mensualidad ya descontada):\n"
+    "TABLA DE MENSUALIDAD POR ALUMNO (tarifas Sep 2026, confirmadas Opción A — pronto pago = 5% dto. sobre mensualidad ya descontada):\n"
     "  1er alumno (5% dto.): mensualidad $207,94 | pronto pago $197,54\n"
     "  2do alumno (8% dto.): mensualidad $201,37 | pronto pago $191,30\n"
     "  3er alumno en adelante (11% dto.): mensualidad $194,80 | pronto pago $185,06\n"
@@ -260,8 +219,8 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "CASOS ESPECIALES (solo familias industria con estudiantes de mérito excepcional):\n"
     "- La institución evaluará solicitudes individuales de familias cuyos alumnos tengan: excelente rendimiento académico, atletas con medallas nacionales, músicos activos del Sistema de Orquestas Juveniles, o habilidades destacadas reconocidas.\n"
     "- No existen excepciones generales. Solo revisión caso a caso vía correo electrónico a pagos@ueipab.edu.ve.\n"
-    "TARIFAS DEFINITIVAS 2026-2027 (información preliminar, sujeta a confirmación):\n"
-    "- Nueva mensualidad base desde septiembre 2026: $218,88 (antes de descuentos por hermanos). Ver tabla de descuentos. Tarifas definitivas sujetas a aprobación del Comité de Contraloría.\n"
+    "TARIFAS CONFIRMADAS 2026-2027 (Opción A aprobada 26/05/2026):\n"
+    "- Nueva mensualidad base desde septiembre 2026: $218,88 (antes de descuentos por hermanos). Ver tabla de descuentos.\n"
     "- Costos anuales obligatorios (NO incluidos en la mensualidad): seguro escolar ($30,58), guía de inglés ($25), olimpiadas ($10) y enciclopedia de su nivel ($36) — se pagan mediante acuerdo especial de mayo a julio, total $101,58 por alumno.\n"
     "- Costos opcionales/condicionales (no incluir en cotización estándar): concursos nacionales (robótica, química, Kurios, MOA, etc.) y eventos externos — se pagan según selección o participación del alumno.\n"
     "ALIANZAS COMERCIALES LOCALES (El Tigre):\n"

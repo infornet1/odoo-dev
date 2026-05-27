@@ -75,7 +75,7 @@
 | 57 | Glenda Telegram Channel | Production | `ueipab_ai_agent` | [Docs](documentation/GLENDA_TELEGRAM_CHANNEL.md) — `@GlendaUeipabBot`; deep-link `EMP_{id}` |
 | 58 | Absence Notification System | Production | Script + Cron + `ueipab_ai_agent` | `scripts/absence_processor.py`; see Key Technical Patterns |
 | 59 | Glenda School Account Help | Production | `ueipab_ai_agent` + Script | `ACTION:SCHOOL_ACCOUNT_HELP`; see Key Technical Patterns |
-| 60 | Budget Consultation 2026-2027 | Production | `ueipab_ai_agent` + Script | price gate lifted; [Docs](documentation/BUDGET_VOTE_EMAIL.md) |
+| 60 | Budget Consultation 2026-2027 | **Closed** | `ueipab_ai_agent` + Script | Opción A won 2026-05-26; Glenda v57.19 updated; results blast fired 201 recipients |
 | 61 | Glenda Kurios Robotics Link | Production | `ueipab_ai_agent` | Shares `https://info.kuriosedu.com/books/kmbs/#p=3` on request |
 | 62 | Glenda MOA Spelling Bee 2026 | Production | `ueipab_ai_agent` | Jun 1 Primaria / Jun 2 Media General |
 | 63 | Glenda Telegram Parent Announcement | Production | Script | `scripts/send_glenda_telegram_email.py` |
@@ -163,7 +163,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.2 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.18 | both |
+| ueipab_ai_agent | 17.0.1.57.19 | both |
 | ueipab_attendance_report | 17.0.1.6.18 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -525,7 +525,6 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — belongs in `ueipab_ai_agent`/`ueipab_campaigns`. Requires DB migration. Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md).
 
 **BLOCKED — Waiting on external trigger:**
-- **Budget results 2026-05-26** — update `general_inquiry.py` pricing to confirmed tariff + unlock Seguro Escolar in `_INSTITUTIONAL_KNOWLEDGE` + bump version + deploy prod.
 - **Representante Continuity Campaign** — script ready (`send_representante_communication.py`), blocked until letter content (LETTER_URL + BULLET_1-3 + EMAIL_HEADLINE) provided.
 - **Banco Plaza API** — QA/eval phase; credentials pending from Banco Plaza team.
 
