@@ -191,6 +191,25 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 - Fix: set `condition_select='none'` + let the amount formula return `0.0` when the rule shouldn't fire
 - The payslip report template already filters `total_in_ves > 0`, so zero-amount lines are invisible
 
+### Closed-Contract Payslip (terminated employee mid-batch)
+
+When an employee's contract is in `close` state, `_get_contract()` filters it out → payslip gets `contract_id = False` and zero lines computed.
+
+**Fix procedure (via XML-RPC / Odoo shell):**
+1. `contract.write({'state': 'open'})` — temporarily re-open so `_get_contract()` finds it
+2. If pro-rating is needed (e.g. employee worked 7 of 15 days): set `ueipab_salary_v2 = original × (2 × days/30)` and same for `ueipab_bonus_v2` — the rule's `/2` then yields the correct `days/30` amount
+3. `payslip.action_compute_sheet()` — runs all rules correctly
+4. `payslip.write({'contract_id': contract.id})` — `action_compute_sheet` does NOT write this back; must set manually
+5. Restore original salary fields: `contract.write({'ueipab_salary_v2': orig, 'ueipab_bonus_v2': orig})`
+6. `contract.write({'state': 'close'})` — restore final state
+7. Adjust fixed lines (e.g. `VE_CESTA_TICKET_V2`) manually via `hr.payslip.line.write()`, then update `VE_GROSS_V2` and `VE_NET_V2` accordingly
+
+**Cesta ticket pro-ration:** `$20 × days_worked / quincena_days` (e.g. 7/15 → $9.33). Update GROSS and NET lines to match.
+
+**Note:** Deductions (SSO, PARO, FAOV, ARI) auto-scale correctly because their bases reference the salary/bonus rules. SSO stays near $0.05 regardless — it uses the minimum wage base by design.
+
+**Reference:** SLIP/801 RAMON BELLO MAYO31 — 7 days (May 16–22), contract end 2026-05-22.
+
 ### Odoo 17 View Syntax
 ```xml
 <!-- OLD --> <div attrs="{'invisible': [('field', '=', 0)]}">

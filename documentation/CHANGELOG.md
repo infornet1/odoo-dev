@@ -2748,6 +2748,24 @@ docker exec -i odoo-dev-web /usr/bin/odoo shell -d testing --no-http \
 
 ---
 
+## 2026-05-27 — SLIP/801 RAMON BELLO — Pro-rated payslip for terminated employee (MAYO31)
+
+**Context:** RAMON BELLO's contract (id=117) ended 2026-05-22 and was in `close` state when the MAYO31 batch (May 16–31) was computed. Odoo's `_get_contract()` filters out `close` contracts → `contract_id = False` → zero lines computed on the slip.
+
+**Fix applied via XML-RPC on production:**
+1. Temporarily set contract state → `open`
+2. Scaled `ueipab_salary_v2` ($187.31 → $87.41) and `ueipab_bonus_v2` ($233.32 → $108.88) using factor `14/30` so that the V2 rule's `/2` yields the correct 7/30 pro-ration
+3. Ran `action_compute_sheet()` on payslip id=852
+4. Manually wrote `contract_id = 117` (not set automatically by compute)
+5. Restored original contract values and state → `close`
+6. Adjusted `VE_CESTA_TICKET_V2` from $20.00 → $9.33 (7/15 days), updated `VE_GROSS_V2` and `VE_NET_V2`
+
+**Final SLIP/801 values (USD):** Salary $43.71 · Bonus $54.44 · Cesta $9.33 · Gross $107.48 · Deductions -$1.58 · **Net $105.90**
+
+**Pattern documented in CLAUDE.md** → Key Technical Patterns → "Closed-Contract Payslip".
+
+---
+
 ## 2026-05-18 — Distintivo Escolar Email Campaign
 
 **Feature #65** — Almacenes París official uniform badge provider announced via email.
