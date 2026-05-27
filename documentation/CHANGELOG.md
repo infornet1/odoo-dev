@@ -4,6 +4,14 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-27 — Env Sync: ueipab_attendance_report 6.18 on Testing
+
+`ueipab_attendance_report` was at 17.0.1.6.17 on testing vs 17.0.1.6.18 on production.
+Upgraded via `docker exec odoo-dev-web /usr/bin/odoo -d testing -u ueipab_attendance_report`.
+All 6 custom modules now in sync across both environments.
+
+---
+
 ## 2026-05-27 — Budget Results Email Blast + Glenda v57.19
 
 ### Glenda Knowledge Update (ueipab_ai_agent v57.19)
