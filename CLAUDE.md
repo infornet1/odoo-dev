@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-26 (v28)
+**Last Updated:** 2026-05-27 (v29)
 
 ## Core Instructions
 
