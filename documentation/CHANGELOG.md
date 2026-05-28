@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-28 — Ajuste Guías de Inglés — Email Blast to Parents
+
+Sent official communication about the English guide cost adjustment for 2026-2027 to all ACTIVE/PIPELINE families.
+
+- **Script:** `scripts/send_english_guide_announcement_email.py`
+- **From:** `soporte@ueipab.edu.ve` | **Reply-To:** `pagos@ueipab.edu.ve`
+- **Subject:** `📢 Comunicado Importante: Ajuste en Guías de Inglés 2026-2027 — Instituto Andrés Bello`
+- **Doc link:** `https://docs.google.com/document/d/1LeeTB-7vk8BWSl9NH_JHZoXSiq3mvtSKpmAgWUh0r-0/edit?usp=sharing`
+- **Recipients:** 185 sent (180 sheet + 6 institutional) | 2 skipped (hard-bounce DSNs confirmed in Freescout)
+  - Skipped: DAMIRIS HEREDIA `eledeher@gmail.com` (conv #46552, active today) + EMIRO GONZALEZ `olysamg@gmail.com` (conv #44815, failing since 2026-05-17)
+- **Pre-blast bounce audit:** Scanned 529 soporte@ conversations via Freescout REST API; found 10 unique hard-bounce addresses; 2 matched ACTIVE/PIPELINE sheet rows → skipped
+
+---
+
 ## 2026-05-28 — Guía de Inglés price update: $35 (hasta 31 jul) / $40 (desde 1 ago)
 
 Updated Glenda's annual costs knowledge base to reflect new two-tier pricing for the Guía de Inglés:
