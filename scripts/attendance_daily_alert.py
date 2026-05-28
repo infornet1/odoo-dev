@@ -306,6 +306,63 @@ def get_attendance_for_date(employee_ids, target_date: date):
                 result[emp_id] = r
     return result
 
+
+def get_leaves_for_date(employee_ids: list, target_date: date) -> dict:
+    """Return dict of employee_id → list of leave records covering target_date."""
+    start_utc, end_utc = vet_date_to_utc_range(target_date)
+    records = odoo_search_read(
+        'hr.leave',
+        [
+            ('employee_id', 'in', employee_ids),
+            ('date_from', '<=', end_utc),
+            ('date_to', '>=', start_utc),
+            ('state', 'in', ['confirm', 'validate1', 'validate']),
+        ],
+        ['id', 'employee_id', 'holiday_status_id', 'date_from', 'date_to',
+         'state', 'number_of_days'],
+    )
+    result = {}
+    for r in records:
+        emp_id = r['employee_id'][0]
+        result.setdefault(emp_id, []).append(r)
+    return result
+
+
+_LEAVE_STATE_LABELS = {
+    'confirm':   ('⏳', 'Pendiente de aprobación', '#fff8e1', '#f9a825', '#f57f17'),
+    'validate1': ('⏳', 'Pendiente de aprobación', '#fff8e1', '#f9a825', '#f57f17'),
+    'validate':  ('✅', 'Aprobado',                '#e8f5e9', '#43a047', '#2e7d32'),
+}
+
+
+def _format_leave_context_html(emp_leaves: list) -> str:
+    """Render leave context blocks for inclusion in the morning attendance email."""
+    if not emp_leaves:
+        return ''
+    blocks = []
+    for lv in emp_leaves:
+        state = lv.get('state', 'confirm')
+        icon, label, bg, border, text = _LEAVE_STATE_LABELS.get(
+            state, ('ℹ️', state, '#f5f5f5', '#9e9e9e', '#616161')
+        )
+        leave_type = lv.get('holiday_status_id')
+        type_name = (leave_type[1] if isinstance(leave_type, (list, tuple)) and len(leave_type) > 1
+                     else str(leave_type or '—'))
+        df_vet = utc_to_vet(lv.get('date_from') or '')
+        dt_vet = utc_to_vet(lv.get('date_to') or '')
+        time_range = ''
+        if df_vet and dt_vet:
+            time_range = f"{df_vet.strftime('%H:%M')} – {dt_vet.strftime('%H:%M')} VET · "
+        days = float(lv.get('number_of_days') or 0)
+        days_str = f"{days:.1f} día{'s' if days != 1.0 else ''}"
+        blocks.append(f"""
+    <div style="background:{bg};border-left:4px solid {border};border-radius:4px;
+                padding:10px 14px;margin-bottom:10px;font-size:13px;color:{text};">
+      <strong>{icon} Permiso registrado para este día:</strong> {type_name}<br>
+      <span style="color:#555555;">{time_range}{days_str} · <em>{label}</em></span>
+    </div>""")
+    return '\n'.join(blocks)
+
 # ============================================================================
 # HTML email builders
 # ============================================================================
@@ -429,7 +486,7 @@ def build_evening_email(emp_name: str, check_in_vet: datetime, target_date: date
 
 
 def build_morning_email(emp_name: str, issues: list, target_date: date,
-                        fix_url: str = None) -> str:
+                        fix_url: str = None, leave_context_html: str = '') -> str:
     """HTML for morning recap with one or more issues.
 
     issues: list of dicts with keys: icon, label, value, detail (optional)
@@ -509,6 +566,7 @@ def build_morning_email(emp_name: str, issues: list, target_date: date,
       {rows_html}
     </table>
 
+    {leave_context_html}
     {correction_html}
   </div>
 """
@@ -794,6 +852,8 @@ def run_morning(employees, state, holidays):
     employee_ids = [e['id'] for e in employees]
     attendance   = get_attendance_for_date(employee_ids, yesterday)
     logger.info("  Attendance records found for yesterday: %d", len(attendance))
+    leaves       = get_leaves_for_date(employee_ids, yesterday)
+    logger.info("  Leave records found for yesterday: %d employee(s)", len(leaves))
 
     sent = 0
     for emp in employees:
@@ -858,9 +918,11 @@ def run_morning(employees, state, holidays):
             logger.debug("  %s — no issues for %s", emp_name, yesterday)
             continue
 
-        fix_url   = get_fix_url_for_employee(emp_id, yesterday)
-        subject   = f"📋 Resumen de asistencia — {yesterday.strftime('%d/%m/%Y')}"
-        body_html = build_morning_email(emp_name, issues, yesterday, fix_url=fix_url)
+        fix_url    = get_fix_url_for_employee(emp_id, yesterday)
+        leave_html = _format_leave_context_html(leaves.get(emp_id, []))
+        subject    = f"📋 Resumen de asistencia — {yesterday.strftime('%d/%m/%Y')}"
+        body_html  = build_morning_email(emp_name, issues, yesterday,
+                                         fix_url=fix_url, leave_context_html=leave_html)
 
         issue_labels = ', '.join(i['label'] for i in issues if i['label'] not in ('Entrada', 'Salida'))
         if not issue_labels:

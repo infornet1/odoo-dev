@@ -77,3 +77,6 @@
 | 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 convs (7-day window) |
 | 74 | Freescout Pagos@ Bridge | Production | `ueipab_ai_agent` + scripts | `ai.agent.freescout.task` |
 | 75 | Attendance Correction — "En Revisión" State | Production | `ueipab_attendance_report` v6.20 | Wizard popup (note + attachment) → FS conversation (employee as customer, mailbox 4) → smart button link; re-invite thread resets to pending; CC arcides.arzola@ on open |
+| 76 | Leave Submission Notifier | Production | Script + Cron | `scripts/leave_notification.py`; CC recursoshumanos@ within 15 min on `confirm` (nueva solicitud) and `validate1` (segunda validación requerida); `/etc/cron.d/leave_notification` every 15 min weekdays |
+| 77 | HR Leave + Attendance Daily Digest | Production | Script + Cron | `scripts/hr_leave_attendance_digest.py`; 3 sections: pending approvals (with "Aprobar/Validar →" buttons), 30-day leave activity, high-issue employees; to recursoshumanos@ CC arcides.arzola@; 08:00 VET weekdays |
+| 78 | Attendance Alert — Leave Cross-Check | Production | Script | `attendance_daily_alert.py` enhanced: fetches `hr.leave` for the alert date; annotates "Sin registro" emails with ✅ approved / ⏳ pending leave context block |

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-28 (v30)
+**Last Updated:** 2026-05-28 (v31)
 
 ## Core Instructions
 
@@ -217,6 +217,31 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 See [GLENDA_TECHNICAL_PATTERNS.md](documentation/GLENDA_TECHNICAL_PATTERNS.md) for full reference on: Silent Timeout/Quiet Hours, OdooBot Bridge (Discuss), Auto Draft Payment / Journal Map, BCV Rate Context, Invoice Balance Query, Daily Executive Digest, Quotation Engine & Enrollment info.
 
+### Leave Notification System (Feature #76 + #77)
+
+**Scripts:** `scripts/leave_notification.py` + `scripts/hr_leave_attendance_digest.py`
+**Crons:** `/etc/cron.d/leave_notification` (*/15 weekdays) + `/etc/cron.d/hr_leave_attendance_digest` (08:00 VET weekdays)
+
+**leave_notification.py** — polls `hr.leave` for actionable states every 15 min:
+- `confirm` → "📋 Nueva Solicitud de Permiso" email to recursoshumanos@ (blue header)
+- `validate1` → "🔔 Segunda Validación Requerida" email to recursoshumanos@ (orange header)
+- State file `leave_notification_state.json` tracks `notified_confirm_{id}` / `notified_validate1_{id}` separately — a confirm→validate1 transition fires a second email
+- Test: `--test-email gustavo.perdomo@ueipab.edu.ve`
+
+**hr_leave_attendance_digest.py** — daily digest (3 sections):
+1. 🔴 Pending approvals split by stage: validate1 rows ("Validar →", orange) above confirm rows ("Aprobar →", blue)
+2. 📅 30-day leave activity per employee (approved days / pending days / request count)
+3. ⚠️ High-issue employees — parsed from `attendance_daily_alert_state.json` morning entries (threshold: `HIGH_ISSUE_THRESHOLD = 3`; consider raising to 5)
+
+**Leave type validation matrix (prod):**
+- `both` (2 approvals): Tiempo personal pagado, Sin pagar, Permiso Muerte (luto), Diligencia Personal, Cita Médica de un familiar
+- `hr` (HR only): Tiempo personal por enfermedad, Lactancia, Cita Médica personal, Cuidados maternos, Reposo Postnatal
+- `manager` (manager only): Días compensatorios
+
+**Work schedule — Standard 40h (calendar_id=1):** Morning start corrected 08:00→**07:00 VET** on 2026-05-28. All weekdays now 07:00–12:00 + 13:00–17:00.
+
+---
+
 ### Attendance Daily Alert + check_out Auto-fill (scripts/attendance_daily_alert.py)
 
 **Crons:** `/etc/cron.d/attendance_daily_alert`
@@ -228,6 +253,8 @@ Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 **State:** `attendance_daily_alert_state.json` — `morning_DATE_EMPID` / `evening_DATE_EMPID`; entries >14 days pruned. WiFi coverage: 8/45 employees in `payroll_db.wifi_hotspot_users`.
 
 **Correction button:** `get_fix_url_for_employee(emp_id, date)` looks up matching `hr.attendance.report` (state=sent/draft) → injects "📝 Solicitar Corrección" link to `/attendance-fix/<token>`. Falls back to plain card if no report. CC `recursoshumanos@` via `email_cc`.
+
+**Leave cross-check (Feature #78):** Morning mode fetches `hr.leave` for yesterday via `get_leaves_for_date()`. If an employee has a matching leave, `_format_leave_context_html()` injects a colored context block into the alert email: green (✅ `validate`) or yellow (⏳ `confirm`/`validate1`). Attendance flag is still raised — context block adds clarity, not suppression.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 
@@ -430,6 +457,10 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 ### Known Issues
 
 **FIXED:** See [CHANGELOG.md](documentation/CHANGELOG.md) for full history of resolved issues.
+
+**FIXED 2026-05-28:**
+- **`hr_org_chart` KeyError `new_parent_id`** — build `17.0-20260504` regression; `kw.get('context')['new_parent_id']` and `['max_level']` crash when context key absent. Patched both containers: `(kw.get('context') or {}).get('key')`. Patch lives in container filesystem (`/tmp/patch_org_chart.py` on both hosts); re-apply if containers are rebuilt.
+- **Standard 40h work schedule** — morning start was 08:00 VET, corrected to 07:00 VET (`resource_calendar_attendance` calendar_id=1). Triggered by GABRIEL ESPAÑA leave #64 validation failure.
 
 **PENDING — Code / Infrastructure:**
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md) — `tdv_multi_currency_account`; both envs
