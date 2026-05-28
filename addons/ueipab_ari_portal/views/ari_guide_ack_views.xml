@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List view scoped to AR-I guide ACKs ── -->
+    <record id="view_ari_guide_ack_tree" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.ari.guide.tree</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <tree string="Confirmaciones — Guía AR-I"
+                  decoration-success="state == 'acknowledged'"
+                  decoration-warning="state == 'pending'">
+                <field name="employee_id" string="Empleado"/>
+                <field name="state"       string="Estado"
+                       decoration-success="state == 'acknowledged'"
+                       decoration-warning="state == 'pending'"/>
+                <field name="sent_date"   string="Envío"/>
+                <field name="ack_date"    string="Confirmado el"/>
+                <field name="days_pending" string="Días pendiente"/>
+                <field name="notice_key"  optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Search view ── -->
+    <record id="view_ari_guide_ack_search" model="ir.ui.view">
+        <field name="name">hr.notice.acknowledgment.ari.guide.search</field>
+        <field name="model">hr.notice.acknowledgment</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <search string="Buscar">
+                <field name="employee_id"/>
+                <filter name="pending"      string="Pendiente"
+                        domain="[('state','=','pending')]"/>
+                <filter name="acknowledged" string="Confirmado"
+                        domain="[('state','=','acknowledged')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ── Window action (filtered to ari_guide_2026_v1) ── -->
+    <record id="action_ari_guide_ack" model="ir.actions.act_window">
+        <field name="name">Confirmaciones — Guía AR-I</field>
+        <field name="res_model">hr.notice.acknowledgment</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('notice_key', '=', 'ari_guide_2026_v1')]</field>
+        <field name="view_id" ref="view_ari_guide_ack_tree"/>
+        <field name="search_view_id" ref="view_ari_guide_ack_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay confirmaciones registradas aún.
+            </p>
+            <p>
+                Cuando los empleados hagan clic en el enlace de confirmación
+                de la Guía AR-I, su estado aparecerá aquí.
+            </p>
+        </field>
+    </record>
+
+    <!-- ── Reminder server action — appears in ⚙️ Action menu of the list ── -->
+    <record id="action_send_ari_guide_reminders" model="ir.actions.server">
+        <field name="name">📧 Enviar Recordatorio (pendientes)</field>
+        <field name="model_id"
+               ref="ueipab_attendance_report.model_hr_notice_acknowledgment"/>
+        <field name="binding_model_id"
+               ref="ueipab_attendance_report.model_hr_notice_acknowledgment"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+NOTICE_KEY = 'ari_guide_2026_v1'
+SUBJECT    = '⏰ Recordatorio: Lee la Guía del Portal AR-I ISLR — Colegio Andrés Bello'
+FROM_EMAIL = 'Recursos Humanos — Colegio Andrés Bello <recursoshumanos@ueipab.edu.ve>'
+CC_EMAIL   = 'recursoshumanos@ueipab.edu.ve'
+
+web_base   = env['ir.config_parameter'].sudo().get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
+portal_url = web_base + '/my/ari'
+
+# Smart target: form view = this record only; list view = all pending
+if records:
+    pending = records.filtered(lambda r: r.notice_key == NOTICE_KEY and r.state == 'pending')
+else:
+    pending = env['hr.notice.acknowledgment'].sudo().search([
+        ('notice_key', '=', NOTICE_KEY),
+        ('state', '=', 'pending'),
+    ])
+
+if not pending:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'title': '✅ Sin pendientes',
+            'message': 'Todos los empleados ya confirmaron la lectura de la Guía AR-I.',
+            'type': 'success',
+            'sticky': False,
+        },
+    }
+else:
+    mail_vals = []
+    for ack in pending:
+        emp      = ack.employee_id
+        to_email = emp.work_email
+        if not to_email:
+            continue
+        guide_url = web_base + '/ari-guide/' + ack.token
+        emp_name  = emp.name
+        body = f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f4f8;">
+<tr><td align="center" style="padding:28px 12px;">
+<table width="580" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:580px;width:100%;border-radius:14px;overflow:hidden;
+              box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <tr>
+    <td style="background:#0a1628;padding:28px 40px 20px;text-align:center;">
+      <div style="width:60px;height:60px;border-radius:50%;border:2px solid #C8A951;
+                  overflow:hidden;margin:0 auto 12px;">
+        <img src="https://odoo.ueipab.edu.ve/web/image/res.company/1/logo"
+             width="60" height="60" style="display:block;"/>
+      </div>
+      <p style="margin:0 0 4px;font-size:10px;font-weight:700;color:#C8A951;
+                letter-spacing:2px;text-transform:uppercase;">Recursos Humanos — Odoo Portal</p>
+      <p style="margin:0;font-size:22px;font-weight:800;color:#FEFEFE;">⏰ Recordatorio</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#b45309;padding:12px 40px;text-align:center;">
+      <p style="margin:0;font-size:13px;font-weight:700;color:#FEFEFE;">
+        Aún no confirmaste la lectura de la Guía del Portal AR-I ISLR
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#ffffff;padding:28px 40px;">
+      <p style="margin:0 0 14px;font-size:14px;color:#374151;line-height:1.7;">
+        Estimado/a <strong>{emp_name}</strong>,
+      </p>
+      <p style="margin:0 0 14px;font-size:13px;color:#374151;line-height:1.7;">
+        Nuestros registros indican que aún no has confirmado la lectura de la
+        <strong>Guía de Usuario del Portal AR-I ISLR</strong>. Esta confirmación
+        permite que RR.HH. registre que conoces el proceso de declaración digital.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+        <tr>
+          <td style="background:#fef9c3;border-left:4px solid #eab308;
+                     border-radius:0 8px 8px 0;padding:12px 16px;">
+            <p style="margin:0;font-size:12px;color:#713f12;line-height:1.6;">
+              ⚠️ Si no presentas el AR-I correctamente, el Colegio está obligado por ley
+              a aplicarte <strong>la retención máxima de ISLR</strong> en cada quincena.
+            </p>
+          </td>
+        </tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
+        <tr>
+          <td align="center">
+            <a href="{guide_url}"
+               style="display:inline-block;background:#22c55e;color:#ffffff;
+                      text-decoration:none;font-size:15px;font-weight:800;
+                      padding:14px 48px;border-radius:50px;">
+              📖 Leer la Guía AR-I y Confirmar
+            </a>
+          </td>
+        </tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="center">
+            <a href="{portal_url}"
+               style="display:inline-block;background:#0a1628;color:#C8A951;
+                      text-decoration:none;font-size:13px;font-weight:700;
+                      padding:10px 32px;border-radius:50px;">
+              📋 Acceder al Portal AR-I
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#0a1628;padding:18px 40px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#C8A951;">
+        Recursos Humanos · Colegio Andrés Bello
+      </p>
+      <p style="margin:0;font-size:10px;color:#4b6080;">
+        recursoshumanos@ueipab.edu.ve
+      </p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+        mail_vals.append({
+            'subject'   : SUBJECT,
+            'body_html' : body,
+            'email_to'  : to_email,
+            'email_from': FROM_EMAIL,
+            'email_cc'  : CC_EMAIL,
+            'state'     : 'outgoing',
+        })
+
+    sent = 0
+    if mail_vals:
+        env['mail.mail'].sudo().create(mail_vals)
+        cron = env.ref('mail.ir_cron_mail_scheduler_action', raise_if_not_found=False)
+        if cron:
+            cron.sudo().method_direct_trigger()
+        sent = len(mail_vals)
+
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'title'  : '📧 Recordatorios enviados',
+            'message': '%d recordatorio(s) en cola de envío.' % sent,
+            'type'   : 'success',
+            'sticky' : False,
+        },
+    }
+        ]]></field>
+    </record>
+
+    <!-- ── Menu entry under AR-I Portal ── -->
+    <menuitem id="menu_ari_guide_ack"
+              name="Confirmaciones de Guía"
+              parent="menu_ari_root"
+              action="action_ari_guide_ack"
+              sequence="30"
+              groups="hr.group_hr_manager"/>
+
+</odoo>

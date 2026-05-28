@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB AR-I Portal',
-    'version': '17.0.1.2.0',
+    'version': '17.0.1.5.0',
     'category': 'Human Resources/Payroll',
     'summary': 'Employee self-service portal for AR-I tax withholding declarations',
     'description': """
@@ -39,7 +39,8 @@ Update Schedule:
         'hr_contract',
         'portal',
         'mail',
-        'ueipab_hr_contract',  # For ueipab_ari_withholding_rate field
+        'ueipab_hr_contract',        # For ueipab_ari_withholding_rate field
+        'ueipab_attendance_report',  # For hr.notice.acknowledgment (guide ACK tracking)
     ],
     'data': [
         # Security
@@ -55,6 +56,7 @@ Update Schedule:
         'views/hr_contract_views.xml',
         'views/portal_templates.xml',
         'views/portal_menu.xml',
+        'views/ari_guide_ack_views.xml',
 
         # Wizards
         'wizard/ari_wizard_views.xml',

@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-28 (v32)
+**Last Updated:** 2026-05-28 (v33)
 
 ## Core Instructions
 
@@ -80,7 +80,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 ## Module Versions
 
 **Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
-**Last sync verified:** 2026-05-28 (v32) — all modules in sync ✓
+**Last sync verified:** 2026-05-28 (v33) — ueipab_ari_portal testing=1.5.0 / prod=1.2.0 (prod deploy pending); all others in sync ✓
 
 | Module | Version | Notes |
 |--------|---------|-------|
@@ -92,7 +92,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_attendance_report | 17.0.1.6.20 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
-| ueipab_ari_portal | 17.0.1.2.0 | both |
+| ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 
 ---
@@ -152,6 +152,22 @@ See [Docs](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md). Model in `ueipab_atte
 - **Route:** `/notice-ack/<token>` (`auth='public'`); generic keys = one-click ACK; `_WA_FORM_KEYS` (e.g. `glenda_calibracion_v1`) → WA form → POST `/glenda-calibracion/<token>`
 - **ACK button:** stored via **SQL** to bypass ORM sanitizer; CC `recursoshumanos@ueipab.edu.ve` on every send
 - **IDs:** Testing attendance_guide=84, prod=58; calibration template testing=86
+- **`_EMAIL_CONFIRM_KEYS`:** `ari_guide_2026_v1` → sends confirmation email to employee + CC recursoshumanos@ on ACK click
+
+### AR-I Portal Guide Page (v1.5.0)
+
+**Module:** `ueipab_ari_portal` | **Controller:** `controllers/ari_guide.py`
+
+| Route | Auth | Description |
+|-------|------|-------------|
+| `/ari-guide/<token>` | public | Full 6-section guide + ACK button (links to `/notice-ack/<token>`). Shows "ya confirmaste" if already acknowledged. |
+| `/ari-guide/` | public | Generic guide without ACK tracking (for employees with no blast token) |
+
+**Portal banner** (`/my/ari`): injected in `portal_templates.xml` — pending ACK → blue "Ver Guía →" button; acknowledged → green "✅ Guía confirmada · Releer →".
+
+**HR Monitor:** `Employees → AR-I Portal → Confirmaciones de Guía` (action id prod=TBD, testing=969) — filtered `hr.notice.acknowledgment` list for `ari_guide_2026_v1` with ⚙️ Action → "📧 Enviar Recordatorio (pendientes)". Smart: form view sends to that employee only; list view sends to all pending.
+
+**Blast script:** `scripts/create_ari_portal_guide_email.py --env production --bulk` — 43 employees sent 2026-05-28 (RAMON BELLO id=608 excluded — contract termination in progress). `_EXCLUDE_EMP_IDS = {608}`.
 
 ### Freescout REST API (api_key + hybrid pattern)
 

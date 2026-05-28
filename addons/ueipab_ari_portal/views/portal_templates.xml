@@ -10,6 +10,41 @@
                 <t t-set="title">Declaraciones AR-I</t>
             </t>
 
+            <!-- ── AR-I Guide banner ── -->
+            <t t-if="guide_ack and guide_ack.state == 'acknowledged'">
+                <div class="alert d-flex align-items-center gap-2 mb-3"
+                     style="background:#f0fdf4;border:1px solid #22c55e;border-radius:10px;padding:12px 18px;">
+                    <span style="font-size:20px;">✅</span>
+                    <div>
+                        <strong style="color:#15803d;">Guía AR-I confirmada</strong>
+                        <span style="color:#374151;font-size:13px;margin-left:8px;">
+                            Ya confirmaste la lectura de la guía de usuario.
+                        </span>
+                        <a t-att-href="guide_url" style="font-size:12px;color:#15803d;margin-left:8px;">
+                            Releer →
+                        </a>
+                    </div>
+                </div>
+            </t>
+            <t t-elif="not guide_ack or guide_ack.state == 'pending'">
+                <div class="alert d-flex align-items-center gap-2 mb-3"
+                     style="background:#eff6ff;border:1px solid #3b82f6;border-radius:10px;padding:14px 18px;">
+                    <span style="font-size:22px;">📖</span>
+                    <div style="flex:1;">
+                        <strong style="color:#1d4ed8;">¿Primera vez usando el Portal AR-I?</strong>
+                        <span style="color:#374151;font-size:13px;margin-left:6px;">
+                            Lee la guía completa antes de completar tu declaración.
+                        </span>
+                        <a t-att-href="guide_url"
+                           style="display:inline-block;margin-left:10px;background:#1d4ed8;color:#fff;
+                                  text-decoration:none;font-size:12px;font-weight:700;
+                                  padding:5px 14px;border-radius:20px;">
+                            Ver Guía →
+                        </a>
+                    </div>
+                </div>
+            </t>
+
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Mis Declaraciones AR-I</h5>

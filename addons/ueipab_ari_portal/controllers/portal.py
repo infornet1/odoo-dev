@@ -72,6 +72,16 @@ class ARIPortal(CustomerPortal):
         aris = ARI.search(domain, order=order, limit=10,
                           offset=pager['offset'])
 
+        # Guide ACK banner — look up this employee's ari_guide_2026_v1 ACK record
+        guide_ack = request.env['hr.notice.acknowledgment'].sudo().search([
+            ('employee_id', '=', employee.id),
+            ('notice_key', '=', 'ari_guide_2026_v1'),
+        ], limit=1, order='id desc')
+        web_base  = request.env['ir.config_parameter'].sudo().get_param(
+            'web.base.url', '')
+        guide_url = (f"{web_base}/ari-guide/{guide_ack.token}"
+                     if guide_ack else '/ari-guide/')
+
         values = {
             'aris': aris,
             'page_name': 'ari',
@@ -79,6 +89,8 @@ class ARIPortal(CustomerPortal):
             'default_url': '/my/ari',
             'searchbar_sortings': searchbar_sortings,
             'sortby': sortby,
+            'guide_ack': guide_ack,
+            'guide_url': guide_url,
         }
         return request.render('ueipab_ari_portal.portal_my_ari', values)
 
