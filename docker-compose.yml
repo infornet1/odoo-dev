@@ -12,6 +12,8 @@ services:
         ports:
             - "8019:8069"
             - "8020:8072"
+        extra_hosts:
+            - "freescout.ueipab.edu.ve:172.18.0.1"
         depends_on:
             - postgres
     postgres:

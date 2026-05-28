@@ -76,3 +76,4 @@
 | 72 | Glenda Welcome Menu + Budget UX v52 | Production | `ueipab_ai_agent` | 5-option menu; balance gate; A vs B quotation; [Patterns](GLENDA_TECHNICAL_PATTERNS.md) |
 | 73 | Glenda Prior Conversation History | Production | `ueipab_ai_agent` | `_get_prior_conversation_summary()` in `general_inquiry.py`; 1-2 convs (7-day window) |
 | 74 | Freescout Pagos@ Bridge | Production | `ueipab_ai_agent` + scripts | `ai.agent.freescout.task` |
+| 75 | Attendance Correction — "En Revisión" State | Production | `ueipab_attendance_report` v6.20 | Wizard popup (note + attachment) → FS conversation (employee as customer, mailbox 4) → smart button link; re-invite thread resets to pending; CC arcides.arzola@ on open |

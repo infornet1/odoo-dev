@@ -4,6 +4,39 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-28 — Attendance Correction "En Revisión" + Freescout Bridge (`ueipab_attendance_report` v6.20)
+
+### New: `under_revision` state on `hr.attendance.correction`
+
+Full audit/ping-pong workflow between RRHH and the employee via Freescout, without leaving Odoo.
+
+**New fields on `hr.attendance.correction`:**
+- `revision_note` (Text) — RRHH note stored on the record
+- `freescout_conversation_id` (Integer) — links the record to the FS employee-dialogue conversation
+
+**New model: `hr.attendance.revision.wizard` (TransientModel)**
+- Popup with expanding optional note textarea + optional binary attachment
+- Calls `action_set_under_revision(note, attachment_data, attachment_name)`
+
+**New buttons on the correction form:**
+- `🔍 Poner en Revisión` (pending only) → opens wizard → creates FS conversation (mailbox 4, employee as `customer`, unassigned) with yellow-header HTML email including RRHH note block; CC `arcides.arzola@ueipab.edu.ve` automatically
+- `🔄 Re-invitar al Empleado` (under_revision only) → adds second FS thread with blue-header email + form link button; resets state to `pending`
+- `💬 Ver en Freescout` smart button → `ir.actions.act_url` to FS conversation (appears once linked)
+- Approve / Reject both work from `under_revision` state (not only `pending`)
+
+**Controller update (`attendance_fix.py`):**
+Employee re-submitting the form via token now updates the existing `pending`/`under_revision` record in place (preserving `freescout_conversation_id`) instead of creating a new one.
+
+**State machine:** `pending → under_revision → pending (re-invite) → approved/rejected`
+
+**Infrastructure fix (dev only):** Added `extra_hosts: freescout.ueipab.edu.ve:172.18.0.1` to `docker-compose.yml` — the dev container's inherited `/etc/hosts` mapped the domain to `127.0.1.1` (container loopback), blocking outbound API calls. Production container was unaffected (resolves via public DNS).
+
+**Deployment:**
+- Testing: validated full flow (wizard → FS conv #46397 created, re-invite thread added, controller update-not-create confirmed)
+- Production: rsync + `--stop-after-init -u ueipab_attendance_report` + container restart
+
+---
+
 ## 2026-05-27 — Env Sync: ueipab_attendance_report 6.18 on Testing
 
 `ueipab_attendance_report` was at 17.0.1.6.17 on testing vs 17.0.1.6.18 on production.

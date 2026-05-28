@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-27 (v29)
+**Last Updated:** 2026-05-28 (v30)
 
 ## Core Instructions
 
@@ -80,7 +80,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 ## Module Versions
 
 **Odoo base:** `odoo:17.0` build `17.0-20260504` (commit `d66bb0d7`) — both envs as of 2026-05-10.
-**Last sync verified:** 2026-05-27 — all modules in sync ✓
+**Last sync verified:** 2026-05-28 — all modules in sync ✓
 
 | Module | Version | Notes |
 |--------|---------|-------|
@@ -89,7 +89,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.19 | both |
-| ueipab_attendance_report | 17.0.1.6.18 | both |
+| ueipab_attendance_report | 17.0.1.6.20 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.1.0 | both |

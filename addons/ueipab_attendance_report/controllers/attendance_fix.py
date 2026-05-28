@@ -278,29 +278,33 @@ class AttendanceCorrectionController(http.Controller):
 
         correction_date = date_cls.fromisoformat(date_str)
 
-        # Guard: duplicate pending
+        # Update existing record (pending or under_revision) rather than creating a new one.
+        # under_revision means RRHH re-invited the employee — we update in place and reset to pending.
         existing = request.env['hr.attendance.correction'].sudo().search([
             ('employee_id', '=', employee.id),
             ('date', '=', correction_date),
-            ('state', '=', 'pending'),
+            ('state', 'in', ('pending', 'under_revision')),
         ], limit=1)
-        if existing:
-            return _page('Ya enviada', f"""
-              <div class="hdr"><h1>&#8987; Solicitud ya enviada</h1>
-                <p>{employee.name}</p></div>
-              <div class="body"><p>Ya existe una solicitud pendiente para el
-              <strong>{correction_date.strftime('%d/%m/%Y')}</strong>.<br/>
-              Recursos Humanos la revisar&#225; en breve.</p></div>""")
 
-        correction = request.env['hr.attendance.correction'].sudo().create({
-            'employee_id':          employee.id,
-            'attendance_report_id': report.id,
-            'date':                 correction_date,
-            'check_in_time':        check_in,
-            'check_out_time':       check_out or False,
-            'reason':               reason,
-            'submitted_ip':         ip or False,
-        })
+        if existing:
+            existing.sudo().write({
+                'check_in_time':  check_in,
+                'check_out_time': check_out or False,
+                'reason':         reason,
+                'submitted_ip':   ip or False,
+                'state':          'pending',
+            })
+            correction = existing
+        else:
+            correction = request.env['hr.attendance.correction'].sudo().create({
+                'employee_id':          employee.id,
+                'attendance_report_id': report.id,
+                'date':                 correction_date,
+                'check_in_time':        check_in,
+                'check_out_time':       check_out or False,
+                'reason':               reason,
+                'submitted_ip':         ip or False,
+            })
 
         # Save attachment if provided — linked via Many2many for inline display
         if att_ok:

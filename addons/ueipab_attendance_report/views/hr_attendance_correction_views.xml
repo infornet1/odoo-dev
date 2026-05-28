@@ -8,6 +8,7 @@
         <field name="arch" type="xml">
             <tree string="Solicitudes de Corrección"
                   decoration-warning="state == 'pending'"
+                  decoration-info="state == 'under_revision'"
                   decoration-success="state == 'approved'"
                   decoration-danger="state == 'rejected'">
                 <field name="create_date" string="Enviada"/>
@@ -18,6 +19,7 @@
                 <field name="reason" string="Motivo"/>
                 <field name="state" widget="badge"
                        decoration-warning="state == 'pending'"
+                       decoration-info="state == 'under_revision'"
                        decoration-success="state == 'approved'"
                        decoration-danger="state == 'rejected'"/>
                 <field name="reviewed_by" string="Revisado por"/>
@@ -32,22 +34,45 @@
         <field name="arch" type="xml">
             <form string="Solicitud de Corrección">
                 <header>
+                    <button string="🔍  Poner en Revisión"
+                            name="action_open_revision_wizard" type="object"
+                            class="btn-warning"
+                            invisible="state != 'pending'"/>
+                    <button string="🔄  Re-invitar al Empleado"
+                            name="action_reinvite" type="object"
+                            class="btn-secondary"
+                            invisible="state != 'under_revision'"/>
                     <button string="✅  Aprobar"
                             name="action_approve" type="object"
                             class="btn-success"
-                            invisible="state != 'pending'"/>
+                            invisible="state not in ('pending', 'under_revision')"/>
                     <button string="❌  Rechazar"
                             name="action_reject" type="object"
                             class="btn-danger"
-                            invisible="state != 'pending'"/>
+                            invisible="state not in ('pending', 'under_revision')"/>
                     <button string="📧  Reenviar Reporte al Empleado"
                             name="action_resend_report" type="object"
                             class="btn-secondary"
                             invisible="state != 'approved' or not attendance_report_id"/>
                     <field name="state" widget="statusbar"
-                           statusbar_visible="pending,approved,rejected"/>
+                           statusbar_visible="pending,under_revision,approved,rejected"/>
                 </header>
                 <sheet>
+                    <field name="freescout_conversation_id" invisible="1"/>
+
+                    <!-- Freescout smart button -->
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object"
+                                name="action_open_freescout"
+                                invisible="not freescout_conversation_id"
+                                icon="fa-comments"
+                                class="oe_stat_button">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Ver en Freescout</span>
+                            </div>
+                        </button>
+                    </div>
+
                     <group>
                         <group string="Empleado">
                             <field name="employee_id" readonly="state != 'pending'"/>
@@ -55,17 +80,27 @@
                             <field name="date" readonly="1"/>
                         </group>
                         <group string="Horario solicitado">
-                            <field name="check_in_time" readonly="state != 'pending'"/>
-                            <field name="check_out_time" readonly="state != 'pending'"/>
+                            <field name="check_in_time"
+                                   readonly="state not in ('pending', 'under_revision')"/>
+                            <field name="check_out_time"
+                                   readonly="state not in ('pending', 'under_revision')"/>
                             <field name="created_attendance_id"
                                    invisible="not created_attendance_id"/>
                         </group>
                     </group>
-                    <separator string="Motivo de la incidencia"/>
+                    <separator string="Motivo del empleado"/>
                     <field name="reason" nolabel="1" readonly="1"/>
+
+                    <separator string="Nota de revisión"
+                               invisible="not revision_note"/>
+                    <field name="revision_note" nolabel="1" readonly="1"
+                           invisible="not revision_note"/>
+
                     <separator string="Documentos adjuntos"/>
                     <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
-                    <group string="Resultado de la revisión" invisible="state == 'pending'">
+
+                    <group string="Resultado de la revisión"
+                           invisible="state in ('pending', 'under_revision')">
                         <field name="reviewed_by" readonly="1"/>
                         <field name="reviewed_date" readonly="1"/>
                         <field name="rejection_reason"
@@ -84,11 +119,13 @@
         <field name="arch" type="xml">
             <search>
                 <field name="employee_id"/>
-                <filter name="state_pending"  string="Pendientes"
+                <filter name="state_pending"        string="Pendientes"
                         domain="[('state','=','pending')]"/>
-                <filter name="state_approved" string="Aprobadas"
+                <filter name="state_under_revision" string="En Revisión"
+                        domain="[('state','=','under_revision')]"/>
+                <filter name="state_approved"       string="Aprobadas"
                         domain="[('state','=','approved')]"/>
-                <filter name="state_rejected" string="Rechazadas"
+                <filter name="state_rejected"       string="Rechazadas"
                         domain="[('state','=','rejected')]"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_employee" string="Empleado"
