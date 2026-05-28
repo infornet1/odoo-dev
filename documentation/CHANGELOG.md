@@ -4,6 +4,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-28 — Guía de Inglés price update: $35 (hasta 31 jul) / $40 (desde 1 ago)
+
+Updated Glenda's annual costs knowledge base to reflect new two-tier pricing for the Guía de Inglés:
+- **Hasta el 31 jul 2026:** $35/alumno → total costos anuales **$111,58/alumno**
+- **Desde el 1 ago 2026:** $40/alumno → total costos anuales **$116,58/alumno**
+
+**Files changed:**
+- `addons/ueipab_ai_agent/skills/general_inquiry.py` — 6 locations (static prompts + dynamic billing enrichment function made date-aware)
+- `addons/ueipab_ai_agent/models/mail_bot_glenda.py` — OdooBot/Discuss channel prompt
+- `documentation/AI_AGENT_MODULE.md`, `GLENDA_TECHNICAL_PATTERNS.md`, `GLENDA_AI_AGENT_OVERVIEW.md`, `CLAUDE.md` — docs updated
+
+---
+
 ## 2026-05-28 — Audit: NIDYA LIRA Correction Request — "Kiosk Down" Claim Denied
 
 **Employee:** NIDYA LIRA | **Correction date claimed:** 2026-05-26 | **Claimed check-in:** 06:40 VET

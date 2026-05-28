@@ -41,7 +41,7 @@ _BUDGET_KNOWLEDGE = (
     "\n"
     "COSTOS ÚNICOS ANUALES POR ALUMNO (pagaderos durante inscripción):\n"
     "- Seguro escolar: $30,58\n"
-    "- Guía de inglés: $25,00\n"
+    "- Guía de inglés: $35,00 (hasta el 31 jul 2026) | $40,00 (desde el 1 ago 2026)\n"
     "- Olimpiadas recreativas de Lengua y Matemáticas: $10,00\n"
     "- Enciclopedia digital Edugogo: $36,00 (aplica a TODOS los niveles: Inicial, Primaria y Bachillerato)\n"
     "- Modelo de Naciones Unidas Bachillerato: $5,00\n"
@@ -170,10 +170,10 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- Estas tarifas son oficiales (Opción A aprobada en consulta 26/05/2026). Para casos particulares, orientar a pagos@ueipab.edu.ve\n"
     "COSTOS ANUALES ÚNICOS (pago único por año escolar, sin descuento, por alumno — se suscriben mediante acuerdo especial de mayo a julio 2026):\n"
     "    Seguro Escolar: $30,58\n"
-    "    Guía de Inglés: $25\n"
+    "    Guía de Inglés: $35 (hasta el 31 jul 2026) | $40 (desde el 1 ago 2026)\n"
     "    Olimpiadas Recreativas de Lengua y Matemáticas: $10\n"
     "    Enciclopedia (Inicial, Primaria o Bachillerato): $36 (aplica a TODOS los niveles)\n"
-    "    Total costos anuales por alumno: $101,58\n"
+    "    Total costos anuales por alumno: $111,58 (hasta el 31 jul 2026) | $116,58 (desde el 1 ago 2026)\n"
     "ACLARACIÓN — COSTOS ANUALES OPCIONALES (talleres y actividades extracurriculares):\n"
     "- Los costos de Modelo de Naciones Unidas, talleres, etc. se pagan mediante acuerdo anual\n"
     "  al INICIO del año escolar (mayo–julio). La participación ocurre durante TODO el año.\n"
@@ -221,7 +221,7 @@ _INSTITUTIONAL_KNOWLEDGE = (
     "- No existen excepciones generales. Solo revisión caso a caso vía correo electrónico a pagos@ueipab.edu.ve.\n"
     "TARIFAS CONFIRMADAS 2026-2027 (Opción A aprobada 26/05/2026):\n"
     "- Nueva mensualidad base desde septiembre 2026: $218,88 (antes de descuentos por hermanos). Ver tabla de descuentos.\n"
-    "- Costos anuales obligatorios (NO incluidos en la mensualidad): seguro escolar ($30,58), guía de inglés ($25), olimpiadas ($10) y enciclopedia de su nivel ($36) — se pagan mediante acuerdo especial de mayo a julio, total $101,58 por alumno.\n"
+    "- Costos anuales obligatorios (NO incluidos en la mensualidad): seguro escolar ($30,58), guía de inglés ($35 hasta el 31 jul / $40 desde el 1 ago), olimpiadas ($10) y enciclopedia de su nivel ($36) — total $111,58/alumno (hasta el 31 jul 2026) o $116,58/alumno (desde el 1 ago 2026).\n"
     "- Costos opcionales/condicionales (no incluir en cotización estándar): concursos nacionales (robótica, química, Kurios, MOA, etc.) y eventos externos — se pagan según selección o participación del alumno.\n"
     "ALIANZAS COMERCIALES LOCALES (El Tigre):\n"
     "- Almacenes París, Comercial Caracas y Ferretería Veramar ofrecen descuentos especiales en uniformes y útiles escolares a representantes del colegio.\n"
@@ -462,8 +462,9 @@ class GeneralInquirySkill:
         next_month = today.month + 1 if today.month < 12 else 1
         remaining = [m for m in range(next_month, _SCHOOL_YEAR_END_MONTH + 1)]
         forecast_block = ''
-        # One-time annual costs 2026-2027 per student
-        _ANNUAL_COST_PER_STUDENT = 101.58   # seguro $30.58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36
+        # One-time annual costs 2026-2027 per student (guía inglés $35 until Jul 31, $40 from Aug 1)
+        _GUIDE_INGLES = 35.0 if today < _date(2026, 8, 1) else 40.0
+        _ANNUAL_COST_PER_STUDENT = round(30.58 + _GUIDE_INGLES + 10.0 + 36.0, 2)
         annual_total = _ANNUAL_COST_PER_STUDENT * quantity
 
         if remaining:
@@ -478,8 +479,8 @@ class GeneralInquirySkill:
                 f"    Total pronto pago: {n} × ${monthly * 0.95:,.2f} = ${total_pp:,.2f}\n"
                 f"    (Pronto pago = pagar en los primeros 10 días de cada mes)\n"
                 f"  COSTOS ÚNICOS 2026-2027 (acuerdo especial, por alumno):\n"
-                f"    {quantity} alumno(s) × $101,58 = ${annual_total:,.2f}\n"
-                f"    (seguro $30,58 + guía inglés $25 + olimpiadas $10 + enciclopedia $36)\n"
+                f"    {quantity} alumno(s) × ${_ANNUAL_COST_PER_STUDENT:,.2f} = ${annual_total:,.2f}\n"
+                f"    (seguro $30,58 + guía inglés ${_GUIDE_INGLES:,.2f} + olimpiadas $10 + enciclopedia $36)\n"
                 f"  USA ESTOS DATOS para responder sin preguntar al representante. ──\n"
             )
 
@@ -1082,8 +1083,8 @@ class GeneralInquirySkill:
             "  2 alumnos (-8%): A=$201,37  |  B=$217,65\n"
             "  3+ (-11%):       A=$194,80  |  B=$210,55\n"
             "INSCRIPCION ANTICIPADA (igual A y B, hasta 31 jul 2026): $187,51/alumno\n"
-            "COSTOS ANUALES (igual A y B): $101,58/alumno\n"
-            "  (seguro $30,58 + guia ingles $25 + olimpiadas $10 + enciclopedia $36)\n"
+            "COSTOS ANUALES (igual A y B): $111,58/alumno (hasta 31 jul 2026) | $116,58/alumno (desde 1 ago 2026)\n"
+            "  (seguro $30,58 + guia ingles $35 hasta 31jul/$40 desde 1ago + olimpiadas $10 + enciclopedia $36)\n"
             "NOTA OBLIGATORIA AL FINAL: 'Las tarifas definitivas se confirman tras el escrutinio del 26/05/2026.'\n"
             "---\n"
             "- Si menciona mas de 1 hijo: prepara cotizacion multi-alumno con AMBAS opciones y descuentos hermanos.\n"
@@ -1149,7 +1150,8 @@ class GeneralInquirySkill:
             "- Pregunta de mensualidad / precio / tarifa → maximo 5 lineas, estructura OBLIGATORIA:\n"
             "  (1) Opciones A ($218,88) y B ($236,58) con pronto pago\n"
             "  (2) Promo inscripcion: $187,51 hasta 31 jul 2026 — SIEMPRE incluir aunque no pregunte\n"
-            "  (3) Costos anuales: $101,58/alumno (seguro $30,58 + ingles $25 + olimpiadas $10 + enciclopedia $36) — SIEMPRE incluir\n"
+            "  (3) Costos anuales: $111,58/alumno (hasta 31 jul) / $116,58 (desde 1 ago) — SIEMPRE incluir\n"
+            "      (seguro $30,58 + ingles $35 hasta 31jul/$40 desde 1ago + olimpiadas $10 + enciclopedia $36)\n"
             "  (4) Pregunta de cierre: cuantos hijos o si necesita cotizacion personalizada\n"
             "- Dificultad economica / queja → 3-4 lineas, calidas, sin enumerar pasos\n"
             "- Despedida → 1 linea, nada mas\n"

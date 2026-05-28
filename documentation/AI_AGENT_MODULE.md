@@ -240,7 +240,7 @@ Added `PROGRAMA ACADÉMICO — BACHILLERATO` + `ACLARACIÓN BACHILLERATO INTERNA
 - **2025-2026 vigente (hasta 31 ago):** Inscripción $197,38 · Mensualidad $197,38 (regular) · Pronto pago $162,39 (10 primeros días)
 - **Promoción inscripción anticipada 2026-2027 (hasta 31 jul):** Inscripción $187,51 · Mensualidad septiembre $197,38 · Mensualidades adicionales prepagables a $197,38 c/u con descuentos hermanos · Requisito: 2025-2026 completamente saldado
 - **Nueva mensualidad base desde 1 sep 2026 (preliminar):** $218,88 (antes de descuentos hermanos)
-- **Costos anuales únicos** (acuerdo especial may-jul): Seguro $30,58 · Guía inglés $25 · Olimpiadas $10 · Enciclopedia $36 (todos los niveles) = **$101,58/alumno**
+- **Costos anuales únicos** (acuerdo especial may-jul): Seguro $30,58 · Guía inglés $35 (hasta 31 jul 2026) / $40 (desde 1 ago 2026) · Olimpiadas $10 · Enciclopedia $36 (todos los niveles) = **$111,58/alumno** (hasta 31 jul) | **$116,58/alumno** (desde 1 ago)
 - **Descuentos hermanos:** 1° 5% · 2° 8% · 3°+ 11% sobre mensualidad · Pronto pago: 5% adicional sobre mensualidad ya descontada (10 primeros días)
 - **Tabla sep 2026:** 1° $207,94 (PP $197,54) · 2° $201,37 (PP $191,30) · 3°+ $194,80 (PP $185,06)
 - **Response priority (v17.0.1.40.3):** Always lead with promotion anticipada ($187,51 inscripción + $197,38 sep) before Sep base rate; always mention Cashea as payment option

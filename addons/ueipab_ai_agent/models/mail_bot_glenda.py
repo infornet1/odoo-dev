@@ -73,7 +73,7 @@ class MailBotGlenda(models.AbstractModel):
             "3. Menciona siempre Cashea como opcion de pago disponible "
             "(el representante debe confirmar el enlace con pagos@ueipab.edu.ve antes de pagar).\n"
             "4. Si preguntan por cuantos hijos o quieren cotizacion: incluye inscripcion promo "
-            "$187,51/alumno + costos anuales $101,58/alumno + mensualidad con descuentos hermanos.\n\n"
+            "$187,51/alumno + costos anuales $111,58/alumno (hasta 31 jul) o $116,58 (desde 1 ago) + mensualidad con descuentos hermanos.\n\n"
             + _INSTITUTIONAL_KNOWLEDGE
         )
 

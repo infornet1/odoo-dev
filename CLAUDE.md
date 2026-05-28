@@ -193,7 +193,7 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 ### Glenda Family Billing Enrichment (Feature #69)
 
-**Cache:** `school.family_billing_json` (199 families); `scripts/sync_family_billing.py --live` — cron 07:30 VET. Lookup: phone → fuzzy student name. Injected block includes monthly, discount, forecast, annual costs (qty × $101.58 = seguro $30.58 + inglés $25 + olimpiadas $10 + enciclopedia $36).
+**Cache:** `school.family_billing_json` (199 families); `scripts/sync_family_billing.py --live` — cron 07:30 VET. Lookup: phone → fuzzy student name. Injected block includes monthly, discount, forecast, annual costs (qty × $111.58 hasta 31 jul / $116.58 desde 1 ago = seguro $30.58 + inglés $35/$40 + olimpiadas $10 + enciclopedia $36).
 
 **Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical.
 
