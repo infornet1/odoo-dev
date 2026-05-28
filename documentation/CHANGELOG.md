@@ -4,6 +4,30 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-28 — Audit: NIDYA LIRA Correction Request — "Kiosk Down" Claim Denied
+
+**Employee:** NIDYA LIRA | **Correction date claimed:** 2026-05-26 | **Claimed check-in:** 06:40 VET
+**Reason given:** "Ingrese al sistema por mi dispositivo ya que el kiosco a esta hora estaba caída la plataforma."
+
+**Audit result: Claim not supported by evidence. Case put under revision.**
+
+Queried `hr.attendance` for May 26, 06:00–09:00 VET. Found **38 successful registrations** with zero kiosk complaints:
+
+| Window | Evidence |
+|--------|----------|
+| 06:17 | ZARETH FARIAS — kiosk operational |
+| 06:30–06:33 | GLADYS BRITO, Maria Figuera, ANDRES MORALES — kiosk operational 1m54s before claimed outage |
+| **06:35–06:40** | **Zero registrations from any employee** — claimed outage window |
+| 06:53–06:59 | MAIRELSY MOTTA, MARIA NIETO, NORKA LA ROSA + 6 others — kiosk operational 13 min after claimed outage |
+
+No evidence of a kiosk outage. Kiosk was functional at 06:33 and again at 06:53. No other employee reported issues.
+
+**Action taken:** Case set to `under_revision` via Freescout bridge. Note sent to employee:
+> "Estimada Nidya, su solicitud de corrección se encuentra en revisión. Tras revisar los registros de video y contrastar con los registros de otros empleados, hemos detectado posibles inconsistencias con la información suministrada. La invitamos cordialmente a conversar con el director sobre este caso."
+CC: arcides.arzola@ueipab.edu.ve (School Director)
+
+---
+
 ## 2026-05-28 — Attendance Correction "En Revisión" + Freescout Bridge (`ueipab_attendance_report` v6.20)
 
 ### New: `under_revision` state on `hr.attendance.correction`
