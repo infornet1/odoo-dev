@@ -47,10 +47,11 @@ class HrEmployeeARI(models.Model):
         related='employee_id.company_id',
         store=True
     )
-    fiscal_year = fields.Integer(
+    fiscal_year = fields.Char(
         string='Fiscal Year',
+        size=4,
         required=True,
-        default=lambda self: fields.Date.today().year,
+        default=lambda self: str(fields.Date.today().year),
         tracking=True
     )
     submission_date = fields.Date(
@@ -507,7 +508,7 @@ class HrEmployeeARI(models.Model):
         for rec in self:
             if rec.variation_month and rec.fiscal_year:
                 month, day = deadlines.get(rec.variation_month, (1, 15))
-                rec.next_deadline = date(rec.fiscal_year, month, day)
+                rec.next_deadline = date(int(rec.fiscal_year), month, day)
             else:
                 rec.next_deadline = False
 
@@ -728,7 +729,7 @@ class HrEmployeeARI(models.Model):
             # Check if employee has approved AR-I for this period
             existing = self.search([
                 ('employee_id', '=', employee.id),
-                ('fiscal_year', '=', fiscal_year),
+                ('fiscal_year', '=', str(fiscal_year)),
                 ('variation_month', '=', period),
                 ('state', '=', 'approved')
             ], limit=1)
@@ -738,7 +739,7 @@ class HrEmployeeARI(models.Model):
                 # or use the latest draft/rejected one
                 latest = self.search([
                     ('employee_id', '=', employee.id),
-                    ('fiscal_year', '=', fiscal_year)
+                    ('fiscal_year', '=', str(fiscal_year))
                 ], order='create_date desc', limit=1)
 
                 if latest:
@@ -751,7 +752,7 @@ class HrEmployeeARI(models.Model):
     def _check_fiscal_year(self):
         current_year = fields.Date.today().year
         for rec in self:
-            if rec.fiscal_year < current_year - 1 or rec.fiscal_year > current_year:
+            if not rec.fiscal_year or int(rec.fiscal_year) < current_year - 1 or int(rec.fiscal_year) > current_year:
                 raise ValidationError(_(
                     'El año gravable debe ser el año en curso o el año anterior.'
                 ))
