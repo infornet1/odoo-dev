@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-29 — Infrastructure Audit
+
+Full cron/service audit triggered by the BCV rate gap incident. Findings:
+
+**Healthy (all running as expected):** `absence_processor`, `leave_notification`, `attendance_daily_alert`, `dmarc_processor`, `glenda_supervisor`, `pagos_receipt_processor`, `wa_invoice_reminder_poller`, `sync_customers_sheet`, `sync_family_billing`, `sync_google_directory`, `sync_bcv_odoo`, BCV scraper root crontab, Freescout PHP scheduler.
+
+**`hr_leave_attendance_digest`** — No log yet; script works correctly. Feature was installed after the last 12:00 UTC cron slot — first run pending (next weekday 12:00 UTC).
+
+**`voting_digest` cron — EXPIRED.** Day-of-month constraint `19,20,21,22,23,24,25,26` in May means the cron will never fire again. Budget vote closed 2026-05-26. Pending removal of `/etc/cron.d/voting_digest`.
+
+**`wa_primary_relay`** — Running every 5 min in intentional DRY_RUN (no `--live` flag). Disabled 2026-05-23 per CLAUDE.md. 288 no-op executions/day. Will stay disabled until WA primary +584148321989 is restored by Massiva.
+
+---
+
 ## 2026-05-29 — BCV Exchange Rate Gap — Root Cause + Backfill + Cron Restore
 
 **Problem:** `res.currency.rate` in production (and testing) had no VEB rates from 2026-05-20 to 2026-05-27. Reports (Relación de Liquidación, etc.) were using the stale May 19 rate (517.9619) instead of the current BCV rate (544.5794).

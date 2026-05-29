@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-28 (v33)
+**Last Updated:** 2026-05-29 (v34)
 
 ## Core Instructions
 
@@ -501,6 +501,8 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 **PENDING — External / Infrastructure:**
 - **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
 - **Glenda WA paused (2026-05-22)** — `ai_agent.dry_run=True`; poll cron skips, Telegram stays active. Restore: set `ai_agent.dry_run=False` in prod `ir.config_parameter`.
+- **`/etc/cron.d/voting_digest` expired** — day-of-month `19-26` in May; will never fire again. Safe to `rm`. Budget vote closed 2026-05-26.
+- **`/etc/cron.d/wa_primary_relay`** — fires every 5 min in DRY_RUN (no `--live`). Intentional until WA primary is restored. Remove or re-add `--live` once Massiva fixes primary account.
 
 **PENDING — Refactor:**
 - **`partner.communication.ack` misplaced in `ueipab_attendance_report`** — belongs in `ueipab_ai_agent`/`ueipab_campaigns`. Requires DB migration. Low urgency — zero functional impact. See [ACK_FORM_UX_IMPROVEMENTS.md](documentation/ACK_FORM_UX_IMPROVEMENTS.md).
