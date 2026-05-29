@@ -69,6 +69,15 @@ See [documentation/FEATURES.md](documentation/FEATURES.md) for the full feature 
 
 **Interest Calculation:** Always uses accrual method (ignores override)
 
+**⚠️ Two BCV sync mechanisms — do NOT conflate them:**
+
+| Cron | Script | Destination | Purpose |
+|------|--------|-------------|---------|
+| `/etc/cron.d/sync_bcv_odoo` (every 30 min) | `sync_bcv_to_odoo.py` | `ir.config_parameter` → `ai_agent.bcv_rate_context` | Glenda AI answers BCV queries |
+| `/etc/cron.d/bcv_odoo_currency_sync` (06:00 VET weekdays) | `curl POST /odoo_api_bridge/sync_currency_rate` | `res.currency.rate` | Reports, payroll, accounting |
+
+These are independent — updating one does NOT update the other. On 2026-05-19 the second cron was mistakenly removed (deemed "duplicate"), causing a 10-day gap in `res.currency.rate` (May 20–28). Restored + backfilled 2026-05-29.
+
 ---
 
 ## Payslip Batch Features

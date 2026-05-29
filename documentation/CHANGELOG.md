@@ -4,6 +4,29 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-29 — BCV Exchange Rate Gap — Root Cause + Backfill + Cron Restore
+
+**Problem:** `res.currency.rate` in production (and testing) had no VEB rates from 2026-05-20 to 2026-05-27. Reports (Relación de Liquidación, etc.) were using the stale May 19 rate (517.9619) instead of the current BCV rate (544.5794).
+
+**Root cause:** Commit `d7c323c` in `odoo_api_bridge` (2026-05-19) removed a root-crontab entry that called `POST /odoo_api_bridge/sync_currency_rate` daily. It was labelled "duplicate" of `/etc/cron.d/sync_bcv_odoo` — but those two jobs update completely different destinations:
+- `sync_bcv_odoo` → `ir.config_parameter` `ai_agent.bcv_rate_context` (Glenda AI only)
+- `sync_currency_rate` → `res.currency.rate` (reports, payroll, accounting)
+
+**Fix applied 2026-05-29:**
+1. **Rate restored:** Called `sync_currency_rate` endpoint manually → 544.5794 written for 2026-05-28 (both envs)
+2. **Gap backfilled:** 6 missing weekday rates written directly via XML-RPC to both prod + testing from MySQL source:
+   - 2026-05-20: 520.9142 · 2026-05-21: 523.6750 · 2026-05-22: 526.8694
+   - 2026-05-25: 530.5047 · 2026-05-26: 535.3853 · 2026-05-27: 540.0431
+3. **Cron restored:** `/etc/cron.d/bcv_odoo_currency_sync` installed (weekdays 10:00 UTC = 06:00 VET) with an explicit comment distinguishing it from `sync_bcv_odoo` to prevent future removal.
+
+---
+
+## 2026-05-29 — Finiquito Report Added to Payroll Reports Menu (v70.3)
+
+`Acuerdo Finiquito Laboral` was missing from Payroll → Reports sidebar. The wizard action existed and was bound to the payslip list (⚙️ Action dropdown) but had no `menuitem` in `payroll_reports_menu.xml`. Added at sequence=14 between Comprobante de Pago and Prestaciones Soc. Intereses. Deployed to both environments.
+
+---
+
 ## 2026-05-28 — Ajuste Guías de Inglés — Email Blast to Parents
 
 Sent official communication about the English guide cost adjustment for 2026-2027 to all ACTIVE/PIPELINE families.
