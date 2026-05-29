@@ -353,7 +353,7 @@ See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full d
 ## Dev Server Configuration
 
 **Host:** `freescout.ueipab.edu.ve` | RAM: 3.8 GB | Swap: 2 GB | Disk: 48 GB
-**NTP:** Both droplets use `169.254.169.123` (DigitalOcean metadata, link-local) — UDP 123 outbound is blocked; external NTP servers time out. Config: `/etc/systemd/timesyncd.conf.d/ntp.conf`. Applied 2026-05-29.
+**NTP:** Both droplets sync to `time.cloudflare.com` (fallback: `ntp.ubuntu.com`). Config: `/etc/systemd/timesyncd.conf.d/ntp.conf`. `System clock synchronized: yes` confirmed 2026-05-29. **Root cause of prior failure:** outbound UDP 123 was missing from the DO cloud firewall outbound rules — fixed by adding `udp 123 → 0.0.0.0/0` outbound rule to `ueipab-fw` firewall. Inbound UDP 123 rule also present (allows external NTP servers to query the droplet if needed).
 
 | Setting | Value | File |
 |---------|-------|------|

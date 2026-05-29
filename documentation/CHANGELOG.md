@@ -6,16 +6,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ## 2026-05-29 — NTP Fix (both DigitalOcean droplets)
 
-Both servers (`freescout.ueipab.edu.ve` dev + `10.124.0.3` prod) had `NTPSynchronized=no` since initial provisioning. UDP port 123 is blocked outbound on both droplets (external NTP servers — Cloudflare, Ubuntu — all timed out). Fixed by pointing `systemd-timesyncd` to DigitalOcean's link-local metadata NTP server `169.254.169.123`, which is reachable without external firewall traversal.
+Both servers (`freescout.ueipab.edu.ve` dev + `10.124.0.3` prod) had `NTPSynchronized=no` since initial provisioning. `System clock synchronized: yes` confirmed on both after fix.
+
+**Root cause:** the DO cloud firewall (`ueipab-fw`) had no outbound UDP 123 rule. NTP packets left the VM's eth0 (visible in tcpdump) but were silently dropped by the hypervisor firewall before reaching the internet. Inbound rules were never the blocker. Fix: added `outbound udp 123 → 0.0.0.0/0` via DO API.
 
 Config written to `/etc/systemd/timesyncd.conf.d/ntp.conf` on both servers:
 ```
 [Time]
-NTP=169.254.169.123
-FallbackNTP=time.cloudflare.com
+NTP=time.cloudflare.com
+FallbackNTP=ntp.ubuntu.com
 ```
 
-Applied 2026-05-29. Kiosk attendance timestamps (server-side UTC) will now be accurate. Prior drift was ~46s on production, ~14s on dev.
+Prior drift: ~46s on production, ~14s on dev. Kiosk attendance timestamps (server-side UTC) are now accurate.
 
 ---
 
