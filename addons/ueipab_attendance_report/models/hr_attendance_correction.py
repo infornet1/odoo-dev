@@ -366,15 +366,31 @@ class HrAttendanceCorrection(models.Model):
             'success',
         )
 
-    def action_reject(self):
+    def action_open_rejection_wizard(self):
         self.ensure_one()
         if self.state not in ('pending', 'under_revision'):
             raise UserError(_("Solo se pueden rechazar solicitudes pendientes o en revisión."))
-        self.write({
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Rechazar solicitud'),
+            'res_model': 'hr.attendance.rejection.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_correction_id': self.id},
+        }
+
+    def action_reject(self, reason=None):
+        self.ensure_one()
+        if self.state not in ('pending', 'under_revision'):
+            raise UserError(_("Solo se pueden rechazar solicitudes pendientes o en revisión."))
+        vals = {
             'state': 'rejected',
             'reviewed_by': self.env.user.id,
             'reviewed_date': fields.Datetime.now(),
-        })
+        }
+        if reason:
+            vals['rejection_reason'] = reason.strip()
+        self.write(vals)
         tmpl = self.env.ref(
             'ueipab_attendance_report.email_template_correction_rejected',
             raise_if_not_found=False,

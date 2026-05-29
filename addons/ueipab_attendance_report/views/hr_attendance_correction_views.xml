@@ -47,7 +47,7 @@
                             class="btn-success"
                             invisible="state not in ('pending', 'under_revision')"/>
                     <button string="❌  Rechazar"
-                            name="action_reject" type="object"
+                            name="action_open_rejection_wizard" type="object"
                             class="btn-danger"
                             invisible="state not in ('pending', 'under_revision')"/>
                     <button string="📧  Reenviar Reporte al Empleado"
@@ -105,7 +105,7 @@
                         <field name="reviewed_date" readonly="1"/>
                         <field name="rejection_reason"
                                invisible="state != 'rejected'"
-                               placeholder="Ingrese el motivo de rechazo antes de hacer clic en Rechazar…"/>
+                               readonly="1"/>
                     </group>
                 </sheet>
             </form>

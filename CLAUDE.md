@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-29 (v34)
+**Last Updated:** 2026-05-29 (v35)
 
 ## Core Instructions
 
@@ -98,7 +98,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.19 | both |
-| ueipab_attendance_report | 17.0.1.6.20 | both |
+| ueipab_attendance_report | 17.0.1.6.21 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.5.0 | both |
@@ -280,6 +280,10 @@ Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 **Correction button:** `get_fix_url_for_employee(emp_id, date)` looks up matching `hr.attendance.report` (state=sent/draft) → injects "📝 Solicitar Corrección" link to `/attendance-fix/<token>`. Falls back to plain card if no report. CC `recursoshumanos@` via `email_cc`.
 
 **Leave cross-check (Feature #78):** Morning mode fetches `hr.leave` for yesterday via `get_leaves_for_date()`. If an employee has a matching leave, `_format_leave_context_html()` injects a colored context block into the alert email: green (✅ `validate`) or yellow (⏳ `confirm`/`validate1`). Attendance flag is still raised — context block adds clarity, not suppression.
+
+### Attendance Correction Rejection Wizard (v6.21)
+
+Clicking **❌ Rechazar** on `hr.attendance.correction` opens `hr.attendance.rejection.wizard` — same pattern as the revision wizard. Manager types an optional reason → `action_reject(reason=...)` writes it before firing the email → employee receives the red "Observación de RRHH" block if reason was provided. `rejection_reason` on the form is `readonly=1` (audit only; set exclusively via wizard).
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 

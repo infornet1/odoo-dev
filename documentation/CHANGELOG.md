@@ -4,6 +4,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-29 — Attendance Correction Rejection Wizard (v6.21)
+
+**Problem:** The `rejection_reason` field on `hr.attendance.correction` was only visible after the record was already in `rejected` state. The ❌ Rechazar button called `action_reject()` directly — email fired immediately with no reason because the manager had no UI opportunity to enter one beforehand.
+
+**Fix:** Added `hr.attendance.rejection.wizard` (TransientModel) following the same pattern as the existing `hr.attendance.revision.wizard`. Clicking ❌ Rechazar now opens a small popup with an optional "Motivo de rechazo" text field. On confirm, the reason is written to the record before `send_mail()` fires, so the red "Observación de RRHH" block in the employee email is populated correctly.
+
+- `rejection_reason` on the form view is now `readonly=1` (audit display only — set exclusively via wizard)
+- `action_reject(reason=None)` accepts the reason param; still callable programmatically with no args
+- Module version: `17.0.1.6.20` → `17.0.1.6.21` | Deployed both envs 2026-05-29
+
+---
+
 ## 2026-05-29 — Infrastructure Audit
 
 Full cron/service audit triggered by the BCV rate gap incident. Findings:

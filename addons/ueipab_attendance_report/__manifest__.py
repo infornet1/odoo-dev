@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB Attendance Biweekly Report',
-    'version': '17.0.1.6.20',
+    'version': '17.0.1.6.21',
     'category': 'Human Resources/Attendance',
     'summary': 'Reporte quincenal de asistencia con confirmación digital del empleado',
     'depends': ['hr_attendance', 'mail', 'ueipab_payroll_enhancements'],
@@ -10,6 +10,7 @@
         'views/hr_attendance_report_wizard_views.xml',
         'views/hr_attendance_correction_views.xml',
         'views/hr_attendance_revision_wizard_views.xml',
+        'views/hr_attendance_rejection_wizard_views.xml',
         'views/hr_notice_acknowledgment_views.xml',
         'views/partner_communication_ack_views.xml',
         'views/vote_assist_wizard_views.xml',
