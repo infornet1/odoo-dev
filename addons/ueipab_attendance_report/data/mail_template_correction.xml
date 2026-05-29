@@ -72,12 +72,76 @@
         </field>
     </record>
 
-    <!-- ── 2. Employee notification — Approved ────────────────────────── -->
+    <!-- ── 2. Employee notification — Under revision ───────────────────── -->
+    <record id="email_template_correction_under_revision" model="mail.template">
+        <field name="name">Corrección Asistencia — En Revisión (empleado)</field>
+        <field name="model_id" ref="model_hr_attendance_correction"/>
+        <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
+        <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
+        <field name="subject">&#128269; Solicitud de corrección de asistencia — {{object.date}} — En revisión</field>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+
+  <div style="background:linear-gradient(135deg,#f5a623,#f0c040);color:#5a3e00;padding:22px 28px;">
+    <img src="https://odoo.ueipab.edu.ve/web/image/res.company/1/logo" alt="UEIPAB"
+         width="56" height="56"
+         style="width:56px;height:56px;border-radius:50%;display:block;margin:0 auto 12px;
+                border:2px solid rgba(255,255,255,0.5);object-fit:cover;"/>
+    <h2 style="margin:0;font-size:18px;text-align:center;color:#5a3e00;">&#128269; Solicitud en revisión</h2>
+    <p style="margin:4px 0 0;font-size:13px;opacity:.8;text-align:center;color:#5a3e00;">Control de Asistencia — UEIPAB</p>
+  </div>
+
+  <div style="padding:24px 28px;">
+    <p style="font-size:15px;color:#333;margin:0 0 12px;">
+      Estimado/a <strong><t t-esc="object.employee_id.name"/></strong>,
+    </p>
+    <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 16px;">
+      Hemos recibido tu solicitud de corrección de asistencia y actualmente
+      está siendo <strong>revisada</strong> por el equipo de Recursos Humanos.
+    </p>
+
+    <div style="background:#e8f0fe;border-left:4px solid #1a73e8;padding:14px 18px;border-radius:4px;margin:0 0 16px;font-size:14px;color:#1a2c5b;">
+      &#128197; <strong>Fecha a corregir:</strong> <t t-esc="object.date"/><br/>
+      &#8987; <strong>Hora de entrada indicada:</strong> <t t-esc="object.check_in_time"/> VET<br/>
+      <t t-if="object.check_out_time">
+      &#8987; <strong>Hora de salida indicada:</strong> <t t-esc="object.check_out_time"/> VET<br/>
+      </t>
+    </div>
+
+    <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 16px;">
+      En caso de requerirse información adicional, nos comunicaremos contigo directamente.
+      Te notificaremos el resultado a la brevedad posible.
+    </p>
+
+    <p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 20px;">
+      Si tienes alguna pregunta, puedes escribirnos a:<br/>
+      <a href="mailto:recursoshumanos@ueipab.edu.ve" style="color:#2471a3;font-weight:600;">
+        recursoshumanos@ueipab.edu.ve</a>
+    </p>
+
+    <p style="font-size:13px;color:#555;margin:0;">Cordialmente,<br/>
+      <strong>Recursos Humanos</strong><br/>
+      Instituto Privado Andrés Bello, CA</p>
+  </div>
+
+  <div style="background:#f8f9fa;padding:12px 24px;text-align:center;
+              font-size:11px;color:#aaaaaa;border-top:1px solid #eeeeee;">
+    Este mensaje fue generado automáticamente por el sistema de Control de Asistencia de UEIPAB.
+  </div>
+</div>
+</div>
+        </field>
+    </record>
+
+    <!-- ── 3. Employee notification — Approved ────────────────────────── -->
     <record id="email_template_correction_approved" model="mail.template">
         <field name="name">Corrección Asistencia — Aprobada (empleado)</field>
         <field name="model_id" ref="model_hr_attendance_correction"/>
         <field name="email_from">"Recursos Humanos" &lt;recursoshumanos@ueipab.edu.ve&gt;</field>
         <field name="email_to">{{object.employee_id.work_email}}</field>
+        <field name="email_cc">recursoshumanos@ueipab.edu.ve</field>
         <field name="subject">&#9989; Corrección de asistencia aprobada — {{object.date}}</field>
         <field name="body_html" type="html">
 <div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;background:#f0f4fa;">
