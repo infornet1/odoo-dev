@@ -4,6 +4,46 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-29 — NTP Fix (both DigitalOcean droplets)
+
+Both servers (`freescout.ueipab.edu.ve` dev + `10.124.0.3` prod) had `NTPSynchronized=no` since initial provisioning. UDP port 123 is blocked outbound on both droplets (external NTP servers — Cloudflare, Ubuntu — all timed out). Fixed by pointing `systemd-timesyncd` to DigitalOcean's link-local metadata NTP server `169.254.169.123`, which is reachable without external firewall traversal.
+
+Config written to `/etc/systemd/timesyncd.conf.d/ntp.conf` on both servers:
+```
+[Time]
+NTP=169.254.169.123
+FallbackNTP=time.cloudflare.com
+```
+
+Applied 2026-05-29. Kiosk attendance timestamps (server-side UTC) will now be accurate. Prior drift was ~46s on production, ~14s on dev.
+
+---
+
+## 2026-05-29 — Attendance Kiosk Investigation (YUDELYS BRITO / 2026-05-27)
+
+Employee raised a formal complaint attributing attendance discrepancies to a "biometric device offline" and a "clock mismatch" on the director's equipment. Technical audit findings:
+
+**Source confirmed: Odoo web kiosk (Chrome), NOT a biometric terminal.**
+`hr_attendance.in_mode = 'kiosk'`, `in_browser = 'chrome'`, `in_ip_address = 186.14.93.234` (school's internet IP). Timestamps are 100% server-side — the production Odoo server records `datetime.utcnow()` on HTTP POST receipt.
+
+**Entry discrepancy (claimed 6:55, recorded 7:19):**
+A queue pattern is visible in the data: 8 employees checked in within 40 seconds starting at 07:07, preceded by an 8-minute gap after YARITZA BRUCES at 06:59. This suggests a kiosk connectivity issue between ~6:59–7:07, followed by a queue that backed up. Yudelys was position ~12 in that queue; DIXIA BELLORIN checked in 6 seconds after her. Her arrival at 6:55 is plausible but unverifiable from the system.
+
+**Exit discrepancy (claimed 12:03, recorded 11:59):**
+She pressed the kiosk checkout button at 11:59:01 VET. Her 12:03 is when she physically left the building — 4 minutes after pressing checkout. The server timestamp is correct.
+
+**Her letter's claim about "biometric device offline"** is technically inaccurate — the kiosk is a browser app, not a biometric reader. The connectivity gap at ~6:59–7:07 is consistent with an internet outage at the school, which would have prevented kiosk access. But the 12-minute queue from 7:07 to her 7:19 check-in is simply a physical line.
+
+**HR guidance:** Worked hours (4.65h) are accurate by system records. Entry correction (6:55) is a judgment call — unverifiable. Exit discrepancy (4 min) is normal checkout-vs-departure gap. Correction form path is appropriate if HR chooses to credit early arrival.
+
+**Key query for future audits:**
+```sql
+SELECT in_mode, out_mode, in_ip_address, in_browser, create_uid
+FROM hr_attendance WHERE employee_id = X AND check_in >= 'Y';
+```
+
+---
+
 ## 2026-05-29 — Attendance Correction Director CC (v6.22)
 
 `arcides.arzola@ueipab.edu.ve` (school director) now CC'd on all 5 correction email touchpoints: (1) employee submission confirmation, (2) HR notification on submission, (3) "Poner en Revisión" Freescout conversation thread, (4) approved email, (5) rejected email. Guard applied on all employee-facing emails: if ARCIDES is himself the subject employee, his address is dropped from CC to avoid duplicate delivery. `_build_cc()` helper centralises the logic. Also adds the missing `recursoshumanos@` CC to the rejected email (was previously missing). v6.21 → v6.22, deployed both envs 2026-05-29.

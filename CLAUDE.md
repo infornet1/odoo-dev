@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-29 (v35)
+**Last Updated:** 2026-05-29 (v36)
 
 ## Core Instructions
 
@@ -281,6 +281,10 @@ Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 
 **Leave cross-check (Feature #78):** Morning mode fetches `hr.leave` for yesterday via `get_leaves_for_date()`. If an employee has a matching leave, `_format_leave_context_html()` injects a colored context block into the alert email: green (✅ `validate`) or yellow (⏳ `confirm`/`validate1`). Attendance flag is still raised — context block adds clarity, not suppression.
 
+### Attendance Record Source Tracing
+
+`hr_attendance` has `in_mode` / `out_mode` fields: `kiosk` (Odoo web kiosk), `systray` (Odoo desktop systray), `manual` (admin-created), or empty (sync scripts). Also stores `in_ip_address`, `in_browser`, `create_uid=4` (public/kiosk user) for kiosk records. Timestamps are always **server-side UTC** — for kiosk records, the production Odoo server's clock at the moment of HTTP POST receipt. For attendance audits, query these fields before assuming biometric/device clock issues.
+
 ### Attendance Correction Rejection Wizard (v6.21)
 
 Clicking **❌ Rechazar** on `hr.attendance.correction` opens `hr.attendance.rejection.wizard` — same pattern as the revision wizard. Manager types an optional reason → `action_reject(reason=...)` writes it before firing the email → employee receives the red "Observación de RRHH" block if reason was provided. `rejection_reason` on the form is `readonly=1` (audit only; set exclusively via wizard).
@@ -349,6 +353,7 @@ See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full d
 ## Dev Server Configuration
 
 **Host:** `freescout.ueipab.edu.ve` | RAM: 3.8 GB | Swap: 2 GB | Disk: 48 GB
+**NTP:** Both droplets use `169.254.169.123` (DigitalOcean metadata, link-local) — UDP 123 outbound is blocked; external NTP servers time out. Config: `/etc/systemd/timesyncd.conf.d/ntp.conf`. Applied 2026-05-29.
 
 | Setting | Value | File |
 |---------|-------|------|
