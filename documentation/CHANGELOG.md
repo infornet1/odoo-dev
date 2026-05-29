@@ -4,6 +4,12 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-05-29 — Attendance Correction Director CC (v6.22)
+
+`arcides.arzola@ueipab.edu.ve` (school director) now CC'd on all 5 correction email touchpoints: (1) employee submission confirmation, (2) HR notification on submission, (3) "Poner en Revisión" Freescout conversation thread, (4) approved email, (5) rejected email. Guard applied on all employee-facing emails: if ARCIDES is himself the subject employee, his address is dropped from CC to avoid duplicate delivery. `_build_cc()` helper centralises the logic. Also adds the missing `recursoshumanos@` CC to the rejected email (was previously missing). v6.21 → v6.22, deployed both envs 2026-05-29.
+
+---
+
 ## 2026-05-29 — Attendance Correction Rejection Wizard (v6.21)
 
 **Problem:** The `rejection_reason` field on `hr.attendance.correction` was only visible after the record was already in `rejected` state. The ❌ Rechazar button called `action_reject()` directly — email fired immediately with no reason because the manager had no UI opportunity to enter one beforehand.

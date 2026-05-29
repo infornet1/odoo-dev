@@ -363,11 +363,14 @@ class AttendanceCorrectionController(http.Controller):
       <strong>Recursos Humanos</strong> — Instituto Privado Andrés Bello, CA</p>
   </div>
 </div></div>"""
+            cc_parts = ['recursoshumanos@ueipab.edu.ve']
+            if emp_email != 'arcides.arzola@ueipab.edu.ve':
+                cc_parts.append('arcides.arzola@ueipab.edu.ve')
             request.env['mail.mail'].sudo().create({
                 'subject':    f'✅ Solicitud de corrección recibida — {correction_date.strftime("%d/%m/%Y")}',
                 'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
                 'email_to':   f'"{employee.name}" <{emp_email}>',
-                'email_cc':   'recursoshumanos@ueipab.edu.ve',
+                'email_cc':   ', '.join(cc_parts),
                 'body_html':  conf_body,
                 'state':      'outgoing',
             }).send()

@@ -9,10 +9,10 @@ from odoo.exceptions import UserError
 
 VET_TO_UTC = timedelta(hours=4)  # VET = UTC-4 → UTC = VET + 4h
 
-# Freescout mailbox that receives HR correction notifications
 _FS_MAILBOX_ID = 4
-# Freescout user used as sender on API-created threads (system/admin)
 _FS_SENDER_USER = 1
+_HR_EMAIL = 'recursoshumanos@ueipab.edu.ve'
+_DIRECTOR_EMAIL = 'arcides.arzola@ueipab.edu.ve'
 
 
 class HrAttendanceCorrection(models.Model):
@@ -75,6 +75,18 @@ class HrAttendanceCorrection(models.Model):
             result.append((r.id, name))
         return result
 
+    def _build_cc(self, include_hr=True):
+        """Return CC string for correction emails.
+
+        Includes HR always and the director unless they are the employee
+        (to avoid sending them a duplicate of the TO line).
+        """
+        self.ensure_one()
+        parts = [_HR_EMAIL] if include_hr else []
+        if self.employee_id.work_email != _DIRECTOR_EMAIL:
+            parts.append(_DIRECTOR_EMAIL)
+        return ', '.join(parts) if parts else ''
+
     def _get_fix_url(self):
         """Public URL for the correction form (uses the same ack_token as the report)."""
         self.ensure_one()
@@ -120,13 +132,14 @@ class HrAttendanceCorrection(models.Model):
         emp_email = self.employee_id.work_email
         if not emp_email:
             raise UserError(_("El empleado no tiene correo de trabajo configurado."))
+        thread_cc = [_DIRECTOR_EMAIL] if emp_email != _DIRECTOR_EMAIL else []
         data = self._fs_post('/conversations', {
             'type': 'email',
             'mailboxId': _FS_MAILBOX_ID,
             'subject': subject,
             'customer': {'email': emp_email},
             'threads': [{'type': 'message', 'text': html_body, 'user': _FS_SENDER_USER,
-                         'cc': ['arcides.arzola@ueipab.edu.ve']}],
+                         'cc': thread_cc}],
             'status': 'active',
         })
         return data.get('id') or data.get('_embedded', {}).get('conversations', [{}])[0].get('id')
@@ -358,7 +371,8 @@ class HrAttendanceCorrection(models.Model):
             raise_if_not_found=False,
         )
         if tmpl and self.employee_id.work_email:
-            tmpl.send_mail(self.id, force_send=True)
+            tmpl.send_mail(self.id, force_send=True,
+                           email_values={'email_cc': self._build_cc()})
 
         return self._notify_and_reload(
             _('Corrección aprobada'),
@@ -396,7 +410,8 @@ class HrAttendanceCorrection(models.Model):
             raise_if_not_found=False,
         )
         if tmpl and self.employee_id.work_email:
-            tmpl.send_mail(self.id, force_send=True)
+            tmpl.send_mail(self.id, force_send=True,
+                           email_values={'email_cc': self._build_cc()})
 
         return self._notify_and_reload(
             _('Solicitud rechazada'),
