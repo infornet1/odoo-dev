@@ -51,6 +51,14 @@
               sequence="13"
               groups="hr_payroll_community.group_hr_payroll_community_user"/>
 
+    <!-- Report 2.7: Acuerdo Finiquito Laboral -->
+    <menuitem id="menu_finiquito_wizard"
+              name="Acuerdo Finiquito Laboral"
+              parent="menu_payroll_reports"
+              action="action_finiquito_wizard"
+              sequence="14"
+              groups="hr_payroll_community.group_hr_payroll_community_user"/>
+
     <!-- Report 3: Prestaciones Soc. Intereses (FULLY WORKING) -->
     <menuitem id="menu_prestaciones_interest"
               name="Prestaciones Soc. Intereses"
