@@ -122,6 +122,17 @@ textarea{min-height:80px;resize:vertical;}
 .file-wrap:hover{border-color:#2471a3;background:#f0f8ff;}
 .note{font-size:11px;color:#999;text-align:center;margin-top:14px;}
 a{color:#2471a3;}
+#proc-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;
+  padding:14px 20px;box-shadow:0 -4px 16px rgba(0,0,0,.25);
+  animation:slideUp .3s ease-out;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+#proc-banner .pb-inner{max-width:600px;margin:0 auto;display:flex;
+  align-items:flex-start;gap:12px;}
+#proc-banner .pb-spin{font-size:22px;flex-shrink:0;animation:spin 1.2s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#proc-banner .pb-text{font-size:13px;line-height:1.6;}
+#proc-banner .pb-text strong{display:block;font-size:14px;margin-bottom:2px;}
 """
 
 _JS = """
@@ -560,8 +571,19 @@ class AttendanceCorrectionController(http.Controller):
               <p class="hint">Reposo médico, permiso, foto del marcador, etc.
                               Formatos: PDF, JPG, PNG, DOC &mdash; Máx. {MAX_MB} MB</p>
 
-              <button class="btn" type="submit">&#128228; Enviar Solicitud</button>
+              <button class="btn" type="submit" id="submit-btn">&#128228; Enviar Solicitud</button>
             </form>
+
+            <div id="proc-banner">
+              <div class="pb-inner">
+                <span class="pb-spin">&#9881;&#65039;</span>
+                <div class="pb-text">
+                  <strong>&#128338; Espere — su solicitud está siendo procesada.</strong>
+                  Aguarde un momento antes de reintentarlo. Si no ha recibido el correo
+                  de confirmación en unos minutos, puede volver a intentarlo.
+                </div>
+              </div>
+            </div>
 
             <p class="note">
               Su solicitud será revisada por Recursos Humanos antes del cierre de nómina.<br/>
@@ -582,5 +604,11 @@ class AttendanceCorrectionController(http.Controller):
             document.getElementById('co-required-badge').style.display = isME ? 'inline' : 'none';
             document.getElementById('co-optional-badge').style.display = isME ? 'none' : 'inline';
           }}
+          document.getElementById('fix-form').addEventListener('submit', function() {{
+            var btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Enviando…';
+            document.getElementById('proc-banner').style.display = 'block';
+          }});
           </script>"""
         return _page('Corrección de Asistencia', body)

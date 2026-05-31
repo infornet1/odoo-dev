@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-05-29 (v36)
+**Last Updated:** 2026-05-31 (v37)
 
 ## Core Instructions
 
@@ -98,7 +98,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.19 | both |
-| ueipab_attendance_report | 17.0.1.6.22 | both |
+| ueipab_attendance_report | 17.0.1.6.23 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.5.0 | both |
@@ -290,6 +290,18 @@ Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 Clicking **❌ Rechazar** on `hr.attendance.correction` opens `hr.attendance.rejection.wizard` — same pattern as the revision wizard. Manager types an optional reason → `action_reject(reason=...)` writes it before firing the email → employee receives the red "Observación de RRHH" block if reason was provided. `rejection_reason` on the form is `readonly=1` (audit only; set exclusively via wizard).
 
 **CC policy (v6.22):** `arcides.arzola@ueipab.edu.ve` is CC'd on every correction email — submission confirmation (controller), HR notification template, approved, and rejected. Guard: if ARCIDES is the employee himself, his address is omitted from CC (he is already the `email_to` recipient). The "Poner en Revisión" Freescout conversation applies the same guard. `_build_cc(include_hr=True)` helper on the model builds the CC string.
+
+**CC matrix (confirmed 2026-05-31):**
+
+| Event | email_to | email_cc |
+|-------|----------|---------|
+| Submitted (form POST) | employee | recursoshumanos@ + arcides@ |
+| Approved (`action_approve`) | employee | recursoshumanos@ + arcides@ |
+| Rejected (`action_reject`) | employee | recursoshumanos@ + arcides@ |
+
+`email_values={'email_cc': self._build_cc()}` in `send_mail()` overrides the template's own `email_cc` field — the runtime CC is always what `_build_cc()` returns.
+
+**Double-submit guard (v6.23):** `/attendance-fix/<token>` form disables the submit button and shows a fixed bottom banner on first click: *"Espere — su solicitud está siendo procesada. Aguarde un momento antes de reintentarlo…"* — prevents duplicate `hr.attendance.correction` records caused by impatient double-taps (race condition: both POSTs could execute the dedup `search` before either `create` commits). CSS slide-up animation; spinning gear icon.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 
