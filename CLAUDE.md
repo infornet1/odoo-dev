@@ -94,7 +94,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | Module | Version | Notes |
 |--------|---------|-------|
 | hr_payroll_community | 17.0.1.0.0 | testing only |
-| ueipab_payroll_enhancements | 17.0.1.70.2 | both |
+| ueipab_payroll_enhancements | 17.0.1.70.5 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.57.19 | both |
@@ -320,6 +320,8 @@ Clicking **❌ Rechazar** on `hr.attendance.correction` opens `hr.attendance.rej
 See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md) for full technical reference.
 - **Wizard:** Accounting → Customers → Recordatorio de Saldo; Tags REP=25 / PDVSA=26 / VIP=30 (excluded)
 - **WA cron:** weekdays 07:00 VET; state file `scripts/wa_invoice_reminder_state.json`
+- **v70.5 (2026-06-01):** Fixed Owl rendering crash on wizard open — `default_get` was computing `line_ids` and `@api.onchange` was recomputing them immediately after, leaving Owl fiber null mid-mount. Removed `line_ids` from `default_get`; onchange is now the single population path.
+- **⚠️ Pending enhancements (2026-06-01):** See PENDING section below — 2 fixes needed before next bulk send. Ground truth: SMS1/SMS2 tabs of Customers sheet.
 
 ### CEO Command Center (wa_monitor)
 
@@ -511,6 +513,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - **Standard 40h work schedule** — morning start was 08:00 VET, corrected to 07:00 VET (`resource_calendar_attendance` calendar_id=1). Triggered by GABRIEL ESPAÑA leave #64 validation failure.
 
 **PENDING — Code / Infrastructure:**
+- **Invoice Reminder Wizard — 2 fixes needed (2026-06-01):** See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md#pending-enhancements-2026-06-01). (1) **Remove `PDVSA_ADVANCE_PAID` exclusion** — 7 PDVSA partners who paid 35% advance are being skipped but SMS2 sheet expects them to receive reminders for the remaining balance. (2) **Assign missing tags** — 7 partners exist in Odoo but have no REP/PDVSA category: REP→ids 2698,3658,2906,2919; PDVSA→ids 2467,2590,2822. Also resolve MARIA MARTIN duplicate (ids 3658 and 2666 both no-tag). Deploy at end-of-day maintenance window.
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md) — `tdv_multi_currency_account`; both envs
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0` in `SendReplyToCustomer.php:76`; fixed upstream, update Freescout on next release
 - **MassivaMóvil Webhook wrong Content-Type** — controller uses `type='json'` but MassivaMóvil sends form-encoded POST. Fix: change to `type='http'`, parse `request.httprequest.form.get()`, `json.loads(data)`. Currently falling back to 5-min poll cron.

@@ -4,6 +4,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-01 — Invoice Reminder Wizard Owl crash fix (v70.5)
+
+**Problem:** Opening *Accounting → Customers → Recordatorio de Saldo* threw an Owl lifecycle error: `TypeError: can't access property "bdom", this.fiber is null`. The wizard opened blank with an error dialog.
+
+**Root cause:** `default_get()` computed and stored `line_ids` (~40 partner records), then the browser triggered `@api.onchange('tag_filter','include_vip')` automatically (because those fields have defaults). The onchange issued `(5,0,0)` to delete all lines and recreated them immediately. Owl's component fiber was still mounting from the first batch when the second batch arrived, leaving `this.fiber = null`.
+
+**Fix:** Removed `line_ids` from `default_get`. The onchange is now the single code path that populates partner lines. Module bumped to v70.5, deployed both envs.
+
+**Pending follow-up:** 2 enhancements identified via SMS1/SMS2 sheet comparison — see [WA_INVOICE_REMINDER_PLAN.md](WA_INVOICE_REMINDER_PLAN.md#pending-enhancements-2026-06-01). Scheduled end-of-day maintenance window.
+
+---
+
 ## 2026-05-29 — NTP Fix (both DigitalOcean droplets)
 
 Both servers (`freescout.ueipab.edu.ve` dev + `10.124.0.3` prod) had `NTPSynchronized=no` since initial provisioning. `System clock synchronized: yes` confirmed on both after fix.

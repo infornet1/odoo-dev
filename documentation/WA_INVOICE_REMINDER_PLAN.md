@@ -294,6 +294,71 @@ python3 scripts/wa_invoice_reminder.py   # dry run, production data
 
 ---
 
+## Pending Enhancements (2026-06-01)
+
+Analysis date: 2026-06-01. Ground truth: **SMS1** (Representante) and **SMS2** (PDVSA) tabs of Customers sheet `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`. Current wizard produces 133 sends (72 REP + 61 PDVSA) vs sheet expectation ~147 (76 REP + 71 PDVSA).
+
+### What already works correctly (no change needed)
+
+- **June 10 future-due invoices** — wizard does NOT filter by due date; all unpaid posted invoices are included regardless of whether they mature June 10 or later. 101+ partners with `due:2026-06-10` already appear in the send list. ✅
+- **May 31 carry-over balances** — partners with unpaid May 10, April 10, and older invoices are already summed into the balance. KARINA DE DELGADO ($789.52 = May+June), REINSON GUTIERREZ ($864.50 = Apr+May+Jun), etc. all appear. ✅
+- **PDVSA "didn't fully pay May + new June invoice"** — partners with both months stacked (ALEXIS QUILARQUE $201.60, ALIRIO ROSAS $325.68, JEAN MUNOZ $394.76) are already included. ✅
+
+### Fix 1 — Remove `PDVSA_ADVANCE_PAID` exclusion (code change)
+
+**Impact: +7 PDVSA partners currently blocked.**
+
+The 35% advance payment rule was designed to skip partners "on track." But SMS2 sheet includes all of them — they still owe the remaining ~65% on the June invoice (due June 10) and should receive a reminder.
+
+All 7 affected partners have ONLY a June invoice, partially paid (35–87% advance):
+
+| Partner | Balance owed | Advance paid |
+|---------|-------------|-------------|
+| VIRGILIO CASTRO | $256.60 | 35.0% |
+| EDUARDO RANGEL | $239.78 | 39.3% |
+| ALBERTO GONZALEZ | $119.89 | 39.3% |
+| ILDEMARO ARRIOJA | $119.89 | 39.3% |
+| RAQUEL LOPEZ | $119.89 | 39.3% |
+| RAMLY REQUENA | $119.51 | 39.5% |
+| MAGDA HERRERA | $25.31 | 87.2% |
+
+Also caught in wizard via REP tag: EDIFEL MARIN $26.64, ENDIS PELEYON $26.64 (SMS2 does not list them — verify with business before including).
+
+**Code fix:** In `wizard/invoice_reminder_wizard.py` `_compute_lines()`, remove the `PDVSA_ADVANCE_PAID` elif block entirely. The `BELOW_THRESHOLD` check ($1.00 minimum) already handles partners with zero net balance.
+
+### Fix 2 — Assign missing category tags (data fix in Odoo, no code change)
+
+**Impact: +4 REP + 3 PDVSA partners not found by wizard query.**
+
+These partners exist in Odoo but have no `category_id` assigned, so `('category_id','in',[25,26])` never returns them:
+
+| Tag to assign | Partner name | Odoo id | Sheet balance |
+|--------------|-------------|---------|--------------|
+| REP (25) | MIGUEL GONZALEZ | 2698 | $394.76 |
+| REP (25) | VICTOR VILLAMIZAR | 2906 | $197.38 |
+| REP (25) | WILMEILYS CONTRERAS | 2919 | $396.19 |
+| REP (25) | MARIA MARTIN | 3658 or 2666 | $197.16 |
+| PDVSA (26) | HECTOR CALLES | 2467 | $197.38 |
+| PDVSA (26) | KELLY MONTAGUTH | 2590 | $197.38 |
+| PDVSA (26) | ROSA MARCANO | 2822 | $383.82 |
+
+⚠️ MARIA MARTIN has **two duplicate partner records** (ids 3658 and 2666, both no-tag). Resolve duplicate before assigning tag — merge or deactivate the blank one.
+
+**Fix procedure (Odoo UI or XML-RPC):**
+```python
+# Assign REP tag (25) to REP partners
+env['res.partner'].browse([2698,2906,2919,3658]).write({'category_id':[(4,25)]})
+# Assign PDVSA tag (26)
+env['res.partner'].browse([2467,2590,2822]).write({'category_id':[(4,26)]})
+# Resolve MARIA MARTIN duplicate separately
+```
+
+### Deployment
+
+Both fixes scheduled for **end-of-day maintenance window**. No module upgrade required for Fix 2 (data only). Fix 1 requires `ueipab_payroll_enhancements` update + upgrade on both envs.
+
+---
+
 ## Related
 
 - [QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md](QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) — fiscal_check segmentation data (2026-04-15)

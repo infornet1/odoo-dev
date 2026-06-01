@@ -83,14 +83,12 @@ class InvoiceReminderWizard(models.TransientModel):
 
     @api.model
     def default_get(self, fields_list):
-        res = super().default_get(fields_list)
-        res['line_ids'] = self._compute_lines('both', include_vip=False)
-        return res
+        return super().default_get(fields_list)
 
     @api.onchange('tag_filter', 'include_vip')
     def _onchange_tag_filter(self):
         self.line_ids = [(5, 0, 0)] + self._compute_lines(
-            self.tag_filter, include_vip=self.include_vip)
+            self.tag_filter or 'both', include_vip=self.include_vip or False)
 
     def _compute_lines(self, tag_filter, include_vip=False):
         tags = {
