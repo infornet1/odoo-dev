@@ -97,7 +97,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.5 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.19 | both |
+| ueipab_ai_agent | 17.0.1.57.20 | both |
 | ueipab_attendance_report | 17.0.1.6.23 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -215,6 +215,21 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 **`address_home_id` not searchable:** group-restricted in Odoo 17. Use `user_id.partner_id` for partner→employee lookups.
 
 **Monitoring:** AI Agent → filter Canal=Telegram (action=830 in prod).
+
+**Telegram partner identification (v57.20):**
+- `res.partner.telegram_chat_id` (ORM field, `readonly=True`) is the authoritative link — written by phone-share, EMP_/FAM_ deep-links, or cédula match.
+- `comment` field (`telegram_chat_id:{chat_id}`) is legacy metadata only — the code searches the ORM field, not the comment.
+- Manual fix for a mislinked contact: `partner.write({'telegram_chat_id': 'CHAT_ID'})` + update conversation `partner_id`.
+
+**First-communication identity ring (v57.20):** `_is_unidentified_first_turn()` + `_send_identity_ring()` in `ai_agent_conversation.py`. Fires on turn 1 for any placeholder partner (name starts with `'Consulta WhatsApp'` or `'Telegram '`) before Claude is ever called. Telegram: text + phone-share keyboard button. WA: cédula request. No AI tokens consumed. Skipped for already-identified partners.
+
+**Placeholder naming (v57.20):** Telegram placeholders always created as `'Telegram {first_name}'` or `'Telegram {chat_id}'` — never bare first name. This makes them detectable by the `partner_found` check and `_is_unidentified_first_turn`.
+
+**`partner_found` check (v57.20):** `general_inquiry.py` `get_context()` — detects placeholders via `name.startswith(('Consulta WhatsApp', 'Telegram '))`. Both channels handled consistently.
+
+**Cédula promotes conversation (v57.20):** `_find_partner_by_cedula()` now also writes `conversation.partner_id` to the real partner immediately — next turn has full context. Previously only wrote `telegram_chat_id` to the partner; the running conversation stayed on the placeholder.
+
+**Akdemia enrichment for Telegram (v57.20):** `_enrich_billing_context()` Strategy 1 falls back to `partner.mobile / partner.phone` when `conversation.phone` is empty (always empty on Telegram). Once a Telegram user is identified, full family billing cache (monthly fee, students, forecast) is available.
 
 ### Glenda Family Billing Enrichment (Feature #69)
 
@@ -467,6 +482,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
 - **General Inquiry:** Handles unsolicited inbound (WA + Telegram) — identifies contact, routes to `pagos@` or `soporte@`
+- **Identity ring (v57.20):** Turn 1 for any unverified contact (placeholder partner) → Glenda sends identification prompt instead of answering; Telegram includes phone-share button; no Claude call until identified
 - **School Account Help:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` → see Key Technical Patterns
 - **Absence notification:** `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Freescout conv → `absence_processor.py` cron
 - **Flyer/Audio:** **⚠️ WA only** — skipped on Telegram (`channel != 'whatsapp'` guard in `_send_flyer()`)
@@ -479,7 +495,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 
 **Competitor risk:** Price gate is primary defence (quotes $197.38/$162.39 only). Re-trigger stuck conv: `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 
-**Production:** `dry_run=True` (WA paused; Telegram active, v57.17), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`. `wa_primary_relay`: `--live` removed 2026-05-23.
+**Production:** `dry_run=True` (WA paused; Telegram active, v57.20), `active_db=DB_UEIPAB`. WA poll 5min. Webhook: `odoo.ueipab.edu.ve`. Hours VET: Weekdays 06:30-20:30, Weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill: `ai_agent.telegram_enabled=False`. `wa_primary_relay`: `--live` removed 2026-05-23.
 **Testing:** `dry_run=False`, `active_db=DB_UEIPAB` (crons self-skip). Webhook: `dev.ueipab.edu.ve`.
 
 ---

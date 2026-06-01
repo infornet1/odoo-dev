@@ -402,8 +402,12 @@ class GeneralInquirySkill:
 
         family = None
 
-        # Strategy 1 — phone match
+        # Strategy 1 — phone match (WA: conversation.phone; Telegram: partner.mobile/phone)
         conv_phone = self._norm_phone(conversation.phone or '')
+        if not conv_phone and conversation.partner_id:
+            conv_phone = self._norm_phone(
+                conversation.partner_id.mobile or conversation.partner_id.phone or ''
+            )
         if conv_phone:
             for f in families:
                 if f.get('phone') and self._norm_phone(f['phone']) == conv_phone:
@@ -565,6 +569,15 @@ class GeneralInquirySkill:
                     "Telegram auto-link: partner %s (%d) ← chat_id %s (via cédula)",
                     partner.name, partner.id, conversation.telegram_chat_id,
                 )
+
+        # Gap-3 fix: promote conversation to real partner immediately so the next
+        # turn builds context from the identified record (both WA and Telegram).
+        if partner and conversation.partner_id.id != partner.id:
+            conversation.sudo().write({'partner_id': partner.id})
+            _logger.info(
+                "Cedula match: promoted conv %d partner %s → %s",
+                conversation.id, conversation.partner_id.name, partner.name,
+            )
 
         return partner or None
 
@@ -778,7 +791,7 @@ class GeneralInquirySkill:
         cfg = self._get_agent_config(conversation)
         partner = conversation.partner_id
         partner_found = bool(
-            partner and not partner.name.startswith('Consulta WhatsApp')
+            partner and not partner.name.startswith(('Consulta WhatsApp', 'Telegram '))
         )
         balance = (
             self._query_partner_balance(conversation, partner)

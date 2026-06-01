@@ -153,7 +153,7 @@ class AiAgentConversation(models.Model):
     def _compute_is_placeholder(self):
         for rec in self:
             name = rec.partner_id.name or ''
-            rec.is_placeholder = 'Desconocido' if name.startswith('Consulta WhatsApp') else ''
+            rec.is_placeholder = 'Desconocido' if name.startswith(('Consulta WhatsApp', 'Telegram ')) else ''
 
     @api.depends('skill_id.name', 'partner_id.name')
     def _compute_name(self):
@@ -568,6 +568,12 @@ class AiAgentConversation(models.Model):
                         "Si tienes una consulta sobre el colegio, con gusto te ayudo."
                     )
                 return
+
+        # First-communication identity ring — fires once on turn 1 for any unverified
+        # contact before Claude is ever invoked.  Skipped for already-identified partners.
+        if self._is_unidentified_first_turn():
+            self._send_identity_ring()
+            return
 
         # Get skill handler
         skill_handler = get_skill(skill.code)
@@ -1252,6 +1258,59 @@ class AiAgentConversation(models.Model):
             extra_attachments=extra_attachments or None,
         )
 
+    def _is_unidentified_first_turn(self):
+        """True when this conversation has no outbound message yet AND the partner
+        is a placeholder (no real identity confirmed on either channel).
+
+        Used to gate the identity ring: fires only once, on the very first reply.
+        """
+        if self.agent_message_ids.filtered(lambda m: m.direction == 'outbound'):
+            return False
+        name = (self.partner_id.name or '') if self.partner_id else ''
+        return name.startswith(('Consulta WhatsApp', 'Telegram '))
+
+    def _send_identity_ring(self):
+        """First-communication identity gate — fires instead of Claude on turn 1
+        for any unverified contact on either channel.
+
+        Telegram: text + phone-share keyboard button (two identification paths).
+        WA: text asking for cédula only.
+        No Claude call; no AI tokens consumed.
+        """
+        if self.channel == 'telegram' and self.telegram_chat_id:
+            text = (
+                "¡Hola! 👋 Para ayudarte correctamente, necesito confirmar con quién hablo.\n\n"
+                "📱 <b>Opción rápida:</b> comparte tu número con el botón de abajo.\n"
+                "✏️ <b>Opción manual:</b> escríbeme tu cédula "
+                "(ej: <code>V-12345678</code>) y lo busco en el sistema."
+            )
+            tg = self.env['ai.agent.telegram.service']
+            tg.send_contact_request(self.telegram_chat_id, text)
+        else:
+            text = (
+                "¡Hola! Soy Glenda, asistente virtual del Colegio Andrés Bello. 😊\n\n"
+                "Para ayudarte con tu información de cuenta, ¿me puedes indicar "
+                "tu número de cédula? (ej: V-12345678)"
+            )
+            self._send_to_user(text)
+
+        self.env['ai.agent.message'].sudo().create({
+            'conversation_id': self.id,
+            'direction':       'outbound',
+            'body':            text,
+            'ai_input_tokens':  0,
+            'ai_output_tokens': 0,
+        })
+        self.write({
+            'state':             'waiting',
+            'last_message_date': fields.Datetime.now(),
+            'last_sender':       'agent',
+        })
+        _logger.info(
+            "Identity ring sent — conv %d channel=%s partner=%s",
+            self.id, self.channel, self.partner_id.name,
+        )
+
     @api.model
     def _send_telegram_welcome_menu(self, chat_id, first_name='', dry_run=False):
         """Send an interactive reply-keyboard welcome to a plain /start with no deep-link token.
@@ -1527,7 +1586,7 @@ class AiAgentConversation(models.Model):
             partner = prev.partner_id
         else:
             # Create a placeholder partner; the skill will identify them during the conversation
-            name = first_name or f'Telegram {chat_id}'
+            name = f'Telegram {first_name}' if first_name else f'Telegram {chat_id}'
             partner = self.env['res.partner'].sudo().create({
                 'name':          name,
                 'customer_rank': 1,
