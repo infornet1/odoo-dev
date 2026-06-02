@@ -76,7 +76,7 @@ See [documentation/FEATURES.md](documentation/FEATURES.md) for the full feature 
 | `/etc/cron.d/sync_bcv_odoo` (every 30 min) | `sync_bcv_to_odoo.py` | `ir.config_parameter` → `ai_agent.bcv_rate_context` | Glenda AI answers BCV queries |
 | `/etc/cron.d/bcv_odoo_currency_sync` (06:00 VET weekdays) | `curl POST /odoo_api_bridge/sync_currency_rate` | `res.currency.rate` | Reports, payroll, accounting |
 
-These are independent — updating one does NOT update the other. On 2026-05-19 the second cron was mistakenly removed (deemed "duplicate"), causing a 10-day gap in `res.currency.rate` (May 20–28). Restored + backfilled 2026-05-29.
+These are independent — updating one does NOT update the other. Full incident history: memory `patterns-bcv-rate-sync`.
 
 ---
 
@@ -142,7 +142,6 @@ When an employee's contract is in `close` state, `_get_contract()` filters it ou
 
 **Note:** Deductions (SSO, PARO, FAOV, ARI) auto-scale correctly because their bases reference the salary/bonus rules. SSO stays near $0.05 regardless — it uses the minimum wage base by design.
 
-**Reference:** SLIP/801 RAMON BELLO MAYO31 — 7 days (May 16–22), contract end 2026-05-22.
 
 ### Odoo 17 View Syntax
 ```xml
@@ -216,20 +215,7 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Monitoring:** AI Agent → filter Canal=Telegram (action=830 in prod).
 
-**Telegram partner identification (v57.20):**
-- `res.partner.telegram_chat_id` (ORM field, `readonly=True`) is the authoritative link — written by phone-share, EMP_/FAM_ deep-links, or cédula match.
-- `comment` field (`telegram_chat_id:{chat_id}`) is legacy metadata only — the code searches the ORM field, not the comment.
-- Manual fix for a mislinked contact: `partner.write({'telegram_chat_id': 'CHAT_ID'})` + update conversation `partner_id`.
-
-**First-communication identity ring (v57.20):** `_is_unidentified_first_turn()` + `_send_identity_ring()` in `ai_agent_conversation.py`. Fires on turn 1 for any placeholder partner (name starts with `'Consulta WhatsApp'` or `'Telegram '`) before Claude is ever called. Telegram: text + phone-share keyboard button. WA: cédula request. No AI tokens consumed. Skipped for already-identified partners.
-
-**Placeholder naming (v57.20):** Telegram placeholders always created as `'Telegram {first_name}'` or `'Telegram {chat_id}'` — never bare first name. This makes them detectable by the `partner_found` check and `_is_unidentified_first_turn`.
-
-**`partner_found` check (v57.20):** `general_inquiry.py` `get_context()` — detects placeholders via `name.startswith(('Consulta WhatsApp', 'Telegram '))`. Both channels handled consistently.
-
-**Cédula promotes conversation (v57.20):** `_find_partner_by_cedula()` now also writes `conversation.partner_id` to the real partner immediately — next turn has full context. Previously only wrote `telegram_chat_id` to the partner; the running conversation stayed on the placeholder.
-
-**Akdemia enrichment for Telegram (v57.20):** `_enrich_billing_context()` Strategy 1 falls back to `partner.mobile / partner.phone` when `conversation.phone` is empty (always empty on Telegram). Once a Telegram user is identified, full family billing cache (monthly fee, students, forecast) is available.
+**Telegram partner identification (v57.20):** `res.partner.telegram_chat_id` (ORM, `readonly=True`) is authoritative; `comment` field is legacy only. Fix mislink: `partner.write({'telegram_chat_id': 'CHAT_ID'})` + update `conversation.partner_id`. Placeholders named `'Telegram {first_name}'` — detectable by `name.startswith('Telegram ')`. Identity ring fires turn 1 (`_is_unidentified_first_turn()` + `_send_identity_ring()`), no Claude call until identified. Cédula match writes `conversation.partner_id` immediately. Akdemia enrichment falls back to `partner.mobile/phone` when `conversation.phone` empty (always on Telegram). Full detail: memory `glenda-identity-ring`.
 
 ### Glenda Family Billing Enrichment (Feature #69)
 
@@ -304,19 +290,9 @@ Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
 
 Clicking **❌ Rechazar** on `hr.attendance.correction` opens `hr.attendance.rejection.wizard` — same pattern as the revision wizard. Manager types an optional reason → `action_reject(reason=...)` writes it before firing the email → employee receives the red "Observación de RRHH" block if reason was provided. `rejection_reason` on the form is `readonly=1` (audit only; set exclusively via wizard).
 
-**CC policy (v6.22):** `arcides.arzola@ueipab.edu.ve` is CC'd on every correction email — submission confirmation (controller), HR notification template, approved, and rejected. Guard: if ARCIDES is the employee himself, his address is omitted from CC (he is already the `email_to` recipient). The "Poner en Revisión" Freescout conversation applies the same guard. `_build_cc(include_hr=True)` helper on the model builds the CC string.
+**CC policy (v6.22):** All correction events (submit/approve/reject) CC `recursoshumanos@` + `arcides.arzola@` via `_build_cc()`. Guard: if ARCIDES is the employee, omit from CC. `email_values={'email_cc': self._build_cc()}` overrides the template's own CC field.
 
-**CC matrix (confirmed 2026-05-31):**
-
-| Event | email_to | email_cc |
-|-------|----------|---------|
-| Submitted (form POST) | employee | recursoshumanos@ + arcides@ |
-| Approved (`action_approve`) | employee | recursoshumanos@ + arcides@ |
-| Rejected (`action_reject`) | employee | recursoshumanos@ + arcides@ |
-
-`email_values={'email_cc': self._build_cc()}` in `send_mail()` overrides the template's own `email_cc` field — the runtime CC is always what `_build_cc()` returns.
-
-**Double-submit guard (v6.23):** `/attendance-fix/<token>` form disables the submit button and shows a fixed bottom banner on first click: *"Espere — su solicitud está siendo procesada. Aguarde un momento antes de reintentarlo…"* — prevents duplicate `hr.attendance.correction` records caused by impatient double-taps (race condition: both POSTs could execute the dedup `search` before either `create` commits). CSS slide-up animation; spinning gear icon.
+**Double-submit guard (v6.23):** `/attendance-fix/<token>` JS disables submit button + shows bottom banner on first click — prevents race-condition duplicate `hr.attendance.correction` records from double-taps.
 
 ### Attendance Biweekly Report Wizard (v6.4 patterns)
 
@@ -346,7 +322,7 @@ See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md) for full refere
 
 ### DMARC Report Processor
 
-See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md). Script: `scripts/dmarc_report_processor.py`; cron 10:30 UTC daily. Source: FreeScout `finanzas@` (mailbox_id=5). IP classes: `good`/`third_party`/`unknown`. Alert: unknown IPs with dkim/spf=pass → OdooBot DM. Akdemia SendGrid `50.31.44.87` = `third_party` (expected). SPF upgrade to `-all` planned ~2026-05-27.
+See [CEO_COMMAND_CENTER.md](documentation/CEO_COMMAND_CENTER.md). Script: `scripts/dmarc_report_processor.py`; cron 10:30 UTC daily. Source: FreeScout `finanzas@` (mailbox_id=5). IP classes: `good`/`third_party`/`unknown`. Alert: unknown IPs with dkim/spf=pass → OdooBot DM. Akdemia SendGrid `50.31.44.87` = `third_party` (expected).
 
 **⚠️ DMARC `p=none` since 2026-05-20 (DO record id=1818865872):** Akdemia SendGrid sends FROM `@ueipab.edu.ve` without DKIM; SPF misaligned. Monitor-only until fix: Akdemia admin → Domain Auth → 3 CNAMEs → DigitalOcean → revert to `p=reject`. **DO NOT set SPF `-all` until DKIM live.**
 
@@ -382,7 +358,7 @@ See [Production Environment](documentation/PRODUCTION_ENVIRONMENT.md) for full d
 ## Dev Server Configuration
 
 **Host:** `freescout.ueipab.edu.ve` | RAM: 3.8 GB | Swap: 2 GB | Disk: 48 GB
-**NTP:** Both droplets sync to `time.cloudflare.com` (fallback: `ntp.ubuntu.com`). Config: `/etc/systemd/timesyncd.conf.d/ntp.conf`. `System clock synchronized: yes` confirmed 2026-05-29. **Root cause of prior failure:** outbound UDP 123 was missing from the DO cloud firewall outbound rules — fixed by adding `udp 123 → 0.0.0.0/0` outbound rule to `ueipab-fw` firewall. Inbound UDP 123 rule also present (allows external NTP servers to query the droplet if needed).
+**NTP:** Both droplets sync to `time.cloudflare.com`. Config: `/etc/systemd/timesyncd.conf.d/ntp.conf`. Fixed 2026-05-29 — was missing outbound UDP 123 in DO firewall (`ueipab-fw`).
 
 | Setting | Value | File |
 |---------|-------|------|
@@ -422,12 +398,10 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
 - **Auth:** API secret key param (not OAuth), key name `ueipab1`
 - **Primary Account (dedicated):** +584148321989 | **Backup:** +584248944898 | **Tertiary (emergency):** +584148321963
-- **⚠️ Active account as of 2026-05-22:** **BACKUP (+584248944898)** — primary broken (all sends failing at WA delivery level since msg≈76649; Massiva support ticket open). Restore: fix on Massiva dashboard → `whatsapp_account_phone=+584148321989`, `whatsapp_account_id=primary_uid`, `whatsapp_active_account=primary`, clear `whatsapp_flagged_phone/date`.
-- **⚠️ As of 2026-05-22 `dry_run=True`:** poll cron fires every 5 min but exits before any Massiva API call — **zero messages read from primary or backup**. Parents get no reply on WA. Telegram unaffected.
+- **⚠️ BACKUP active** (+584248944898) since 2026-05-22; `dry_run=True` — WA paused, Telegram active. See PENDING section for restore steps.
 - **Anti-spam:** Min 120s between sends
 - **Send:** `POST /api/send/whatsapp` | **Validate:** `GET /api/validate/whatsapp` | **Receive:** `GET /api/get/wa.received`
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
-- **Inbox-to-backup re-routing:** Poll `GET /api/get/wa.received?account=primary_uid`; resend via backup uid; then send Telegram invite. *(inactive while `dry_run=True`)*
 
 ### Claude AI API (Anthropic)
 
@@ -516,6 +490,8 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **Ops/Infra:** [Meta WA Migration](documentation/META_CLOUD_API_MIGRATION_PLAN.md) · [Production](documentation/PRODUCTION_ENVIRONMENT.md) · [WebSocket/Nginx](documentation/WEBSOCKET_NGINX_FIX.md) · [Finanzas Spoofing](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) · [Combined Fix](documentation/COMBINED_FIX_PROCEDURE.md) · [Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md) · [Bounce Cleanup](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) · [Akdemia Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md) · [Freescout Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
+**Attendance Enhancement:** [Smart Alert Plan](documentation/ATTENDANCE_SMART_ALERT_PLAN.md) — multi-signal confidence engine (asistencia + WiFi + Classroom + email); Python engine + optional AI narrative; Phases 1–4
+
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 
 **Ad-hoc / Legal:** [PDVSA Tag Check](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) · [Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) · [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md) · [Freescout Phone Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) · [Invoice Currency Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
@@ -524,9 +500,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **FIXED:** See [CHANGELOG.md](documentation/CHANGELOG.md) for full history of resolved issues.
 
-**FIXED 2026-05-28:**
-- **`hr_org_chart` KeyError `new_parent_id`** — build `17.0-20260504` regression; `kw.get('context')['new_parent_id']` and `['max_level']` crash when context key absent. Patched both containers: `(kw.get('context') or {}).get('key')`. Patch lives in container filesystem (`/tmp/patch_org_chart.py` on both hosts); re-apply if containers are rebuilt.
-- **Standard 40h work schedule** — morning start was 08:00 VET, corrected to 07:00 VET (`resource_calendar_attendance` calendar_id=1). Triggered by GABRIEL ESPAÑA leave #64 validation failure.
+**FIXED 2026-05-28:** `hr_org_chart` patch (`/tmp/patch_org_chart.py` on both hosts) — **re-apply if containers rebuilt** (`(kw.get('context') or {}).get('key')` pattern). Work schedule 07:00 VET start (calendar_id=1). See [CHANGELOG.md](documentation/CHANGELOG.md).
 
 **PENDING — Code / Infrastructure:**
 - **Invoice Reminder Wizard — 2 fixes needed (2026-06-01):** See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md#pending-enhancements-2026-06-01). (1) **Remove `PDVSA_ADVANCE_PAID` exclusion** — 7 PDVSA partners who paid 35% advance are being skipped but SMS2 sheet expects them to receive reminders for the remaining balance. (2) **Assign missing tags** — 7 partners exist in Odoo but have no REP/PDVSA category: REP→ids 2698,3658,2906,2919; PDVSA→ids 2467,2590,2822. Also resolve MARIA MARTIN duplicate (ids 3658 and 2666 both no-tag). Deploy at end-of-day maintenance window.
@@ -544,7 +518,6 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 **PENDING — External / Infrastructure:**
 - **WA Primary +584148321989 broken** (2026-05-22) — all sends fail at WA delivery; Massiva support ticket open. Glenda on backup (+584248944898). Once Massiva fixes: reconnect in dashboard → restore config params → clear flagged_phone.
 - **Glenda WA paused (2026-05-22)** — `ai_agent.dry_run=True`; poll cron skips, Telegram stays active. Restore: set `ai_agent.dry_run=False` in prod `ir.config_parameter`.
-- **`/etc/cron.d/voting_digest` expired** — day-of-month `19-26` in May; will never fire again. Safe to `rm`. Budget vote closed 2026-05-26.
 - **`/etc/cron.d/wa_primary_relay`** — fires every 5 min in DRY_RUN (no `--live`). Intentional until WA primary is restored. Remove or re-add `--live` once Massiva fixes primary account.
 
 **PENDING — Refactor:**

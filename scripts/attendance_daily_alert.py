@@ -81,6 +81,26 @@ WIFI_DB = {
     'database': 'payroll_db', 'charset': 'utf8mb4',
 }
 
+# control_asistencias DB — teacher work-delivery signal (Phase 1)
+CA_DB = {
+    'host': 'localhost', 'port': 3306,
+    'user': 'control_asist', 'password': 'y3deTsi92HrQgj0wgvVx',
+    'database': 'control_asistencias', 'charset': 'utf8mb4',
+}
+
+MIN_WORKED_HOURS_TEACHER = 4.5   # teachers finish ~12:45 VET (morning block only)
+
+# Confidence score thresholds — below SCORE_FULL_ALERT → suppress employee email
+SCORE_SILENCE    = 60   # multiple signals confirm presence → complete silence
+SCORE_RRHH_ONLY  = 30   # some signals confirm → log internally, no employee email
+
+SIGNAL_WEIGHTS = {
+    'asistencia_submitted': 65,  # teacher submitted student attendance — alone sufficient for silence
+    'wifi_connected':       25,  # on-campus network confirmed
+    'odoo_checkin':         20,  # kiosk tap
+    'odoo_hours_adequate':  20,  # worked >= expected hours
+}
+
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RRHH_EMAIL = 'recursoshumanos@ueipab.edu.ve'
 SENDER_NAME = 'Recursos Humanos UEIPAB'
@@ -280,6 +300,27 @@ def get_payroll_employees():
         ['id', 'name', 'work_email'],
     )
     return [e for e in employees if e['id'] not in EXCLUDE_EMPLOYEE_IDS]
+
+
+def get_guide_urls(employee_ids: list) -> dict:
+    """Return {emp_id: notice-ack URL} for employees with an unacknowledged
+    attendance_guide_2026_v1 record. Employees who already acked are omitted."""
+    global _web_base_url
+    if not _web_base_url:
+        _web_base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
+    try:
+        rows = odoo_search_read(
+            'hr.notice.acknowledgment',
+            [('notice_key', '=', 'attendance_guide_2026_v1'),
+             ('employee_id', 'in', employee_ids),
+             ('state', '=', 'pending')],
+            ['employee_id', 'token'],
+        )
+        return {r['employee_id'][0]: f"{_web_base_url}/attendance-guide/{r['token']}"
+                for r in rows if r.get('token')}
+    except Exception as e:
+        logger.warning("get_guide_urls failed: %s", e)
+        return {}
 
 
 def get_attendance_for_date(employee_ids, target_date: date):
@@ -486,11 +527,13 @@ def build_evening_email(emp_name: str, check_in_vet: datetime, target_date: date
 
 
 def build_morning_email(emp_name: str, issues: list, target_date: date,
-                        fix_url: str = None, leave_context_html: str = '') -> str:
+                        fix_url: str = None, leave_context_html: str = '',
+                        guide_url: str = None) -> str:
     """HTML for morning recap with one or more issues.
 
     issues: list of dicts with keys: icon, label, value, detail (optional)
     fix_url: if provided, show a direct correction button instead of plain email card
+    guide_url: if provided, show a subtle guide link below the correction CTA
     """
     date_str = target_date.strftime('%d/%m/%Y')
     first_name = emp_name.split()[0].capitalize() if emp_name else emp_name
@@ -568,6 +611,12 @@ def build_morning_email(emp_name: str, issues: list, target_date: date,
 
     {leave_context_html}
     {correction_html}
+    {f'''<div style="text-align:center;margin:4px 0 12px;">
+      <a href="{guide_url}"
+         style="font-size:12px;color:#2471a3;text-decoration:none;font-weight:600;">
+        📋 Ver Guía de Asistencia — cómo funciona y cómo te protege →
+      </a>
+    </div>''' if guide_url else ''}
   </div>
 """
     return _base_html(body, f'Resumen de asistencia — {date_str}')
@@ -725,6 +774,169 @@ def auto_fill_checkout(att_id: int, checkout_utc_str: str) -> bool:
         return False
 
 # ============================================================================
+# Phase 1: Multi-signal confidence engine
+# ============================================================================
+
+def load_teacher_emails() -> set:
+    """Return set of lowercase work emails for all teachers in profesor_seccion."""
+    import pymysql
+    try:
+        conn = pymysql.connect(**CA_DB)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DISTINCT u.email
+                    FROM usuario u
+                    JOIN profesor_seccion ps ON ps.id_profesor = u.id_usuario
+                    WHERE u.email IS NOT NULL AND u.email != ''
+                """)
+                return {r[0].lower() for r in cur.fetchall()}
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.warning("Could not load teacher emails from control_asistencias: %s", e)
+        return set()
+
+
+def get_asistencia_signals_batch(teacher_emails: set, target_date: date) -> set:
+    """Return set of lowercase emails that submitted asistencia_estudiante for target_date.
+
+    One DB round-trip for all teachers. Returns empty set on any error so that
+    failure never suppresses an alert (safe default = send alert).
+    """
+    import pymysql
+    if not teacher_emails:
+        return set()
+    try:
+        conn = pymysql.connect(**CA_DB)
+        try:
+            with conn.cursor() as cur:
+                placeholders = ','.join(['%s'] * len(teacher_emails))
+                cur.execute(
+                    f"SELECT id_usuario, email FROM usuario WHERE email IN ({placeholders})",
+                    list(teacher_emails),
+                )
+                user_map = {uid: eml.lower() for uid, eml in cur.fetchall()}
+                if not user_map:
+                    return set()
+
+                id_ph = ','.join(['%s'] * len(user_map))
+                cur.execute(
+                    f"""SELECT DISTINCT id_usuario FROM asistencia_estudiante
+                        WHERE fecha = %s AND id_usuario IN ({id_ph})""",
+                    [target_date.strftime('%Y-%m-%d')] + list(user_map.keys()),
+                )
+                submitted_ids = {r[0] for r in cur.fetchall()}
+                return {user_map[uid] for uid in submitted_ids if uid in user_map}
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.warning("asistencia batch check failed (%s) — defaulting to no suppression", e)
+        return set()
+
+
+def get_teacher_day_patterns(teacher_emails: set, reference_date: date,
+                              lookback_days: int = 45) -> dict:
+    """Return per-teacher weekday submission rates based on historical data.
+
+    Returns: {email_lower: {weekday_int: (submitted_count, total_school_days)}}
+    where weekday_int 0=Mon … 4=Fri.
+
+    Failure returns empty dict — callers fall through to normal scoring.
+    """
+    import pymysql
+    from collections import defaultdict
+    if not teacher_emails:
+        return {}
+    cutoff = reference_date - timedelta(days=lookback_days)
+    try:
+        conn = pymysql.connect(**CA_DB)
+        try:
+            with conn.cursor() as cur:
+                # All school days in window (any teacher submitted = school was open)
+                cur.execute(
+                    'SELECT DISTINCT fecha FROM asistencia_estudiante WHERE fecha >= %s',
+                    (cutoff.strftime('%Y-%m-%d'),),
+                )
+                school_days = [r[0] for r in cur.fetchall()]
+                wd_totals = defaultdict(int)
+                for d in school_days:
+                    wd_totals[d.weekday()] += 1
+
+                # Per-teacher submission dates in window
+                ph = ','.join(['%s'] * len(teacher_emails))
+                cur.execute(
+                    f"""SELECT u.email, ae.fecha
+                        FROM usuario u
+                        JOIN asistencia_estudiante ae ON ae.id_usuario = u.id_usuario
+                        WHERE u.email IN ({ph}) AND ae.fecha >= %s
+                        GROUP BY u.email, ae.fecha""",
+                    list(teacher_emails) + [cutoff.strftime('%Y-%m-%d')],
+                )
+                wd_counts = defaultdict(lambda: defaultdict(int))
+                for email, fecha in cur.fetchall():
+                    wd_counts[email.lower()][fecha.weekday()] += 1
+
+                result = {}
+                for email in teacher_emails:
+                    e = email.lower()
+                    result[e] = {
+                        wd: (wd_counts[e].get(wd, 0), wd_totals.get(wd, 0))
+                        for wd in range(5)
+                    }
+                return result
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.warning("Could not compute teacher day patterns: %s", e)
+        return {}
+
+
+_WD_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+OFF_DAY_MAX_RATE  = 0.25   # ≤25% submissions → off day
+OFF_DAY_MIN_DATA  = 4      # need at least 4 occurrences of that weekday before suppressing
+
+
+def compute_confidence_score(
+    is_teacher: bool,
+    has_checkin: bool,
+    worked_hours: float,
+    asistencia_submitted: bool,
+    wifi_connected: bool,
+) -> tuple:
+    """Return (score: int, summary: str)."""
+    score = 0
+    parts = []
+
+    if asistencia_submitted:
+        score += SIGNAL_WEIGHTS['asistencia_submitted']
+        parts.append('asistencia ✅')
+    elif is_teacher:
+        parts.append('asistencia ❌')
+
+    if wifi_connected:
+        score += SIGNAL_WEIGHTS['wifi_connected']
+        parts.append('wifi ✅')
+    elif is_teacher:
+        parts.append('wifi ❌')
+
+    if has_checkin:
+        score += SIGNAL_WEIGHTS['odoo_checkin']
+        parts.append('kiosk ✅')
+    else:
+        parts.append('kiosk ❌')
+
+    min_h = MIN_WORKED_HOURS_TEACHER if is_teacher else MIN_WORKED_HOURS
+    if worked_hours >= min_h:
+        score += SIGNAL_WEIGHTS['odoo_hours_adequate']
+        parts.append(f'hours ✅({worked_hours:.1f}h)')
+    else:
+        parts.append(f'hours ❌({worked_hours:.1f}h)')
+
+    return score, ' | '.join(parts)
+
+
+# ============================================================================
 # Evening mode: missing check-out
 # ============================================================================
 
@@ -854,6 +1066,38 @@ def run_morning(employees, state, holidays):
     logger.info("  Attendance records found for yesterday: %d", len(attendance))
     leaves       = get_leaves_for_date(employee_ids, yesterday)
     logger.info("  Leave records found for yesterday: %d employee(s)", len(leaves))
+    guide_urls   = get_guide_urls(employee_ids)
+    logger.info("  Guide URLs (pending ack): %d employee(s)", len(guide_urls))
+
+    # ── Phase 1: load signal sources ─────────────────────────────────────────
+    teacher_emails = load_teacher_emails()
+    logger.info("  Teachers in control_asistencias: %d", len(teacher_emails))
+
+    # Asistencia batch: check all teacher emails at once
+    teacher_emails_present = [
+        (emp.get('work_email') or '').lower()
+        for emp in employees
+        if (emp.get('work_email') or '').lower() in teacher_emails
+    ]
+    asistencia_submitted = get_asistencia_signals_batch(set(teacher_emails_present), yesterday)
+    logger.info("  Asistencia submitted yesterday: %d teacher(s)", len(asistencia_submitted))
+
+    # Day-of-week pattern: derive each teacher's expected schedule
+    teacher_day_patterns = get_teacher_day_patterns(teacher_emails, yesterday)
+    logger.info("  Day patterns loaded for %d teacher(s)", len(teacher_day_patterns))
+
+    # WiFi presence for yesterday: one SSH call covering all mapped employees
+    wifi_email_map   = _load_wifi_email_to_usernames()
+    all_wifi_usernames = set()
+    for emp in employees:
+        email = (emp.get('work_email') or '').lower()
+        all_wifi_usernames.update(wifi_email_map.get(email, set()))
+    wifi_presence = {}  # username_lower → last_event_vet_datetime
+    if all_wifi_usernames:
+        logger.info("  Querying Router 2 for yesterday WiFi presence (%d usernames)...",
+                    len(all_wifi_usernames))
+        wifi_presence = _get_all_wifi_logouts(all_wifi_usernames, yesterday)
+        logger.info("  WiFi presence confirmed: %d username(s)", len(wifi_presence))
 
     sent = 0
     for emp in employees:
@@ -918,11 +1162,63 @@ def run_morning(employees, state, holidays):
             logger.debug("  %s — no issues for %s", emp_name, yesterday)
             continue
 
+        # ── Phase 1: confidence scoring for teachers ──────────────────────────
+        emp_email_lower = emp_email.lower()
+        is_teacher = emp_email_lower in teacher_emails
+
+        if is_teacher:
+            # Off-day pattern check: suppress entirely if this weekday is historically absent
+            wd = yesterday.weekday()
+            day_pattern = teacher_day_patterns.get(emp_email_lower, {})
+            submitted_n, total_n = day_pattern.get(wd, (0, 0))
+            if total_n >= OFF_DAY_MIN_DATA and submitted_n / total_n <= OFF_DAY_MAX_RATE:
+                pct = submitted_n / total_n * 100
+                logger.info("  OFF-DAY: %s | %s %d/%d (%.0f%%) — contract off day, silence",
+                            emp_name, _WD_NAMES[wd], submitted_n, total_n, pct)
+                if not TEST_EMAIL:
+                    state[state_key] = datetime.now().isoformat()
+                continue
+
+            rec = attendance.get(emp_id)
+            has_checkin   = rec is not None and bool(rec.get('check_in'))
+            worked_h      = float((rec or {}).get('worked_hours') or 0.0)
+            asistencia_ok = emp_email_lower in asistencia_submitted
+            emp_usernames = wifi_email_map.get(emp_email_lower, set())
+            wifi_ok       = any(uname in wifi_presence for uname in emp_usernames)
+
+            score, signal_summary = compute_confidence_score(
+                is_teacher=True,
+                has_checkin=has_checkin,
+                worked_hours=worked_h,
+                asistencia_submitted=asistencia_ok,
+                wifi_connected=wifi_ok,
+            )
+
+            if score >= SCORE_SILENCE:
+                logger.info("  SILENCE: %s | score=%d | %s",
+                            emp_name, score, signal_summary)
+                if not TEST_EMAIL:
+                    state[state_key] = datetime.now().isoformat()
+                continue
+
+            if score >= SCORE_RRHH_ONLY:
+                logger.info("  RRHH-ONLY: %s | score=%d | %s",
+                            emp_name, score, signal_summary)
+                if not TEST_EMAIL:
+                    state[state_key] = datetime.now().isoformat()
+                continue
+
+            logger.info("  LOW-SCORE teacher: %s | score=%d | %s — sending alert",
+                        emp_name, score, signal_summary)
+        # ─────────────────────────────────────────────────────────────────────
+
         fix_url    = get_fix_url_for_employee(emp_id, yesterday)
         leave_html = _format_leave_context_html(leaves.get(emp_id, []))
+        guide_url  = guide_urls.get(emp_id)
         subject    = f"📋 Resumen de asistencia — {yesterday.strftime('%d/%m/%Y')}"
         body_html  = build_morning_email(emp_name, issues, yesterday,
-                                         fix_url=fix_url, leave_context_html=leave_html)
+                                         fix_url=fix_url, leave_context_html=leave_html,
+                                         guide_url=guide_url)
 
         issue_labels = ', '.join(i['label'] for i in issues if i['label'] not in ('Entrada', 'Salida'))
         if not issue_labels:
