@@ -2,10 +2,13 @@
 """
 leave_notification.py
 ─────────────────────
-Sends a notification to recursoshumanos@ueipab.edu.ve whenever an employee
-submits a leave request (state = confirm).
+Notifies recursoshumanos@ + arcides.arzola@ of the full leave lifecycle:
+  confirm   → 📋 Nueva Solicitud (to RRHH + CC Director)
+  validate1 → 🔔 Segunda Validación Requerida (to RRHH + CC Director)
+  validate  → ✅ Permiso Aprobado (to RRHH + CC Director)
+  refuse    → ❌ Permiso Rechazado (to RRHH + CC Director)
 
-Runs every 15 min via cron. State file tracks already-notified leave IDs.
+Runs every 15 min via cron. State file tracks already-notified leave IDs per state.
 
 Usage:
     python3 scripts/leave_notification.py                        # dry run
@@ -26,9 +29,10 @@ from datetime import datetime, timedelta
 # Configuration
 # ============================================================================
 
-RRHH_EMAIL   = 'recursoshumanos@ueipab.edu.ve'
-SENDER_NAME  = 'Recursos Humanos UEIPAB'
-SENDER_EMAIL = 'recursoshumanos@ueipab.edu.ve'
+RRHH_EMAIL     = 'recursoshumanos@ueipab.edu.ve'
+DIRECTOR_EMAIL = 'arcides.arzola@ueipab.edu.ve'
+SENDER_NAME    = 'Recursos Humanos UEIPAB'
+SENDER_EMAIL   = 'recursoshumanos@ueipab.edu.ve'
 LOGO_URL     = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 ODOO_BASE    = 'https://odoo.ueipab.edu.ve'
 
@@ -250,11 +254,43 @@ def build_validate1_email(leave: dict) -> str:
     )
 
 
-def queue_email(to: str, subject: str, body_html: str) -> int:
+def build_validated_email(leave: dict) -> str:
+    emp_name, leave_type, rows = _common_rows(leave, submitted_label='✅ Aprobado')
+    odoo_url = f"{ODOO_BASE}/web#id={leave.get('id', '')}&cids=1&menu_id=378&action=520&model=hr.leave&view_type=form"
+    badge = ('<div style="display:inline-block;background:#d4edda;color:#155724;'
+             'border:1px solid #28a745;border-radius:12px;padding:4px 14px;'
+             'font-size:12px;font-weight:600;margin-bottom:16px;">'
+             '✅ Permiso aprobado</div>')
+    return _email_shell(
+        hdr_gradient='linear-gradient(135deg,#155724,#28a745)',
+        hdr_icon='✅', hdr_title='Permiso Aprobado',
+        badge_html=badge, rows_html=rows,
+        note='Este permiso fue aprobado y está registrado en el sistema.',
+        btn_color='#28a745', btn_label='Ver en Odoo →', odoo_url=odoo_url,
+    )
+
+
+def build_refused_email(leave: dict) -> str:
+    emp_name, leave_type, rows = _common_rows(leave, submitted_label='❌ Rechazado')
+    odoo_url = f"{ODOO_BASE}/web#id={leave.get('id', '')}&cids=1&menu_id=378&action=520&model=hr.leave&view_type=form"
+    badge = ('<div style="display:inline-block;background:#f8d7da;color:#721c24;'
+             'border:1px solid #f5c6cb;border-radius:12px;padding:4px 14px;'
+             'font-size:12px;font-weight:600;margin-bottom:16px;">'
+             '❌ Solicitud rechazada</div>')
+    return _email_shell(
+        hdr_gradient='linear-gradient(135deg,#721c24,#c0392b)',
+        hdr_icon='❌', hdr_title='Permiso Rechazado',
+        badge_html=badge, rows_html=rows,
+        note='Esta solicitud fue rechazada. El empleado fue notificado automáticamente por Odoo.',
+        btn_color='#c0392b', btn_label='Ver en Odoo →', odoo_url=odoo_url,
+    )
+
+
+def queue_email(to: str, subject: str, body_html: str, cc: str = '') -> int:
     effective_to      = TEST_EMAIL if TEST_EMAIL else to
     effective_subject = f"[TEST] {subject}" if TEST_EMAIL else subject
     if DRY_RUN:
-        logger.info("  [DRY] Would send to %s: %s", effective_to, effective_subject)
+        logger.info("  [DRY] Would send to %s CC %s: %s", effective_to, cc or '—', effective_subject)
         return -1
     vals = {
         'subject':     effective_subject,
@@ -262,11 +298,12 @@ def queue_email(to: str, subject: str, body_html: str) -> int:
         'email_to':    effective_to,
         'email_from':  f'{SENDER_NAME} <{SENDER_EMAIL}>',
         'reply_to':    RRHH_EMAIL,
+        'email_cc':    cc,
         'state':       'outgoing',
         'auto_delete': True,
     }
     mail_id = odoo_execute('mail.mail', 'create', [vals])
-    logger.info("  Queued mail.mail id=%d to %s", mail_id, effective_to)
+    logger.info("  Queued mail.mail id=%d to %s CC %s", mail_id, effective_to, cc or '—')
     return mail_id
 
 
@@ -300,7 +337,7 @@ def main():
         logger.info("TEST MODE — all emails → %s", TEST_EMAIL)
 
     print('=' * 60)
-    print('LEAVE SUBMISSION NOTIFIER')
+    print('LEAVE LIFECYCLE NOTIFIER')
     print('=' * 60)
     print(f"  DRY_RUN    : {DRY_RUN}")
     print(f"  TEST_EMAIL : {TEST_EMAIL or '(none — real recipient)'}")
@@ -309,21 +346,34 @@ def main():
     state = load_state()
     prune_state(state)
 
-    leaves = odoo_search_read(
+    # Pending: all confirm/validate1 regardless of age
+    pending_leaves = odoo_search_read(
         'hr.leave',
         [('state', 'in', ['confirm', 'validate1'])],
         ['id', 'employee_id', 'holiday_status_id', 'date_from', 'date_to',
          'number_of_days', 'write_date', 'state'],
         order='write_date asc',
     )
-    logger.info("Found %d leave(s) needing attention (confirm + validate1)", len(leaves))
+
+    # Outcomes: validate/refuse within last 60 days (avoids processing all history)
+    cutoff = (datetime.utcnow() - timedelta(days=60)).strftime('%Y-%m-%d %H:%M:%S')
+    outcome_leaves = odoo_search_read(
+        'hr.leave',
+        [('state', 'in', ['validate', 'refuse']), ('write_date', '>=', cutoff)],
+        ['id', 'employee_id', 'holiday_status_id', 'date_from', 'date_to',
+         'number_of_days', 'write_date', 'state'],
+        order='write_date asc',
+    )
+
+    all_leaves = pending_leaves + outcome_leaves
+    logger.info("Found %d leave(s): %d pending, %d outcomes",
+                len(all_leaves), len(pending_leaves), len(outcome_leaves))
 
     sent = 0
-    for lv in leaves:
-        lv_id      = lv['id']
-        lv_state   = lv.get('state', 'confirm')
-        # Separate state keys so a confirm→validate1 transition triggers a second email
-        state_key  = f"notified_{lv_state}_{lv_id}"
+    for lv in all_leaves:
+        lv_id    = lv['id']
+        lv_state = lv.get('state', 'confirm')
+        state_key = f"notified_{lv_state}_{lv_id}"
         if state_key in state and not TEST_EMAIL:
             logger.debug("  Leave #%d (%s) already notified — skipping", lv_id, lv_state)
             continue
@@ -331,16 +381,27 @@ def main():
         emp_name   = (lv.get('employee_id') or [None, '?'])[1]
         leave_type = (lv.get('holiday_status_id') or [None, '?'])[1]
 
+        # CC Director on all events; guard: omit if Director is the employee
+        cc = '' if 'ARCIDES' in emp_name.upper() else DIRECTOR_EMAIL
+
         if lv_state == 'confirm':
             subject   = f"📋 Solicitud de Permiso: {emp_name} — {leave_type}"
             body_html = build_confirm_email(lv)
             logger.info("  [CONFIRM] Leave #%d — %s (%s)", lv_id, emp_name, leave_type)
-        else:  # validate1
+        elif lv_state == 'validate1':
             subject   = f"🔔 Segunda Validación Requerida: {emp_name} — {leave_type}"
             body_html = build_validate1_email(lv)
             logger.info("  [VALIDATE1] Leave #%d — %s (%s)", lv_id, emp_name, leave_type)
+        elif lv_state == 'validate':
+            subject   = f"✅ Permiso Aprobado: {emp_name} — {leave_type}"
+            body_html = build_validated_email(lv)
+            logger.info("  [VALIDATE] Leave #%d — %s (%s)", lv_id, emp_name, leave_type)
+        else:  # refuse
+            subject   = f"❌ Permiso Rechazado: {emp_name} — {leave_type}"
+            body_html = build_refused_email(lv)
+            logger.info("  [REFUSE] Leave #%d — %s (%s)", lv_id, emp_name, leave_type)
 
-        queue_email(RRHH_EMAIL, subject, body_html)
+        queue_email(RRHH_EMAIL, subject, body_html, cc=cc)
 
         if not TEST_EMAIL:
             state[state_key] = datetime.now().isoformat()
