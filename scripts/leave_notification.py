@@ -215,7 +215,7 @@ def _common_rows(leave: dict, submitted_label: str = '🕐 Solicitado') -> tuple
 
 def build_confirm_email(leave: dict) -> str:
     emp_name, leave_type, rows = _common_rows(leave)
-    odoo_url = f"{ODOO_BASE}/odoo/time-off/{leave.get('id', '')}"
+    odoo_url = f"{ODOO_BASE}/web#id={leave.get('id', '')}&cids=1&menu_id=378&action=520&model=hr.leave&view_type=form"
     badge = ('<div style="display:inline-block;background:#fff3cd;color:#856404;'
              'border:1px solid #f0ad4e;border-radius:12px;padding:4px 14px;'
              'font-size:12px;font-weight:600;margin-bottom:16px;">'
@@ -231,7 +231,7 @@ def build_confirm_email(leave: dict) -> str:
 
 def build_validate1_email(leave: dict) -> str:
     emp_name, leave_type, rows = _common_rows(leave, submitted_label='✅ 1ª aprobación')
-    odoo_url = f"{ODOO_BASE}/odoo/time-off/{leave.get('id', '')}"
+    odoo_url = f"{ODOO_BASE}/web#id={leave.get('id', '')}&cids=1&menu_id=378&action=520&model=hr.leave&view_type=form"
     badge = ('<div style="display:inline-block;background:#e8f5e9;color:#2e7d32;'
              'border:1px solid #66bb6a;border-radius:12px;padding:4px 14px;'
              'font-size:12px;font-weight:600;margin-bottom:8px;">'

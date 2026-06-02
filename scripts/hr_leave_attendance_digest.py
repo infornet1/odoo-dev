@@ -264,7 +264,7 @@ def build_section_pending(pending: list) -> str:
         days   = float(lv.get('number_of_days') or 0)
         lv_id  = lv.get('id', '')
         lv_st  = lv.get('state', 'confirm')
-        url    = f"https://odoo.ueipab.edu.ve/odoo/time-off/{lv_id}"
+        url    = f"https://odoo.ueipab.edu.ve/web#id={lv_id}&cids=1&menu_id=378&action=520&model=hr.leave&view_type=form"
 
         if lv_st == 'validate1':
             btn_color = '#e65100'
