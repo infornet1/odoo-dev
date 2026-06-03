@@ -321,6 +321,7 @@ class AttendanceCorrectionController(http.Controller):
                 'check_in_time':  check_in,
                 'check_out_time': check_out or False,
                 'reason':         reason,
+                'motivo_key':     motivo_key,
                 'submitted_ip':   ip or False,
                 'state':          'pending',
             })
@@ -333,6 +334,7 @@ class AttendanceCorrectionController(http.Controller):
                 'check_in_time':        check_in,
                 'check_out_time':       check_out or False,
                 'reason':               reason,
+                'motivo_key':           motivo_key,
                 'submitted_ip':         ip or False,
             })
 
@@ -741,6 +743,7 @@ class AttendanceCorrectionController(http.Controller):
                 'check_in_time':  check_in,
                 'check_out_time': check_out or False,
                 'reason':         reason,
+                'motivo_key':     motivo_key,
                 'submitted_ip':   ip or False,
                 'state':          'pending',
             })
@@ -753,6 +756,7 @@ class AttendanceCorrectionController(http.Controller):
                 'check_in_time': check_in,
                 'check_out_time': check_out or False,
                 'reason':        reason,
+                'motivo_key':    motivo_key,
                 'submitted_ip':  ip or False,
             })
 

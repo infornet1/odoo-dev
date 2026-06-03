@@ -1,6 +1,7 @@
+import logging
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 import requests as _requests
 
@@ -9,10 +10,26 @@ from odoo.exceptions import UserError
 
 VET_TO_UTC = timedelta(hours=4)  # VET = UTC-4 → UTC = VET + 4h
 
+_logger = logging.getLogger(__name__)
+
 _FS_MAILBOX_ID = 4
 _FS_SENDER_USER = 1
 _HR_EMAIL = 'recursoshumanos@ueipab.edu.ve'
 _DIRECTOR_EMAIL = 'arcides.arzola@ueipab.edu.ve'
+
+# Motivos that map directly to an hr.leave.type (leave type IDs match both envs)
+_MOTIVO_LEAVE_MAP = {
+    'capacitacion': 1,   # Paid Time Off
+    'medico':       15,  # Cita Médica personal
+    'reposo':       2,   # Sick Time Off
+    'duelo':        13,  # Muerte familiar (luto)
+    'judicial':     18,  # Diligencia personal
+    'matrimonio':   1,   # Paid Time Off
+    'calamidad':    18,  # Diligencia personal
+}
+# 'energia'    → always attendance (employee was present, clock issue)
+# 'otro'       → opens approve wizard for RRHH to decide
+# anything else → attendance (safe default)
 
 
 class HrAttendanceCorrection(models.Model):
@@ -49,6 +66,18 @@ class HrAttendanceCorrection(models.Model):
     submitted_ip      = fields.Char(string='IP de envío', readonly=True)
     attachment_ids    = fields.Many2many('ir.attachment', string='Documentos adjuntos')
     attachment_count  = fields.Integer(string='Adjuntos', compute='_compute_attachment_count')
+    motivo_key = fields.Char(
+        string='Categoría de motivo', readonly=True, index=True,
+        help='Clave interna del motivo seleccionado por el empleado en el formulario.',
+    )
+    correction_type = fields.Selection([
+        ('attendance', 'Corrección de asistencia'),
+        ('leave',      'Permiso'),
+    ], string='Tipo de resolución', readonly=True,
+       help='Determinado automáticamente al aprobar según el motivo.')
+    created_leave_id = fields.Many2one(
+        'hr.leave', string='Permiso creado', readonly=True, ondelete='set null',
+    )
 
     def _compute_attachment_count(self):
         Att = self.env['ir.attachment']
@@ -339,9 +368,31 @@ class HrAttendanceCorrection(models.Model):
         )
 
     def action_approve(self):
+        """Smart dispatcher: route to hr.attendance or hr.leave based on motivo_key."""
         self.ensure_one()
         if self.state not in ('pending', 'under_revision'):
             raise UserError(_("Solo se pueden aprobar solicitudes pendientes o en revisión."))
+
+        motivo = (self.motivo_key or '').strip()
+
+        if motivo in _MOTIVO_LEAVE_MAP:
+            return self._do_approve_leave(_MOTIVO_LEAVE_MAP[motivo])
+        elif motivo == 'otro':
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Aprobar corrección — motivo: Otro'),
+                'res_model': 'hr.attendance.approve.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {'default_correction_id': self.id},
+            }
+        else:
+            # 'energia', unknown keys, or empty → attendance correction
+            return self._do_approve_attendance()
+
+    def _do_approve_attendance(self):
+        """Create hr.attendance record — employee was present, clock issue."""
+        self.ensure_one()
         if not re.match(r'^\d{2}:\d{2}$', self.check_in_time.strip()):
             raise UserError(_("Formato de hora inválido. Use HH:MM (ej: 07:30)."))
 
@@ -360,10 +411,11 @@ class HrAttendanceCorrection(models.Model):
         att_id = self.env.cr.fetchone()[0]
 
         self.write({
-            'state': 'approved',
+            'state':               'approved',
+            'correction_type':     'attendance',
             'created_attendance_id': att_id,
-            'reviewed_by': self.env.user.id,
-            'reviewed_date': fields.Datetime.now(),
+            'reviewed_by':         self.env.user.id,
+            'reviewed_date':       fields.Datetime.now(),
         })
 
         tmpl = self.env.ref(
@@ -379,6 +431,65 @@ class HrAttendanceCorrection(models.Model):
             _('Registro de asistencia creado para %s.') % self.employee_id.name,
             'success',
         )
+
+    def _do_approve_leave(self, leave_type_id):
+        """Create hr.leave in confirm state — employee was genuinely absent."""
+        self.ensure_one()
+        leave_date = self.date
+
+        # Full work day: VET 07:00–17:00 → UTC 11:00–21:00
+        date_from_utc = datetime.combine(leave_date, time(7, 0)) + VET_TO_UTC
+        date_to_utc   = datetime.combine(leave_date, time(17, 0)) + VET_TO_UTC
+
+        leave = self.env['hr.leave'].sudo().create({
+            'holiday_status_id': leave_type_id,
+            'employee_id':       self.employee_id.id,
+            'request_date_from': leave_date,
+            'request_date_to':   leave_date,
+            'date_from':         date_from_utc,
+            'date_to':           date_to_utc,
+            'name':              self.reason or '',
+        })
+        try:
+            leave.sudo().action_confirm()
+        except Exception as e:
+            _logger.warning("Could not confirm leave %s: %s", leave.id, e)
+
+        self.write({
+            'state':           'approved',
+            'correction_type': 'leave',
+            'created_leave_id': leave.id,
+            'reviewed_by':     self.env.user.id,
+            'reviewed_date':   fields.Datetime.now(),
+        })
+
+        tmpl = self.env.ref(
+            'ueipab_attendance_report.email_template_correction_approved',
+            raise_if_not_found=False,
+        )
+        if tmpl and self.employee_id.work_email:
+            tmpl.send_mail(self.id, force_send=True,
+                           email_values={'email_cc': self._build_cc()})
+
+        return self._notify_and_reload(
+            _('Corrección aprobada — Permiso creado'),
+            _('Permiso creado para %s y enviado a aprobación.') % self.employee_id.name,
+            'success',
+        )
+
+    def action_open_leave(self):
+        """Navigate to the hr.leave record created from this correction."""
+        self.ensure_one()
+        if not self.created_leave_id:
+            raise UserError(_("No hay permiso vinculado a esta solicitud."))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Permiso'),
+            'res_model': 'hr.leave',
+            'res_id': self.created_leave_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
     def action_open_rejection_wizard(self):
         self.ensure_one()

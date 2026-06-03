@@ -17,6 +17,9 @@
                 <field name="check_in_time" string="Entrada"/>
                 <field name="check_out_time" string="Salida"/>
                 <field name="reason" string="Motivo"/>
+                <field name="correction_type" string="Tipo" widget="badge"
+                       decoration-info="correction_type == 'attendance'"
+                       decoration-warning="correction_type == 'leave'"/>
                 <field name="state" widget="badge"
                        decoration-warning="state == 'pending'"
                        decoration-info="state == 'under_revision'"
@@ -59,8 +62,9 @@
                 </header>
                 <sheet>
                     <field name="freescout_conversation_id" invisible="1"/>
+                    <field name="motivo_key" invisible="1"/>
 
-                    <!-- Freescout smart button -->
+                    <!-- Smart buttons -->
                     <div class="oe_button_box" name="button_box">
                         <button type="object"
                                 name="action_open_freescout"
@@ -69,6 +73,15 @@
                                 class="oe_stat_button">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">Ver en Freescout</span>
+                            </div>
+                        </button>
+                        <button type="object"
+                                name="action_open_leave"
+                                invisible="not created_leave_id"
+                                icon="fa-calendar"
+                                class="oe_stat_button">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Ver Permiso</span>
                             </div>
                         </button>
                     </div>
@@ -86,6 +99,10 @@
                                    readonly="state not in ('pending', 'under_revision')"/>
                             <field name="created_attendance_id"
                                    invisible="not created_attendance_id"/>
+                            <field name="correction_type" readonly="1"
+                                   invisible="not correction_type"/>
+                            <field name="created_leave_id" readonly="1"
+                                   invisible="not created_leave_id"/>
                         </group>
                     </group>
                     <separator string="Motivo del empleado"/>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_hr_attendance_approve_wizard_form" model="ir.ui.view">
+        <field name="name">hr.attendance.approve.wizard.form</field>
+        <field name="model">hr.attendance.approve.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Aprobar corrección — motivo: Otro">
+                <sheet>
+                    <field name="correction_id" invisible="1"/>
+
+                    <!-- Context card -->
+                    <div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+                        <div style="font-size:13px;font-weight:700;color:#1a2c5b;margin-bottom:6px;">
+                            Solicitud de corrección
+                        </div>
+                        <div style="font-size:13px;color:#444;line-height:1.8;">
+                            <strong>Empleado:</strong> <field name="employee_name" readonly="1" nolabel="1"/><br/>
+                            <strong>Fecha:</strong> <field name="date" readonly="1" nolabel="1"/>
+                        </div>
+                        <div style="margin-top:10px;font-size:12px;color:#555;font-style:italic;border-top:1px solid #dde3ee;padding-top:8px;">
+                            <strong>Motivo del empleado:</strong><br/>
+                            <field name="reason" readonly="1" nolabel="1"/>
+                        </div>
+                    </div>
+
+                    <separator string="¿Cómo registrar esta solicitud?"/>
+
+                    <field name="resolution" widget="radio" nolabel="1"/>
+
+                    <group invisible="resolution != 'leave'" style="margin-top:8px;">
+                        <field name="leave_type_id" required="resolution == 'leave'"/>
+                    </group>
+
+                    <div style="background:#fff8e1;border-left:4px solid #f0ad4e;border-radius:4px;
+                                padding:10px 14px;margin-top:12px;font-size:12px;color:#7b5800;">
+                        <strong>Corrección de asistencia:</strong> El empleado estaba físicamente presente —
+                        se creará el registro de entrada/salida en <em>hr.attendance</em>.<br/>
+                        <strong>Registrar como permiso:</strong> El empleado estaba ausente —
+                        se creará una solicitud de permiso en estado <em>Confirmado</em> para aprobación.
+                    </div>
+                </sheet>
+                <footer>
+                    <button string="Confirmar" name="action_confirm" type="object" class="btn-success"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
