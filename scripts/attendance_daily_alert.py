@@ -45,10 +45,12 @@ Date: 2026-05-19
 """
 
 import argparse
+import hmac as _hmac
 import json
 import logging
 import os
 import re
+import secrets
 import subprocess
 import xmlrpc.client
 from datetime import date, datetime, timedelta
@@ -201,10 +203,51 @@ def odoo_get_param(key, default=''):
 
 
 _web_base_url = None
+_fix_secret_cache = None
+
+
+def _get_or_create_fix_secret() -> str:
+    """Read attendance.fix_secret from ir.config_parameter; auto-create if missing."""
+    global _fix_secret_cache
+    if _fix_secret_cache:
+        return _fix_secret_cache
+    try:
+        val = odoo_get_param('attendance.fix_secret', '')
+        if not val:
+            val = secrets.token_hex(32)
+            odoo_execute('ir.config_parameter', 'set_param', ['attendance.fix_secret', val])
+            logger.info("Created new attendance.fix_secret in ir.config_parameter")
+        _fix_secret_cache = val
+        return val
+    except Exception as e:
+        logger.warning("Could not load/create attendance.fix_secret: %s", e)
+        return ''
+
+
+def _make_direct_fix_url(emp_id: int, target_date: date) -> str:
+    """Return a signed /attendance-fix-open/ URL valid for this employee + date."""
+    global _web_base_url
+    try:
+        secret = _get_or_create_fix_secret()
+        if not secret:
+            return ''
+        date_str = target_date.strftime('%Y-%m-%d')
+        sig = _hmac.new(secret.encode(), f"{emp_id}:{date_str}".encode(), 'sha256').hexdigest()[:16]
+        if not _web_base_url:
+            _web_base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve').rstrip('/')
+        return f"{_web_base_url}/attendance-fix-open/{emp_id}/{date_str}/{sig}"
+    except Exception as e:
+        logger.debug("_make_direct_fix_url emp=%d: %s", emp_id, e)
+        return ''
+
 
 def get_fix_url_for_employee(emp_id: int, target_date: date):
-    """Return the /attendance-fix/<token> URL for this employee's active report
-    that covers target_date, or None if no matching report exists."""
+    """Return a correction URL for this employee's alert.
+
+    Tries /attendance-fix/<token> via the biweekly report first.
+    Falls back to the HMAC-signed /attendance-fix-open/ URL so the button
+    always appears even when no biweekly report exists yet.
+    """
     global _web_base_url
     try:
         date_str = target_date.strftime('%Y-%m-%d')
@@ -219,15 +262,15 @@ def get_fix_url_for_employee(emp_id: int, target_date: date):
             ['ack_token'],
             limit=1,
         )
-        if not reports or not reports[0].get('ack_token'):
-            return None
-        token = reports[0]['ack_token']
-        if not _web_base_url:
-            _web_base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve').rstrip('/')
-        return f"{_web_base_url}/attendance-fix/{token}"
+        if reports and reports[0].get('ack_token'):
+            token = reports[0]['ack_token']
+            if not _web_base_url:
+                _web_base_url = odoo_get_param('web.base.url', 'https://odoo.ueipab.edu.ve').rstrip('/')
+            return f"{_web_base_url}/attendance-fix/{token}"
     except Exception as e:
-        logger.debug("get_fix_url_for_employee emp=%d: %s", emp_id, e)
-        return None
+        logger.debug("get_fix_url_for_employee report lookup emp=%d: %s", emp_id, e)
+
+    return _make_direct_fix_url(emp_id, target_date) or None
 
 # ============================================================================
 # VET time helpers

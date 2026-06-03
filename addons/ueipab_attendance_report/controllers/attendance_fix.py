@@ -1,5 +1,6 @@
 import base64
-from datetime import date as date_cls
+import hmac as _hmac
+from datetime import date as date_cls, datetime as _datetime, timedelta as _timedelta
 
 from odoo import http
 from odoo.http import request
@@ -156,6 +157,23 @@ function showFile(input){
 }
 </script>
 """
+
+
+def _make_direct_sig(secret: str, emp_id: int, date_str: str) -> str:
+    """HMAC-SHA256 signature for a direct fix URL (first 16 hex chars)."""
+    return _hmac.new(secret.encode(), f"{emp_id}:{date_str}".encode(), 'sha256').hexdigest()[:16]
+
+
+def _utc_to_vet_str(utc_val) -> str:
+    """Convert an Odoo UTC datetime (str or datetime) to VET HH:MM string."""
+    if not utc_val:
+        return ''
+    try:
+        if isinstance(utc_val, str):
+            utc_val = _datetime.fromisoformat(utc_val.replace('Z', ''))
+        return (utc_val + _timedelta(hours=-4)).strftime('%H:%M')
+    except Exception:
+        return ''
 
 
 def _page(title, body):
@@ -608,6 +626,356 @@ class AttendanceCorrectionController(http.Controller):
             var btn = document.getElementById('submit-btn');
             btn.disabled = true;
             btn.textContent = '⏳ Enviando…';
+            document.getElementById('proc-banner').style.display = 'block';
+          }});
+          </script>"""
+        return _page('Corrección de Asistencia', body)
+
+    # ── Direct fix route (no report required) ────────────────────────────────
+
+    @http.route('/attendance-fix-open/<int:emp_id>/<string:date_str>/<string:sig>',
+                type='http', auth='public', website=False, csrf=False)
+    def correction_form_direct(self, emp_id, date_str, sig, **post):
+        """Public correction form signed with HMAC — no attendance report needed."""
+        # 1. Verify HMAC signature
+        secret = request.env['ir.config_parameter'].sudo().get_param('attendance.fix_secret', '')
+        if not secret or not _hmac.compare_digest(sig, _make_direct_sig(secret, emp_id, date_str)):
+            return _page('Enlace inválido', """
+              <div class="hdr"><h1>&#128683; Enlace no válido</h1></div>
+              <div class="body"><p>Este enlace no es válido o ha expirado.
+              Por favor contacte a <a href="mailto:recursoshumanos@ueipab.edu.ve">
+              recursoshumanos@ueipab.edu.ve</a>.</p></div>""")
+
+        # 2. Parse date
+        try:
+            target_date = date_cls.fromisoformat(date_str)
+        except ValueError:
+            return _page('Enlace inválido', """
+              <div class="hdr"><h1>Fecha inválida</h1></div>
+              <div class="body"></div>""")
+
+        # 3. Look up employee
+        employee = request.env['hr.employee'].sudo().browse(emp_id)
+        if not employee.exists():
+            return _page('Enlace inválido', """
+              <div class="hdr"><h1>Empleado no encontrado</h1></div>
+              <div class="body"></div>""")
+
+        # 4. Determine issue type from actual attendance
+        next_date = target_date + _timedelta(days=1)
+        att = request.env['hr.attendance'].sudo().search([
+            ('employee_id', '=', emp_id),
+            ('check_in',    '>=', f'{date_str} 00:00:00'),
+            ('check_in',    '<',  f'{next_date} 00:00:00'),
+        ], limit=1)
+
+        if att and att.check_in and not att.check_out:
+            issue_type = 'missing_exit'
+            existing_checkin_vet = _utc_to_vet_str(att.check_in)
+        else:
+            issue_type = 'absent'
+            existing_checkin_vet = ''
+
+        if request.httprequest.method == 'POST':
+            return self._handle_direct_post(employee, target_date, issue_type,
+                                            existing_checkin_vet, post)
+        return self._render_direct_form(employee, target_date, issue_type,
+                                        existing_checkin_vet)
+
+    def _handle_direct_post(self, employee, target_date, issue_type,
+                             existing_checkin_vet, post):
+        ci_h  = post.get('ci_hour', '').strip()
+        ci_m  = post.get('ci_min',  '00').strip()
+        ci_ap = post.get('ci_ampm', 'AM').strip()
+        co_h  = post.get('co_hour', '').strip()
+        co_m  = post.get('co_min',  '00').strip()
+        co_ap = post.get('co_ampm', 'AM').strip()
+
+        check_in  = f"{_to_24h(ci_h, ci_ap):02d}:{ci_m}" if ci_h else ''
+        check_out = f"{_to_24h(co_h, co_ap):02d}:{co_m}" if co_h else ''
+
+        if issue_type == 'missing_exit':
+            check_in = existing_checkin_vet or post.get('existing_checkin', '').strip()
+
+        motivo_key    = post.get('motivo', '').strip()
+        motivo_detail = post.get('motivo_detail', '').strip()
+        motivo_label  = _MOTIVOS_DICT.get(motivo_key, '')
+        if motivo_detail and motivo_label:
+            reason = f"{motivo_label}: {motivo_detail}"
+        else:
+            reason = motivo_detail or motivo_label
+
+        att_file = request.httprequest.files.get('attachment')
+        att_ok   = att_file and att_file.filename
+        ip = (request.httprequest.headers.get('X-Forwarded-For')
+              or request.httprequest.remote_addr or '')[:50]
+
+        errors = []
+        if issue_type == 'absent' and not ci_h:
+            errors.append("Seleccione la hora de entrada.")
+        if issue_type == 'missing_exit' and not co_h:
+            errors.append("Seleccione la hora de salida.")
+        if not motivo_key:
+            errors.append("Seleccione un motivo.")
+        if motivo_key == 'otro' and not motivo_detail:
+            errors.append("Explique el motivo detalladamente.")
+        if att_ok:
+            att_file.seek(0)
+            if len(att_file.read()) > MAX_MB * 1024 * 1024:
+                errors.append(f"El archivo adjunto no puede superar {MAX_MB} MB.")
+            att_file.seek(0)
+
+        if errors:
+            return self._render_direct_form(employee, target_date, issue_type,
+                                             existing_checkin_vet, errors, post)
+
+        existing = request.env['hr.attendance.correction'].sudo().search([
+            ('employee_id', '=', employee.id),
+            ('date',        '=', target_date),
+            ('state',       'in', ('pending', 'under_revision')),
+        ], limit=1)
+
+        if existing:
+            existing.sudo().write({
+                'check_in_time':  check_in,
+                'check_out_time': check_out or False,
+                'reason':         reason,
+                'submitted_ip':   ip or False,
+                'state':          'pending',
+            })
+            correction = existing
+        else:
+            correction = request.env['hr.attendance.correction'].sudo().create({
+                'employee_id':   employee.id,
+                # attendance_report_id intentionally omitted — direct alert link
+                'date':          target_date,
+                'check_in_time': check_in,
+                'check_out_time': check_out or False,
+                'reason':        reason,
+                'submitted_ip':  ip or False,
+            })
+
+        if att_ok:
+            att_file.seek(0)
+            file_bytes = att_file.read()
+            if file_bytes:
+                att = request.env['ir.attachment'].sudo().create({
+                    'name':      att_file.filename,
+                    'datas':     base64.b64encode(file_bytes).decode(),
+                    'res_model': 'hr.attendance.correction',
+                    'res_id':    correction.id,
+                    'mimetype':  att_file.content_type or 'application/octet-stream',
+                })
+                correction.sudo().write({'attachment_ids': [(4, att.id)]})
+
+        tmpl_id = request.env['ir.model.data'].sudo()._xmlid_to_res_id(
+            'ueipab_attendance_report.email_template_correction_request'
+        )
+        if tmpl_id:
+            request.env['mail.template'].sudo().browse(tmpl_id).send_mail(
+                correction.id, force_send=True,
+            )
+
+        emp_email = employee.work_email or ''
+        if emp_email:
+            ci_disp_c = _fmt_12h(check_in)
+            co_disp_c = _fmt_12h(check_out) if check_out else '— no indicada'
+            att_line  = f'<br/>&#128206; Adjunto: <em>{att_file.filename}</em>' if att_ok else ''
+            conf_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);color:white;padding:20px 26px;">
+    <h2 style="margin:0;font-size:17px;">&#128295; Solicitud de corrección recibida</h2>
+    <p style="margin:4px 0 0;font-size:12px;opacity:.85;">Instituto Privado Andrés Bello, CA</p>
+  </div>
+  <div style="padding:22px 26px;">
+    <p style="font-size:14px;color:#333;">Estimado/a <strong>{employee.name}</strong>,</p>
+    <p style="font-size:13px;color:#555;line-height:1.6;">
+      Hemos recibido tu solicitud de corrección de asistencia. Recursos Humanos la revisará
+      antes del cierre de nómina y te notificará con el resultado.
+    </p>
+    <div style="background:#d4edda;border-left:4px solid #28a745;padding:12px 16px;
+                border-radius:4px;margin:16px 0;font-size:13px;color:#155724;line-height:1.8;">
+      &#128197; <strong>Fecha:</strong> {target_date.strftime('%d/%m/%Y')}<br/>
+      &#9203; <strong>Entrada:</strong> {ci_disp_c} &nbsp;|&nbsp;
+              <strong>Salida:</strong> {co_disp_c}<br/>
+      &#128172; <strong>Motivo:</strong> {reason}{att_line}
+    </div>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;">Cordialmente,<br/>
+      <strong>Recursos Humanos</strong> — Instituto Privado Andrés Bello, CA</p>
+  </div>
+</div></div>"""
+            cc_parts = ['recursoshumanos@ueipab.edu.ve']
+            if emp_email != 'arcides.arzola@ueipab.edu.ve':
+                cc_parts.append('arcides.arzola@ueipab.edu.ve')
+            request.env['mail.mail'].sudo().create({
+                'subject':    f'&#10003; Solicitud de corrección recibida — {target_date.strftime("%d/%m/%Y")}',
+                'email_from': '"Recursos Humanos" <recursoshumanos@ueipab.edu.ve>',
+                'email_to':   f'"{employee.name}" <{emp_email}>',
+                'email_cc':   ', '.join(cc_parts),
+                'body_html':  conf_body,
+                'state':      'outgoing',
+            }).send()
+
+        ci_disp  = _fmt_12h(check_in)
+        co_disp  = _fmt_12h(check_out) if check_out else 'No indicada'
+        att_note = f'<br/>&#128206; Adjunto: <em>{att_file.filename}</em>' if att_ok else ''
+
+        return _page('Solicitud enviada', f"""
+          <div class="hdr"><h1>&#10003; Solicitud enviada correctamente</h1>
+            <p>{employee.name}</p></div>
+          <div class="body">
+            <div class="ok">
+              <strong>Su solicitud fue recibida y será revisada por Recursos Humanos.</strong><br/>
+              &#128197; <strong>Fecha:</strong> {target_date.strftime('%d/%m/%Y')}<br/>
+              &#9203; <strong>Entrada:</strong> {ci_disp} &nbsp;|&nbsp;
+              <strong>Salida:</strong> {co_disp}<br/>
+              &#128172; <strong>Motivo:</strong> {reason}{att_note}
+            </div>
+            <p style="font-size:13px;color:#555;margin-top:18px;">
+              Recibirá una notificación por correo cuando su solicitud sea procesada.
+            </p>
+            <p class="note">Instituto Privado Andrés Bello, CA &mdash; Recursos Humanos</p>
+          </div>""")
+
+    def _render_direct_form(self, employee, target_date, issue_type,
+                             existing_checkin_vet, errors=None, post=None):
+        post   = post or {}
+        errors = errors or []
+        date_str  = str(target_date)
+        date_disp = f"{_DAYS_ES.get(target_date.weekday(), '')} {target_date.strftime('%d/%m/%Y')}"
+
+        err_html = ''
+        if errors:
+            items    = ''.join(f'<li>{e}</li>' for e in errors)
+            err_html = f'<div class="err"><ul style="margin:0;padding-left:18px;">{items}</ul></div>'
+
+        if issue_type == 'missing_exit':
+            issue_info   = (f'&#9888;&#65039; Tienes <strong>entrada registrada</strong> a las '
+                            f'<strong>{existing_checkin_vet or "—"}</strong>. '
+                            f'Solo indica la hora de salida correcta.')
+            ci_section   = ''
+            co_req_badge = '<span style="color:#dc3545;">*</span>'
+            co_required  = True
+        else:
+            issue_info  = '&#128683; No se encontró registro de entrada para este día.'
+            ci_section  = f"""
+              <div class="section">
+                {_time_row('ci',
+                           'Hora de entrada <span style="color:#dc3545;">*</span>',
+                           required=True,
+                           sel_h=post.get('ci_hour',''),
+                           sel_m=post.get('ci_min','00'),
+                           sel_ap=post.get('ci_ampm','AM'))}
+              </div>"""
+            co_req_badge = '<span style="color:#888;font-size:11px;font-weight:400;">(opcional)</span>'
+            co_required  = False
+
+        co_section = f"""
+              <div class="section">
+                <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#2471a3;
+                          text-transform:uppercase;letter-spacing:.5px;">
+                  Hora de salida {co_req_badge}
+                </p>
+                {_time_row('co', 'Hora de salida',
+                           hint='Deje «hr» si no recuerda la hora exacta',
+                           required=co_required,
+                           sel_h=post.get('co_hour',''),
+                           sel_m=post.get('co_min','00'),
+                           sel_ap=post.get('co_ampm','AM'))}
+              </div>"""
+
+        prev_motivo = post.get('motivo', '')
+        prev_detail = post.get('motivo_detail', '')
+        motivo_opts = '<option value="">— Seleccione un motivo —</option>'
+        for key, label in _MOTIVOS:
+            sel = 'selected' if key == prev_motivo else ''
+            motivo_opts += f'<option value="{key}" {sel}>{label}</option>'
+
+        is_otro = prev_motivo == 'otro'
+        det_lbl = ('Explique el motivo <span style="color:#dc3545;">*</span>' if is_otro
+                   else 'Detalles adicionales '
+                        '<span style="color:#888;font-size:12px;font-weight:400;">(opcional)</span>')
+        det_req = 'required' if is_otro else ''
+        det_ph  = ('Describa detalladamente la razón de su ausencia…' if is_otro
+                   else 'Puede agregar información adicional si lo considera necesario…')
+
+        hidden_ci = (f'<input type="hidden" name="existing_checkin" value="{existing_checkin_vet}"/>'
+                     if issue_type == 'missing_exit' else '')
+
+        body = f"""
+          <div class="hdr">
+            <h1>&#128295; Solicitar Corrección de Asistencia</h1>
+            <p>Instituto Privado Andrés Bello, CA</p>
+          </div>
+          <div class="body">
+            <div class="info">
+              <strong>{employee.name}</strong> &#160;|&#160; {date_disp}
+            </div>
+            <div class="info" style="margin-top:8px;">{issue_info}</div>
+            {err_html}
+
+            <form method="POST" enctype="multipart/form-data" id="fix-form">
+              {hidden_ci}
+              {ci_section}
+              {co_section}
+
+              <label style="{_LBL_STYLE}">
+                Motivo de la incidencia <span style="color:#dc3545;">*</span>
+              </label>
+              <select name="motivo" id="motivo" required
+                      style="{_SEL_STYLE};width:100%;"
+                      onchange="updateDetail(this.value)">
+                {motivo_opts}
+              </select>
+              <p class="hint">Razones reconocidas por la legislación laboral venezolana (LOTTT / LOPCYMAT)</p>
+
+              <label id="detail-label" style="{_LBL_STYLE}">{det_lbl}</label>
+              <textarea id="motivo-detail" name="motivo_detail"
+                        {det_req} placeholder="{det_ph}">{prev_detail}</textarea>
+
+              <label style="{_LBL_STYLE}">
+                Documento de soporte
+                <span style="color:#888;font-size:12px;font-weight:400;">(opcional)</span>
+              </label>
+              <div class="file-wrap" onclick="document.getElementById('att-input').click()">
+                <p style="margin:0 0 4px;font-size:13px;color:#2471a3;font-weight:600;">
+                  &#128206; Adjuntar archivo
+                </p>
+                <p id="file-name" style="margin:0;font-size:12px;color:#888;">
+                  Ningún archivo seleccionado
+                </p>
+              </div>
+              <input id="att-input" type="file" name="attachment"
+                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                     style="display:none;" onchange="showFile(this)"/>
+              <p class="hint">Reposo médico, permiso, foto del marcador, etc.
+                              Formatos: PDF, JPG, PNG, DOC &mdash; Máx. {MAX_MB} MB</p>
+
+              <button class="btn" type="submit" id="submit-btn">&#128228; Enviar Solicitud</button>
+            </form>
+
+            <div id="proc-banner">
+              <div class="pb-inner">
+                <span class="pb-spin">&#9881;&#65039;</span>
+                <div class="pb-text">
+                  <strong>&#128338; Espere — su solicitud está siendo procesada.</strong>
+                  Aguarde un momento antes de reintentarlo.
+                </div>
+              </div>
+            </div>
+
+            <p class="note">
+              Su solicitud será revisada por Recursos Humanos antes del cierre de nómina.<br/>
+              ¿Consultas?
+              <a href="mailto:recursoshumanos@ueipab.edu.ve">recursoshumanos@ueipab.edu.ve</a>
+            </p>
+          </div>
+          <script>
+          document.getElementById('fix-form').addEventListener('submit', function() {{
+            var btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = '&#9203; Enviando…';
             document.getElementById('proc-banner').style.display = 'block';
           }});
           </script>"""
