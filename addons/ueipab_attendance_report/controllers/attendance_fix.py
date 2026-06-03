@@ -12,14 +12,15 @@ _DAYS_ES = {
 
 # Venezuela Labor Law (LOTTT / LOPCYMAT) predefined absence reasons
 _MOTIVOS = [
-    ('energia',    'Corte de energía eléctrica'),
-    ('medico',     'Consulta o emergencia médica  (Art. 49 LOTTT)'),
-    ('reposo',     'Reposo médico prescrito'),
-    ('duelo',      'Duelo familiar  (Art. 49 LOTTT)'),
-    ('judicial',   'Citación judicial u obligación legal'),
-    ('matrimonio', 'Matrimonio del trabajador  (Art. 49 LOTTT)'),
-    ('calamidad',  'Calamidad doméstica justificada'),
-    ('otro',       'Otro motivo  (explique a continuación)'),
+    ('energia',      'Corte de energía eléctrica'),
+    ('medico',       'Consulta o emergencia médica  (Art. 49 LOTTT)'),
+    ('reposo',       'Reposo médico prescrito'),
+    ('duelo',        'Duelo familiar  (Art. 49 LOTTT)'),
+    ('judicial',     'Citación judicial u obligación legal'),
+    ('matrimonio',   'Matrimonio del trabajador  (Art. 49 LOTTT)'),
+    ('calamidad',    'Calamidad doméstica justificada'),
+    ('capacitacion', 'Participación en capacitación, taller y/o evento institucional'),
+    ('otro',         'Otro motivo  (explique a continuación)'),
 ]
 _MOTIVOS_DICT = dict(_MOTIVOS)
 MAX_MB = 5  # max attachment size
@@ -291,7 +292,7 @@ class AttendanceCorrectionController(http.Controller):
         if day_type == 'missing_exit' and not co_h:
             errors.append("Seleccione la hora de salida.")
         if not motivo_key:
-            errors.append("Seleccione el motivo de la incidencia.")
+            errors.append("Seleccione el motivo de la solicitud de corrección.")
         if motivo_key == 'otro' and not motivo_detail:
             errors.append("Seleccionó 'Otro motivo' — por favor explique a continuación.")
         if att_ok:
@@ -557,7 +558,7 @@ class AttendanceCorrectionController(http.Controller):
 
               <!-- Motivo -->
               <label style="{_LBL_STYLE}">
-                Motivo de la incidencia <span style="color:#dc3545;">*</span>
+                Motivo de la solicitud de corrección <span style="color:#dc3545;">*</span>
               </label>
               <select name="motivo" id="motivo" required
                       style="{_SEL_STYLE};width:100%;"
@@ -716,7 +717,7 @@ class AttendanceCorrectionController(http.Controller):
         if issue_type == 'missing_exit' and not co_h:
             errors.append("Seleccione la hora de salida.")
         if not motivo_key:
-            errors.append("Seleccione un motivo.")
+            errors.append("Seleccione el motivo de la solicitud de corrección.")
         if motivo_key == 'otro' and not motivo_detail:
             errors.append("Explique el motivo detalladamente.")
         if att_ok:
@@ -921,7 +922,7 @@ class AttendanceCorrectionController(http.Controller):
               {co_section}
 
               <label style="{_LBL_STYLE}">
-                Motivo de la incidencia <span style="color:#dc3545;">*</span>
+                Motivo de la solicitud de corrección <span style="color:#dc3545;">*</span>
               </label>
               <select name="motivo" id="motivo" required
                       style="{_SEL_STYLE};width:100%;"
