@@ -572,13 +572,10 @@ def main():
     logger.info("  %d employee(s) with morning flags in last %d days",
                 len(issue_counts), LOOKBACK_DAYS)
 
-    # Resolve names for employees in issue_counts not already in leaves data
-    leave_emp_ids = {(lv['employee_id'] or [None])[0] for lv in pending + leaves_30d
-                     if lv.get('employee_id')}
-    flag_emp_ids  = set(issue_counts.keys())
-    missing_ids   = list((flag_emp_ids - leave_emp_ids) - EXCLUDE_EMPLOYEE_IDS)
-    emp_names = fetch_employee_names(missing_ids) if missing_ids else {}
-    logger.info("  Resolved %d additional employee name(s) for attendance flags", len(emp_names))
+    flag_emp_ids = set(issue_counts.keys())
+    all_flag_ids = list(flag_emp_ids - EXCLUDE_EMPLOYEE_IDS)
+    emp_names = fetch_employee_names(all_flag_ids) if all_flag_ids else {}
+    logger.info("  Resolved %d employee name(s) for attendance flags", len(emp_names))
 
     today_str  = today_vet().strftime('%d/%m/%Y')
     pending_lbl = f" ({len(pending)} pendiente{'s' if len(pending) != 1 else ''})" if pending else ''
