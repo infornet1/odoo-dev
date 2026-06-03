@@ -1142,21 +1142,8 @@ def run_morning(employees, state, holidays):
                 issues.append({
                     'icon': '🔴', 'label': 'Salida', 'value': 'No registrada',
                 })
-            elif not is_special and float(worked_hours) < MIN_WORKED_HOURS:
-                # Short hours
-                check_out_vet = utc_to_vet(check_out_val if isinstance(check_out_val, str)
-                                           else str(check_out_val))
-                check_out_str = check_out_vet.strftime('%H:%M') if check_out_vet else '—'
-                issues.append({
-                    'icon': '🟢', 'label': 'Entrada', 'value': check_in_str,
-                })
-                issues.append({
-                    'icon': '🟡', 'label': 'Salida', 'value': check_out_str,
-                })
-                issues.append({
-                    'icon': '⚠️', 'label': 'Horas trabajadas',
-                    'value': f"{float(worked_hours):.1f}h (mínimo {MIN_WORKED_HOURS:.1f}h)",
-                })
+            # Both check_in and check_out exist → employee registered correctly;
+            # short-hours review belongs in the biweekly report, not the daily alert.
 
         if not issues:
             logger.debug("  %s — no issues for %s", emp_name, yesterday)

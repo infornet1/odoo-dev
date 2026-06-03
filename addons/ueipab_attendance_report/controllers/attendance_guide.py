@@ -133,7 +133,7 @@ def _build_page(emp_name, ack_url, already=False):
       <div class="step-card">
         <div class="step-num">2</div>
         <p class="step-label">Aviso inteligente</p>
-        <p class="step-desc">El sistema cruza múltiples señales — solo recibirás aviso cuando no haya evidencia suficiente de asistencia</p>
+        <p class="step-desc">Solo recibirás aviso si falta tu registro de entrada o de salida — con ambos presentes no se genera ningún correo</p>
       </div>
       <div class="step-card">
         <div class="step-num">3</div>
