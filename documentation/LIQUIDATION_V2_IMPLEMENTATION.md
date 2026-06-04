@@ -1,7 +1,7 @@
 # Venezuelan Liquidation V2 - Implementation Reference
 
 **Status:** ✅ PRODUCTION READY (All Tests Passed!)
-**Last Updated:** 2025-11-21 (Antigüedad Validation Fix)
+**Last Updated:** 2026-06-04 (Service Months Net-Period Fix)
 
 ## V2 Implementation (2025-11-17)
 
@@ -18,6 +18,34 @@
 - ✅ **Progressive vacation calculation** - LOTTT Article 190 compliant (Updated 2025-11-21)
 
 **Key Updates:**
+
+### 2026-06-04 — LIQUID_SERVICE_MONTHS_V2 Net-Period Fix 🔴 CRITICAL
+
+**Bug:** `LIQUID_SERVICE_MONTHS_V2` always counted from `contract.date_start`, ignoring `ueipab_previous_liquidation_date`. Since every other rule depends on SERVICE_MONTHS for its period calculation, all of Prestaciones, Utilidades, Vacaciones, Bono Vacacional, and Intereses were computed against the **full employment tenure** — double-paying any benefits already settled in a prior liquidation.
+
+`LIQUID_ANTIGUEDAD_V2` was the only rule that correctly computed a net period (it reads `previous_liquidation_date` directly). All other rules did not.
+
+**Fix:** SERVICE_MONTHS now uses `previous_liquidation_date` as the start date when set and `> contract.date_start`:
+
+```python
+if prev_liq and prev_liq > contract.date_start:
+    start_date = prev_liq
+else:
+    start_date = contract.date_start
+days_diff = (end_date - start_date).days
+result = days_diff / 30.0
+```
+
+**Side effect on `ueipab_vacation_prepaid_amount`:** This contract field was used as a manual offset: calculate vacation for the full tenure, then subtract what was previously paid. With SERVICE_MONTHS now scoped to the net period, the offset is no longer needed and `ueipab_vacation_prepaid_amount` must be cleared to $0 on any contract that uses `previous_liquidation_date`. Leaving it non-zero would under-pay vacation.
+
+**Impact (payslip 891 — EMILIO ISEA, 10.27 net months vs 32.53 full months):**
+- Overstatement corrected: **$662.87** (NET $1,365.79 → $702.92)
+- LIQUID_PRESTACIONES_V2: $1,053.28 → $332.39 (largest component)
+- LIQUID_INTERESES_V2: $185.61 → $18.48
+
+**Rules updated:** prod id=21, testing id=51.
+
+---
 
 ### 2025-11-21 (PM) - Antigüedad Validation Fix 🔴 CRITICAL
 - **Bug Fixed:** `LIQUID_ANTIGUEDAD_V2` now validates `previous_liquidation_date`

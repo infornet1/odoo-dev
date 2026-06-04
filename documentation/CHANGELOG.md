@@ -4,6 +4,34 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-04 — Liquidation V2: LIQUID_SERVICE_MONTHS_V2 net-period fix 🔴 CRITICAL
+
+**Problem:** `LIQUID_SERVICE_MONTHS_V2` always counted from `contract.date_start`, ignoring `ueipab_previous_liquidation_date`. All downstream rules (Vacaciones, Bono Vacacional, Utilidades, Prestaciones, Intereses) computed against the **full tenure** instead of the net period since the last full liquidation. Only `LIQUID_ANTIGUEDAD_V2` previously handled `previous_liquidation_date` correctly.
+
+**Impact (payslip 891 — EMILIO ISEA):**
+- Contract start: 2023-10-02 | Previous liquidation: 2025-07-31 | Period end: 2026-06-04
+- School obligation: 10.27 net months (2025-08-01 → 2026-06-04) — all benefits through Jul 2025 already paid
+- Payslip was computing 32.53 months for every rule → **overstatement of $662.87**
+
+| Rule | Before | After |
+|------|--------|-------|
+| LIQUID_SERVICE_MONTHS_V2 | 32.53 mo | **10.27 mo** |
+| LIQUID_PRESTACIONES_V2 | $1,053.28 | $332.39 |
+| LIQUID_INTERESES_V2 | $185.61 | $18.48 |
+| LIQUID_VACACIONES_V2 | $242.24 | $76.44 |
+| LIQUID_BONO_VACACIONAL_V2 | $242.24 | $76.44 |
+| LIQUID_UTILIDADES_V2 | $80.38 | $68.77 |
+| LIQUID_VACATION_PREPAID_V2 | −$564.86 | $0.00 |
+| LIQUID_ANTIGUEDAD_V2 | $132.95 | $132.95 (unchanged — already correct) |
+| **NET** | **$1,365.79** | **$702.92** |
+
+**Fix:** `LIQUID_SERVICE_MONTHS_V2` now uses `ueipab_previous_liquidation_date` as the period start when it is set and `> contract.date_start`. All dependent rules automatically inherit the net period. Contract's `ueipab_vacation_prepaid_amount` cleared to $0 (that value was the previous liquidation's vacation payment; it is not needed as a manual offset once the period boundary is correct).
+
+**Rule updated:** prod id=21, testing id=51. Contract updated: prod id=94 (EMILIO ISEA), testing id=127 (RAMON BELLO).
+**Migration script:** `scripts/fix_liquid_service_months_testing.py`
+
+---
+
 ## 2026-06-01 — Invoice Reminder Wizard Owl crash fix (v70.5)
 
 **Problem:** Opening *Accounting → Customers → Recordatorio de Saldo* threw an Owl lifecycle error: `TypeError: can't access property "bdom", this.fiber is null`. The wizard opened blank with an error dialog.
