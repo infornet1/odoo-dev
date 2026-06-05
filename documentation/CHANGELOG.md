@@ -4,6 +4,24 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-05 — LIQUID_ANTIGUEDAD_V2: 2.0 → 2.5 days/month (LOTTT Art. 142 fix)
+
+**Rule:** `LIQUID_ANTIGUEDAD_V2` (prod id=29, testing id=59)
+
+**Fix:** Rate changed from `2.0 days/month` (24 days/year) to `2.5 days/month` (30 days/year) per LOTTT Article 142 System B: `30 days × years of service × last integral salary`.
+
+**Impact on payslip 891 (EMILIO ISEA liquidation):**
+- `LIQUID_ANTIGUEDAD_V2`: $132.95 → **$166.19** (+$33.24)
+- `LIQUID_NET_V2`: $481.27 → **$514.51**
+
+**LOTTT basis:** System B retroactive formula = 30 days/year ÷ 12 = 2.5 days/month. Previous 2.0 days/month rate was a 20% underpayment on seniority benefit.
+
+**`previous_liquidation_date` behaviour confirmed correct:** True termination on 2025-07-31 (full settlement including antigüedad). Current slip covers new employment period Aug 2025–Jun 2026 = 10.27 net months only. Formula's `total_months − paid_months` approach is legally correct for this scenario.
+
+**Both envs updated.** Payslip 891 recomputed.
+
+---
+
 ## 2026-06-05 — EMILIO ISEA contract salary_v2 accidentally zeroed (incident)
 
 **Incident:** `ueipab_salary_v2` on production contract id=94 (EMILIO ISEA) was set to `$0` at `04:01:21` when editing the contract via UI (field cleared on save).
