@@ -17,6 +17,14 @@
                 <field name="payslip_run_state" invisible="1"/>
             </field>
 
+            <!-- Período Parcial toggle — shown after credit_note in main group -->
+            <field name="credit_note" position="after">
+                <field name="is_partial_quincena"
+                       widget="boolean_toggle"
+                       string="Período Parcial (prorratear)"
+                       readonly="state != 'draft'"/>
+            </field>
+
             <!-- Modify "Set to Draft" button visibility to check batch state -->
             <button name="action_payslip_draft" position="attributes">
                 <attribute name="invisible">state != 'cancel' or payslip_run_state == 'cancel'</attribute>
@@ -24,6 +32,19 @@
 
             <!-- Add warning banner when payslip belongs to cancelled batch -->
             <header position="inside">
+                <button name="action_send_delivery_email"
+                        string="📧 Payslip Email"
+                        type="object"
+                        class="oe_highlight"
+                        invisible="state == 'cancel'"
+                        confirm="Queue payslip delivery email to this employee?"
+                        help="Send payslip delivery email using the standard template"/>
+                <button name="action_send_ack_reminder_single"
+                        string="🔔 Send Ack Reminder"
+                        type="object"
+                        invisible="state != 'done' or is_acknowledged"
+                        confirm="Send acknowledgment reminder to this employee?"
+                        help="Send acknowledgment reminder email to this employee"/>
                 <button name="action_compose_payslip_email"
                         string="Send by Email"
                         type="object"

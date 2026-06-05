@@ -4,6 +4,34 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-05 — Partial Quincena Pro-ration + Single Payslip Email Actions (v71.0)
+
+**Features:**
+
+1. **`is_partial_quincena` flag on `hr.payslip`** — Boolean toggle "Período Parcial (prorratear)" in the payslip form (next to Credit Note). When enabled, all VE_PAYROLL_V2 earnings and deductions are multiplied by `period_days / 15`. Defaults to `False`; must be set manually.
+
+2. **`VE_PERIOD_RATIO_V2` helper salary rule** — sequence 0, `condition_select=none`; returns `period_days / 15.0` when `is_partial_quincena=True`, else `1.0`. Linked to VE_PAYROLL_V2 structure. 9 existing rules updated: `VE_SALARY_V2`, `VE_EXTRABONUS_V2`, `VE_BONUS_V2`, `VE_CESTA_TICKET_V2`, `VE_SSO_DED_V2`, `VE_PARO_DED_V2`, `VE_FAOV_DED_V2`, `VE_ARI_DED_V2`, `VE_OTHER_DED_V2`.
+
+3. **Single-payslip email actions** — two new buttons in the payslip form header:
+   - **📧 Payslip Email** — sends "Payslip Email - Employee Delivery" template to the employee; visible on all non-cancelled payslips; emails queued via mail cron (`force_send=False`)
+   - **🔔 Send Ack Reminder** — sends ack reminder template + increments `ack_reminder_count`; visible only on `done` + not acknowledged
+
+**Rules excluded from pro-ration by design:** `BONO_CALIBRACION` (per-session calibration bonus), `VE_LOAN_DED_V2` (fixed installment per quincena).
+
+**Validation (testing):**
+
+| Scenario | `is_partial` | Ratio | NET | Result |
+|---|---|---|---|---|
+| Jun 1–15 (full quincena) | False | 1.0 | $166.96 | ✅ unchanged |
+| Jun 1–4 (4 days, resignation) | True | 0.27 | $44.52 | ✅ prorated |
+| Feb 16–28 (13 days, full per HR policy) | False | 1.0 | $166.96 | ✅ no accidental proration |
+
+**Deployed:** both envs. Rule IDs — testing: `VE_PERIOD_RATIO_V2`=72; prod: `VE_PERIOD_RATIO_V2`=43.
+**Module:** `ueipab_payroll_enhancements` v17.0.1.71.0.
+**Deployment script:** `scripts/deploy_ve_period_ratio_prod.py`
+
+---
+
 ## 2026-06-04 — Liquidation V2: LIQUID_SERVICE_MONTHS_V2 net-period fix 🔴 CRITICAL
 
 **Problem:** `LIQUID_SERVICE_MONTHS_V2` always counted from `contract.date_start`, ignoring `ueipab_previous_liquidation_date`. All downstream rules (Vacaciones, Bono Vacacional, Utilidades, Prestaciones, Intereses) computed against the **full tenure** instead of the net period since the last full liquidation. Only `LIQUID_ANTIGUEDAD_V2` previously handled `previous_liquidation_date` correctly.

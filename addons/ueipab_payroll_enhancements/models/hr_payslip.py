@@ -152,6 +152,18 @@ class HrPayslip(models.Model):
     )
 
     # ========================================
+    # PARTIAL QUINCENA PRO-RATION
+    # ========================================
+
+    is_partial_quincena = fields.Boolean(
+        string='Período Parcial',
+        default=False,
+        help='Activa prorrateo por días reales ÷ 15 en estructura VE_PAYROLL_V2. '
+             'Usar en renuncias, ingresos a mitad de quincena u otros '
+             'períodos incompletos.',
+    )
+
+    # ========================================
     # EMAIL TEMPLATE HELPER METHODS
     # ========================================
 
@@ -348,6 +360,57 @@ class HrPayslip(models.Model):
         self.message_post(body=_("Payslip set to Draft."))
         return res
     
+    def action_send_delivery_email(self):
+        """Send payslip delivery email to employee using the standard delivery template."""
+        self.ensure_one()
+        if not self.employee_id.work_email:
+            raise UserError(_('Employee %s has no work email configured.') % self.employee_id.name)
+        template = self.env['mail.template'].search([
+            ('name', '=', 'Payslip Email - Employee Delivery'),
+            ('model', '=', 'hr.payslip'),
+        ], limit=1)
+        if not template:
+            raise UserError(_('Template "Payslip Email - Employee Delivery" not found.'))
+        template.send_mail(self.id, force_send=False)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': _('Payslip email queued for %s.') % self.employee_id.name,
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
+    def action_send_ack_reminder_single(self):
+        """Send acknowledgment reminder to this employee."""
+        self.ensure_one()
+        if self.is_acknowledged:
+            raise UserError(_('%s has already acknowledged this payslip.') % self.employee_id.name)
+        if not self.employee_id.work_email:
+            raise UserError(_('Employee %s has no work email configured.') % self.employee_id.name)
+        template = self.env.ref(
+            'ueipab_payroll_enhancements.email_template_payslip_ack_reminder',
+            raise_if_not_found=False,
+        )
+        if not template:
+            raise UserError(_('Acknowledgment reminder template not found.'))
+        template.send_mail(self.id, force_send=False)
+        self.write({
+            'ack_reminder_count': self.ack_reminder_count + 1,
+            'ack_reminder_last_date': fields.Datetime.now(),
+        })
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': _('Reminder queued for %s (reminder #%d).') % (
+                    self.employee_id.name, self.ack_reminder_count),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
     def action_compose_payslip_email(self):
         """Generates the compact payslip PDF and opens the mail composer."""
         self.ensure_one()
