@@ -4,6 +4,18 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-05 — EMILIO ISEA contract salary_v2 accidentally zeroed (incident)
+
+**Incident:** `ueipab_salary_v2` on production contract id=94 (EMILIO ISEA) was set to `$0` at `04:01:21` when editing the contract via UI (field cleared on save).
+
+**Evidence:** Prior confirmed payslip id=866 (May 16–31) showed `VE_SALARY_V2=$80.38` → implied monthly `salary_v2 = $160.76`. `ueipab_bonus_v2=$135.66` was unaffected.
+
+**Resolution:** Restored manually via UI to `$160.76` at `04:10:05`. Contract id=94 verified.
+
+**Pending:** `ueipab_vacation_prepaid_amount=$221.65` still set on this contract — should be cleared to `$0` now that `ueipab_previous_liquidation_date=2025-07-31` correctly bounds the liquidation period. Requires authorization before touching.
+
+---
+
 ## 2026-06-05 — Partial Quincena Pro-ration + Single Payslip Email Actions (v71.0)
 
 **Features:**
