@@ -4,6 +4,22 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-05 — EMILIO ISEA liquidation closed (SLIP/840 + SLIP/841)
+
+**Payslip 891 → SLIP/840** (`LIQUID_VE_V2`): NET = **$514.51** (includes LIQUID_ANTIGUEDAD_V2 2.5-day fix). Confirmed `done`.
+
+**Payslip 892 → SLIP/841** (`VE_PAYROLL_V2`, `is_partial_quincena=True`): Jun 1–4 (4 days), ratio=0.27, NET = **$44.52**. Confirmed `done`.
+
+**Email:** Comprobante de Pago sent to `emilio.isea@ueipab.edu.ve` (mail id=7477, `exchange_rate_used=563.2892`). Mail queue cron triggered manually as automated fire was ~4 min away.
+
+**Contract id=94 (prod):** `ueipab_vacation_prepaid_amount` cleared to `$0.00` — no longer needed; payslip 891 is confirmed and paid.
+
+**Employee status:** no longer with UEIPAB as of 2026-06-04 (contract `close`).
+
+**LOTTT research note (utilidades vs aguinaldos):** `LIQUID_UTILIDADES_V2` uses 15 days/year (LOTTT minimum) but UEIPAB's aguinaldo policy pays 60 days/year (2× monthly salary). Under LOTTT Art. 131, utilidades and aguinaldos are the same concept. This creates a rate inconsistency in liquidation; additionally, the rule uses full `service_months` (10.27) which overlaps with the Dec 2025 aguinaldo already paid for fiscal year 2025 — the proportional amount in liquidation should ideally cover only the current fiscal year (Jan–Jun 2026 ≈ 5.1 months). See PENDING in CLAUDE.md.
+
+---
+
 ## 2026-06-05 — LIQUID_ANTIGUEDAD_V2: 2.0 → 2.5 days/month (LOTTT Art. 142 fix)
 
 **Rule:** `LIQUID_ANTIGUEDAD_V2` (prod id=29, testing id=59)
@@ -30,7 +46,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 **Resolution:** Restored manually via UI to `$160.76` at `04:10:05`. Contract id=94 verified.
 
-**Note:** `ueipab_vacation_prepaid_amount=$221.65` is intentionally kept — it is actively used by `LIQUID_VACATION_PREPAID_V2` in payslip 891 (liquidation V2, still being processed). Do NOT clear until the liquidation is confirmed and paid.
+**Note:** `ueipab_vacation_prepaid_amount=$221.65` was intentionally kept during processing. **Resolved 2026-06-05:** cleared to `$0.00` on contract id=94 (prod) after payslip 891 was confirmed and paid.
 
 ---
 
