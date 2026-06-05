@@ -12,7 +12,7 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 **Resolution:** Restored manually via UI to `$160.76` at `04:10:05`. Contract id=94 verified.
 
-**Pending:** `ueipab_vacation_prepaid_amount=$221.65` still set on this contract — should be cleared to `$0` now that `ueipab_previous_liquidation_date=2025-07-31` correctly bounds the liquidation period. Requires authorization before touching.
+**Note:** `ueipab_vacation_prepaid_amount=$221.65` is intentionally kept — it is actively used by `LIQUID_VACATION_PREPAID_V2` in payslip 891 (liquidation V2, still being processed). Do NOT clear until the liquidation is confirmed and paid.
 
 ---
 
