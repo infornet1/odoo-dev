@@ -6,6 +6,8 @@
 **Análisis realizado:** 1 de mayo de 2026
 **PDF ejecutivo:** `/home/ftpuser/odoo-dev/Analisis_Impacto_Salarial_Mayo2026.pdf`
 
+> **✅ RESOLVED 2026-06-06:** LUIS RODRIGUEZ y NIDYA LIRA tienen horarios especiales de clases — sus salarios actuales son correctos y no requieren ajuste. No se aplica el incremento de `ueipab_bonus_v2`.
+
 ---
 
 ## Estructura del Decreto

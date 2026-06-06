@@ -512,7 +512,6 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - **Glenda supervisor brevity criterion** — split from tone (criterion 4); add avg char_count to digest. See [UX Plan](documentation/GLENDA_UX_IMPROVEMENT_PLAN.md).
 
 **PENDING — Data / Contract:**
-- **Decreto Ingreso Mínimo $240 (2026-04-30):** LUIS RODRIGUEZ (total $151.38, gap **+$88.62**) y NIDYA LIRA (total $188.67, gap **+$51.33**) — incrementar `ueipab_bonus_v2` en contratos (ambos envs). Ver [Análisis](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md).
 - **Josefina Phase 2** — liquidation SLIP confirmed (done). Pending: `LIQUID_OTHER_DED_V2` rule in `LIQUID_VE_V2` to deduct $420.87 overpayment from Year 2 liquidation via `ueipab_other_deductions`. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
 
 **PENDING — External / Infrastructure:**
