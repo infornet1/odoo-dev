@@ -1,19 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Upsert: only create these stages if they do not already exist -->
+    <!--
+        UEIPAB Recruitment Pipeline — 7 stages
+        Odoo defaults (New, Interview, Hired) are kept but renamed/resequenced via shell on first install.
+        This file owns the 4 custom stages; sequences must not clash with Odoo defaults.
+
+        Full pipeline:
+          0  New                — CV received, scored by cron
+          5  Pre-Screening      — Confirmation email sent (3 questions)
+         10  Pre-Approved       — Confirmed fit, eval invite pending
+         15  Technical Evaluation — Glenda OdooBot session in progress
+         20  Interview          — High confidence → human interview
+         40  Hired   (fold)     — Offer accepted  [Odoo default id=6]
+         50  Rejected (fold)    — Not proceeding
+    -->
 
     <record id="stage_pre_screening" model="hr.recruitment.stage">
         <field name="name">Pre-Screening</field>
         <field name="sequence">5</field>
+        <field name="fold">False</field>
         <field name="hired_stage">False</field>
-        <field name="requirements">Filtro de elegibilidad enviado al candidato</field>
+        <field name="requirements">3-question confirmation email sent; awaiting candidate reply</field>
     </record>
 
-    <record id="stage_evaluacion_tecnica" model="hr.recruitment.stage">
-        <field name="name">Evaluación Técnica</field>
-        <field name="sequence">15</field>
+    <record id="stage_pre_approved" model="hr.recruitment.stage">
+        <field name="name">Pre-Approved</field>
+        <field name="sequence">10</field>
+        <field name="fold">False</field>
         <field name="hired_stage">False</field>
-        <field name="requirements">Evaluación IA vía Glenda Telegram completada</field>
+        <field name="requirements">Candidate confirmed salary, location and availability — evaluation invite pending</field>
+    </record>
+
+    <record id="stage_technical_evaluation" model="hr.recruitment.stage">
+        <field name="name">Technical Evaluation</field>
+        <field name="sequence">15</field>
+        <field name="fold">False</field>
+        <field name="hired_stage">False</field>
+        <field name="requirements">Glenda OdooBot 8-turn evaluation completed; dual-AI score written to applicant</field>
+    </record>
+
+    <record id="stage_rejected" model="hr.recruitment.stage">
+        <field name="name">Rejected</field>
+        <field name="sequence">50</field>
+        <field name="fold">True</field>
+        <field name="hired_stage">False</field>
+        <field name="requirements"></field>
     </record>
 
 </odoo>

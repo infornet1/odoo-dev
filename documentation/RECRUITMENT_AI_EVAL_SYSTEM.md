@@ -326,36 +326,33 @@ def _compute_confidence(self):
 
 ## Layer 1 — Recruitment (Native Odoo 17)
 
-### Kanban stages — current live state (testing, 2026-06-07)
+### Kanban pipeline — live state (testing, 2026-06-07, cleaned up)
 
-8 stages total: 6 Odoo defaults + 2 custom added by `ueipab_recruitment`.
+7 stages — 3 kept/renamed Odoo defaults + 4 custom (`ueipab_recruitment`).
 
 | ID | Seq | Name | Fold | Hired | Source |
 |----|-----|------|------|-------|--------|
-| 1 | 0 | **Nuevo** | No | No | Odoo default |
-| 2 | 1 | Calificación inicial | No | No | Odoo default ← redundant |
-| 3 | 2 | Primera entrevista | No | No | Odoo default |
-| 4 | 3 | Segunda entrevista | No | No | Odoo default ← redundant |
-| 5 | 4 | Propuesta de contrato | No | No | Odoo default |
-| 6 | 5 | Contrato firmado | Yes (folded) | Yes | Odoo default |
-| 13 | 5 | **Pre-Screening** | No | No | ⚠️ `ueipab_recruitment` — seq conflict with id=6 |
-| 14 | 15 | **Evaluación Técnica** | No | No | `ueipab_recruitment` |
+| 1 | 0 | **New** | No | No | Odoo default |
+| 13 | 5 | **Pre-Screening** | No | No | `ueipab_recruitment` |
+| 15 | 10 | **Pre-Approved** | No | No | `ueipab_recruitment` |
+| 14 | 15 | **Technical Evaluation** | No | No | `ueipab_recruitment` |
+| 3 | 20 | **Interview** | No | No | Odoo default (renamed) |
+| 6 | 40 | **Hired** | Yes | ✅ Yes | Odoo default (renamed) |
+| 16 | 50 | **Rejected** | Yes | No | `ueipab_recruitment` |
 
-**Issues:** "Calificación inicial" duplicates Pre-Screening. "Segunda entrevista" not needed for one position. Seq=5 conflict between Pre-Screening and Contrato firmado.
+**Deleted:** Initial Qualification (id=2), Second Interview (id=4), Contract Proposal (id=5) — none had applicants.
 
-### Recommended pipeline (rationalized)
+### Stage meaning in the UEIPAB flow
 
-| Seq | Name | Purpose | Action |
-|-----|------|---------|--------|
-| 0 | Nuevo | CV received, scored by cron | Keep as-is |
-| 5 | Pre-Screening | Confirmation email sent (3 questions) | Keep id=13, fix seq |
-| 10 | Pre-Aprobado | Confirmed fit — awaiting eval invite | **Add new** |
-| 15 | Evaluación Técnica | Glenda OdooBot session in progress | Keep id=14 |
-| 20 | Entrevista | High confidence → human interview | **Add new** |
-| 25 | Contratado | Hired | Rename id=6 |
-| 30 | Descartado (folded) | Rejected | **Add new** |
-
-**To clean up:** Delete ids 2 (Calificación inicial) and 4 (Segunda entrevista). Fix seq on id=13 Pre-Screening to 5. Add missing stages. ⏳ Pending — do in next session via Odoo UI or `recruitment_stages.xml` update.
+| Stage | Trigger | Who acts |
+|-------|---------|---------|
+| **New** | CV arrives → cron scores it → `hr.applicant` created | Cron (automatic) |
+| **Pre-Screening** | CEO sends 3-question confirmation email | CEO manually |
+| **Pre-Approved** | Candidate replies: salary ✅ + location ✅ + Telegram ✅ | CEO manually |
+| **Technical Evaluation** | CEO clicks "Invitar a Evaluación Presencial" → appointment email sent | Button on form |
+| **Interview** | Glenda scores ≥ threshold + consensus HIGH/MEDIUM | CEO manually after review |
+| **Hired** | Offer accepted — marks hired in Odoo | CEO manually |
+| **Rejected** | Any point of disqualification — folded from Kanban | CEO manually |
 
 ### Job Position: Auxiliar de Contabilidad y Administración
 
@@ -1342,7 +1339,7 @@ models.execute_kw(db, uid, pwd, 'ir.module.module', 'button_immediate_install',
 | `hr.applicant` custom fields — full set (cv_score, cv_tier, cv_salary_risk, cv_extract_method, eval_state, evaluation_mode, skill_score, skill_score_gpt, eval_consensus, confidence_pct, ai_eval_notes, freescout_conv_id) | `models/hr_applicant.py` |
 | Confidence formula: `cv_score × 0.40 + glenda_score × 0.60` | `models/hr_applicant.py` |
 | Evaluation panel — **"Evaluación IA" tab** in notebook alongside "Application Summary" (3 buttons: confirm, in-person invite, telegram invite) | `views/hr_applicant_views.xml` |
-| Recruitment stages: Pre-Screening (seq=5), Evaluación Técnica (seq=15) | `data/recruitment_stages.xml` |
+| Recruitment stages — 7-stage pipeline: New→Pre-Screening→Pre-Approved→Technical Evaluation→Interview→Hired/Rejected | `data/recruitment_stages.xml` + shell cleanup |
 | `fs_cv_loader.py` — full CV sync processor (cron-ready) | `scripts/fs_cv_loader.py` |
 | — Freescout REST API polling (mailbox 4, `_embedded.threads`, `_embedded.attachments`) | |
 | — CV filter (date + domain + subject patterns + `ACTIVE` flag) | |
