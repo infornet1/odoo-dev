@@ -326,14 +326,36 @@ def _compute_confidence(self):
 
 ## Layer 1 — Recruitment (Native Odoo 17)
 
-### Kanban stages (recommended)
+### Kanban stages — current live state (testing, 2026-06-07)
 
-1. **Nuevo** — CV received
-2. **Pre-Screening** — Roster survey sent
-3. **Pre-Aprobado** — Passed eligibility gate
-4. **Evaluación Técnica** — AI exercise in progress
-5. **Entrevista** — High confidence, human review
-6. **Contratado / Descartado**
+8 stages total: 6 Odoo defaults + 2 custom added by `ueipab_recruitment`.
+
+| ID | Seq | Name | Fold | Hired | Source |
+|----|-----|------|------|-------|--------|
+| 1 | 0 | **Nuevo** | No | No | Odoo default |
+| 2 | 1 | Calificación inicial | No | No | Odoo default ← redundant |
+| 3 | 2 | Primera entrevista | No | No | Odoo default |
+| 4 | 3 | Segunda entrevista | No | No | Odoo default ← redundant |
+| 5 | 4 | Propuesta de contrato | No | No | Odoo default |
+| 6 | 5 | Contrato firmado | Yes (folded) | Yes | Odoo default |
+| 13 | 5 | **Pre-Screening** | No | No | ⚠️ `ueipab_recruitment` — seq conflict with id=6 |
+| 14 | 15 | **Evaluación Técnica** | No | No | `ueipab_recruitment` |
+
+**Issues:** "Calificación inicial" duplicates Pre-Screening. "Segunda entrevista" not needed for one position. Seq=5 conflict between Pre-Screening and Contrato firmado.
+
+### Recommended pipeline (rationalized)
+
+| Seq | Name | Purpose | Action |
+|-----|------|---------|--------|
+| 0 | Nuevo | CV received, scored by cron | Keep as-is |
+| 5 | Pre-Screening | Confirmation email sent (3 questions) | Keep id=13, fix seq |
+| 10 | Pre-Aprobado | Confirmed fit — awaiting eval invite | **Add new** |
+| 15 | Evaluación Técnica | Glenda OdooBot session in progress | Keep id=14 |
+| 20 | Entrevista | High confidence → human interview | **Add new** |
+| 25 | Contratado | Hired | Rename id=6 |
+| 30 | Descartado (folded) | Rejected | **Add new** |
+
+**To clean up:** Delete ids 2 (Calificación inicial) and 4 (Segunda entrevista). Fix seq on id=13 Pre-Screening to 5. Add missing stages. ⏳ Pending — do in next session via Odoo UI or `recruitment_stages.xml` update.
 
 ### Job Position: Auxiliar de Contabilidad y Administración
 
@@ -858,7 +880,7 @@ Since Glenda (WhatsApp + Telegram AI agent) is already deployed, an elegant exte
 |-----|--------|--------|
 | `hr_recruitment_survey` links ONE survey per job/applicant | Designed for the final interview form only; we need two (roster + skill eval) separately linked | Minor — custom fields solve this cleanly |
 | `survey.survey` has no `tag_ids` in Community | Can't domain-filter surveys by tag | Minor — use naming convention instead (`[ROSTER]` prefix) |
-| `//chatter` xpath doesn't exist in Odoo 17 | Must use `//div[hasclass('oe_chatter')]` | ✅ Fixed in module |
+| Eval panel at bottom of form (before chatter) felt disconnected | Moved to a dedicated **"Evaluación IA" tab** in the notebook alongside "Application Summary" | ✅ Fixed — `//page[@name='application_summary']` position="after" |
 | Statusbar widget conflict in `//header` | Can't add a second statusbar to header alongside `stage_id` | ✅ Moved eval state to form body |
 | `survey.survey` tag system | Community surveys don't have a tag/category system | Use survey title convention instead |
 | Glenda `ai.agent.conversation` has no `skill_type` | All convs are treated as family-facing; recruitment needs isolation | Need new field in `ueipab_ai_agent` Phase 2 |
@@ -1319,7 +1341,7 @@ models.execute_kw(db, uid, pwd, 'ir.module.module', 'button_immediate_install',
 | `ueipab_recruitment` module v2.0.0 installed in `testing` | `addons/ueipab_recruitment/` |
 | `hr.applicant` custom fields — full set (cv_score, cv_tier, cv_salary_risk, cv_extract_method, eval_state, evaluation_mode, skill_score, skill_score_gpt, eval_consensus, confidence_pct, ai_eval_notes, freescout_conv_id) | `models/hr_applicant.py` |
 | Confidence formula: `cv_score × 0.40 + glenda_score × 0.60` | `models/hr_applicant.py` |
-| Evaluation panel in applicant form view (3 buttons: confirm, in-person invite, telegram invite) | `views/hr_applicant_views.xml` |
+| Evaluation panel — **"Evaluación IA" tab** in notebook alongside "Application Summary" (3 buttons: confirm, in-person invite, telegram invite) | `views/hr_applicant_views.xml` |
 | Recruitment stages: Pre-Screening (seq=5), Evaluación Técnica (seq=15) | `data/recruitment_stages.xml` |
 | `fs_cv_loader.py` — full CV sync processor (cron-ready) | `scripts/fs_cv_loader.py` |
 | — Freescout REST API polling (mailbox 4, `_embedded.threads`, `_embedded.attachments`) | |

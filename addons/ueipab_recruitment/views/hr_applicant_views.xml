@@ -8,9 +8,10 @@
         <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_form"/>
         <field name="arch" type="xml">
 
-            <!-- Evaluation panel injected before the chatter -->
-            <xpath expr="//div[hasclass('oe_chatter')]" position="before">
-                <group string="Evaluación IA — UEIPAB" col="4">
+            <!-- Evaluation tab injected alongside Application Summary -->
+            <xpath expr="//page[@name='application_summary']" position="after">
+                <page string="Evaluación IA" name="ueipab_eval">
+                <group col="4">
                     <group string="Estado">
                         <field name="ueipab_eval_state" string="Estado Evaluación"/>
                         <field name="ueipab_evaluation_mode" string="Modo Evaluación"/>
@@ -51,6 +52,7 @@
                                 invisible="ueipab_eval_state not in ['confirmed', 'pending']"/>
                     </div>
                 </group>
+                </page>
             </xpath>
 
         </field>
