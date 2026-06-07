@@ -843,6 +843,73 @@ For a new hire at the administrative assistant level, the comparable band is the
 - `ueipab_freescout_conv_id` (Integer) — Freescout conversation DB id
 - `ueipab_freescout_url` (Char, computed) — direct link to Freescout conversation
 
+---
+
+## Job Portal Page — Email CTA Modal (PENDING — Phase 1.5)
+
+**Decision (2026-06-07):** Keep Freescout as the single CV intake channel. The Odoo portal page shows the job description publicly but replaces the native "Apply Now" form with a modal popup that directs candidates to email their CV. No `hr.applicant` is ever created via the portal form — all intake flows through Freescout → `fs_cv_loader.py` cron.
+
+**Rationale:** No HR staff. CEO manages the process alone. One intake channel (Freescout) is simpler to operate and ensures every CV gets AI-scored before it appears in Odoo. The portal form would create unscored applicants in a separate path with no CV file attached.
+
+### Current state (2026-06-07)
+- `hr.job` id=8: `is_published = False` — page accessible to logged-in admins only; anonymous visitors get 404
+- **Do NOT publish until the modal override is deployed** — or candidates hit the native Odoo apply form
+
+### Implementation plan (⏳ NOT YET BUILT — ~2h effort)
+
+**File to create:** `addons/ueipab_recruitment/views/website_job_apply_override.xml`
+
+**Approach:** QWeb template inheritance inside `ueipab_recruitment` — overrides the apply button section of `website_hr_recruitment`'s job detail page template. Replaces it with a Bootstrap modal (already available on every Odoo website page — no extra JS framework).
+
+```
+ueipab_recruitment/
+  views/
+    website_job_apply_override.xml    ← new
+  __manifest__.py                     ← add to data[]
+```
+
+**Modal content:**
+```
+📩 ¿Quieres postularte?
+
+Envía tu CV al siguiente correo:
+  recursoshumanos@ueipab.edu.ve
+
+Asunto sugerido: CV — Auxiliar de Contabilidad y Administración
+
+Incluye en tu correo:
+  • Tu CV en formato PDF o Word
+  • Tu nombre completo y número de cédula
+  • Ciudad de residencia
+
+[✉️ Abrir correo]   ← mailto: pre-filled link
+[✖ Cerrar]
+
+Recibirás respuesta en 2-3 días hábiles.
+```
+
+**`mailto:` pre-fill:**
+```
+mailto:recursoshumanos@ueipab.edu.ve
+  ?subject=CV%20—%20Auxiliar%20de%20Contabilidad%20y%20Administración
+  &body=Nombre%3A%0ACédula%3A%0ACiudad%3A%0A%0AAdjunto%20mi%20CV.
+```
+
+**Deployment steps (when ready to build):**
+1. Identify exact template name from `website_hr_recruitment` source (check `/usr/lib/python3/dist-packages/odoo/addons/website_hr_recruitment/views/`)
+2. Create `website_job_apply_override.xml` with XPath targeting the apply button/form
+3. Add to `__manifest__.py` data list
+4. Run `-u ueipab_recruitment`
+5. Set `hr.job` id=8 `is_published = True` (via Odoo UI toggle or shell)
+6. Verify anonymous access shows modal, not the Odoo apply form
+
+**Why this approach over alternatives:**
+- ✅ Lives in our module — survives Odoo updates
+- ✅ Bootstrap already loaded — no extra JS dependency
+- ✅ Zero Odoo apply form submissions — Freescout stays sole intake
+- ❌ Rejected: JS asset intercepting button — fragile if Odoo renames element
+- ❌ Rejected: unpublishing — candidates can't read the job description
+
 *(These fields are planned for Phase 1 — not yet in the module.)*
 
 ---
@@ -1365,6 +1432,7 @@ models.execute_kw(db, uid, pwd, 'ir.module.module', 'button_immediate_install',
 | `skill_type='recruitment_eval'` field on `ai.agent.conversation` — isolates eval convs from family convs | Phase 1 | 30 min | Required before OdooBot handler |
 | 8-turn Glenda evaluation conversation + dual-AI scoring at close | Phase 1 | 3h | Writes `ueipab_skill_score`, `ueipab_skill_score_gpt`, `ueipab_eval_consensus` |
 | `RECRUIT_*` Telegram deep-link handler (Mode B fallback) | Phase 1 | 1h | After Mode A validated |
+| **Portal email CTA modal** — publish job page + replace apply form with Bootstrap modal directing to `recursoshumanos@` | Phase 1.5 | 2h | Deploy before publishing `is_published=True` on hr.job id=8 |
 | Kanban confidence badge (tier + score visible in card) | Phase 2 | 1h | Deferred — Odoo 17 kanban QWeb strict |
 | Deploy `ueipab_recruitment` to production | Phase 2 | 30 min | After first real evaluation complete |
 
