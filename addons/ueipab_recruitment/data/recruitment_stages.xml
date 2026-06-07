@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Upsert: only create these stages if they do not already exist -->
+
+    <record id="stage_pre_screening" model="hr.recruitment.stage">
+        <field name="name">Pre-Screening</field>
+        <field name="sequence">5</field>
+        <field name="hired_stage">False</field>
+        <field name="requirements">Filtro de elegibilidad enviado al candidato</field>
+    </record>
+
+    <record id="stage_evaluacion_tecnica" model="hr.recruitment.stage">
+        <field name="name">Evaluación Técnica</field>
+        <field name="sequence">15</field>
+        <field name="hired_stage">False</field>
+        <field name="requirements">Evaluación IA vía Glenda Telegram completada</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inherit hr.applicant form: add evaluation panel -->
+    <record id="hr_applicant_eval_form_view" model="ir.ui.view">
+        <field name="name">hr.applicant.eval.form</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Evaluation panel injected before the chatter -->
+            <xpath expr="//div[hasclass('oe_chatter')]" position="before">
+                <group string="Evaluación IA — UEIPAB" col="4">
+                    <group string="Estado">
+                        <field name="ueipab_eval_state" string="Estado Evaluación"/>
+                        <field name="ueipab_evaluation_mode" string="Modo Evaluación"/>
+                        <field name="ueipab_eval_consensus" string="Consenso IA"/>
+                    </group>
+                    <group string="Puntajes">
+                        <field name="ueipab_cv_score"       string="Score CV (40%)"/>
+                        <field name="ueipab_skill_score"    string="Score Glenda (60%)"/>
+                        <field name="ueipab_skill_score_gpt" string="Score GPT Validador"/>
+                        <field name="ueipab_confidence_pct" string="Confianza Total %"/>
+                    </group>
+                    <group string="CV">
+                        <field name="ueipab_cv_tier"           string="Tier"/>
+                        <field name="ueipab_cv_salary_risk"    string="Riesgo Salarial" widget="boolean_toggle"/>
+                        <field name="ueipab_cv_extract_method" string="Extracción"/>
+                        <field name="ueipab_freescout_conv_id" string="Freescout Conv #"/>
+                        <field name="ueipab_freescout_url"     string="Ver en Freescout" widget="url"/>
+                    </group>
+                    <group string="Glenda">
+                        <field name="ueipab_telegram_eval_conv_id" string="Conv. Glenda"/>
+                    </group>
+                    <group colspan="4" string="Notas IA">
+                        <field name="ueipab_ai_eval_notes" nolabel="1"
+                               placeholder="Glenda registrará aquí el resumen de la evaluación..."/>
+                    </group>
+                    <div colspan="4">
+                        <button name="action_send_confirmation_email"
+                                string="📧 Enviar Email de Confirmación"
+                                type="object" class="btn-secondary"
+                                invisible="ueipab_eval_state != 'pending'"/>
+                        <button name="action_invite_in_person_eval"
+                                string="🖥️ Invitar a Evaluación Presencial"
+                                type="object" class="btn-primary"
+                                invisible="ueipab_eval_state not in ['confirmed', 'pending']"/>
+                        <button name="action_send_telegram_eval_invite"
+                                string="💬 Invitar a Evaluación Telegram"
+                                type="object" class="btn-secondary"
+                                invisible="ueipab_eval_state not in ['confirmed', 'pending']"/>
+                    </div>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
