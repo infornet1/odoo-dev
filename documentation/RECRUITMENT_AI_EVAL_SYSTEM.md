@@ -40,15 +40,29 @@ UEIPAB has historically hired professionals who do not meet the demands of a mod
 
 **Reporta a:** Administración Interna / Coordinación de Finanzas (enlace directo con Contador Público Externo)
 
+### Por qué existe este cargo — Tres brechas que bloquean la Acta de Conformidad SENIAT
+
+El colegio tiene como meta a mediano plazo obtener la **Acta de Conformidad SENIAT** ante una fiscalización. Hoy tres brechas concretas lo impiden:
+
+| # | Brecha | Síntoma actual |
+|---|--------|---------------|
+| 1 | **Calendario fiscal SENIAT sin dueño** | Retenciones IVA (libro de compras), retenciones ISLR a proveedores, y planillas IVSS/FAOV/INCES no tienen un responsable de día a día — el contador externo no está presente para cumplirlas |
+| 2 | **Archivos físicos desorganizados** | El contador externo reporta que no puede encontrar comprobantes, facturas de compra, planillas pagadas o expedientes de personal — cada visita empieza con una búsqueda, no con trabajo contable |
+| 3 | **Sin conciliaciones bancarias** | Los extractos bancarios mensuales nunca se cruzan contra Odoo — SENIAT solicita conciliaciones en toda fiscalización; sin ellas el proceso se cae desde el inicio |
+
+El ocupante de este cargo resuelve las tres brechas y libera al contador externo para hacer cierre, certificación y estrategia fiscal — no logística de documentos.
+
 ### Objetivo del Puesto
-Ejecutar, organizar y controlar los procesos administrativos y registros contables diarios del colegio. El ocupante será capacitado en herramientas de IA para optimizar la carga transaccional, conciliaciones y reportes, sirviendo como puente operativo que alimentará la información para el Contador Externo (quien realiza el cierre y certificación legal).
+Ser el guardián de cumplimiento fiscal diario del colegio: mantener archivos organizados, cumplir el calendario SENIAT cada mes, realizar conciliaciones bancarias mensuales y servir de puente operativo con el Contador Externo — permitiendo al colegio alcanzar y mantener la Acta de Conformidad SENIAT.
 
 ### Responsabilidades Principales
-- **Gestión Transaccional:** Registro diario de ingresos (matrículas, mensualidades, extracurriculares) y egresos (proveedores, servicios)
-- **Soporte de Nómina:** Consolidación de incidencias docentes/administrativas para preparación de nómina
-- **Conciliación Bancaria:** Revisión y cruce diario de cuentas bancarias
-- **Preparación de Archivo Fiscal:** Organización digital/física de facturas, retenciones y comprobantes para el Contador Externo
-- **Atención al Representante:** Verificación de pagos, emisión de solvencias/facturas
+- **Calendario Fiscal SENIAT:** Seguimiento y cumplimiento mensual de retenciones IVA (libro de compras), retenciones ISLR a proveedores, y planillas IVSS/FAOV/INCES — preparación de declaraciones y pago oportuno en el portal SENIAT
+- **Conciliación Bancaria:** Descarga mensual de extractos bancarios + cruce contra registros en Odoo + identificación y documentación de partidas en tránsito
+- **Archivo Físico y Digital:** Organización mensual de facturas de compra, comprobantes de retención emitidos/recibidos, planillas de organismos pagadas — disponibles para el Contador Externo en cualquier momento
+- **Enlace con Contador Externo:** Preparación de paquete mensual de cierre (extractos reconciliados, retenciones, facturas, nómina) para entrega ordenada y completa
+- **Gestión Transaccional:** Registro diario de ingresos (matrículas, mensualidades) y egresos (proveedores, servicios) en Odoo
+- **Atención al Representante:** Verificación de pagos, emisión de facturas y solvencias
+- **Archivos de Personal (RRHH):** Mantenimiento de expedientes físicos de empleados actualizados
 - **Adopción Tecnológica:** Formación e implementación activa de herramientas de IA para automatizar tareas repetitivas
 
 ### Perfil Requerido
@@ -1377,49 +1391,48 @@ Candidate types **A / B / C / D** after each question. Glenda acknowledges ("Sig
 
 ---
 
-**Q6 — Tipo de cambio en cobros en dólares**
-> Se recibe un pago en efectivo en dólares por mensualidad. ¿A qué tipo de cambio se registra en libros?
+**Q6 — Retenciones IVA en compras**
+> UEIPAB paga una factura de un proveedor de mantenimiento por Bs. 500.000 más 16% IVA (Bs. 80.000). Si la institución es agente de retención IVA, ¿cuánto retiene de ese IVA y a quién lo paga?
 >
-> A. Al tipo de cambio pactado con el representante | B. Al tipo de cambio BCV del día de la transacción | C. Al tipo de cambio del primer día del mes | D. No se registra en Bs., solo en dólares
+> A. Retiene el 100% del IVA (Bs. 80.000) y lo entrega al SENIAT | B. Retiene el 75% del IVA (Bs. 60.000) y lo entera al SENIAT; paga al proveedor solo Bs. 20.000 de IVA | C. No retiene nada porque la institución está exenta de IVA | D. Retiene el 16% sobre el total de la factura incluyendo el monto base
 
-✅ **B** — norma contable venezolana: conversión al tipo BCV vigente en la fecha del hecho económico.
+✅ **B** — los agentes de retención IVA retienen 75% del IVA facturado y lo declaran y pagan al SENIAT. La exención educativa aplica a las *ventas* del colegio, no a sus compras.
 
 ---
 
-**Q7 — Saldo pendiente — aplicación de pagos**
-> Un representante tiene deuda de enero y febrero, y paga en marzo. ¿Cómo se aplica el pago?
+**Q7 — Retenciones ISLR a proveedores**
+> El colegio paga honorarios profesionales al contador externo. ¿Qué obligación fiscal tiene UEIPAB sobre ese pago?
 >
-> A. Se aplica primero al mes más reciente (febrero) | B. Se aplica al mes que el representante indique | C. Se aplica al saldo más antiguo primero (enero) | D. Se divide en partes iguales entre los dos meses
+> A. Ninguna — el contador declara su propio ISLR como persona natural | B. Retener ISLR según la tarifa aplicable, emitir comprobante de retención al proveedor y declararlo mensualmente al SENIAT | C. Pagar el IVA correspondiente a los honorarios profesionales | D. Solo reportarlo en el libro de ventas al cierre del año fiscal
 
-✅ **C** — principio FIFO en cuentas por cobrar; reduce la mora más antigua.
-**Nota:** La LOE prohíbe cobrar intereses o recargos por mora en servicios educativos — solo aplica la asignación FIFO del pago, nunca un cargo adicional.
+✅ **B** — quien paga honorarios profesionales está obligado a retener ISLR, emitir el comprobante de retención al proveedor y declararlo vía portal SENIAT en el período correspondiente.
 
 ---
 
-**Q8 — Conciliación bancaria**
-> ¿Qué es una conciliación bancaria?
+**Q8 — Conciliación bancaria — proceso**
+> Al conciliar el banco de octubre, el saldo contable en Odoo es Bs. 1.200.000 pero el extracto bancario muestra Bs. 1.350.000. ¿Cuál es el primer paso correcto?
 >
-> A. Cancelar una deuda con el banco | B. Comparar el saldo contable con el extracto bancario para identificar diferencias | C. Renovar el certificado de la cuenta bancaria | D. Solicitar un crédito empresarial al banco
+> A. Ajustar el saldo de Odoo al del banco sin investigar para cuadrar rápido | B. Identificar todas las partidas en tránsito: transferencias no reflejadas en libros, depósitos no acreditados, y posibles errores de registro | C. Emitir una nota de débito por la diferencia de Bs. 150.000 | D. Reportar el error directamente al SENIAT como discrepancia contable
 
-✅ **B** — definición estándar de conciliación bancaria.
+✅ **B** — la conciliación identifica y documenta cada diferencia antes de cualquier ajuste; el objetivo es explicar la diferencia, no igualar un saldo al otro sin entender la causa.
 
 ---
 
-**Q9 — Nota de crédito**
-> ¿En qué situación se emite una nota de crédito a un representante?
+**Q9 — Calendario fiscal SENIAT — retenciones**
+> ¿Hasta qué fecha vencen generalmente las declaraciones de retenciones de IVA del período anterior para un contribuyente ordinario?
 >
-> A. Cuando el representante paga por adelantado | B. Cuando se anula o ajusta una factura previamente emitida | C. Cuando el representante solicita información de su saldo | D. Para confirmar la recepción de un pago en efectivo
+> A. El último día hábil del mismo mes en que ocurrieron | B. El día 15 del mes siguiente al período declarado | C. El primer día hábil del mes siguiente | D. Solo se declaran de forma trimestral junto con el IVA propio
 
-✅ **B** — la nota de crédito reversa o ajusta una factura ya emitida.
+✅ **B** — las retenciones IVA se declaran y pagan hasta el día 15 del mes siguiente (contribuyentes ordinarios). Los contribuyentes especiales tienen calendario escalonado según RIF.
 
 ---
 
-**Q10 — Cashea**
-> Un representante quiere pagar con Cashea. ¿Qué significa esto para la institución?
+**Q10 — IVSS / FAOV / INCES — obligación patronal**
+> Además de descontar IVSS y FAOV del salario del trabajador, ¿qué debe hacer la institución cada mes?
 >
-> A. La institución recibe el pago en cuotas del representante directamente | B. Cashea paga a la institución el monto completo; el representante le paga a Cashea en cuotas | C. Es equivalente a una transferencia bancaria inmediata sin diferencias contables | D. Solo aplica para pagos menores de $50
+> A. Nada más — el descuento en nómina es suficiente obligación | B. Pagar el aporte patronal correspondiente (IVSS 9–11%, FAOV 2%) y presentar la planilla ante el organismo dentro del plazo | C. Solo reportarlo al SENIAT en el libro de compras al cierre del año | D. Acumularlo durante el año y pagar junto con el ISLR en la declaración anual
 
-✅ **B** — Cashea es una fintech de crédito al consumidor; el colegio cobra el total, el representante le paga a Cashea en cuotas. El representante debe coordinar el enlace con pagos@ueipab.edu.ve antes de usar esta opción.
+✅ **B** — el empleador aporta su parte patronal además de retener la del trabajador, y debe presentar y pagar la planilla mensualmente. El incumplimiento genera multas e impide obtener la Solvencia Laboral — requisito para la Acta de Conformidad SENIAT.
 
 ---
 
@@ -1435,6 +1448,26 @@ Candidate types **A / B / C / D** after each question. Glenda acknowledges ("Sig
 Recommended gate threshold: **≥ 7 / 10**.
 
 At session end, Glenda reveals the score, gives brief positive/constructive feedback summary, and (if ≥ 7) asks: *"¡Bien hecho! Ahora pasamos a una segunda parte más práctica. Escribí 'continuar' cuando estés listo/a."* If < 7: *"Gracias por tu tiempo. Nuestro equipo estará en contacto."*
+
+### MCQ Calibration — External Accountant Dry Run (before first real candidate)
+
+Before deploying to real candidates, the external accountant takes the full quiz as UX and accuracy validation.
+
+**Expected outcome:** Score 9–10/10. If he scores < 9, investigate that specific question — either the wording is ambiguous or the answer key reflects theory rather than Venezuelan practice.
+
+**Feedback to collect from him:**
+
+| Signal | What it means |
+|---|---|
+| Hesitates on a question | Wording is ambiguous — reword |
+| Disputes a "correct" answer | Answer key wrong for real VZ practice — fix the key |
+| Finds a wrong option obviously absurd | Distractors too easy — replace with realistic wrong answer |
+| Scores < 9/10 | Question poorly framed or genuinely debatable — review |
+| Finishes in < 3 minutes | Questions too simple for even a junior — raise difficulty |
+
+**UX feedback:** Does A/B/C/D chat format feel natural? Is pacing comfortable? Does any question feel irrelevant to the actual day-to-day?
+
+**Flexibility:** Questions are a Python list/dict in the OdooBot handler — one-line edits, no database migration, module reload to apply. Score gate threshold (7/10) is a single constant at the top of the file.
 
 Fields written to `hr.applicant` at Phase 1 close:
 - `ueipab_quiz_score` — Integer 0–10
@@ -1471,16 +1504,24 @@ Turn 4: Practical classification exercise
    (2) cobro de mensualidad de un representante, (3) compra de
    papelería. ¿Qué cuenta de débito y crédito usarías para cada una?"
 
-Turn 5: Real-world UEIPAB scenario
-  "Un representante dice que pagó su mensualidad pero el sistema
-   la muestra pendiente. Tenés 10 minutos para resolver.
-   ¿Qué hacés primero?"
+Turn 5: Bank reconciliation process
+  "Descargaste el extracto bancario de octubre. El saldo en Odoo
+   es Bs. 1.200.000 y el banco muestra Bs. 1.350.000. ¿Qué hacés
+   paso a paso para encontrar y documentar la diferencia antes de
+   que llegue el contador?"
 
-Turn 6: Self-awareness check
-  "¿Cuál es el área de contabilidad o administración donde sentís
-   que tenés más por aprender?"
+Turn 6: Physical file + accountant liaison scenario
+  "El contador externo llega el viernes para el cierre y necesita
+   las facturas de compra de octubre con sus comprobantes de
+   retención IVA y las planillas IVSS/FAOV pagadas ese mes.
+   ¿Cómo tendrías organizado ese archivo y en cuánto tiempo lo
+   encontrarías?"
 
-Turn 7: Role fit + close
+Turn 7: Self-awareness check
+  "¿Cuál es el área de contabilidad o cumplimiento fiscal donde
+   sentís que tenés más por aprender?"
+
+Turn 8: Role fit + close
   "¿Tenés alguna pregunta sobre el cargo, el equipo o cómo
    sería tu primer mes?"
   → triggers dual-AI scoring on full Phase 2 transcript
