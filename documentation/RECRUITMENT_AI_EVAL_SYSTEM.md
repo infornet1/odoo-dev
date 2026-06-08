@@ -1,7 +1,7 @@
 # Odoo 17 Recruitment + Roster + AI Skill Evaluation System
 
-**Created:** 2026-06-07 | **Updated:** 2026-06-07 (session 2)
-**Status:** Phase 0 COMPLETE — Phase 1 (Glenda evaluation) in design  
+**Created:** 2026-06-07 | **Updated:** 2026-06-07 (session 3)
+**Status:** Phase 0 COMPLETE — Phase 1 (Glenda evaluation) design APPROVED, build pending  
 **Priority:** 20% effort → 80% impact (MVP-first approach)
 
 ---
@@ -1168,6 +1168,39 @@ pip3 install pdfplumber python-docx   # ✅ installed 2026-06-07
 
 ---
 
+## Venezuelan Legal & Financial Context — Critical for Evaluation Design
+
+These are non-negotiable constraints that directly affect what Glenda can ask and what counts as a **correct answer** for this role.
+
+### IVA Exemption — Educational Services
+
+Under Venezuelan LIVA (Ley del IVA), private educational services are **exempt from IVA**. UEIPAB does NOT charge IVA to families on mensualidades, matrículas, or any educational service. A candidate who states "se cobra 16% IVA" on a school invoice is factually wrong.
+
+**Correct answer:** The applicable tax when families pay in foreign currency (Zelle, efectivo USD, binance) is **IGTF (3%)** — not IVA. Bs. payments (transferencia, pago móvil) have no additional tax for the recipient.
+
+### No Interest on Late Balances — LOE Constraint
+
+The Venezuelan Ley Orgánica de Educación (LOE) and related MPPE resolutions **prohibit private educational institutions from charging interest or mora fees** on outstanding family balances. UEIPAB cannot legally add a "recargo por mora" to a representante's invoice — only the Ministry can authorize that.
+
+**Implication for evaluation:** MCQ questions about payment application and overdue accounts test accounting mechanics (e.g. FIFO allocation), but must never imply that the school charges interest. A candidate who suggests charging mora fees would be proposing an illegal action in this specific context.
+
+### Valid Payment Methods (Venezuela, 2026)
+
+Cheques — personal, de gerencia, certificados — are **fully discontinued** in the Venezuelan financial system. No bank clears them for routine transactions. Any mention of "cheque" in an evaluation question is invalid and misleads candidates who know the real market.
+
+**Valid payments accepted by UEIPAB:**
+
+| Method | Currency | Notes |
+|--------|----------|-------|
+| Transferencia bancaria | Bs. | Standard interbank |
+| Pago Móvil | Bs. | Phone-to-phone, requires same-bank or C2P |
+| Zelle | USD | IGTF 3% applies |
+| Binance Pay | USDT | IGTF 3% applies |
+| Cashea | USD (settled) | Fintech installments — UEIPAB receives full amount |
+| Dólares en efectivo | USD | IGTF 3% applies |
+
+---
+
 ## Glenda Evaluation — Delivery Modes
 
 ### Two modes: In-Person (preferred) + Remote (fallback)
@@ -1280,45 +1313,186 @@ For candidates who cannot travel to El Tigre (legitimate cases only — distance
 
 ---
 
-### Conversation flow (same for both modes — 8 turns)
+### Evaluation Architecture — Two-Phase, MCQ-First (v2.0)
+
+**Design principle:** Invest AI conversation time only on candidates who demonstrate baseline knowledge. Phase 1 is fast (~5 min), objective, and cheap. Phase 2 is only triggered when Phase 1 score justifies it.
+
+**Shared session trigger — two entry paths (both supported):**
+
+| Path | How | Best for |
+|------|-----|---------|
+| **Form button** | HR opens `hr.applicant` → clicks "🤖 Iniciar Evaluación IA" → session armed + Discuss opens | Planned sessions |
+| **Direct Discuss** | HR opens OdooBot chat → types `evaluar` → Glenda guides: asks candidate name → confirms → arms session | Walk-in / ad-hoc |
+
+In both cases, `ir.config_parameter` key `recruit.eval.session.{uid}` is written with the applicant_id and session state. Glenda's `_get_answer()` detects this key first — before any normal Glenda routing — and switches into evaluation mode.
+
+---
+
+### Phase 1 — MCQ Knowledge Quiz (~5 minutes)
+
+Candidate types **A / B / C / D** after each question. Glenda acknowledges ("Siguiente pregunta:") without revealing right/wrong until all 10 are done. Scores are tallied silently and written to `hr.applicant` at the end.
+
+**Q1 — Medios de pago válidos**
+> La institución recibe pagos de representantes. ¿Cuál de estos medios NO es aceptado actualmente en Venezuela?
+>
+> A. Transferencia bancaria | B. Pago Móvil | C. Cheque personal | D. Zelle
+
+✅ **C** — cheques están descontinuados en el sistema financiero venezolano.
+
+---
+
+**Q2 — IVA en servicios educativos**
+> Al facturar la mensualidad escolar de un representante, ¿qué aplica respecto al IVA?
+>
+> A. Se cobra 16% de IVA estándar | B. Se cobra 8% de IVA reducido por ser servicio básico | C. El servicio educativo privado está exento de IVA | D. Solo pagan IVA los representantes que usan Zelle
+
+✅ **C** — servicios educativos privados son exentos de IVA bajo la LIVA venezolana.
+
+---
+
+**Q3 — IGTF en pagos en divisa**
+> Un representante paga su mensualidad vía Zelle en dólares. ¿Qué impuesto adicional aplica sobre ese pago?
+>
+> A. IVA 16% | B. IGTF 3% por pago en divisa | C. ISR 10% sobre la transacción | D. Ningún impuesto — servicios educativos son completamente exentos
+
+✅ **B** — IGTF (3%) aplica sobre pagos en divisas recibidos por personas jurídicas. La exención educativa cubre el IVA, no el IGTF.
+
+---
+
+**Q4 — Asiento contable de cobro**
+> La institución recibe Bs. 200.000 por Pago Móvil por mensualidad de un alumno. ¿Cuál es el asiento correcto?
+>
+> A. Débito Cuentas por Cobrar / Crédito Banco | B. Débito Banco / Crédito Ingresos por Servicios | C. Débito Gastos Operativos / Crédito Banco | D. Débito Ingresos / Crédito Cuentas por Pagar
+
+✅ **B** — el cobro aumenta el activo (Banco) y reconoce el ingreso.
+
+---
+
+**Q5 — Requisitos de factura SENIAT**
+> ¿Qué información es OBLIGATORIA en una factura válida emitida al representante?
+>
+> A. Nombre completo del estudiante y grado | B. Número de control, RIF del emisor, fecha y monto | C. Firma del representante y copia del pago | D. Número de cuenta bancaria del colegio
+
+✅ **B** — campos mínimos exigidos por el SENIAT para cualquier factura.
+
+---
+
+**Q6 — Tipo de cambio en cobros en dólares**
+> Se recibe un pago en efectivo en dólares por mensualidad. ¿A qué tipo de cambio se registra en libros?
+>
+> A. Al tipo de cambio pactado con el representante | B. Al tipo de cambio BCV del día de la transacción | C. Al tipo de cambio del primer día del mes | D. No se registra en Bs., solo en dólares
+
+✅ **B** — norma contable venezolana: conversión al tipo BCV vigente en la fecha del hecho económico.
+
+---
+
+**Q7 — Saldo pendiente — aplicación de pagos**
+> Un representante tiene deuda de enero y febrero, y paga en marzo. ¿Cómo se aplica el pago?
+>
+> A. Se aplica primero al mes más reciente (febrero) | B. Se aplica al mes que el representante indique | C. Se aplica al saldo más antiguo primero (enero) | D. Se divide en partes iguales entre los dos meses
+
+✅ **C** — principio FIFO en cuentas por cobrar; reduce la mora más antigua.
+**Nota:** La LOE prohíbe cobrar intereses o recargos por mora en servicios educativos — solo aplica la asignación FIFO del pago, nunca un cargo adicional.
+
+---
+
+**Q8 — Conciliación bancaria**
+> ¿Qué es una conciliación bancaria?
+>
+> A. Cancelar una deuda con el banco | B. Comparar el saldo contable con el extracto bancario para identificar diferencias | C. Renovar el certificado de la cuenta bancaria | D. Solicitar un crédito empresarial al banco
+
+✅ **B** — definición estándar de conciliación bancaria.
+
+---
+
+**Q9 — Nota de crédito**
+> ¿En qué situación se emite una nota de crédito a un representante?
+>
+> A. Cuando el representante paga por adelantado | B. Cuando se anula o ajusta una factura previamente emitida | C. Cuando el representante solicita información de su saldo | D. Para confirmar la recepción de un pago en efectivo
+
+✅ **B** — la nota de crédito reversa o ajusta una factura ya emitida.
+
+---
+
+**Q10 — Cashea**
+> Un representante quiere pagar con Cashea. ¿Qué significa esto para la institución?
+>
+> A. La institución recibe el pago en cuotas del representante directamente | B. Cashea paga a la institución el monto completo; el representante le paga a Cashea en cuotas | C. Es equivalente a una transferencia bancaria inmediata sin diferencias contables | D. Solo aplica para pagos menores de $50
+
+✅ **B** — Cashea es una fintech de crédito al consumidor; el colegio cobra el total, el representante le paga a Cashea en cuotas. El representante debe coordinar el enlace con pagos@ueipab.edu.ve antes de usar esta opción.
+
+---
+
+### Phase 1 — Scoring & Gate
+
+| Score | Band | Result |
+|-------|------|--------|
+| 9–10 / 10 | Excelente | Immediate Phase 2 invite |
+| 7–8 / 10 | Bueno | HR reviews → Phase 2 invite |
+| 5–6 / 10 | Regular | HR manual review only — no Phase 2 |
+| 0–4 / 10 | Insuficiente | Polite close — session ends |
+
+Recommended gate threshold: **≥ 7 / 10**.
+
+At session end, Glenda reveals the score, gives brief positive/constructive feedback summary, and (if ≥ 7) asks: *"¡Bien hecho! Ahora pasamos a una segunda parte más práctica. Escribí 'continuar' cuando estés listo/a."* If < 7: *"Gracias por tu tiempo. Nuestro equipo estará en contacto."*
+
+Fields written to `hr.applicant` at Phase 1 close:
+- `ueipab_quiz_score` — Integer 0–10
+- `ueipab_quiz_answers` — JSON array `[{"q": 1, "given": "C", "correct": "C", "ok": true}, ...]`
+- `ueipab_quiz_completed` — Boolean True
+
+---
+
+### Phase 2 — Conversational Evaluation (gated, ~20 minutes)
+
+Only proceeds if Phase 1 score ≥ threshold AND HR has not intervened to stop. Flows immediately in the same OdooBot chat — no channel switch.
 
 ```
-Turn 1: Identity confirmation
-  In-person: "Hola, soy Glenda. ¿Me confirmas tu nombre completo y número de cédula?"
-             → crosscheck vs hr.applicant (redundant — supervisor already checked; logged for record)
-  Remote:    Same + more weight on the cédula match
+Identity Turn (before Phase 1 or at Phase 1 Turn 0):
+  "Hola, soy Glenda, la asistente de UEIPAB. Antes de comenzar,
+   ¿me confirmas tu nombre completo y número de cédula?"
+  → crosscheck vs hr.applicant → session formally starts
 
-Turn 2: Warm-up — open question
-  "Descríbeme brevemente tu experiencia más reciente en contabilidad o administración."
+Turn 1: Experience warm-up
+  "Descríbeme brevemente tu experiencia más reciente en
+   contabilidad o administración."
 
-Turn 3: Applied Venezuelan fiscal scenario
-  "Una empresa le pagó al colegio con cheque de otro banco. ¿Qué impuesto aplica
-   además del IVA y cuál es su tasa actual?" (IGTF probe)
+Turn 2: Applied Venezuelan fiscal scenario — IGTF
+  "Un representante realizó el pago de su mensualidad mediante Zelle
+   en USD. ¿Qué impuesto aplica sobre esa transacción, cuál es
+   la tasa, y quién lo paga?"
 
-Turn 4: Follow-up probe on Turn 3 — no escape from depth
-  "Explicaste [X]. ¿En qué situación ese impuesto NO aplicaría? Dame un ejemplo concreto."
+Turn 3: Follow-up probe — no escape from depth
+  "Explicaste [X]. ¿En qué situación ese impuesto NO aplicaría?
+   Dame un ejemplo concreto."
 
-Turn 5: Practical classification exercise
-  "Clasificá estas 3 transacciones: (1) pago de nómina, (2) cobro de mensualidad,
-   (3) compra de papelería. ¿Qué cuenta débito y crédito usarías para cada una?"
+Turn 4: Practical classification exercise
+  "Clasificá estas 3 transacciones: (1) pago de nómina del colegio,
+   (2) cobro de mensualidad de un representante, (3) compra de
+   papelería. ¿Qué cuenta de débito y crédito usarías para cada una?"
 
-Turn 6: Real-world school scenario (UEIPAB context)
-  "Un representante dice que pagó su mensualidad pero el sistema la muestra pendiente.
-   Tenés 10 minutos para resolver. ¿Qué hacés primero?"
+Turn 5: Real-world UEIPAB scenario
+  "Un representante dice que pagó su mensualidad pero el sistema
+   la muestra pendiente. Tenés 10 minutos para resolver.
+   ¿Qué hacés primero?"
 
-Turn 7: Self-awareness check (detects over-confidence / genuine humility)
-  "¿Cuál es el área de contabilidad o administración donde sentís que tenés más por aprender?"
+Turn 6: Self-awareness check
+  "¿Cuál es el área de contabilidad o administración donde sentís
+   que tenés más por aprender?"
 
-Turn 8: Role fit + close
-  "¿Tenés alguna pregunta sobre el cargo, el equipo o cómo sería tu primer mes?"
-  → triggers scoring
+Turn 7: Role fit + close
+  "¿Tenés alguna pregunta sobre el cargo, el equipo o cómo
+   sería tu primer mes?"
+  → triggers dual-AI scoring on full Phase 2 transcript
 ```
 
-**Scoring prompt (both Claude + GPT-4o-mini receive this):**
+**Phase 2 scoring prompt (both Claude + GPT-4o-mini receive this):**
 ```
 Evaluate this recruitment conversation for "Auxiliar de Contabilidad y Administración"
 at a Venezuelan private school. Score 0–100 on:
-- Technical accuracy 40%: accounting knowledge, Venezuelan fiscal awareness (IVA, IGTF, SENIAT)
+- Technical accuracy 40%: accounting knowledge, Venezuelan fiscal awareness
+  (IGTF, SENIAT — note: educational services are IVA-EXEMPT; correct answers
+  must reflect this; also: LOE prohibits interest charges on late educational balances)
 - Reasoning quality 30%: explains WHY not just WHAT; shows process thinking
 - Communication clarity 20%: professional, organized Spanish; appropriate tone
 - Self-awareness 10%: honest about gaps, not overconfident
@@ -1428,10 +1602,13 @@ models.execute_kw(db, uid, pwd, 'ir.module.module', 'button_immediate_install',
 | `recursoshumanos@ueipab.edu.ve` Odoo internal user created | Phase 1 | 5 min | CEO creates via UI → validate |
 | **Send confirmation email** to Edglis Rondón (Tier A, 72/100, no salary risk) | Phase 1 | 5 min | Manual, personal email — do now |
 | `action_send_in_person_invite()` — sends appointment email (date/time/address, no credentials) | Phase 1 | 30 min | Button on hr.applicant form |
-| OdooBot `RECRUIT_*` handler in `mail_bot_glenda.py` — detects evaluation session via cédula Turn 1, finds `hr.applicant`, starts 8-turn conversation | Phase 1 | 3h | Core build |
-| `skill_type='recruitment_eval'` field on `ai.agent.conversation` — isolates eval convs from family convs | Phase 1 | 30 min | Required before OdooBot handler |
-| 8-turn Glenda evaluation conversation + dual-AI scoring at close | Phase 1 | 3h | Writes `ueipab_skill_score`, `ueipab_skill_score_gpt`, `ueipab_eval_consensus` |
-| `RECRUIT_*` Telegram deep-link handler (Mode B fallback) | Phase 1 | 1h | After Mode A validated |
+| **New hr.applicant fields:** `ueipab_quiz_score` (Int 0–10), `ueipab_quiz_answers` (Text JSON), `ueipab_quiz_completed` (Boolean) | Phase 1 | 30 min | Phase 1 MCQ state tracking |
+| **Form button trigger:** `action_start_eval()` on hr.applicant → writes `ir.config_parameter` eval session key → opens Discuss OdooBot chat | Phase 1 | 1h | Planned-session entry path |
+| **Direct Discuss trigger:** Glenda detects keyword `evaluar` in OdooBot chat → asks candidate name → confirms vs hr.applicant → arms eval session | Phase 1 | 1h | Walk-in / ad-hoc entry path |
+| **OdooBot `RECRUIT_EVAL` handler** in `mail_bot_glenda.py` — session state machine: Identity → Phase 1 MCQ (10 Qs, letter answers) → score gate → Phase 2 conversational (7 turns) → dual-AI scoring | Phase 1 | 4h | Core build — replaces generic Glenda when eval session armed |
+| Dual-AI scoring at Phase 2 close (Claude + GPT-4o-mini on transcript) → writes `ueipab_skill_score`, `ueipab_skill_score_gpt`, `ueipab_eval_consensus` to `hr.applicant` | Phase 1 | 1h | Within OdooBot handler |
+| CEO notification at eval complete — OdooBot DM with scorecard (Phase 1 MCQ score + Phase 2 AI score + consensus) | Phase 1 | 30 min | Within OdooBot handler |
+| `RECRUIT_*` Telegram deep-link handler (Mode B fallback) | Phase 1 | 1h | After Mode A validated in practice |
 | **Portal email CTA modal** — publish job page + replace apply form with Bootstrap modal directing to `recursoshumanos@` | Phase 1.5 | 2h | Deploy before publishing `is_published=True` on hr.job id=8 |
 | Kanban confidence badge (tier + score visible in card) | Phase 2 | 1h | Deferred — Odoo 17 kanban QWeb strict |
 | Deploy `ueipab_recruitment` to production | Phase 2 | 30 min | After first real evaluation complete |
