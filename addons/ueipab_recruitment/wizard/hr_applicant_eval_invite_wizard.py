@@ -127,6 +127,11 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
         address     = self.address or '—'
         duration    = self.duration_minutes or 30
 
+        ICP = self.env['ir.config_parameter'].sudo()
+        base_url = ICP.get_param('web.base.url', 'https://odoo.ueipab.edu.ve')
+        job_obj = self.applicant_id.job_id
+        job_url = f"{base_url}/recruitment/job/{job_obj.id}" if job_obj and job_obj.description else None
+
         mailto_subj = f"Confirmo asistencia a evaluación — {name}"
         mailto_body = (
             f"Confirmo mi asistencia a la evaluación técnica presencial "
@@ -233,6 +238,7 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
         <td style="padding:10px 12px;color:#555;font-weight:600;">⏱️ Duración</td>
         <td style="padding:10px 12px;color:#222;">{duration} minutos</td>
       </tr>
+      {'<tr><td style="padding:10px 12px;background:#f8f9fa;color:#555;font-weight:600;">📋 Descripción</td><td style="padding:10px 12px;background:#f8f9fa;"><a href="' + job_url + '" target="_blank" style="color:#1a73e8;font-size:13px;font-weight:600;">Ver descripción del cargo →</a></td></tr>' if job_url else ''}
     </table>
 
     <!-- Important note -->
