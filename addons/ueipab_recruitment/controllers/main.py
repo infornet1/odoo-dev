@@ -40,11 +40,6 @@ def _build_page(job):
     dept       = job.department_id.name if job.department_id else 'Administración'
     vacantes   = job.no_of_recruitment or 1
     desc_html  = str(job.description or '')
-    mailto     = (
-        f"mailto:{_RRHH_EMAIL}"
-        f"?subject=Postulación%20para%20{title.replace(' ', '%20')}"
-        f"&body=Estimado%20equipo%20de%20RRHH%2C%0A%0AMi%20nombre%20es%20[Nombre%20completo]%20y%20deseo%20postularme%20al%20cargo%20de%20{title.replace(' ', '%20')}."
-    )
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -294,19 +289,43 @@ def _build_page(job):
       margin-left: auto;
       margin-right: auto;
     }}
-    .cta-btn {{
-      display: inline-block;
+    .email-card {{
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 10px;
+      padding: 14px 20px;
+      max-width: 100%;
+    }}
+    .email-addr {{
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: .3px;
+      word-break: break-all;
+    }}
+    .copy-btn {{
+      flex-shrink: 0;
       background: var(--gold);
       color: var(--navy);
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
-      padding: 13px 32px;
-      border-radius: 8px;
-      text-decoration: none;
+      cursor: pointer;
       transition: opacity .2s;
+      white-space: nowrap;
     }}
-    .cta-btn:hover {{ opacity: .88; }}
+    .copy-btn:hover {{ opacity: .85; }}
+    .copy-hint {{
+      font-size: 12px;
+      color: rgba(255,255,255,.45);
+      margin-top: 14px;
+    }}
 
     /* ── DIVIDER ── */
     .divider {{ height: 4px; background: linear-gradient(90deg, var(--navy), var(--blue), var(--teal)); }}
@@ -389,8 +408,12 @@ def _build_page(job):
   <!-- CTA -->
   <div class="cta-section">
     <h3>¿Te interesa este cargo?</h3>
-    <p>Envíanos tu CV y carta de presentación al correo de Recursos Humanos. Revisamos cada postulación con atención.</p>
-    <a href="{mailto}" class="cta-btn">✉ Postularme ahora</a>
+    <p>Escríbenos directamente desde tu correo favorito —<br>Gmail, Outlook, o cualquier cliente que uses.</p>
+    <div class="email-card">
+      <span class="email-addr" id="rrhh-email">{_RRHH_EMAIL}</span>
+      <button class="copy-btn" onclick="copyEmail()">Copiar</button>
+    </div>
+    <p class="copy-hint">Adjunta tu CV e indica el cargo al que te postulas</p>
   </div>
 </div>
 
@@ -404,5 +427,21 @@ def _build_page(job):
   </p>
 </footer>
 
+<script>
+function copyEmail() {{
+  var email = document.getElementById('rrhh-email').textContent;
+  navigator.clipboard.writeText(email).then(function() {{
+    var btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copiado';
+    btn.style.background = '#1fb8c0';
+    setTimeout(function() {{
+      btn.textContent = 'Copiar';
+      btn.style.background = '';
+    }}, 2000);
+  }}).catch(function() {{
+    window.prompt('Copia esta dirección:', email);
+  }});
+}}
+</script>
 </body>
 </html>"""
