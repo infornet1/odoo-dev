@@ -97,10 +97,16 @@ class HrApplicantEval(models.Model):
         self.ueipab_eval_state = 'confirmed'
 
     def action_invite_in_person_eval(self):
-        """Send appointment email (date/time/address — no credentials needed)."""
+        """Open the wizard to send an in-person evaluation invitation."""
         self.ensure_one()
-        self.ueipab_evaluation_mode = 'in_person'
-        self.ueipab_eval_state = 'eval_invited'
+        return {
+            'type':      'ir.actions.act_window',
+            'name':      'Enviar Invitación Presencial',
+            'res_model': 'hr.applicant.eval.invite.wizard',
+            'view_mode': 'form',
+            'target':    'new',
+            'context':   {'default_applicant_id': self.id},
+        }
 
     def action_start_eval(self):
         """Arm the OdooBot evaluation session for the current user and open Discuss."""

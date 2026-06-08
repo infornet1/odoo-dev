@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_hr_applicant_eval_user,hr.applicant.eval.user,hr_recruitment.model_hr_applicant,base.group_user,1,1,0,0
 access_hr_applicant_eval_officer,hr.applicant.eval.officer,hr_recruitment.model_hr_applicant,hr_recruitment.group_hr_recruitment_user,1,1,1,0
 access_wage_range_officer,hr.recruitment.wage.range.officer,model_hr_recruitment_wage_range,hr_recruitment.group_hr_recruitment_user,1,1,1,1
+access_eval_invite_wizard_officer,hr.applicant.eval.invite.wizard.officer,model_hr_applicant_eval_invite_wizard,hr_recruitment.group_hr_recruitment_user,1,1,1,1

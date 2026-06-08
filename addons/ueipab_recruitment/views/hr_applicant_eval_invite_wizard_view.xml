@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="hr_applicant_eval_invite_wizard_form" model="ir.ui.view">
+        <field name="name">hr.applicant.eval.invite.wizard.form</field>
+        <field name="model">hr.applicant.eval.invite.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Enviar Invitación de Evaluación Presencial">
+                <group>
+                    <group string="Candidato">
+                        <field name="applicant_id" invisible="1"/>
+                        <field name="partner_name"/>
+                        <field name="job_name"/>
+                    </group>
+                    <group string="Cita">
+                        <field name="appointment_date"/>
+                        <field name="appointment_time"/>
+                        <field name="address"/>
+                        <field name="duration_minutes"/>
+                    </group>
+                </group>
+                <group string="Canales de Envío">
+                    <group>
+                        <field name="candidate_email"/>
+                    </group>
+                    <group>
+                        <field name="candidate_phone"/>
+                        <field name="send_whatsapp"
+                               invisible="not has_phone"
+                               string="Enviar también por WhatsApp (Glenda)"/>
+                        <field name="has_phone" invisible="1"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_send" type="object"
+                            string="Enviar Invitación" class="btn-primary"/>
+                    <button special="cancel" string="Cancelar" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_hr_applicant_eval_invite_wizard" model="ir.actions.act_window">
+        <field name="name">Enviar Invitación Presencial</field>
+        <field name="res_model">hr.applicant.eval.invite.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="hr_recruitment.model_hr_applicant"/>
+    </record>
+
+</odoo>
