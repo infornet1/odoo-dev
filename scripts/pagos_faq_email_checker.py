@@ -89,18 +89,22 @@ Recibirás el contenido de un correo electrónico enviado a pagos@ueipab.edu.ve 
 A) RESPONDER: Si puedes responder la pregunta de forma factual con el conocimiento que tienes.
 B) ESCALAR: Si la consulta requiere revisión humana (disputas, excepciones, casos complejos, datos específicos de cuenta).
 
-CONOCIMIENTO — PROPUESTA ECONÓMICA 2026-2027:
-Aprobada sin objeción por contraloría el 18/05/2026 (Resoluciones MPPE 0009 y 024-2020).
+CONOCIMIENTO — PROPUESTA ECONÓMICA 2026-2027 (APROBADA):
+La consulta parental cerró el 26/05/2026. Opción A ganó con 108 votos (60,7% de 114 votantes).
+Vigente a partir de septiembre 2026. Aprobada por contraloría (Resoluciones MPPE 0009 y 024-2020).
 
-OPCIÓN A — $218,88/mes (incremento 10,89%):
-- Pronto pago días 1-10: ahorro $10,95 → pagas $207,93
+TARIFAS CONFIRMADAS 2026-2027:
+- Mensualidad: $218,88/mes (incremento 10,89% vs año anterior)
+- Pronto pago (días 1-10): $207,93
 - Costo anual por alumno: $2.845,45
 - Presupuesto total: $589.649 (67% personal + 33% materiales/servicios)
 
-OPCIÓN B — $236,58/mes (incremento 19,86%):
-- Pronto pago días 1-10: ahorro $11,82 → pagas $224,75
-- Costo anual por alumno: $3.075,55
-- Presupuesto total: $637.284 (67% personal + 33% materiales/servicios)
+TARIFA ACTUAL (2025-2026, vigente hasta agosto 2026):
+- Mensualidad: $197,38 | Pronto pago: $162,39 | Cashea disponible
+
+OFERTA INSCRIPCIÓN ANTICIPADA (hasta 31 julio 2026):
+- Inscripción: $187,51 | Mensualidad septiembre: $197,38 (tarifa actual)
+- Requisito: año 2025-2026 completamente saldado
 
 DESCUENTOS POR HERMANOS (sobre mensualidad base):
 - 1er hijo/a: 5% | 2do: 8% | 3er en adelante: 11%
@@ -110,22 +114,8 @@ COSTOS ÚNICOS ANUALES POR ALUMNO (pagaderos en inscripción):
 - Seguro escolar: $30,58 | Guía de inglés: $25 | Olimpiadas: $10
 - Enciclopedia digital: $36 | MUN Bachillerato: $5 | MUN Primaria: $5 | Talleres: $5
 
-OFERTA INSCRIPCIÓN ANTICIPADA (hasta 31 julio 2026):
-- Inscripción: $187,51 | Mensualidad septiembre: $197,38 (tarifa actual)
-- Requisito: año 2025-2026 completamente saldado
-
 CONTEXTO ECONÓMICO:
 - Inflación 611,86% | Bs/USD $487,12 (vs $154 en abril) — justifica el ajuste
-
-CRONOGRAMA VOTACIÓN:
-- 18/05: Contraloría aprobó por unanimidad
-- 19/05 3pm y 20/05 2pm: Videollamadas de aclaración
-- 21-23/05: Período de divulgación y votación (correo personalizado)
-- 26/05: Anuncio del resultado
-
-VOTACIÓN:
-- Solo representantes ACTIVOS reciben enlace de votación por correo
-- Una sola vez por familia | Correo a pagos@ueipab.edu.ve si no recibió enlace
 
 PRESENTACIÓN OFICIAL:
 https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA
@@ -135,15 +125,6 @@ MÉTODOS DE PAGO ACEPTADOS:
 - Confirmar detalles bancarios en pagos@ueipab.edu.ve
 
 MORA: https://odoo.ueipab.edu.ve/mora-policy/
-
-PROPUESTA ECONÓMICA 2026-2027 — ETAPA DE CONSULTA ACTIVA:
-La propuesta ha sido presentada oficialmente. Comparte ambas opciones con total transparencia:
-- Opción A: $218,88/mes (incremento 10,89%). Pronto pago: $207,93.
-- Opción B: $236,58/mes (incremento 19,86%). Pronto pago: $224,75.
-- Votación: 22–23 de mayo por correo electrónico. Un voto por familia.
-- Presentación: https://docs.google.com/presentation/d/16EmMb-8mMtnsvdLLnc4Cx8srhzDrzjrsOvNIcXvTkEA
-- Sin enlace de votación: indicar que escriba a pagos@ueipab.edu.ve.
-La mensualidad VIGENTE es $197,38 | Pronto pago: $162,39 | Cashea disponible.
 
 CUÁNDO ESCALAR (responde "escalar"):
 - Solicitud de excepción, descuento especial o prórroga
@@ -157,8 +138,8 @@ INSTRUCCIONES DE RESPUESTA:
 - Sé conciso — máximo 200 palabras por respuesta
 - Siempre firma: "Equipo de Pagos — Colegio Andrés Bello"
 - Incluye el enlace de la presentación cuando pregunten por la propuesta
-- NO inventes porcentajes de votación ni resultados — no están disponibles aún
-- Si es una consulta de votación y no recibió enlace: indícale que escriba a pagos@ueipab.edu.ve
+- Si preguntan por la votación o el resultado: la consulta cerró el 26/05/2026 con Opción A ganadora (108 votos, 60,7%)
+- Cuando menciones las tarifas 2026-2027, SIEMPRE destaca primero la oferta de inscripción anticipada ($187,51 inscripción + $197,38 septiembre, hasta 31 julio 2026) antes de mencionar la mensualidad confirmada ($218,88). Es una oportunidad de ahorro concreta y vigente.
 
 FORMATO DE RESPUESTA (JSON estricto, sin markdown):
 {
@@ -433,21 +414,29 @@ def main():
 
         if action == 'responder':
             reply_text = result.get('reply', '')
-            reply_html = reply_text.replace('\n', '<br/>')
+            now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+            note_html = (
+                f"<p><strong>💬 Borrador de respuesta sugerida por Glenda FAQ</strong></p>"
+                f"<p><strong>Remitente:</strong> {name} ({sender})</p>"
+                f"<hr/>"
+                f"<p>{reply_text.replace(chr(10), '<br/>')}</p>"
+                f"<hr/>"
+                f"<p><em>Revisar y enviar manualmente si procede — {now_str}</em></p>"
+            )
             new_subject = f"{PROCESSED_TAG} {subject}"
 
             if LIVE:
                 try:
-                    fs_post_reply(conv_id, reply_html)
+                    fs_post_note(conv_id, note_html)
                     fs_update_subject(conv_id, new_subject)
-                    logger.info("  Reply sent + subject updated")
+                    logger.info("  Draft note posted (no customer reply) + subject updated")
                     answered += 1
                 except Exception as e:
                     logger.error("  FS API error: %s", e)
                     errors += 1
                     continue
             else:
-                logger.info("  DRY RUN — reply:\n    %s", reply_text[:200])
+                logger.info("  DRY RUN — draft note:\n    %s", reply_text[:200])
                 answered += 1
 
         else:  # escalar

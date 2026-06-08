@@ -4,6 +4,32 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-08 — pagos_faq_email_checker: draft-only mode + post-vote knowledge update
+
+**Type:** Script behavior + knowledge | **File:** `scripts/pagos_faq_email_checker.py`
+
+### No more customer-facing replies
+
+`pagos_faq_email_checker.py` now operates in **draft-only mode**: Glenda never posts a customer-visible reply.
+
+| Claude decision | Before | After |
+|---|---|---|
+| `action=responder` | `POST /threads` type=`message` (customer sees it) | `POST /threads` type=`note` — "💬 Borrador de respuesta sugerida por Glenda FAQ" |
+| `action=escalar` | `POST /threads` type=`note` (unchanged) | same — no change |
+
+Both paths now write internal notes only. The pagos@ team reviews the draft and sends manually if appropriate.
+
+### SYSTEM_PROMPT knowledge update
+
+The hardcoded knowledge block was frozen at pre-vote state (voting framing, stale "etapa de votación", Option B still present). Updated to reflect the closed consultation:
+
+- **Removed:** voting timeline (18/05, 21-23/05, 26/05), "ETAPA DE CONSULTA ACTIVA" section, Opción B, "NO inventes resultados" instruction, "sin enlace de votación" guidance
+- **Added:** "APROBADA" heading — Opción A confirmed 108/114 votes (60.7%) on 2026-05-26
+- **Split tariffs:** "TARIFAS CONFIRMADAS 2026-2027" ($218,88/$207,93) vs "TARIFA ACTUAL 2025-2026" ($197,38/$162,39)
+- **Response instruction:** always lead with early-bird promotion ($187,51 inscripción + $197,38 sept, hasta 31 jul 2026) before quoting confirmed mensualidad
+
+---
+
 ## 2026-06-05 — EMILIO ISEA liquidation closed (SLIP/840 + SLIP/841)
 
 **Payslip 891 → SLIP/840** (`LIQUID_VE_V2`): NET = **$514.51** (includes LIQUID_ANTIGUEDAD_V2 2.5-day fix). Confirmed `done`.

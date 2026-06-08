@@ -227,6 +227,12 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **`pagos_faq_email_checker.py`** — 100% REST API (no pymysql). `fs_get_conversations_page()` + `fs_get_conversation_detail()`.
 
+**Behavior (2026-06-08):** Never replies to customers directly. Both `action=responder` and `action=escalar` post **internal notes only**:
+- `responder` → "💬 Borrador de respuesta sugerida por Glenda FAQ" note; human reviews and sends manually if appropriate. Subject prefix: `[FAQ-AI]`.
+- `escalar` → "⚠️ Escalación sugerida por Glenda FAQ" note with reason + detail. Subject prefix: `[FAQ-AI][ESCALAR]`.
+
+**Knowledge block (2026-06-08):** Updated for post-vote reality — Opción A confirmed ($218,88/$207,93), voting/timeline sections removed, early-bird offer leads responses about 2026-2027 rates (before quoting the approved mensualidad).
+
 **`pagos_receipt_processor.py`** key patterns:
 - **Email lookup:** use `ilike` (not `=ilike`) — Odoo stores multi-email as `a@x.com;b@x.com`; exact match fails (v57.10).
 - **Google Sheet fallback:** email miss → `sheets_lookup_by_email()` checks `Customers!B2:J` → `odoo_find_partner_by_name()`. Spreadsheet: `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`.
