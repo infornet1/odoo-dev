@@ -38,7 +38,7 @@
                         <field name="ueipab_telegram_eval_conv_id" string="Conv. Glenda"/>
                     </group>
                     <group colspan="4" string="Notas IA">
-                        <field name="ueipab_ai_eval_notes" nolabel="1"
+                        <field name="ueipab_ai_eval_notes" nolabel="1" colspan="2"
                                placeholder="Glenda registrará aquí el resumen de la evaluación..."/>
                     </group>
                     <div colspan="4">
