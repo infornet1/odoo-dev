@@ -80,6 +80,13 @@ class HrApplicantEval(models.Model):
                 rec.ueipab_skill_score * 0.60
             )
 
+    # ── In-person appointment confirmation ───────────────────────────────────
+    ueipab_eval_invite_token     = fields.Char('Token Confirmación Cita', copy=False, index=True)
+    ueipab_eval_confirmed        = fields.Boolean('Asistencia Confirmada', default=False)
+    ueipab_eval_appointment_date = fields.Date('Fecha Cita')
+    ueipab_eval_appointment_time = fields.Char('Hora Cita')
+    ueipab_eval_appointment_addr = fields.Char('Dirección Cita')
+
     # ── Phase 1 MCQ quiz tracking ────────────────────────────────────────────
     ueipab_quiz_score = fields.Integer(
         'Score Quiz MCQ (/ 10)', default=0,

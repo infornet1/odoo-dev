@@ -1,4 +1,5 @@
 import logging
+import secrets
 from datetime import date
 
 from odoo import models, fields, api
@@ -66,11 +67,21 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
         self.ensure_one()
         sent_wa = False
 
+        # Generate a fresh confirmation token and persist appointment details
+        token = secrets.token_urlsafe(24)
+        self.applicant_id.sudo().write({
+            'ueipab_eval_invite_token':     token,
+            'ueipab_eval_confirmed':        False,
+            'ueipab_eval_appointment_date': self.appointment_date,
+            'ueipab_eval_appointment_time': self.appointment_time,
+            'ueipab_eval_appointment_addr': self.address,
+        })
+
         if self.send_whatsapp and self.candidate_phone:
             sent_wa = self._send_whatsapp()
 
         if self.candidate_email:
-            self._send_email(sent_wa)
+            self._send_email(sent_wa, token)
 
         # Update applicant state
         self.applicant_id.sudo().write({
@@ -98,8 +109,8 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
 
     # ── Email ─────────────────────────────────────────────────────────────────
 
-    def _send_email(self, with_wa: bool):
-        html = self._build_email_html(with_wa)
+    def _send_email(self, with_wa: bool, token: str = ''):
+        html = self._build_email_html(with_wa, token)
         subject = (
             f"Invitación a Evaluación Presencial — "
             f"{self.job_name or 'UEIPAB'} | UEIPAB"
@@ -118,7 +129,7 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
             mail.id, self.candidate_email, self.applicant_id.id,
         )
 
-    def _build_email_html(self, with_wa: bool) -> str:
+    def _build_email_html(self, with_wa: bool, token: str = '') -> str:
         name        = (self.partner_name or '—').upper()
         first_name  = name.split()[0] if name != '—' else 'Candidato/a'
         job         = self.job_name or '—'
@@ -132,16 +143,7 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
         job_obj = self.applicant_id.job_id
         job_url = f"{base_url}/recruitment/job/{job_obj.id}" if job_obj and job_obj.description else None
 
-        mailto_subj = f"Confirmo asistencia a evaluación — {name}"
-        mailto_body = (
-            f"Confirmo mi asistencia a la evaluación técnica presencial "
-            f"del {date_str} a las {time_str}."
-        )
-        mailto_link = (
-            f"mailto:{_RRHH_EMAIL}"
-            f"?subject={mailto_subj.replace(' ', '%20')}"
-            f"&body={mailto_body.replace(' ', '%20')}"
-        )
+        confirm_url = f"{base_url}/recruitment/confirm/{token}" if token else ''
 
         if with_wa:
             cta_block = f"""
@@ -153,7 +155,7 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
         else:
             cta_block = f"""
 <p style="text-align:center;margin:20px 0 6px;">
-  <a href="{mailto_link}"
+  <a href="{confirm_url}"
      style="display:inline-block;background:#1a73e8;color:#ffffff !important;
             padding:12px 32px;border-radius:6px;text-decoration:none;
             font-size:14px;font-weight:700;font-family:Arial,sans-serif;">
@@ -161,7 +163,7 @@ class HrApplicantEvalInviteWizard(models.TransientModel):
   </a>
 </p>
 <p style="text-align:center;font-size:11px;color:#aaa;margin:4px 0 16px;">
-  Haga clic para enviarnos su confirmación por correo
+  Un clic confirma su asistencia — no se abrirá ninguna otra aplicación
 </p>"""
 
         return f"""<!DOCTYPE html>

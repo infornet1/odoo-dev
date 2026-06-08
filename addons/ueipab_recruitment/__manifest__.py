@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB Recruitment Evaluation',
-    'version': '17.0.3.2.0',
+    'version': '17.0.3.3.0',
     'category': 'Human Resources',
     'summary': 'CV scoring + Glenda AI evaluation pipeline with dual-AI confidence score',
     'depends': ['hr_recruitment', 'ueipab_ai_agent'],
