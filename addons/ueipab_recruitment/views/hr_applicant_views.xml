@@ -30,6 +30,10 @@
                         <field name="ueipab_freescout_conv_id" string="Freescout Conv #"/>
                         <field name="ueipab_freescout_url"     string="Ver en Freescout" widget="url"/>
                     </group>
+                    <group string="Quiz MCQ">
+                        <field name="ueipab_quiz_score"     string="Score Quiz (/ 10)"/>
+                        <field name="ueipab_quiz_completed" string="Quiz Completado" widget="boolean_toggle"/>
+                    </group>
                     <group string="Glenda">
                         <field name="ueipab_telegram_eval_conv_id" string="Conv. Glenda"/>
                     </group>
@@ -43,13 +47,17 @@
                                 type="object" class="btn-secondary"
                                 invisible="ueipab_eval_state != 'pending'"/>
                         <button name="action_invite_in_person_eval"
-                                string="🖥️ Invitar a Evaluación Presencial"
-                                type="object" class="btn-primary"
+                                string="🖥️ Enviar Invitación Presencial"
+                                type="object" class="btn-secondary"
                                 invisible="ueipab_eval_state not in ['confirmed', 'pending']"/>
+                        <button name="action_start_eval"
+                                string="🤖 Iniciar Evaluación IA (OdooBot)"
+                                type="object" class="btn-primary"
+                                invisible="ueipab_eval_state not in ['confirmed', 'eval_invited', 'pending']"/>
                         <button name="action_send_telegram_eval_invite"
                                 string="💬 Invitar a Evaluación Telegram"
                                 type="object" class="btn-secondary"
-                                invisible="ueipab_eval_state not in ['confirmed', 'pending']"/>
+                                invisible="ueipab_eval_state not in ['confirmed', 'eval_invited', 'pending']"/>
                     </div>
                 </group>
                 </page>

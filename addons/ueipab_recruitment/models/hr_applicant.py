@@ -1,4 +1,9 @@
+import json
+import logging
+
 from odoo import models, fields, api
+
+_logger = logging.getLogger(__name__)
 
 
 class HrApplicantEval(models.Model):
@@ -75,23 +80,58 @@ class HrApplicantEval(models.Model):
                 rec.ueipab_skill_score * 0.60
             )
 
+    # ── Phase 1 MCQ quiz tracking ────────────────────────────────────────────
+    ueipab_quiz_score = fields.Integer(
+        'Score Quiz MCQ (/ 10)', default=0,
+        help='Number of correct answers in the Phase 1 multiple-choice quiz (0–10).',
+    )
+    ueipab_quiz_answers = fields.Text(
+        'Respuestas Quiz (JSON)',
+        help='JSON array: [{q, given, correct, ok}, …] — full answer log from MCQ session.',
+    )
+    ueipab_quiz_completed = fields.Boolean('Quiz Completado', default=False)
+
     # ── Actions ──────────────────────────────────────────────────────────────
     def action_send_confirmation_email(self):
-        """Send 3-question confirmation email to interested candidate."""
         self.ensure_one()
         self.ueipab_eval_state = 'confirmed'
-        # TODO Phase 1: email template with 3 questions + OdooBot invite instructions
 
     def action_invite_in_person_eval(self):
-        """Schedule in-person OdooBot evaluation session."""
+        """Send appointment email (date/time/address — no credentials needed)."""
         self.ensure_one()
         self.ueipab_evaluation_mode = 'in_person'
         self.ueipab_eval_state = 'eval_invited'
-        # TODO Phase 1: create portal user, send credentials via email
+
+    def action_start_eval(self):
+        """Arm the OdooBot evaluation session for the current user and open Discuss."""
+        self.ensure_one()
+        ICP = self.env['ir.config_parameter'].sudo()
+        session_key = f'recruit.eval.session.{self.env.user.id}'
+        session = {
+            'applicant_id':       self.id,
+            'state':              'identity_prompt',
+            'q_idx':              0,
+            'answers':            [],
+            'quiz_score':         None,
+            'conv_turns':         [],
+            'identity_confirmed': False,
+            'evaluation_mode':    'in_person',
+        }
+        ICP.set_param(session_key, json.dumps(session))
+        self.ueipab_evaluation_mode = 'in_person'
+        self.ueipab_eval_state = 'ai_evaluating'
+        _logger.info(
+            "Eval session armed: applicant=%s user=%s key=%s",
+            self.id, self.env.user.login, session_key,
+        )
+        # Open Discuss — let the user navigate to OdooBot from there
+        return {
+            'type': 'ir.actions.act_url',
+            'url':  '/web#action=mail.action_discuss',
+            'target': 'self',
+        }
 
     def action_send_telegram_eval_invite(self):
-        """Send Glenda Telegram deep-link for remote skill evaluation."""
         self.ensure_one()
         self.ueipab_evaluation_mode = 'remote'
         self.ueipab_eval_state = 'eval_invited'
-        # TODO Phase 1: generate t.me/GlendaUeipabBot?start=RECRUIT_{self.id}
