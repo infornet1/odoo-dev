@@ -714,19 +714,26 @@ def _build_transcript(conv_turns):
 
 def _parse_json_response(text):
     text = text.strip()
-    # Strip markdown fences if present
-    text = re.sub(r'^```(?:json)?\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
+    # Strip markdown fences wherever they appear (Claude sometimes wraps despite instructions)
+    text = re.sub(r'```(?:json)?\s*', '', text).strip()
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        # Try to extract JSON object from surrounding text
-        m = re.search(r'\{.*\}', text, re.DOTALL)
-        if m:
-            try:
-                return json.loads(m.group())
-            except json.JSONDecodeError:
-                pass
+        pass
+    # Balanced-brace extraction — handles leading/trailing prose around the JSON object
+    start = text.find('{')
+    if start >= 0:
+        depth = 0
+        for i, c in enumerate(text[start:], start):
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        break
     _logger.warning("Could not parse AI scoring JSON: %s", text[:200])
     return {}
 
