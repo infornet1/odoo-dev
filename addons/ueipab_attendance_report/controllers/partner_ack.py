@@ -31,9 +31,16 @@ class PartnerAckController(http.Controller):
             return self._respond(self._page_invalid())
         if ack.state != 'pending':
             return self._respond(self._page_already_done(ack))
+        deadline = self._VOTE_DEADLINES.get(ack.notice_key)
+        if deadline and datetime.date.today() > deadline:
+            return self._respond(self._page_voting_closed(ack))
         return self._respond(self._page_decision(ack))
 
     # ── Core decision handler ─────────────────────────────────────────────────
+
+    _VOTE_DEADLINES = {
+        'budget_consulta_2026_2027': datetime.date(2026, 6, 8),
+    }
 
     def _record_decision(self, token, decision):
         Ack = request.env['partner.communication.ack'].sudo()
@@ -42,6 +49,9 @@ class PartnerAckController(http.Controller):
             return self._respond(self._page_invalid())
         if ack.state != 'pending':
             return self._respond(self._page_already_done(ack))
+        deadline = self._VOTE_DEADLINES.get(ack.notice_key)
+        if deadline and datetime.date.today() > deadline:
+            return self._respond(self._page_voting_closed(ack))
         ip = self._client_ip()
         ack.write({
             'state':        decision,
@@ -328,6 +338,31 @@ class PartnerAckController(http.Controller):
   <p style="margin:0 0 4px;"><strong>Decisi&oacute;n:</strong> {label}</p>
   <p style="margin:0;"><strong>Respondido el:</strong> {dt}</p>
 </div>
+"""
+        )
+
+    def _page_voting_closed(self, ack):
+        name = ack.partner_name or ''
+        return self._base_page(
+            'Consulta cerrada',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:52px;">&#128274;</div>
+  <h2 style="color:#1a2c5b;margin:10px 0 4px;">Per&iacute;odo de consulta cerrado</h2>
+  <p style="color:#555;font-size:14px;margin:0;"><strong>{name}</strong></p>
+</div>
+<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
+            padding:16px 18px;font-size:13px;color:#856404;margin-bottom:16px;">
+  <p style="margin:0;">El plazo para participar en la Consulta Presupuestaria 2026-2027
+  venci&oacute; el <strong>08 de junio de 2026</strong>. Los resultados oficiales ya
+  fueron publicados.</p>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;font-size:13px;color:#444;">
+  <p style="margin:0;">Si tiene preguntas sobre la propuesta econ&oacute;mica aprobada,
+  escr&iacute;banos a
+  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:16px 0 0;">Puede cerrar esta p&aacute;gina.</p>
 """
         )
 

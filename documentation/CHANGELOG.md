@@ -4,6 +4,30 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-09 — partner_ack: voting deadline guard (budget_consulta_2026_2027)
+
+**Type:** Bug fix | **File:** `addons/ueipab_attendance_report/controllers/partner_ack.py`
+
+### Problem
+
+`_record_decision` had no date-based guard. Any of the 64 pending parents who still had their original vote email could click the personalized `/partner-ack/<token>/si` or `/no` link and have their vote recorded — even after the consultation closed on 2026-05-26 and the stated deadline of 2026-06-08 passed.
+
+Discovered when ILDEMARO ARRIOJA submitted a vote on 2026-06-09 (one day after deadline) via his email link, triggering a CC confirmation to `votacion@ueipab.edu.ve`.
+
+### Fix
+
+Added `_VOTE_DEADLINES` dict on the controller class. Both `_record_decision` and `partner_ack_landing` now check the deadline for the ACK's `notice_key` before accepting input. If today > deadline → show `_page_voting_closed` page (yellow warning, redirects to `pagos@`). No vote is written, no confirmation email sent.
+
+```python
+_VOTE_DEADLINES = {
+    'budget_consulta_2026_2027': datetime.date(2026, 6, 8),
+}
+```
+
+Deployed to testing + production on 2026-06-09.
+
+---
+
 ## 2026-06-08 — pagos_faq_email_checker: draft-only mode + post-vote knowledge update
 
 **Type:** Script behavior + knowledge | **File:** `scripts/pagos_faq_email_checker.py`
