@@ -271,7 +271,13 @@ _SCORING_PROMPT = textwrap.dedent("""\
     struggle and practical examples from real experience.
 
     Return ONLY valid JSON (no markdown fences):
-    {"score": <int 0-100>, "strengths": ["...", "..."], "gaps": ["...", "..."], "summary": "<2 sentences in Spanish>"}
+    {
+      "score": <int 0-100>,
+      "strengths": ["...", "..."],
+      "gaps": ["...", "..."],
+      "summary": "<2 sentences in Spanish>",
+      "manager_summary": "<plain-language decision aid for HR manager in Spanish, 4-6 bullet lines using • character, covering: (1) confidence level and what it means, (2) 2 key strengths, (3) 1-2 red flags, (4) bottom-line hiring recommendation>"
+    }
 """)
 
 
@@ -535,15 +541,16 @@ class MailBotRecruitEval(models.AbstractModel):
         # ── Claude score ──
         claude_score = 0
         claude_summary = ''
+        claude_data = {}
         try:
             result = self.env['ai.agent.claude.service'].generate_response(
                 system_prompt=_SCORING_PROMPT,
                 messages=messages,
                 model='claude-haiku-4-5-20251001',
             )
-            data = _parse_json_response(result.get('content', ''))
-            claude_score = int(data.get('score', 0))
-            claude_summary = data.get('summary', '')
+            claude_data = _parse_json_response(result.get('content', ''))
+            claude_score = int(claude_data.get('score', 0))
+            claude_summary = claude_data.get('summary', '')
             _logger.info("Eval Claude score: applicant=%s score=%s", applicant_id, claude_score)
         except Exception:
             _logger.exception("Claude scoring failed for applicant=%s", applicant_id)
@@ -573,12 +580,15 @@ class MailBotRecruitEval(models.AbstractModel):
             + claude_summary
         )
 
+        manager_summary = claude_data.get('manager_summary', '')
+
         applicant.sudo().write({
-            'ueipab_skill_score':     float(claude_score),
-            'ueipab_skill_score_gpt': float(gpt_score),
-            'ueipab_eval_consensus':  consensus,
-            'ueipab_ai_eval_notes':   notes,
-            'ueipab_eval_state':      'ai_done',
+            'ueipab_skill_score':       float(claude_score),
+            'ueipab_skill_score_gpt':   float(gpt_score),
+            'ueipab_eval_consensus':    consensus,
+            'ueipab_ai_eval_notes':     notes,
+            'ueipab_manager_summary':   manager_summary,
+            'ueipab_eval_state':        'ai_done',
         })
 
         ICP.set_param(session_key, '')

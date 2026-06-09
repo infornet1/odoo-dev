@@ -11,6 +11,20 @@
             <!-- Evaluation tab injected alongside Application Summary -->
             <xpath expr="//page[@name='application_summary']" position="after">
                 <page string="Evaluación IA" name="ueipab_eval">
+
+                    <!-- Manager executive summary — top of tab, full width -->
+                    <div style="background:#f0f7ff;border-left:4px solid #1a73e8;
+                                border-radius:4px;padding:14px 18px;margin:12px 0 16px;">
+                        <div style="font-size:12px;font-weight:700;color:#1a73e8;
+                                    text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+                            📋 Resumen Ejecutivo — Decisión RRHH
+                        </div>
+                        <field name="ueipab_manager_summary" nolabel="1"
+                               placeholder="Generado automáticamente por IA al completar la evaluación. Editable por RRHH."
+                               style="background:transparent;border:none;width:100%;
+                                      font-size:13px;color:#333;line-height:1.6;"/>
+                    </div>
+
                 <group col="4">
                     <group string="Estado">
                         <field name="ueipab_eval_state" string="Estado Evaluación"/>

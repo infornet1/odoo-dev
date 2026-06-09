@@ -63,6 +63,7 @@ class HrApplicantEval(models.Model):
         ('low',    'Bajo (delta >25 — posible gaming)'),
     ], string='Consenso IA')
     ueipab_ai_eval_notes = fields.Text('Notas de Evaluación IA')
+    ueipab_manager_summary = fields.Text('Resumen Ejecutivo RRHH')
 
     # ── Composite confidence score ───────────────────────────────────────────
     ueipab_confidence_pct = fields.Float(
