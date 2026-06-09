@@ -34,6 +34,14 @@ _logger = logging.getLogger(__name__)
 # ── Scoring gate ────────────────────────────────────────────────────────────
 _MCQ_PASS_THRESHOLD = 7   # out of 10 — change here to recalibrate
 
+# ── Salary / compensation keyword detector ───────────────────────────────────
+_SALARY_KEYWORDS = frozenset([
+    'sueldo', 'salario', 'pago', 'cuanto ofrecen', 'cuánto ofrecen',
+    'cuanto gana', 'cuánto gana', 'cuanto pagan', 'cuánto pagan',
+    'compensaci', 'remuner', 'beneficio', 'ingreso mensual', 'cuanto cobra',
+    'cuánto cobra', 'cuanto es el', 'cuánto es el',
+])
+
 # ── Keyword triggers for ad-hoc Discuss start ────────────────────────────────
 _EVAL_KEYWORDS = {'evaluar', 'iniciar evaluacion', 'iniciar evaluación', 'eval'}
 
@@ -510,6 +518,8 @@ class MailBotRecruitEval(models.AbstractModel):
 
         # All conversational turns done — score
         session['state'] = 'scoring'
+        if _is_salary_question(plain):
+            session['last_was_salary_q'] = True
         ICP.set_param(session_key, json.dumps(session))
         return self._eval_score_and_close(ICP, session_key, session)
 
@@ -579,8 +589,16 @@ class MailBotRecruitEval(models.AbstractModel):
 
         self._eval_notify_ceo(applicant, quiz_score, claude_score, gpt_score, consensus, delta)
 
+        salary_ack = ''
+        if session.get('last_was_salary_q'):
+            salary_ack = (
+                "Sobre tu pregunta de compensación: los detalles de sueldo y beneficios "
+                "los conversaremos en la siguiente etapa del proceso, si avanzás en la selección.\n\n"
+            )
+
         return (
-            "Gracias, hemos terminado la evaluación técnica.\n\n"
+            salary_ack
+            + "Gracias, hemos terminado la evaluación técnica.\n\n"
             "El equipo de UEIPAB revisará los resultados y se pondrá en contacto contigo "
             "a la brevedad.\n\n"
             "Puedes entregar el teclado al evaluador."
@@ -711,6 +729,11 @@ def _parse_json_response(text):
                 pass
     _logger.warning("Could not parse AI scoring JSON: %s", text[:200])
     return {}
+
+
+def _is_salary_question(text):
+    t = text.lower()
+    return any(k in t for k in _SALARY_KEYWORDS)
 
 
 def _call_gpt_scoring(ICP, transcript):

@@ -137,12 +137,41 @@ class HrApplicantEval(models.Model):
             "Eval session armed: applicant=%s user=%s key=%s",
             self.id, self.env.user.login, session_key,
         )
-        # Open Discuss — let the user navigate to OdooBot from there
+        self._post_eval_welcome_to_odoobot()
         return {
             'type': 'ir.actions.act_url',
             'url':  '/web#action=mail.action_discuss',
             'target': 'self',
         }
+
+    def _post_eval_welcome_to_odoobot(self):
+        """Post the evaluation welcome message to the OdooBot DM channel proactively."""
+        bot_partner = self.env.ref('base.partner_root')
+        user = self.env.user
+        channel = self.env['discuss.channel'].sudo().search([
+            ('channel_type', '=', 'chat'),
+            ('channel_member_ids.partner_id', '=', user.partner_id.id),
+            ('channel_member_ids.partner_id', '=', bot_partner.id),
+        ], limit=1)
+        if not channel:
+            return
+        job_name = self.job_id.name or 'el cargo solicitado'
+        msg = (
+            f"👋 Hola, soy <b>Glenda</b>, la asistente de evaluación de UEIPAB.<br><br>"
+            f"Estás participando en la <b>evaluación técnica</b> para el cargo de "
+            f"<b>{job_name}</b>.<br><br>"
+            f"La evaluación tiene dos partes:<br>"
+            f"▸ <b>Parte 1:</b> 10 preguntas de selección múltiple — responde con A, B, C o D<br>"
+            f"▸ <b>Parte 2:</b> Preguntas de desarrollo sobre situaciones prácticas del colegio<br><br>"
+            f"Tiempo estimado: <b>15–20 minutos</b>. Tus respuestas son confidenciales.<br><br>"
+            f"Para comenzar, escribe tu <b>nombre completo</b> tal como aparece en tu cédula."
+        )
+        channel.sudo().message_post(
+            body=msg,
+            message_type='comment',
+            subtype_xmlid='mail.mt_comment',
+            author_id=bot_partner.id,
+        )
 
     def action_send_telegram_eval_invite(self):
         self.ensure_one()
