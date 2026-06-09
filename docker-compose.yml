@@ -10,8 +10,8 @@ services:
             - /opt/odoo-dev/config:/etc/odoo
             - odoo-web-data:/var/lib/odoo
         ports:
-            - "8019:8069"
-            - "8020:8072"
+            - "127.0.0.1:8069:8069"
+            - "127.0.0.1:8072:8072"
         extra_hosts:
             - "freescout.ueipab.edu.ve:172.18.0.1"
         depends_on:

@@ -102,15 +102,43 @@ Expected output: `HTTP Code: 101` (Switching Protocols)
 - `/etc/nginx/sites-available/odoo.ueipab.edu.ve.bak.20260127_083923`
 - `/home/vision/ueipab17/config/odoo.conf.bak.20260127_084222`
 
-## Testing Environment
+## Testing Environment (dev.ueipab.edu.ve) — Updated 2026-06-09
 
-The testing environment (`dev.ueipab.edu.ve`) already has:
-- Correct `gevent_port = 8072` in Odoo config
-- WebSocket location configured in nginx
+### Architecture
 
-However, it may need:
-- `Origin` header pass-through if WebSocket issues occur
-- `client_max_body_size` increase if large file uploads fail
+The dev environment runs multiple Odoo Docker containers identified by port number.
+Port 8019 is the dev/testing environment. To keep that UX while making WebSocket work,
+nginx now owns port 8019 and intercepts `/websocket` before it reaches the HTTP worker.
+
+```
+http://dev.ueipab.edu.ve:8019/websocket  →  nginx :8019  →  127.0.0.1:8072 (gevent)  HTTP 101 ✓
+http://dev.ueipab.edu.ve:8019/*          →  nginx :8019  →  127.0.0.1:8069 (HTTP worker)
+https://dev.ueipab.edu.ve/websocket      →  nginx :443   →  127.0.0.1:8072 (gevent)
+https://dev.ueipab.edu.ve/*              →  nginx :443   →  127.0.0.1:8069 (HTTP worker)
+```
+
+**Docker port bindings** (`docker-compose.yml`):
+```yaml
+ports:
+    - "127.0.0.1:8069:8069"   # HTTP worker — localhost only, nginx proxies
+    - "127.0.0.1:8072:8072"   # gevent worker — localhost only, nginx proxies
+```
+Port 8019 and 8020 are no longer exposed by Docker. Nginx owns 8019 publicly.
+
+**nginx** (`/etc/nginx/sites-available/dev.ueipab.edu.ve`): dedicated `server { listen 8019; }` block
+added above the HTTPS block, with full WebSocket headers (`Origin`, `X-Forwarded-Host`,
+`Upgrade`, `Connection`). Both the :8019 and :443 blocks route `/websocket` to `127.0.0.1:8072`.
+
+### Verification
+```bash
+# HTTP 101 in gevent logs confirms WebSocket upgrade worked
+docker logs odoo-dev-web --tail 10 | grep websocket
+```
+
+### DO Firewall
+- Port 8019: open (nginx now handles it — no change needed)
+- Port 8020: can be closed (no longer exposed by Docker)
+- Port 443: open
 
 ## Related Odoo 17 Information
 
