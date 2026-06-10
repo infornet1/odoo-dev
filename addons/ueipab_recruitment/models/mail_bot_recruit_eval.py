@@ -2,7 +2,7 @@
 Glenda OdooBot — Recruitment Evaluation Handler
 ================================================
 Extends mail.bot to intercept OdooBot DM sessions when a recruitment eval
-session is armed (via hr.applicant action_start_eval or keyword trigger).
+session is armed (via hr.applicant action_start_eval — session schema there).
 
 Architecture
 ------------
@@ -14,7 +14,7 @@ Phase 2 — Conversational (7 turns, free text)
   • CEO OdooBot DM with full scorecard
 
 Session state — stored in ir.config_parameter key:
-  recruit.eval.session.{uid}  →  JSON (see _new_session)
+  recruit.eval.session.{uid}  →  JSON (schema: hr_applicant.action_start_eval)
 
 Question banks — keyed by job_key resolved from hr.job name.
 Future upgrade: swap _load_quiz_questions() to read from
@@ -24,6 +24,7 @@ import json
 import logging
 import re
 import textwrap
+import time
 
 import requests
 
@@ -34,6 +35,10 @@ _logger = logging.getLogger(__name__)
 # ── Scoring gate ────────────────────────────────────────────────────────────
 _MCQ_PASS_THRESHOLD = 7   # out of 10 — change here to recalibrate
 
+# ── Session TTL ──────────────────────────────────────────────────────────────
+# An armed session hijacks all OdooBot DMs for that user — expire stale ones.
+_SESSION_TTL_SECONDS = 2 * 60 * 60   # 2 hours
+
 # ── Salary / compensation keyword detector ───────────────────────────────────
 _SALARY_KEYWORDS = frozenset([
     'sueldo', 'salario', 'pago', 'cuanto ofrecen', 'cuánto ofrecen',
@@ -41,9 +46,6 @@ _SALARY_KEYWORDS = frozenset([
     'compensaci', 'remuner', 'beneficio', 'ingreso mensual', 'cuanto cobra',
     'cuánto cobra', 'cuanto es el', 'cuánto es el',
 ])
-
-# ── Keyword triggers for ad-hoc Discuss start ────────────────────────────────
-_EVAL_KEYWORDS = {'evaluar', 'iniciar evaluacion', 'iniciar evaluación', 'eval'}
 
 # ── MCQ question banks (keyed by job_key) ────────────────────────────────────
 # Each question: q=text shown to candidate, answer=correct letter, note=why.
@@ -307,34 +309,30 @@ class MailBotRecruitEval(models.AbstractModel):
                     "Por favor, inicia de nuevo desde el formulario del candidato."
                 )
 
-        # Keyword trigger for ad-hoc start from Discuss
-        plain = _plain(body)
-        if plain.strip().lower() in _EVAL_KEYWORDS:
-            return self._eval_keyword_start(ICP, session_key)
-
         return super()._get_answer(record, body, values, command)
-
-    # ── Keyword-triggered setup ──────────────────────────────────────────────
-
-    def _eval_keyword_start(self, ICP, session_key):
-        """HR typed 'evaluar' without using the form button — guided setup."""
-        pending_key = f'recruit.eval.setup.{self.env.user.id}'
-        ICP.set_param(pending_key, 'awaiting_name')
-        return (
-            "Entendido, vamos a iniciar una evaluación.\n\n"
-            "¿Cuál es el nombre completo del candidato que vas a evaluar?"
-        )
 
     def _eval_dispatch(self, record, body, ICP, session_key, session):
         plain = _plain(body)
+
+        # Stale-session guard — an armed session hijacks every OdooBot DM for
+        # this user, so sessions without a timestamp or past TTL are expired.
+        created = session.get('created_at', 0)
+        if not created or (time.time() - created) > _SESSION_TTL_SECONDS:
+            self._eval_abort(ICP, session_key, session)
+            return (
+                "La sesión de evaluación expiró por inactividad. "
+                "Inicia de nuevo desde el formulario del candidato."
+            )
+
+        # Escape hatch — evaluator types 'cancelar' at any point
+        if plain.strip().lower() in ('cancelar', 'cancel'):
+            self._eval_abort(ICP, session_key, session)
+            return (
+                "Sesión de evaluación cancelada. "
+                "El candidato vuelve al estado 'Evaluación Invitada'."
+            )
+
         state = session.get('state', 'identity_prompt')
-
-        # Check if this is the second step of keyword setup (candidate name lookup)
-        pending_key = f'recruit.eval.setup.{self.env.user.id}'
-        pending = ICP.get_param(pending_key, False)
-        if pending == 'awaiting_name' and not session_json_armed(session):
-            return self._eval_setup_lookup(ICP, session_key, pending_key, plain)
-
         if state == 'identity_prompt':
             return self._eval_identity(ICP, session_key, session, plain)
         if state == 'mcq':
@@ -345,48 +343,18 @@ class MailBotRecruitEval(models.AbstractModel):
             return self._eval_conv(record, ICP, session_key, session, plain)
         return "Sesión de evaluación en estado desconocido. Contacta al administrador."
 
-    # ── Setup via keyword: find applicant by name ────────────────────────────
+    # ── Abort / expiry ───────────────────────────────────────────────────────
 
-    def _eval_setup_lookup(self, ICP, session_key, pending_key, name_text):
-        Applicant = self.env['hr.applicant'].sudo()
-        candidates = Applicant.search([
-            ('partner_name', 'ilike', name_text),
-            ('stage_id.name', 'not in', ['Hired', 'Rejected']),
-        ], limit=5)
-
-        ICP.set_param(pending_key, '')
-
-        if not candidates:
-            return (
-                f"No encontré ningún candidato activo con el nombre '{name_text}'.\n"
-                "Verifica el nombre en el Kanban de Reclutamiento e intenta de nuevo con 'evaluar'."
-            )
-
-        if len(candidates) == 1:
-            c = candidates[0]
-            session = _new_session(c.id, 'in_person')
-            ICP.set_param(session_key, json.dumps(session))
-            c.sudo().write({
-                'ueipab_evaluation_mode': 'in_person',
-                'ueipab_eval_state': 'ai_evaluating',
+    def _eval_abort(self, ICP, session_key, session):
+        """Clear the armed session and return the applicant to a re-invitable state."""
+        ICP.set_param(session_key, '')
+        applicant_id = session.get('applicant_id')
+        if applicant_id:
+            self.env['hr.applicant'].sudo().browse(applicant_id).write({
+                'ueipab_eval_state': 'eval_invited',
             })
-            return (
-                f"Encontré a {c.partner_name} — {c.job_id.name or 'sin cargo'}.\n\n"
-                "Sesión armada. Entrega el teclado al candidato.\n\n"
-                + _identity_prompt()
-            )
-
-        lines = "\n".join(
-            f"{i+1}. {c.partner_name} ({c.job_id.name or 'sin cargo'})"
-            for i, c in enumerate(candidates)
-        )
-        ICP.set_param(f'recruit.eval.setup.candidates.{self.env.user.id}',
-                      json.dumps([c.id for c in candidates]))
-        ICP.set_param(pending_key, 'awaiting_choice')
-        return (
-            f"Encontré varios candidatos con ese nombre:\n\n{lines}\n\n"
-            "Responde con el número (1, 2, …) para seleccionar."
-        )
+        _logger.info("Eval session aborted/expired: applicant=%s user=%s",
+                     applicant_id, self.env.user.login)
 
     # ── Identity confirmation ────────────────────────────────────────────────
 
@@ -435,6 +403,13 @@ class MailBotRecruitEval(models.AbstractModel):
 
         letter = plain.strip().upper()
         if letter not in ('A', 'B', 'C', 'D'):
+            if _is_salary_question(plain):
+                return (
+                    "Los detalles de sueldo y beneficios los conversaremos en la "
+                    "siguiente etapa del proceso, si avanzás en la selección. "
+                    "Sigamos con la evaluación:\n\n"
+                    + questions[q_idx]['q']
+                )
             return (
                 "Por favor responde solo con la letra de tu opción: A, B, C o D."
             )
@@ -494,6 +469,7 @@ class MailBotRecruitEval(models.AbstractModel):
             session['state'] = 'conv'
             session['q_idx'] = 0
             session['conv_turns'] = []
+            session['current_q'] = _CONV_QUESTIONS[0]
             ICP.set_param(session_key, json.dumps(session))
             return _CONV_QUESTIONS[0]
         return "Escribe 'continuar' cuando estés listo/a para la segunda parte."
@@ -502,6 +478,21 @@ class MailBotRecruitEval(models.AbstractModel):
 
     def _eval_conv(self, record, ICP, session_key, session, plain):
         turn_idx = session['q_idx']
+
+        # Mid-eval salary question — deflect without recording it as an answer
+        # (it would pollute the transcript the AIs score). The final turn
+        # ("¿Tenés alguna pregunta…?") is exempt: handled at close with an ack.
+        # Heuristic guard: short message or explicit '?' — avoids false positives
+        # on technical answers that mention e.g. 'beneficio' (= profit).
+        if (turn_idx < len(_CONV_QUESTIONS) - 1
+                and _is_salary_question(plain)
+                and ('?' in plain or len(plain) < 80)):
+            return (
+                "Los detalles de sueldo y beneficios los conversaremos en la "
+                "siguiente etapa del proceso, si avanzás en la selección. "
+                "Sigamos con la evaluación:\n\n"
+                + (session.get('current_q') or _CONV_QUESTIONS[turn_idx] or '')
+            )
 
         # Record this answer
         session['conv_turns'].append({'role': 'user', 'content': plain})
@@ -519,6 +510,7 @@ class MailBotRecruitEval(models.AbstractModel):
                     "¿En qué situación ese impuesto NO aplicaría? Dame un ejemplo concreto."
                 )
             session['conv_turns'].append({'role': 'assistant', 'content': q})
+            session['current_q'] = q
             ICP.set_param(session_key, json.dumps(session))
             return q
 
@@ -538,8 +530,9 @@ class MailBotRecruitEval(models.AbstractModel):
         transcript = _build_transcript(session['conv_turns'])
         messages = [{'role': 'user', 'content': transcript}]
 
-        # ── Claude score ──
+        # ── Claude score (primary) ──
         claude_score = 0
+        claude_ok = False
         claude_summary = ''
         claude_data = {}
         try:
@@ -549,41 +542,61 @@ class MailBotRecruitEval(models.AbstractModel):
                 model='claude-haiku-4-5-20251001',
             )
             claude_data = _parse_json_response(result.get('content', ''))
-            claude_score = int(claude_data.get('score', 0))
+            if 'score' in claude_data:
+                claude_score = int(float(claude_data['score']))
+                claude_ok = True
             claude_summary = claude_data.get('summary', '')
-            _logger.info("Eval Claude score: applicant=%s score=%s", applicant_id, claude_score)
+            _logger.info("Eval Claude score: applicant=%s score=%s ok=%s",
+                         applicant_id, claude_score, claude_ok)
         except Exception:
             _logger.exception("Claude scoring failed for applicant=%s", applicant_id)
 
-        # ── GPT-4o-mini score ──
+        # ── GPT-4o-mini score (validator) ──
         gpt_score = 0
+        gpt_ok = False
         try:
-            gpt_score = _call_gpt_scoring(ICP, transcript)
-            _logger.info("Eval GPT score: applicant=%s score=%s", applicant_id, gpt_score)
+            val = _call_gpt_scoring(ICP, transcript)
+            if val is not None:
+                gpt_score = val
+                gpt_ok = True
+            _logger.info("Eval GPT score: applicant=%s score=%s ok=%s",
+                         applicant_id, gpt_score, gpt_ok)
         except Exception:
             _logger.exception("GPT scoring failed for applicant=%s", applicant_id)
 
-        # ── Consensus ──
+        # ── Consensus — a scorer failure is NOT gaming; flag it distinctly ──
         delta = abs(claude_score - gpt_score)
-        if delta <= 15:
+        if not (claude_ok and gpt_ok):
+            consensus = 'failed'
+        elif delta <= 15:
             consensus = 'high'
         elif delta <= 25:
             consensus = 'medium'
         else:
             consensus = 'low'
 
+        # Primary skill score is Claude; fall back to GPT if Claude failed so
+        # the composite confidence isn't dragged to CV-only weighting.
+        skill_score = claude_score if claude_ok else gpt_score
+
         quiz_score = session.get('quiz_score', 0)
+        consensus_txt = {
+            'high': 'Alta', 'medium': 'Media', 'low': 'Baja',
+            'failed': 'Falla de scorer — re-puntuar',
+        }[consensus]
         notes = (
             f"Quiz MCQ: {quiz_score}/10 | "
-            f"Evaluación conversacional: Claude={claude_score}/100 GPT={gpt_score}/100 "
-            f"Consenso={'Alta' if consensus == 'high' else 'Media' if consensus == 'medium' else 'Baja'} (Δ={delta})\n\n"
+            f"Evaluación conversacional: "
+            f"Claude={claude_score}/100{'' if claude_ok else ' (falló)'} "
+            f"GPT={gpt_score}/100{'' if gpt_ok else ' (falló)'} "
+            f"Consenso={consensus_txt} (Δ={delta})\n\n"
             + claude_summary
         )
 
         manager_summary = claude_data.get('manager_summary', '')
 
         applicant.sudo().write({
-            'ueipab_skill_score':       float(claude_score),
+            'ueipab_skill_score':       float(skill_score),
             'ueipab_skill_score_gpt':   float(gpt_score),
             'ueipab_eval_consensus':    consensus,
             'ueipab_ai_eval_notes':     notes,
@@ -633,6 +646,7 @@ class MailBotRecruitEval(models.AbstractModel):
                 'high': '✅ Alta',
                 'medium': '⚠️ Media',
                 'low': '🔴 Baja — revisar transcript',
+                'failed': '⚙️ Falla de scorer — re-puntuar manualmente',
             }.get(consensus, consensus)
 
             msg = (
@@ -671,31 +685,6 @@ def _plain(html):
     text = re.sub(r'<[^>]+>', ' ', html)
     from html import unescape
     return ' '.join(unescape(text).split())
-
-
-def session_json_armed(session):
-    return bool(session.get('applicant_id'))
-
-
-def _new_session(applicant_id, mode):
-    return {
-        'applicant_id':       applicant_id,
-        'state':              'identity_prompt',
-        'q_idx':              0,
-        'answers':            [],
-        'quiz_score':         None,
-        'conv_turns':         [],
-        'identity_confirmed': False,
-        'identity_attempts':  0,
-        'evaluation_mode':    mode,
-    }
-
-
-def _identity_prompt():
-    return (
-        "Hola, soy Glenda, la asistente de UEIPAB.\n\n"
-        "Para comenzar la evaluación, ¿me confirmas tu nombre completo?"
-    )
 
 
 def _resolve_job_key(applicant):
@@ -754,11 +743,16 @@ def _is_salary_question(text):
 
 
 def _call_gpt_scoring(ICP, transcript):
-    """Call GPT-4o-mini independently for dual-AI consensus scoring."""
+    """Call GPT-4o-mini independently for dual-AI consensus scoring.
+
+    Returns int score, or None when scoring was not possible (no API key,
+    unparseable response) — callers must treat None as scorer failure,
+    never as a legitimate 0.
+    """
     api_key = ICP.get_param('ai_agent.openai_api_key', '')
     if not api_key:
         _logger.warning("GPT scoring skipped — no openai_api_key configured")
-        return 0
+        return None
 
     messages = [
         {'role': 'system', 'content': _SCORING_PROMPT},
@@ -775,9 +769,11 @@ def _call_gpt_scoring(ICP, transcript):
             'max_tokens': 512,
             'messages':   messages,
         },
-        timeout=60,
+        timeout=30,
     )
     resp.raise_for_status()
     content = resp.json()['choices'][0]['message']['content']
     data = _parse_json_response(content)
-    return int(data.get('score', 0))
+    if 'score' not in data:
+        return None
+    return int(float(data['score']))

@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from odoo import models, fields, api
 
@@ -61,6 +62,7 @@ class HrApplicantEval(models.Model):
         ('high',   'Alto (delta ≤15)'),
         ('medium', 'Medio (delta 16-25)'),
         ('low',    'Bajo (delta >25 — posible gaming)'),
+        ('failed', 'Falla IA (un scorer no respondió — re-puntuar)'),
     ], string='Consenso IA')
     ueipab_ai_eval_notes = fields.Text('Notas de Evaluación IA')
     ueipab_manager_summary = fields.Text('Resumen Ejecutivo RRHH')
@@ -129,7 +131,9 @@ class HrApplicantEval(models.Model):
             'quiz_score':         None,
             'conv_turns':         [],
             'identity_confirmed': False,
+            'identity_attempts':  0,
             'evaluation_mode':    'in_person',
+            'created_at':         time.time(),  # TTL guard in mail_bot_recruit_eval
         }
         ICP.set_param(session_key, json.dumps(session))
         self.ueipab_evaluation_mode = 'in_person'
@@ -165,7 +169,8 @@ class HrApplicantEval(models.Model):
             f"▸ <b>Parte 1:</b> 10 preguntas de selección múltiple — responde con A, B, C o D<br>"
             f"▸ <b>Parte 2:</b> Preguntas de desarrollo sobre situaciones prácticas del colegio<br><br>"
             f"Tiempo estimado: <b>15–20 minutos</b>. Tus respuestas son confidenciales.<br><br>"
-            f"Para comenzar, escribe tu <b>nombre completo</b> tal como aparece en tu cédula."
+            f"Para comenzar, escribe tu <b>nombre completo</b> tal como aparece en tu cédula.<br>"
+            f"<i>(El evaluador puede escribir 'cancelar' para abortar la sesión.)</i>"
         )
         channel.sudo().message_post(
             body=msg,

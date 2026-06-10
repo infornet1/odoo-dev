@@ -1,8 +1,8 @@
 # Recruitment Pipeline — Architecture Plan
 
 **Status:** Design / Planning  
-**Last Updated:** 2026-06-09  
-**Module:** `ueipab_recruitment` (v17.0.3.6.0 — testing only)
+**Last Updated:** 2026-06-10  
+**Module:** `ueipab_recruitment` (v17.0.3.7.0 — testing only)
 
 ---
 
@@ -31,6 +31,45 @@ Candidate email → Freescout mailbox
 | 3 | No public-facing application UX | Requires candidates to know the email address; no official apply flow |
 | 4 | MCQ question bank hardcoded as Python dict, one role only | Cannot add new positions without a code deploy |
 | 5 | LinkedIn / structured resume import not supported | HR must forward CVs manually |
+
+### Single-Position Hardcoding — Three Layers (audit 2026-06-10)
+
+The prototype is single-position at **three** levels, not just the MCQ bank:
+
+| Layer | Where | Covered by plan? |
+|-------|-------|------------------|
+| MCQ question bank | `_QUIZ_BANKS['contabilidad']` | ✅ Phase 3 |
+| Phase-2 conversational questions | `_CONV_QUESTIONS` — all 7 turns are accounting-specific (IGTF, asientos, conciliación) | ✅ Phase 3 (scope expanded 2026-06-10) |
+| AI scoring prompt | `_SCORING_PROMPT` — hardcodes the job title and accounting scoring criteria | ✅ Phase 3 (scope expanded 2026-06-10) |
+
+Adding a second position requires all three to become per-`hr.job` data, otherwise
+every candidate gets accounting questions and is scored against accounting criteria.
+`_resolve_job_key()` currently returns `'contabilidad'` unconditionally.
+
+### Eval Bot Audit — 2026-06-10 (Fable 5)
+
+Read-only audit of `mail_bot_recruit_eval.py` + live-run data (applicant id=30, Jun 9 session).
+
+**Latency (measured):** identity/MCQ/gate turns are instant (same-transaction reply;
+no AI involved). Final scoring turn measured **~9.4s** (Claude Haiku ~6.4s + GPT-4o-mini
+~3.0s, sequential, blocking an HTTP worker). Worst case with retries/timeouts: minutes —
+mitigation deferred to Phase 4 (move scoring off the HTTP worker).
+
+**Cost:** < $0.01 per candidate (AI only at final scoring; state machine elsewhere).
+
+**Findings & status:**
+
+| # | Finding | Severity | Status |
+|---|---------|----------|--------|
+| 1 | Claude JSON fence parse failure → score 0 → false "gaming" alarm (live run Jun 9) | High | ✅ Fixed v3.6.0 (parser); needs live re-validation |
+| 2 | Scorer failure conflated with low consensus ("posible gaming") | High | ✅ Fixed v3.7.0 — new `failed` consensus state; GPT fallback feeds `ueipab_skill_score` when Claude fails |
+| 3 | No session TTL — stale armed session hijacks the HR user's OdooBot DM indefinitely | Medium | ✅ Fixed v3.7.0 — 2h TTL + `cancelar` escape command |
+| 4 | `evaluar` keyword setup flow was dead code (handler unreachable); `awaiting_choice` had no handler | Medium | ✅ Removed v3.7.0 — form button is the only entry point |
+| 5 | Salary questions mid-eval recorded as technical answers (pollutes scored transcript) | Medium | ✅ Fixed v3.7.0 — deflection in MCQ + conversational turns; final turn keeps close-time ack |
+| 6 | Sequential AI calls block 1 of 3 HTTP workers up to minutes on provider trouble | Medium | ⏳ Partial v3.7.0 (GPT timeout 60→30s); full fix (queued scoring) → Phase 4 |
+| 7 | Quiz Q9 content questionable (IVA retention calendar applies to *sujetos pasivos especiales*, not ordinary taxpayers) | Low | ⏳ Pre-production: review bank with accountant |
+| 8 | Quiz score not passed to scoring AIs (free context) | Low | ⏳ Backlog |
+| 9 | Identity check trivially weak (`len > 5` passes) | Info | By design — in-person mode, supervisor verifies physical ID |
 
 ---
 
@@ -62,47 +101,67 @@ Path A (Email intake — evolve existing):          Path B (Native Odoo — new)
 
 ### Mechanism
 
-Candidates continue emailing CVs naturally. HR reviews in Freescout and appends
-`#<job_id>` to the conversation subject to assign the position.
+Candidates continue emailing CVs naturally. HR reviews in Freescout and edits
+the conversation subject to include `[Applying for <job_id>]`.
 
-**Subject line format:** append `#<id>` at the end.
+**Subject line format:** `[Applying for <id>]` — anywhere in the subject, case-insensitive.
 
 ```
 Before: "Hola envio mi curriculum"
-After:  "Hola envio mi curriculum #8"
+After:  "Hola envio mi curriculum [Applying for 8]"
+
+Before: (sin asunto)
+After:  [Applying for 8]
+
+Before: "solicitud empleo contabilidad"
+After:  "solicitud empleo contabilidad [Applying for 8]"
 ```
 
-The job IDs map to `hr.job` records in Odoo:
+**Why numeric ID over short codes:**
+- Uses `hr.job.id` — already exists, no new field or setup required
+- Guaranteed unique by DB primary key — no constraint to enforce
+- Parser does a direct `hr.job.browse(n)` — zero ambiguity
+- IDs are stable: `hr.job` records are archived, never deleted
+
+**Job ID reference** (current positions):
 
 | ID | Position |
 |----|----------|
+| 1  | Auxiliar de Soporte |
 | 2  | Asociada de Administración y RRHH |
+| 3  | Director |
+| 4  | Profesora |
 | 5  | Asesor Especialista Académico |
 | 6  | Docente |
+| 7  | Docente de Educación Deportiva |
 | 8  | Auxiliar de Contabilidad y Administración |
 
-(Full list via `hr.job` table — IDs are stable once created.)
+This reference should be posted in a pinned Freescout note and on each
+public job description page (`/recruitment/job/<id>` displays the ID in the URL).
 
 ### How `fs_cv_loader.py` handles it
 
-1. **New conversation, no `#id` tag:** create `hr.applicant`, score CV, leave `job_id` blank,
+1. **New conversation, no tag:** create `hr.applicant`, score CV, leave `job_id` blank,
    set `ueipab_eval_state='pending'`. HR tags in Freescout later.
 
-2. **New conversation, `#id` tag present:** create applicant, set `job_id` immediately,
+2. **New conversation, tag present:** create applicant, set `job_id` immediately,
    score CV in context of that job position.
 
-3. **Existing applicant (dedup by `ueipab_freescout_conv_id`), `#id` now in subject:**
+3. **Existing applicant (dedup by `ueipab_freescout_conv_id`), tag now in subject:**
    do NOT re-create. Only update `job_id` if currently blank (or different).
    Log the update. No re-scoring needed unless HR explicitly requests it.
 
-4. **Invalid `#id` (no matching `hr.job`):** log warning, leave `job_id` blank, do not error.
+4. **Invalid ID (no matching `hr.job`):** log warning, leave `job_id` blank, do not error.
 
 ### Regex
 
 ```python
-m = re.search(r'#(\d+)\s*$', subject or '')
+m = re.search(r'\[Applying for\s+(\d+)\]', subject or '', re.IGNORECASE)
 job_id = int(m.group(1)) if m else None
 ```
+
+Can appear anywhere in the subject — no end-of-string anchoring needed.
+Case-insensitive so `[applying for 8]` and `[APPLYING FOR 8]` both work.
 
 ### Retroactive fix for already-scored applicants
 
@@ -110,13 +169,13 @@ Since `ueipab_freescout_conv_id` is stored on every `hr.applicant`, HR can fix a
 previously-processed CV simply by updating the Freescout subject. The next cron run
 picks it up and writes `job_id` to the existing record.
 
-**Example:** Juan Ortuño (applicant id=30, Freescout conv id stored on record).  
-HR appends `#8` to his Freescout conversation subject → next loader run sets `job_id=8`.
+**Example:** Juan Ortuño (applicant id=30, Freescout conv id=46987).  
+HR edits subject to `[Applying for 8]` → next loader run sets `job_id=8` on his existing record.
 
 ### Future Odoo button (optional — Phase 2+)
 
 A "Asignar Cargo" button on the `hr.applicant` form that calls the Freescout API
-(`PUT /api/conversations/{id}`) to append `#<selected_job_id>` to the subject
+(`PUT /api/conversations/{id}`) to write `[Applying for <selected_job_id>]` into the subject
 directly from Odoo, without HR needing to open Freescout manually.
 
 ---
@@ -185,6 +244,18 @@ HR edits question banks from Odoo UI per position.
 
 ## 6. Phased Implementation Plan
 
+### Phase 0 — Eval bot hardening (audit 2026-06-10) — ✅ DONE v17.0.3.7.0
+
+- [x] Robust Claude JSON parser (fence-stripping + balanced-brace extraction) — v3.6.0
+- [x] `failed` consensus state — scorer failure no longer reads as "posible gaming"
+- [x] GPT score fallback into `ueipab_skill_score` when Claude fails (protects composite confidence)
+- [x] Session TTL (2h) + `cancelar` escape command + applicant state reset on abort
+- [x] Removed dead `evaluar` keyword flow (form button is the single entry point)
+- [x] Mid-eval salary question deflection (MCQ + conversational; final-turn ack preserved)
+- [x] GPT scoring timeout 60s → 30s
+- [ ] **Live end-to-end validation run** — parser fix + welcome + salary ack + TTL have
+      not yet been exercised in a real OdooBot session (pending HR/test candidate)
+
 ### Phase 1 — Fix Path A (subject-line job tagging)
 
 - [ ] `fs_cv_loader.py`: parse `#<id>` from subject → set `job_id`
@@ -199,17 +270,23 @@ HR edits question banks from Odoo UI per position.
 - [ ] Inline CV scoring trigger (no Freescout middleman)
 - [ ] Candidate acknowledgment email
 
-### Phase 3 — DB-driven question banks
+### Phase 3 — DB-driven evaluation profiles (scope expanded 2026-06-10)
+
+All **three** hardcoded layers must become per-`hr.job` data, not just the MCQ bank:
 
 - [ ] `ueipab.recruitment.quiz` + `ueipab.recruitment.quiz.question` models
 - [ ] Migrate `_QUIZ_BANKS['contabilidad']` into DB records
+- [ ] **Conversational question set per position** — `_CONV_QUESTIONS` → DB (ordered turns, optional dynamic follow-up flag)
+- [ ] **Scoring criteria per position** — `_SCORING_PROMPT` job title + technical criteria → template fed from `hr.job` fields
 - [ ] HR UI to add/edit questions per position
 - [ ] `_load_quiz_questions()` reads from ORM
 
 ### Phase 4 — Production deploy
 
 - [ ] All question banks validated (min 2 positions)
+- [ ] **Quiz content review with accountant** (Q9 IVA retention calendar — see audit finding #7)
 - [ ] End-to-end tested on at least 3 real candidates
+- [ ] **Move dual-AI scoring off the HTTP worker** (queued job or cron) — only 3 workers in prod-like envs; worst-case provider trouble blocks one for minutes
 - [ ] Add `recruitment` to production nginx allowlist
 - [ ] Deploy module to `DB_UEIPAB`
 
@@ -221,7 +298,7 @@ HR edits question banks from Odoo UI per position.
 |----------|---------|-------|
 | Path B form: custom vs website module | Custom controller (recommended) vs `website_hr_recruitment` | Custom already started; avoids `website` dependency |
 | Who tags Freescout subject: HR manual vs Odoo button | Manual for Phase 1; Odoo button optional for Phase 2+ | Manual is zero code; button is better UX |
-| Subject tag format | `#<id>` (simple) vs `[JOB-<id>]` (explicit) | `#<id>` chosen — easy to type, easy to parse |
+| Subject tag format | `[Applying for <id>]` | **Decided** — English tag (intentional for staff EN exposure), numeric ID (no new field, PK guarantees uniqueness, stable for lifetime of position) |
 | LinkedIn | PDF attach (Phase 2) vs URL field only (Phase 1) | URL field is 1 field, zero code |
 | Conversational question banks per position | Hardcoded dict (Phase 1-2) vs DB model (Phase 3) | Hardcoded is fine until 3+ positions exist |
 
