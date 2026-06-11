@@ -190,6 +190,55 @@ class SaleOrder(models.Model):
         return product
 
     @api.model
+    def get_pricing_ground_truth(self):
+        """Canonical 2026-2027 pricing block (Spanish) for AI prompts.
+
+        Single source of truth: llamado windows come from UEIPAB_LLAMADOS,
+        prices are read LIVE from the product catalog. Consumed by the Glenda
+        prompt (general_inquiry), glenda_supervisor.py and
+        pagos_faq_email_checker.py (via XML-RPC) — a price change in the
+        catalog propagates to every AI consumer on its next run.
+        """
+        def usd(code):
+            p = self.env['product.product'].search(
+                [('default_code', '=', code)], limit=1)
+            v = p.list_price if p else 0.0
+            return '$' + f"{v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+        def win(ll):
+            return '%s – %s' % (ll['start'].strftime('%d/%m/%Y'),
+                                ll['end'].strftime('%d/%m/%Y'))
+
+        l1, l2, l3 = UEIPAB_LLAMADOS
+        hermanos_pct = {2: '-5%', 3: '-8%', 4: '-11%'}
+
+        def men_line(ll):
+            parts = ['1 hijo: %s' % usd(ll['men'][1])]
+            parts += ['%d%s hijos %s: %s c/u' % (n, '+' if n == 4 else '',
+                                                 hermanos_pct[n], usd(ll['men'][n]))
+                      for n in (2, 3, 4)]
+            return ' | '.join(parts)
+
+        lines = [
+            "TARIFAS OFICIALES 2026-2027 (generadas del catálogo Odoo — comunicado 10/06/2026, Opción A aprobada):",
+            "%s (%s) — CON CONVENIO DE PAGO:" % (l1['name'], win(l1)),
+            "  Inscripción: %s | Mensualidad: %s" % (usd(l1['ins']), men_line(l1)),
+            "  Convenio: requisito solvencia con junio 2026; julio y agosto se pagan con normalidad;",
+            "  fechas definitivas de pago se acuerdan y firman EN LA INSTITUCIÓN (lunes a viernes, también en agosto).",
+            "%s (%s) — sin convenio, solvencia al 31/07/2026:" % (l2['name'], win(l2)),
+            "  Inscripción: %s | Mensualidad: %s" % (usd(l2['ins']), men_line(l2)),
+            "%s (%s) — sin convenio, solvencia total 2025-2026:" % (l3['name'], win(l3)),
+            "  Inscripción: %s | Mensualidad: %s" % (usd(l3['ins']), men_line(l3)),
+            "Descuentos hermanos en mensualidad (aplican TAMBIÉN sobre la tarifa promocional): 2 hijos -5% | 3 hijos -8% | 4+ hijos -11%.",
+            "Costos anuales por alumno — hasta 31/07: seguro %s + guía inglés %s + olimpiadas %s + enciclopedia %s;" % (
+                usd('SEG2627'), usd('ING2627-P'), usd('OLI2627'), usd('ENC2627')),
+            "  desde 01/08 la guía de inglés sube a %s (resto igual)." % usd('ING2627-R'),
+            "Desde el 17/07/2026 las mensualidades de julio y agosto se facturan por anticipado en el estado de cuenta.",
+            "Todos los montos en USD, pagaderos a tasa BCV del día.",
+        ]
+        return '\n'.join(lines)
+
+    @api.model
     def create_ai_quote(self, partner_id, n_students, channel='telegram'):
         """Create an enrollment quotation for `partner_id` with `n_students`.
 

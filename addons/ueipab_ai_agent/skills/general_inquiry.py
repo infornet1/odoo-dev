@@ -22,6 +22,36 @@ def _get_flyer_url(base_url, filename):
     """Build the public URL for a flyer file."""
     return f"{base_url.rstrip('/')}/{filename}"
 
+# Static fallback only — the live block comes from
+# sale.order.get_pricing_ground_truth() (ueipab_sales catalog).
+_PRICING_FALLBACK = (
+    "  1er llamado (11 jun - 31 jul 2026) PROMOCION ESPECIAL: inscripcion $187,51 / mensualidad $197,38.\n"
+    "    Incluye CONVENIO DE PAGO a tarifa preferencial: julio y agosto se pagan con normalidad, "
+    "y el representante planifica las fechas de pago de inscripcion, septiembre, seguro escolar y "
+    "enciclopedias. Requisito: solvente al menos con junio 2026. Las fechas DEFINITIVAS del "
+    "convenio se acuerdan y firman EN LA INSTITUCION (invita a visitar la administracion, "
+    "lunes a viernes, tambien durante agosto).\n"
+    "  2do llamado (1 - 31 ago 2026) PROMOCION VACACIONAL: inscripcion $207,93 / mensualidad $218,88. "
+    "Sin convenio; requiere solvencia al 31/07/2026.\n"
+    "  3er llamado (1 - 30 sep 2026) REGULAR: inscripcion $218,88 / mensualidad $218,88. "
+    "Sin convenio; requiere solvencia total 2025-2026.\n"
+    "  Descuentos hermanos en mensualidad (aplican TAMBIEN sobre la tarifa promocional): "
+    "2 hijos -5% | 3 hijos -8% | 4+ hijos -11%.\n"
+    "  Costos anuales por alumno: $111,58 hasta el 31 jul (seguro $30,58 + guia ingles $35 + "
+    "olimpiadas $10 + enciclopedia $36); $116,58 desde el 1 ago (guia ingles sube a $40).\n"
+    "  Desde el 17/07/2026 las mensualidades de julio y agosto se facturan por anticipado en el estado de cuenta.\n"
+    "- Todos los montos en USD, pagaderos a tasa BCV del dia.\n"
+)
+
+
+def _get_pricing_block(conversation):
+    """Live pricing ground truth from the ueipab_sales catalog; static fallback."""
+    try:
+        text = conversation.env['sale.order'].sudo().get_pricing_ground_truth()
+        return text + "\n" if text else _PRICING_FALLBACK
+    except Exception:
+        return _PRICING_FALLBACK
+
 # Budget 2026-2027 — Opción A confirmed (voting closed 2026-05-26)
 _BUDGET_KNOWLEDGE = (
     "PRESUPUESTO 2026-2027 — RESULTADO OFICIAL (votación cerrada 26/05/2026):\n"
@@ -1088,22 +1118,9 @@ class GeneralInquirySkill:
             "- Si el contacto NO esta identificado: pide cedula primero. NUNCA emitas ACTION:QUOTE sin identificacion.\n"
             "- NO emitas ACTION:HANDOFF en el mismo mensaje que ACTION:QUOTE; el handoff va en un turno posterior.\n"
             "CRONOGRAMA DE LLAMADOS (contexto conversacional — el sistema cotiza automaticamente el llamado vigente):\n"
-            "  1er llamado (11 jun - 31 jul 2026) PROMOCION ESPECIAL: inscripcion $187,51 / mensualidad $197,38.\n"
-            "    Incluye CONVENIO DE PAGO a tarifa preferencial: julio y agosto se pagan con normalidad, "
-            "y el representante planifica las fechas de pago de inscripcion, septiembre, seguro escolar y "
-            "enciclopedias. Requisito: solvente al menos con junio 2026. Las fechas DEFINITIVAS del "
-            "convenio se acuerdan y firman EN LA INSTITUCION (invita a visitar la administracion, "
-            "lunes a viernes, tambien durante agosto).\n"
-            "  2do llamado (1 - 31 ago 2026) PROMOCION VACACIONAL: inscripcion $207,93 / mensualidad $218,88. "
-            "Sin convenio; requiere solvencia al 31/07/2026.\n"
-            "  3er llamado (1 - 30 sep 2026) REGULAR: inscripcion $218,88 / mensualidad $218,88. "
-            "Sin convenio; requiere solvencia total 2025-2026.\n"
-            "  Descuentos hermanos en mensualidad (aplican TAMBIEN sobre la tarifa promocional): "
-            "2 hijos -5% | 3 hijos -8% | 4+ hijos -11%.\n"
-            "  Costos anuales por alumno: $111,58 hasta el 31 jul (seguro $30,58 + guia ingles $35 + "
-            "olimpiadas $10 + enciclopedia $36); $116,58 desde el 1 ago (guia ingles sube a $40).\n"
-            "  Desde el 17/07/2026 las mensualidades de julio y agosto se facturan por anticipado en el estado de cuenta.\n"
-            "- Todos los montos en USD, pagaderos a tasa BCV del dia.\n"
+            + _get_pricing_block(conversation) +
+            "    Sobre el convenio: invita a visitar la administracion para acordar y firmar las fechas "
+            "definitivas (lunes a viernes, tambien durante agosto).\n"
             "- NO presentes la Opcion B ni hables de opciones pendientes: la tarifa es definitiva (Opcion A).\n"
             "- Costos opcionales (Kurios, MOA, traslados): NO se incluyen en cotizacion estandar.\n"
             "- En el turno SIGUIENTE a la cotizacion, haz el handoff: ACTION:HANDOFF:nombre|cotizacion 2026-2027 generada|billing\n"

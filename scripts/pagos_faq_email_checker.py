@@ -102,17 +102,10 @@ TARIFAS CONFIRMADAS 2026-2027:
 TARIFA ACTUAL (2025-2026, vigente hasta agosto 2026):
 - Mensualidad: $197,38 | Pronto pago: $162,39 | Cashea disponible
 
-OFERTA INSCRIPCIÓN ANTICIPADA (hasta 31 julio 2026):
-- Inscripción: $187,51 | Mensualidad septiembre: $197,38 (tarifa actual)
-- Requisito: año 2025-2026 completamente saldado
+__PRICING_GROUND_TRUTH__
 
-DESCUENTOS POR HERMANOS (sobre mensualidad base):
-- 1er hijo/a: 5% | 2do: 8% | 3er en adelante: 11%
-- Pronto pago (5% adicional) se aplica sobre la mensualidad ya descontada
-
-COSTOS ÚNICOS ANUALES POR ALUMNO (pagaderos en inscripción):
-- Seguro escolar: $30,58 | Guía de inglés: $25 | Olimpiadas: $10
-- Enciclopedia digital: $36 | MUN Bachillerato: $5 | MUN Primaria: $5 | Talleres: $5
+COSTOS OPCIONALES (según presentación oficial, NO incluidos en cotización estándar):
+- MUN Bachillerato: $5 | MUN Primaria: $5 | Talleres: $5
 
 CONTEXTO ECONÓMICO:
 - Inflación 611,86% | Bs/USD $487,12 (vs $154 en abril) — justifica el ajuste
@@ -139,7 +132,7 @@ INSTRUCCIONES DE RESPUESTA:
 - Siempre firma: "Equipo de Pagos — Colegio Andrés Bello"
 - Incluye el enlace de la presentación cuando pregunten por la propuesta
 - Si preguntan por la votación o el resultado: la consulta cerró el 26/05/2026 con Opción A ganadora (108 votos, 60,7%)
-- Cuando menciones las tarifas 2026-2027, SIEMPRE destaca primero la oferta de inscripción anticipada ($187,51 inscripción + $197,38 septiembre, hasta 31 julio 2026) antes de mencionar la mensualidad confirmada ($218,88). Es una oportunidad de ahorro concreta y vigente.
+- Cuando menciones las tarifas 2026-2027, SIEMPRE destaca primero la promoción del 1er llamado (inscripción anticipada + convenio de pago, hasta el 31 julio 2026, según TARIFAS OFICIALES arriba) antes de mencionar la mensualidad regular. Es una oportunidad de ahorro concreta y vigente.
 
 FORMATO DE RESPUESTA (JSON estricto, sin markdown):
 {
@@ -314,8 +307,39 @@ def get_new_conversations(processed_ids):
 # Claude Haiku
 # ============================================================================
 
+# Static fallback only — live block comes from sale.order.get_pricing_ground_truth()
+_PRICING_FALLBACK = """OFERTA INSCRIPCIÓN ANTICIPADA — 1er llamado (hasta 31 julio 2026):
+- Inscripción: $187,51 | Mensualidad convenio: $197,38 (2 hermanos -5%: $187,51 c/u | 3 -8%: $181,59 | 4+ -11%: $175,67)
+- Incluye convenio de pago; requisito: solvente con junio 2026
+2do llamado (agosto): inscripción $207,93 / mensualidad $218,88 | 3er llamado (sept): $218,88 / $218,88
+COSTOS ANUALES POR ALUMNO: $111,58 hasta 31 jul (seguro $30,58 + inglés $35 + olimpiadas $10 + enciclopedia $36); $116,58 desde 1 ago (inglés $40)
+Todos los montos en USD, pagaderos a tasa BCV del día."""
+
+
+def _resolve_system_prompt():
+    """Inject live pricing ground truth (Odoo ueipab_sales catalog) into SYSTEM_PROMPT."""
+    try:
+        import xmlrpc.client
+        xcfg = json.load(open('/opt/odoo-dev/config/production.json'))['production']['xmlrpc']
+        uid = xmlrpc.client.ServerProxy(xcfg['url'] + '/xmlrpc/2/common').authenticate(
+            xcfg['db'], xcfg['user'], xcfg['api_key'], {})
+        pricing = xmlrpc.client.ServerProxy(xcfg['url'] + '/xmlrpc/2/object').execute_kw(
+            xcfg['db'], uid, xcfg['api_key'], 'sale.order', 'get_pricing_ground_truth', [])
+        logger.info("Pricing ground truth fetched live from Odoo catalog (%d chars)", len(pricing))
+    except Exception as e:
+        logger.warning("Pricing ground truth fetch failed (%s) — using static fallback", e)
+        pricing = _PRICING_FALLBACK
+    return SYSTEM_PROMPT.replace('__PRICING_GROUND_TRUTH__', pricing)
+
+
+_SYSTEM_PROMPT_FINAL = None
+
+
 def call_claude(subject, body_plain):
     """Call Claude Haiku and return parsed JSON response."""
+    global _SYSTEM_PROMPT_FINAL
+    if _SYSTEM_PROMPT_FINAL is None:
+        _SYSTEM_PROMPT_FINAL = _resolve_system_prompt()
     cfg = json.load(open(ANTHROPIC_CONFIG_PATH))
     api_key = cfg.get('api', {}).get('api_key') or cfg.get('api_key', '')
 
@@ -334,7 +358,7 @@ def call_claude(subject, body_plain):
         json={
             'model': 'claude-haiku-4-5-20251001',
             'max_tokens': 600,
-            'system': SYSTEM_PROMPT,
+            'system': _SYSTEM_PROMPT_FINAL,
             'messages': [{'role': 'user', 'content': user_message}],
         },
         timeout=30,

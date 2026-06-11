@@ -35,12 +35,7 @@ REVIEW_SYSTEM_PROMPT = """Eres supervisor de calidad de Glenda, asistente virtua
 CONOCIMIENTO QUE GLENDA DEBE TENER (actualizado 11/06/2026 — comunicado oficial 10/06/2026):
 - Mensualidad vigente 2025-2026: $197,38 | Pronto pago: $162,39 (primeros 10 días)
 - Tarifas 2026-2027 CONFIRMADAS (Opción A aprobada el 26/05/2026; la votación CERRÓ — Glenda NO debe mencionar la Opción B ni hablar de votación pendiente)
-- 3 llamados de inscripción 2026-2027:
-  · 1er llamado (11 jun - 31 jul): inscripción $187,51 / mensualidad convenio $197,38. Incluye CONVENIO DE PAGO (requisito: solvente con junio 2026; fechas definitivas se firman EN LA INSTITUCIÓN)
-  · 2do llamado (agosto): inscripción $207,93 / mensualidad $218,88 (solvencia al 31/07)
-  · 3er llamado (septiembre): inscripción $218,88 / mensualidad $218,88 (solvencia total)
-- Descuentos hermanos en mensualidad (aplican TAMBIÉN sobre la tarifa promocional): 2 hijos -5% ($187,51 promo) | 3 hijos -8% ($181,59) | 4+ -11% ($175,67)
-- Costos anuales únicos por alumno: $111,58 hasta el 31 jul (seguro $30,58 + guía inglés $35 + olimpiadas $10 + enciclopedia $36); $116,58 desde el 1 ago (inglés sube a $40)
+__PRICING_GROUND_TRUTH__
 - COTIZACIONES FORMALES: las genera el SISTEMA, no Glenda. Glenda emite un marcador interno y el sistema envía un mensaje aparte "📋 Cotización S00XXX" con los totales exactos del motor de Odoo. NO penalizar que Glenda no calcule totales (es lo correcto); SÍ penalizar si Glenda inventa o calcula totales por su cuenta. El mensaje del sistema es la cifra autoritativa.
 - Seguro escolar: Seguros Caracas — Póliza Accidentes Escolares Alt.2
 - Reclamos seguro: WA 0414-903.3738 / amis@grupov.com.ve / App Asegurados
@@ -86,6 +81,26 @@ def _odoo_call(m, db, uid, key, model, method, args=None, kw=None):
         db, uid, key, model, method, args or [], kw or {})
 
 
+# Static fallback only — live block comes from sale.order.get_pricing_ground_truth()
+_PRICING_FALLBACK = """- 3 llamados de inscripción 2026-2027:
+  · 1er llamado (11 jun - 31 jul): inscripción $187,51 / mensualidad convenio $197,38. Incluye CONVENIO DE PAGO (requisito: solvente con junio 2026; fechas definitivas se firman EN LA INSTITUCIÓN)
+  · 2do llamado (agosto): inscripción $207,93 / mensualidad $218,88 (solvencia al 31/07)
+  · 3er llamado (septiembre): inscripción $218,88 / mensualidad $218,88 (solvencia total)
+- Descuentos hermanos en mensualidad (aplican TAMBIÉN sobre la tarifa promocional): 2 hijos -5% ($187,51 promo) | 3 hijos -8% ($181,59) | 4+ -11% ($175,67)
+- Costos anuales únicos por alumno: $111,58 hasta el 31 jul (seguro $30,58 + guía inglés $35 + olimpiadas $10 + enciclopedia $36); $116,58 desde el 1 ago (inglés sube a $40)"""
+
+
+def _build_system_prompt(call):
+    """Inject live pricing ground truth (ueipab_sales catalog) into the review prompt."""
+    try:
+        pricing = call('sale.order', 'get_pricing_ground_truth', [])
+        log.info("Pricing ground truth fetched live from catalog (%d chars)", len(pricing))
+    except Exception as e:
+        log.warning("Pricing ground truth fetch failed (%s) — using static fallback", e)
+        pricing = _PRICING_FALLBACK
+    return REVIEW_SYSTEM_PROMPT.replace('__PRICING_GROUND_TRUTH__', pricing)
+
+
 def _call_claude(messages, system):
     cfg = json.load(open(ANTHROPIC_CFG))
     api_key = cfg.get('api', {}).get('api_key') or cfg.get('api_key', '')
@@ -101,7 +116,7 @@ def _call_claude(messages, system):
     return resp.json()['content'][0]['text'].strip()
 
 
-def _review_conversation(conv, msgs):
+def _review_conversation(conv, msgs, system_prompt):
     """Ask Claude to score a conversation. Returns dict or None on error."""
     transcript = '\n'.join(
         f"[{'GLENDA' if m['direction']=='outbound' else 'CLIENTE'}] {m['body'][:400]}"
@@ -109,7 +124,7 @@ def _review_conversation(conv, msgs):
     )
     prompt = f"Conversación #{conv['id']} — {conv['partner_id'][1] if conv['partner_id'] else 'Anónimo'}:\n\n{transcript}"
     try:
-        raw = _call_claude([{'role': 'user', 'content': prompt}], REVIEW_SYSTEM_PROMPT)
+        raw = _call_claude([{'role': 'user', 'content': prompt}], system_prompt)
         # Extract JSON
         import re
         match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -354,6 +369,8 @@ def main():
     def call(model, method, a=None, k=None):
         return _odoo_call(xcfg['url'], xcfg['db'], 2, xcfg['api_key'], model, method, a, k)
 
+    system_prompt = _build_system_prompt(call)
+
     # Pull conversations with recent activity
     since = (datetime.now(timezone.utc) - timedelta(hours=args.hours)).strftime('%Y-%m-%d %H:%M:%S')
     convs = call('ai.agent.conversation', 'search_read', [[
@@ -389,7 +406,7 @@ def main():
         log.info("Reviewing conv %s (%s) — %d messages", conv['id'],
                  conv['partner_id'][1] if conv['partner_id'] else '?', len(msgs))
 
-        review = _review_conversation(conv, msgs)
+        review = _review_conversation(conv, msgs, system_prompt)
         if not review:
             continue
 
