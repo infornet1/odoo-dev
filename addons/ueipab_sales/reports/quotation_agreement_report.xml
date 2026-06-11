@@ -28,7 +28,15 @@
                                 <td style="width: 18%; text-align: right; vertical-align: middle; font-size: 8pt; color: #444;">
                                     <strong>Nro:</strong> <span t-esc="report['order'].name"/><br/>
                                     <strong>Fecha:</strong> <span t-esc="report['date_str']"/><br/>
-                                    <strong>Promo Válida hasta:</strong><br/>
+                                    <t t-if="report['llamado']['code'] == 'L1'">
+                                        <strong>Promo 1er llamado:</strong><br/>
+                                    </t>
+                                    <t t-elif="report['llamado']['code'] == 'L2'">
+                                        <strong>Promo 2do llamado:</strong><br/>
+                                    </t>
+                                    <t t-else="">
+                                        <strong>Válido hasta:</strong><br/>
+                                    </t>
                                     <span style="color: #d32f2f; font-weight: bold;" t-esc="report['validity_str']"/>
                                 </td>
                             </tr>
