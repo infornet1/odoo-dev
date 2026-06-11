@@ -204,10 +204,12 @@ Parent asks price → Glenda emits ACTION:QUOTE:<n_students>
 - [x] Sample rendered (S00004, 2 hermanos, $973.20) — sent to Gustavo
 - [x] Layout approval by Gustavo (2026-06-11, v3 — logo reduced 35% to 49px, centered in first header cell with padding; test mails 1112/1113/1114)
 
-### Phase 6 — Glenda `ACTION:QUOTE` (testing)
-- [ ] ACTION:QUOTE marker handler in `ai_agent_conversation.py` → `sale.order.create_ai_quote()`
-- [ ] Prompt trim in `skills/general_inquiry.py` (quotation block → ACTION instruction + conversational knowledge)
-- [ ] Test matrix: 3 llamados × 3 cases = 9 quotes verified (llamado override param for simulating L2/L3 dates)
+### Phase 6 — Glenda `ACTION:QUOTE` (testing) ✅ 2026-06-11 — ai_agent v17.0.1.59.0 (testing only)
+- [x] `_handle_quote_action()` + `_format_quote_message()` in `skills/general_inquiry.py` → `sale.order.create_ai_quote()`; `quote_message` sent as separate message in `ai_agent_conversation.py` (normal + handoff/resolve paths); Venezuelan number format ($973,20); chatter log on conversation
+- [x] Prompt rewritten: COTIZACIÓN block → ACTION:QUOTE instruction + 3-llamado conversational knowledge (convenio, solvencia junio L1 / 31-jul L2 / total L3, fechas definitivas en la institución, 17/07 advance billing, USD+BCV); price-reply structure updated; "no HANDOFF same turn as QUOTE" rule
+- [x] Guards verified: unidentified partner → cédula request (no order created); no marker → no-op; marker stripped from visible text
+- [x] Engine validation: ACTION:QUOTE:2 → S00006 $973.20 channel=telegram ✓; llamado boundary dates all correct (31/07→L1, 01/08→L2, 01/09→L3, post-30/09→L3)
+- [ ] Live conversational test via @GlendaUeipabBot testing webhook (real Claude turn emitting the marker)
 
 **Validated engine totals (testing, 2026-06-11, L1):** 1 student $496.47 ✓ · 2 hermanos $973.20 ✓ · 3 hermanos $1,442.04 ✓ — S00003/S00004/S00005 (test partner Admin1; no emails sent)
 

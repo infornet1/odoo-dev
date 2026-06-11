@@ -495,11 +495,9 @@ class GeneralInquirySkill:
             + '\n'.join(student_lines) + '\n'
             + f"  Mensualidad actual: ${monthly:,.2f} | {quantity} estudiante(s){discount_note}\n"
             + forecast_block
-            + "  ── Con la propuesta aprobada, las nuevas mensualidades serían:\n"
-            f"     Opción A (+10,89%): ${monthly * 1.1089:,.2f}/mes "
+            + "  ── Con la tarifa aprobada (Opción A, +10,89%), la nueva mensualidad desde sep 2026 sería:\n"
+            f"     ${monthly * 1.1089:,.2f}/mes "
             f"(pronto pago ${monthly * 1.1089 * 0.95:,.2f})\n"
-            f"     Opción B (+19,86%): ${monthly * 1.1986:,.2f}/mes "
-            f"(pronto pago ${monthly * 1.1986 * 0.95:,.2f})\n"
             "  IMPORTANTE: Responde directamente con estos datos. "
             "No los pidas al representante. ──\n"
         )
@@ -948,7 +946,8 @@ class GeneralInquirySkill:
             "- Los representantes tienen distintos niveles de familiaridad con tecnologia. "
             "Muchos son padres de alumnos de Media General con poca experiencia con asistentes virtuales.\n"
             "- Routing del menu de bienvenida: si escribe '1' o menciona saldo/deuda/cuenta → consulta balance de inmediato; "
-            "'2' o propuesta/precio/mensualidad proximo año → presenta ambas opciones 2026-2027; "
+            "'2' o propuesta/precio/mensualidad proximo año → presenta la tarifa aprobada (Opción A) "
+            "comenzando por la promo de inscripcion anticipada hasta el 31 jul 2026; "
             "'3' o inscripcion/matricula → presenta promo anticipada $187,51; "
             "'4' o informacion/horarios/uniformes → pide que especifique el tema; "
             "'5' u otro → pide que describa su consulta.\n"
@@ -974,7 +973,7 @@ class GeneralInquirySkill:
                 "Si su mensaje es solo un saludo generico (hola, buenas, buenos dias, etc.):\n"
                 "  → NO mostrar el menu completo.\n"
                 "  → Saludar por nombre si lo conoces + retomar el hilo del tema anterior en 1 linea.\n"
-                "  → Ejemplo (tema = mensualidad): '¡Hola [nombre]! ¿Pudiste revisar las opciones de mensualidad? ¿Te hago la cotizacion?'\n"
+                "  → Ejemplo (tema = mensualidad): '¡Hola [nombre]! ¿Pudiste revisar la informacion de tarifas 2026-2027? ¿Te hago la cotizacion?'\n"
                 "  → Ejemplo (tema = saldo/deuda): '¡Hola [nombre]! ¿Pudiste coordinar el pago con pagos@ueipab.edu.ve?'\n"
                 "  → Si el historial no deja claro el tema: '¡Hola [nombre]! ¿En que puedo ayudarte hoy?' — sin menu.\n"
                 "Si su mensaje incluye una consulta especifica: responde directamente usando el historial como contexto.\n"
@@ -990,7 +989,7 @@ class GeneralInquirySkill:
                 "[Saludo apropiado]! Soy [nombre], asistente virtual del Colegio Andres Bello.\n\n"
                 "Puedo ayudarte con lo siguiente:\n\n"
                 "1️⃣  Mi estado de cuenta / saldo pendiente\n"
-                "2️⃣  Propuesta economica 2026-2027 (opciones, tarifas, votacion)\n"
+                "2️⃣  Tarifas 2026-2027 e inscripcion anticipada\n"
                 "3️⃣  Inscripcion anticipada y matricula\n"
                 "4️⃣  Informacion general (horarios, uniformes, cursos)\n"
                 "5️⃣  Otro asunto\n\n"
@@ -1022,23 +1021,16 @@ class GeneralInquirySkill:
             + menu_block
             + "- Entiende su consulta. Responde preguntas generales con el conocimiento institucional que tienes "
             "(medios de pago, mensualidades, fechas, información general del colegio).\n"
-            "PROPUESTA ECONÓMICA 2026-2027 — RESULTADOS DISPONIBLES:\n"
-            "La consulta presupuestaria cerró el 26/05/2026. NO proceses votos.\n"
+            "PROPUESTA ECONÓMICA 2026-2027 — RESULTADO FINAL (OPCIÓN A APROBADA):\n"
+            "La consulta presupuestaria cerró el 26/05/2026 y la OPCIÓN A fue aprobada. NO proceses votos.\n"
             "Si un representante pregunta por la mensualidad, el resultado o la votación:\n"
             "- Carta oficial de resultados: https://docs.google.com/document/d/1GSGzXLxGaaMvYtbyJuGki5KFodmpoy5OyHk0fm4e2fg/edit?usp=sharing\n"
-            "- Opción A: $218,88/mes (incremento 10,89%). Pronto pago: $207,93.\n"
-            "- Opción B: $236,58/mes (incremento 19,86%). Pronto pago: $224,75.\n"
+            "- Tarifa aprobada (Opción A): $218,88/mes desde sep 2026 (incremento 10,89%). Pronto pago: $207,93.\n"
+            "- La Opción B NO fue aprobada: no la menciones ni la cotices. Solo si preguntan "
+            "expresamente por el resultado de la votación puedes indicar que la Opción A ganó.\n"
             "- Para consultas sobre la tarifa aprobada: pagos@ueipab.edu.ve.\n"
             + self._get_voting_wa_block(conversation)
             +
-            "SESIONES VIRTUALES DE PRESENTACIÓN (AÚN NO REALIZADAS — son el 19 y 20 de mayo):\n"
-            "- 1ra Sesión: Lunes 19 de mayo, 3:00–4:00 p.m. (hora Venezuela)\n"
-            "  Enlace Google Meet: https://meet.google.com/dxk-yyjr-jzg\n"
-            "- 2da Sesión: Martes 20 de mayo, 2:00–3:00 p.m. (hora Venezuela)\n"
-            "  Enlace Google Meet: https://meet.google.com/joa-hyjw-dob\n"
-            "- Ambas sesiones son virtuales (también con opción presencial en el colegio).\n"
-            "- Si un representante pregunta CÓMO conectarse a las reuniones del 19 o 20 de mayo: "
-            "proporciona DIRECTAMENTE el enlace Meet correspondiente. No digas que ya ocurrieron.\n"
             "PRIORIDAD AL RESPONDER SOBRE TARIFAS E INSCRIPCION (VIGENTES):\n"
             "- Mensualidad ACTUAL vigente: $197,38\n"
             "- Pronto pago (primeros 10 días del mes): $162,39\n"
@@ -1075,38 +1067,49 @@ class GeneralInquirySkill:
             "alumno, quejas, etc.): infórmale que la conectarás con el equipo de soporte "
             "(soporte@ueipab.edu.ve). Usa ACTION:HANDOFF con ruta 'support'.\n"
             "BALANCE 2025-2026 — VERIFICAR SIEMPRE ANTES DE COTIZAR 2026-2027:\n"
-            "Cuando el representante pregunte por inscripcion, mensualidad del proximo año o la propuesta economica:\n"
+            "Cuando el representante pregunte por inscripcion, mensualidad del proximo año o tarifas:\n"
             "  1. Consulta el bloque SALDO EN SISTEMA:\n"
-            "     - Si hay facturas pendientes: informa el saldo PRIMERO, antes de cualquier cotizacion 2026-2027.\n"
-            "       Calcula el total a regularizar: saldo_actual + meses_restantes_hasta_agosto_2026 × $197,38.\n"
-            "       Ejemplo: 'Veo que tienes $394,76 pendiente + 3 meses (jun-ago 2026) = $987,90 a regularizar.'\n"
-            "       Explica con empatia: no es posible inscribir para 2026-2027 hasta saldar el año en curso.\n"
-            "       Ofrece conectar con pagos@ueipab.edu.ve para coordinar el plan de pago.\n"
+            "     - Si hay facturas pendientes: informa el saldo PRIMERO. Para firmar el convenio del "
+            "1er llamado basta estar solvente al menos con el mes de JUNIO 2026 (julio y agosto se "
+            "pagan con normalidad bajo el convenio). Si solo debe junio: dile que al pagarlo ya puede "
+            "firmar su convenio con la tarifa promocional. Para el 2do llamado se requiere solvencia "
+            "al 31/07/2026; para el 3er llamado, solvencia total del periodo 2025-2026.\n"
             "     - Si saldo es cero: confirma que esta al dia y procede con la cotizacion.\n"
             "  2. Si el contacto no esta identificado: pide cedula primero (para verificar saldo).\n"
-            "COTIZACIÓN 2026-2027 — MOSTRAR SIEMPRE AMBAS OPCIONES:\n"
-            "(Resultado de votacion: 26/05/2026 — ninguna opcion es definitiva aun)\n"
-            "Cuando pregunten por tarifas o costos del proximo año, presenta AMBAS opciones:\n"
-            "---\n"
-            "OPCION A (+10,89%)            |  OPCION B (+19,86%)\n"
-            "Mensualidad:    $218,88       |  Mensualidad:    $236,58\n"
-            "Pronto pago:    $207,93       |  Pronto pago:    $224,75\n"
-            "Descuentos hermanos:\n"
-            "  1 alumno  (-5%): A=$207,94  |  B=$224,75\n"
-            "  2 alumnos (-8%): A=$201,37  |  B=$217,65\n"
-            "  3+ (-11%):       A=$194,80  |  B=$210,55\n"
-            "INSCRIPCION ANTICIPADA (igual A y B, hasta 31 jul 2026): $187,51/alumno\n"
-            "COSTOS ANUALES (igual A y B): $111,58/alumno (hasta 31 jul 2026) | $116,58/alumno (desde 1 ago 2026)\n"
-            "  (seguro $30,58 + guia ingles $35 hasta 31jul/$40 desde 1ago + olimpiadas $10 + enciclopedia $36)\n"
-            "NOTA OBLIGATORIA AL FINAL: 'Las tarifas definitivas se confirman tras el escrutinio del 26/05/2026.'\n"
-            "---\n"
-            "- Si menciona mas de 1 hijo: prepara cotizacion multi-alumno con AMBAS opciones y descuentos hermanos.\n"
-            "  Incluye: MENSUALIDAD + INSCRIPCION + COSTOS ANUALES + TOTAL PRIMER MES para cada opcion.\n"
+            "COTIZACIÓN 2026-2027 — GENERADOR AUTOMATICO (ACTION:QUOTE) — Comunicado oficial 10/06/2026:\n"
+            "El sistema genera la cotizacion formal EXACTA desde Odoo (productos oficiales). "
+            "NUNCA calcules ni cites montos totales tu mismo: usa el marcador y el sistema enviara "
+            "la cotizacion en un mensaje aparte.\n"
+            "- Cuando un representante IDENTIFICADO pida precios, cotizacion o costos de inscripcion "
+            "2026-2027 y sepas cuantos alumnos inscribira, emite al final de tu respuesta:\n"
+            "    ACTION:QUOTE:numero_de_alumnos\n"
+            "  Ejemplo: 'Con gusto, te preparo la cotizacion formal para tus 2 hijos. 😊\\n\\nACTION:QUOTE:2'\n"
+            "- Si no sabes cuantos alumnos inscribira: pregunta primero ('¿Para cuantos alumnos seria?').\n"
+            "- Si el contacto NO esta identificado: pide cedula primero. NUNCA emitas ACTION:QUOTE sin identificacion.\n"
+            "- NO emitas ACTION:HANDOFF en el mismo mensaje que ACTION:QUOTE; el handoff va en un turno posterior.\n"
+            "CRONOGRAMA DE LLAMADOS (contexto conversacional — el sistema cotiza automaticamente el llamado vigente):\n"
+            "  1er llamado (11 jun - 31 jul 2026) PROMOCION ESPECIAL: inscripcion $187,51 / mensualidad $197,38.\n"
+            "    Incluye CONVENIO DE PAGO a tarifa preferencial: julio y agosto se pagan con normalidad, "
+            "y el representante planifica las fechas de pago de inscripcion, septiembre, seguro escolar y "
+            "enciclopedias. Requisito: solvente al menos con junio 2026. Las fechas DEFINITIVAS del "
+            "convenio se acuerdan y firman EN LA INSTITUCION (invita a visitar la administracion, "
+            "lunes a viernes, tambien durante agosto).\n"
+            "  2do llamado (1 - 31 ago 2026) PROMOCION VACACIONAL: inscripcion $207,93 / mensualidad $218,88. "
+            "Sin convenio; requiere solvencia al 31/07/2026.\n"
+            "  3er llamado (1 - 30 sep 2026) REGULAR: inscripcion $218,88 / mensualidad $218,88. "
+            "Sin convenio; requiere solvencia total 2025-2026.\n"
+            "  Descuentos hermanos en mensualidad (aplican TAMBIEN sobre la tarifa promocional): "
+            "2 hijos -5% | 3 hijos -8% | 4+ hijos -11%.\n"
+            "  Costos anuales por alumno: $111,58 hasta el 31 jul (seguro $30,58 + guia ingles $35 + "
+            "olimpiadas $10 + enciclopedia $36); $116,58 desde el 1 ago (guia ingles sube a $40).\n"
+            "  Desde el 17/07/2026 las mensualidades de julio y agosto se facturan por anticipado en el estado de cuenta.\n"
+            "- Todos los montos en USD, pagaderos a tasa BCV del dia.\n"
+            "- NO presentes la Opcion B ni hables de opciones pendientes: la tarifa es definitiva (Opcion A).\n"
             "- Costos opcionales (Kurios, MOA, traslados): NO se incluyen en cotizacion estandar.\n"
-            "- Tras la cotizacion, haz el handoff: ACTION:HANDOFF:nombre|cotizacion opciones A/B presentada|billing\n"
+            "- En el turno SIGUIENTE a la cotizacion, haz el handoff: ACTION:HANDOFF:nombre|cotizacion 2026-2027 generada|billing\n"
             "TARIFAS VIGENTES vs PRÓXIMAS:\n"
             "- Si preguntan por costos ACTUALES (antes de septiembre 2026): inscripción $197,38, mensualidad $197,38 (pronto pago $162,39).\n"
-            "- Si preguntan por costos del PRÓXIMO AÑO ESCOLAR o a partir de septiembre 2026: inscripción en promoción $187,51 (hasta el 31 jul), mensualidad desde sep $207,94 para el 1er alumno (5% dto. hermano) con pronto pago $197,54. Orientar a pagos@ueipab.edu.ve para confirmar tarifas definitivas.\n"
+            "- Si preguntan por costos del PRÓXIMO AÑO ESCOLAR o a partir de septiembre 2026: inscripción en promoción $187,51 (hasta el 31 jul), mensualidad desde sep base $218,88 ($207,94 para el 1er alumno con 5% dto. hermano; pronto pago $197,54). Tarifas confirmadas — Opción A aprobada el 26/05/2026.\n"
             "- Si preguntan si el precio subirá: sí, habrá un ajuste a partir del 1 de septiembre de 2026. Informar con claridad y sin alarmar.\n"
             "MANEJO ESPECIAL FUERZA LABORAL INDUSTRIA (PDVSA / Petropiar / otras Industrias):\n"
             "- Si alguien se identifica como trabajador(a) del sector industria (PDVSA, Petropiar u otra) "
@@ -1118,20 +1121,23 @@ class GeneralInquirySkill:
             "- Si es una familia YA INSCRITA (período 2025-2026) que expresa dificultad económica, "
             "preocupación o amenaza de no poder continuar: respóndele con MUCHA empatía y calma. "
             "Hazle saber que el colegio comprende su situación y valora a su familia. Recuérdale que "
-            "tiene hasta el lunes 08 de junio de 2026 a las 12:30 p.m. para comunicar su decisión por "
-            "escrito a pagos@ueipab.edu.ve. Menciona que si su alumno tiene méritos académicos o "
+            "la fecha límite para comunicar su decisión por escrito a pagos@ueipab.edu.ve fue el "
+            "lunes 08 de junio de 2026 a las 12:30 p.m.; si no respondió, el sistema asumió la "
+            "aceptación de las nuevas condiciones, pero aún puede escribir a pagos@ueipab.edu.ve "
+            "para revisar su caso. Menciona que si su alumno tiene méritos académicos o "
             "deportivos excepcionales, puede solicitar revisión de un 'Caso Especial' individual via email. "
             "Invítala a comunicarse con pagos@ueipab.edu.ve antes de tomar cualquier decisión. "
             "No presiones ni repitas la política fríamente. "
             "Usa ACTION:HANDOFF con ruta 'pdvsa_retention'.\n"
-            "- Si preguntan por la FECHA LÍMITE: es el 08 de junio de 2026 a las 12:30 p.m. "
-            "Sin respuesta antes de esa fecha, el sistema asume aceptación de las nuevas condiciones.\n"
+            "- Si preguntan por la FECHA LÍMITE: fue el 08 de junio de 2026 a las 12:30 p.m. (ya venció). "
+            "Sin respuesta antes de esa fecha, el sistema asumió aceptación de las nuevas condiciones. "
+            "Casos particulares: pagos@ueipab.edu.ve.\n"
             "- Si preguntan si su alumno califica como CASO ESPECIAL: los criterios son excelente "
             "rendimiento académico, atleta con medallas nacionales, músico activo del Sistema de "
             "Orquestas Juveniles, o habilidades destacadas reconocidas. Orientar a pagos@ueipab.edu.ve "
             "para solicitud individual. No hay excepciones generales.\n"
-            "- Si preguntan por el aumento de tarifas 2026-2027: se proyecta un ajuste de entre 20% y "
-            "34% sobre la tarifa base. Las cifras definitivas aún no están confirmadas. "
+            "- Si preguntan por el aumento de tarifas 2026-2027: el ajuste aprobado es de 10,89% "
+            "(Opción A — mensualidad base $218,88 desde septiembre 2026). "
             "Orientar a pagos@ueipab.edu.ve para más detalles.\n"
             "- Cuando tengas el nombre de la persona Y el tema de su consulta, o luego de máximo 2 intercambios, "
             "finaliza con: ACTION:HANDOFF:nombre|resumen_de_la_consulta|ruta\n"
@@ -1160,12 +1166,11 @@ class GeneralInquirySkill:
             "Limites estrictos por tipo de mensaje:\n"
             "- Saludo simple / sin consulta especifica → menu (maximo 8 lineas, nada mas)\n"
             "- Consulta de saldo → 2-3 lineas con el dato + proximo paso\n"
-            "- Pregunta de mensualidad / precio / tarifa → maximo 5 lineas, estructura OBLIGATORIA:\n"
-            "  (1) Opciones A ($218,88) y B ($236,58) con pronto pago\n"
-            "  (2) Promo inscripcion: $187,51 hasta 31 jul 2026 — SIEMPRE incluir aunque no pregunte\n"
-            "  (3) Costos anuales: $111,58/alumno (hasta 31 jul) / $116,58 (desde 1 ago) — SIEMPRE incluir\n"
-            "      (seguro $30,58 + ingles $35 hasta 31jul/$40 desde 1ago + olimpiadas $10 + enciclopedia $36)\n"
-            "  (4) Pregunta de cierre: cuantos hijos o si necesita cotizacion personalizada\n"
+            "- Pregunta de mensualidad / precio / tarifa → maximo 5 lineas:\n"
+            "  (1) Promo 1er llamado: inscripcion $187,51 + mensualidad $197,38, vigente hasta el 31 jul 2026 — SIEMPRE abre con esto\n"
+            "  (2) Pregunta cuantos alumnos inscribira; cuando tengas la cifra y el contacto este "
+            "identificado, emite ACTION:QUOTE:n y el sistema enviara la cotizacion formal exacta\n"
+            "  (3) Menciona el convenio de pago del 1er llamado (planifica sus fechas; se firma en la institucion)\n"
             "- Dificultad economica / queja → 3-4 lineas, calidas, sin enumerar pasos\n"
             "- Despedida → 1 linea, nada mas\n"
             "- Cualquier otra consulta → maximo 5 lineas\n"
@@ -1330,6 +1335,87 @@ class GeneralInquirySkill:
         bcv_rate = self._get_bcv_rate_from_context(conversation)
         return self._format_balance_message(balance, bcv_rate)
 
+    @staticmethod
+    def _fmt_usd(value):
+        """Format 1442.04 → '1.442,04' (Venezuelan separators)."""
+        return f"{value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    def _handle_quote_action(self, conversation, ai_response, context):
+        """Resolve ACTION:QUOTE:<n_students> via sale.order.create_ai_quote (ueipab_sales).
+
+        Returns the formatted quote message (numbers 100% from Odoo products,
+        never written by the LLM), an identification request if the contact is
+        not verified, or None when no marker is present.
+        """
+        match = re.search(r'ACTION:QUOTE:(\d+)', ai_response, re.MULTILINE)
+        if not match:
+            return None
+        n_students = int(match.group(1))
+
+        partner = conversation.partner_id
+        identified = bool(partner) and not partner.name.startswith(
+            ('Consulta WhatsApp', 'Telegram '))
+        if not identified:
+            return (
+                "Para preparar tu cotización formal primero necesito verificar tu "
+                "identidad. ¿Me indicas tu cédula, por favor?"
+            )
+
+        if 'sale.order' not in conversation.env:
+            _logger.error("ACTION:QUOTE: module ueipab_sales/sale not installed")
+            return None
+        try:
+            quote = conversation.env['sale.order'].sudo().create_ai_quote(
+                partner.id, n_students, channel=conversation.channel or 'whatsapp')
+            conversation.env.cr.commit()
+        except Exception as e:
+            _logger.error("ACTION:QUOTE failed for conv %d: %s", conversation.id, e)
+            return (
+                "No pude generar la cotización formal en este momento. "
+                "Escríbenos a pagos@ueipab.edu.ve y con gusto te la preparamos."
+            )
+
+        conversation.message_post(body=(
+            "📋 Cotización generada por Glenda: %s — %d alumno(s) — $%s USD (%s)"
+        ) % (quote['name'], n_students, self._fmt_usd(quote['amount_total']),
+             quote['llamado_name']))
+        return self._format_quote_message(quote)
+
+    def _format_quote_message(self, quote):
+        """Build the customer-facing quote message from create_ai_quote()'s dict."""
+        label = 'alumno' if quote['n_students'] == 1 else 'alumnos'
+        try:
+            from datetime import datetime as _dt
+            valid = _dt.strptime(quote['validity_date'], '%Y-%m-%d').strftime('%d/%m/%Y')
+        except Exception:
+            valid = quote['validity_date']
+
+        lines = [
+            f"📋 *Cotización {quote['name']} — Inscripción 2026-2027*",
+            f"{quote['llamado_name']} · {quote['n_students']} {label}",
+            "",
+        ]
+        for l in quote['lines']:
+            lines.append(
+                f"• {l['name']}: {int(l['qty'])} × ${self._fmt_usd(l['price_unit'])}"
+                f" = ${self._fmt_usd(l['subtotal'])}"
+            )
+        lines += [
+            "",
+            f"💰 *TOTAL PRIMER MES: ${self._fmt_usd(quote['amount_total'])} USD*",
+            f"Tarifas válidas hasta el {valid}.",
+            "",
+            f"⚠ {quote['bcv_note']}",
+        ]
+        if quote.get('convenio'):
+            lines += [
+                "",
+                "✍️ Con el *convenio de pago* del 1er llamado puedes planificar las "
+                "fechas de pago de cada concepto. Las fechas definitivas se acuerdan "
+                "y firman en la institución (lunes a viernes). ¡Te esperamos!",
+            ]
+        return "\n".join(lines)
+
     def _get_voting_wa_block(self, conversation):
         """Voting period closed 2026-05-26. Direct parents to the results letter."""
         return (
@@ -1340,8 +1426,8 @@ class GeneralInquirySkill:
             "---\n"
             "¡Hola, [nombre]! Gracias por su interés en la *Consulta Presupuestaria 2026-2027*.\n"
             "\n"
-            "El período de votación concluyó hoy, 26 de mayo. Los resultados ya están "
-            "disponibles en la carta oficial del colegio:\n"
+            "El período de votación concluyó el 26 de mayo y la Opción A fue aprobada. "
+            "Los resultados están disponibles en la carta oficial del colegio:\n"
             "📄 https://docs.google.com/document/d/1GSGzXLxGaaMvYtbyJuGki5KFodmpoy5OyHk0fm4e2fg/edit?usp=sharing\n"
             "\n"
             "Para cualquier consulta adicional sobre la propuesta económica, puede escribirnos "
@@ -1451,6 +1537,9 @@ class GeneralInquirySkill:
         # Check for balance query — resolve and append to visible text before other actions
         balance_msg = self._handle_balance_action(conversation, ai_response, context)
 
+        # Check for quotation request — generated 100% from Odoo products (ueipab_sales)
+        quote_msg = self._handle_quote_action(conversation, ai_response, context)
+
         # Check for absence notification
         absence_match = re.search(
             r'ACTION:NOTIFY_ABSENCE:([^|\n]+)\|([^|\n]+)\|(.+?)(?:\n|ACTION:|$)',
@@ -1512,6 +1601,8 @@ class GeneralInquirySkill:
                     'flyer_key': flyer_key,
                 },
             }
+            if quote_msg:
+                result['quote_message'] = quote_msg
             return result
 
         visible_text = self._extract_visible_text(ai_response)
@@ -1521,6 +1612,8 @@ class GeneralInquirySkill:
             result = {'message': final_text, 'balance_message': balance_msg}
         else:
             result = {'message': visible_text or ai_response}
+        if quote_msg:
+            result['quote_message'] = quote_msg
         if flyer_key:
             result['flyer_key'] = flyer_key
         if absence_data:

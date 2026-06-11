@@ -623,6 +623,19 @@ class AiAgentConversation(models.Model):
                     'ai_output_tokens': output_tokens,
                 })
 
+            # Quotation emitted in the same turn as a handoff: send before resolving
+            resolve_quote_msg = action.get('quote_message')
+            if resolve_quote_msg:
+                try:
+                    self._send_to_user(resolve_quote_msg)
+                    self.env['ai.agent.message'].sudo().create({
+                        'conversation_id': self.id,
+                        'direction':       'outbound',
+                        'body':            resolve_quote_msg,
+                    })
+                except Exception as e:
+                    _logger.warning("Failed to send quotation before resolve (conv %d): %s", self.id, e)
+
             # Send flyer if requested (after farewell text, before resolving)
             flyer_key = action.get('resolution_data', {}).get('flyer_key')
             if flyer_key and hasattr(skill_handler, 'send_flyer'):
@@ -772,6 +785,20 @@ class AiAgentConversation(models.Model):
                 _logger.info("Balance breakdown sent to %s", self.phone)
             except Exception as e:
                 _logger.warning("Failed to send balance breakdown to %s: %s", self.phone, e)
+
+        # Send formal quotation (ueipab_sales engine) as a separate message if present
+        quote_msg = action.get('quote_message')
+        if quote_msg:
+            try:
+                self._send_to_user(quote_msg)
+                self.env['ai.agent.message'].sudo().create({
+                    'conversation_id': self.id,
+                    'direction':       'outbound',
+                    'body':            quote_msg,
+                })
+                _logger.info("Quotation sent for conversation %d", self.id)
+            except Exception as e:
+                _logger.warning("Failed to send quotation for conv %d: %s", self.id, e)
 
         # P1: Auto-resolve when customer sent a farewell (general_inquiry only).
         # Claude already replied with a single closing line per the prompt rules.
@@ -2792,10 +2819,17 @@ class AiAgentConversation(models.Model):
 
     @api.model
     def _cron_check_credits(self):
-        """Cron: check MassivaMóvil + Anthropic credit levels.
+        """Cron: check MassivaMóvil + Anthropic credit levels independently.
 
-        Uses a consecutive-failure counter (ai_agent.credits_fail_count) to
-        avoid false-positive alerts from transient network timeouts.
+        Two independent kill switches (v1.58.0):
+          - ai_agent.credits_ok    → Claude/AI brain — gates generate_response()
+            on ALL channels (WhatsApp, Telegram, OdooBot)
+          - ai_agent.wa_credits_ok → WhatsApp sends only — gates
+            whatsapp_service.send_message()/send_media()
+
+        Each leg keeps its own consecutive-failure counter so a WhatsApp send
+        depletion never mutes Telegram (incident 2026-06-09: WA at 26/1000
+        sends tripped the shared flag and silenced all channels for >24h).
         Kill switch + alert only fires after N consecutive failures
         (ai_agent.credits_fail_threshold, default 2).
         """
@@ -2803,37 +2837,47 @@ class AiAgentConversation(models.Model):
             return
 
         ICP = self.env['ir.config_parameter'].sudo()
+        threshold = int(ICP.get_param('ai_agent.credits_fail_threshold', '2'))
+
         wa_ok, wa_detail = self._check_whatsapp_credits()
         claude_ok, claude_detail = self._check_claude_credits()
 
-        credits_ok = wa_ok and claude_ok
-        was_ok = ICP.get_param('ai_agent.credits_ok', 'True').lower() == 'true'
-        threshold = int(ICP.get_param('ai_agent.credits_fail_threshold', '2'))
-        fail_count = int(ICP.get_param('ai_agent.credits_fail_count', '0'))
+        legs = [
+            # (flag param, counter param, ok, detail, label, scope message)
+            ('ai_agent.credits_ok', 'ai_agent.credits_fail_count',
+             claude_ok, claude_detail, 'Claude',
+             'Las respuestas de IA en TODOS los canales (WhatsApp, Telegram, '
+             'OdooBot) han sido pausadas hasta que se recarguen los creditos.'),
+            ('ai_agent.wa_credits_ok', 'ai_agent.wa_credits_fail_count',
+             wa_ok, wa_detail, 'WhatsApp',
+             'Solo los ENVIOS POR WHATSAPP estan bloqueados. Telegram y '
+             'OdooBot siguen activos y respondiendo normalmente.'),
+        ]
+        for flag_key, count_key, leg_ok, detail, label, scope_msg in legs:
+            was_ok = ICP.get_param(flag_key, 'True').lower() == 'true'
+            fail_count = int(ICP.get_param(count_key, '0'))
 
-        if credits_ok:
-            # Clean check — reset counter
-            if fail_count > 0:
-                ICP.set_param('ai_agent.credits_fail_count', '0')
-                _logger.info("Credit Guard: transient issue cleared (was %d/%d fails)", fail_count, threshold)
-            if not was_ok:
-                # Recovery: NOT OK → OK
-                ICP.set_param('ai_agent.credits_ok', 'True')
-                _logger.info("Credit Guard: credits restored, re-enabling AI Agent")
-        else:
-            new_count = fail_count + 1
-            ICP.set_param('ai_agent.credits_fail_count', str(new_count))
-            _logger.warning(
-                "Credit Guard: consecutive failure %d/%d — WA: %s | Claude: %s",
-                new_count, threshold, wa_detail, claude_detail,
-            )
-            if new_count >= threshold and was_ok:
-                # Confirmed failure: kill switch + alert
-                ICP.set_param('ai_agent.credits_ok', 'False')
-                self._send_credit_alert(wa_ok, wa_detail, claude_ok, claude_detail, new_count, threshold)
-                _logger.warning(
-                    "Credit Guard: KILL SWITCH activated after %d consecutive failures", new_count
-                )
+            if leg_ok:
+                # Clean check — reset counter
+                if fail_count > 0:
+                    ICP.set_param(count_key, '0')
+                    _logger.info("Credit Guard [%s]: transient issue cleared (was %d/%d fails)",
+                                 label, fail_count, threshold)
+                if not was_ok:
+                    # Recovery: NOT OK → OK
+                    ICP.set_param(flag_key, 'True')
+                    _logger.info("Credit Guard [%s]: credits restored, re-enabling", label)
+            else:
+                new_count = fail_count + 1
+                ICP.set_param(count_key, str(new_count))
+                _logger.warning("Credit Guard [%s]: consecutive failure %d/%d — %s",
+                                label, new_count, threshold, detail)
+                if new_count >= threshold and was_ok:
+                    # Confirmed failure: kill switch + alert
+                    ICP.set_param(flag_key, 'False')
+                    self._send_credit_alert(label, detail, scope_msg, new_count, threshold)
+                    _logger.warning("Credit Guard [%s]: KILL SWITCH activated after %d consecutive failures",
+                                    label, new_count)
 
     def _check_whatsapp_credits(self):
         """Check MassivaMóvil subscription remaining sends.
@@ -2885,30 +2929,22 @@ class AiAgentConversation(models.Model):
                   f"tokens: {total_in:,} in / {total_out:,} out)")
         return (spend < spend_limit, detail)
 
-    def _send_credit_alert(self, wa_ok, wa_detail, claude_ok, claude_detail, fail_count=1, threshold=1):
-        """Send email alert when credits are confirmed low (after N consecutive failures)."""
-        problems = []
-        if not wa_ok:
-            problems.append(wa_detail)
-        if not claude_ok:
-            problems.append(claude_detail)
-
-        items_html = ''.join(f'<li>{p}</li>' for p in problems)
+    def _send_credit_alert(self, label, detail, scope_msg, fail_count=1, threshold=1):
+        """Send email alert when one credit leg is confirmed low (after N consecutive failures)."""
         body_html = (
-            '<h3>AI Agent — Alerta de Creditos</h3>'
-            '<p>El sistema de AI Agent ha sido <strong>desactivado automaticamente</strong> '
-            'por creditos insuficientes:</p>'
-            f'<ul>{items_html}</ul>'
+            f'<h3>AI Agent — Alerta de Creditos ({label})</h3>'
+            f'<p>El kill switch de <strong>{label}</strong> ha sido '
+            '<strong>activado automaticamente</strong> por creditos insuficientes:</p>'
+            f'<ul><li>{detail}</li></ul>'
             f'<p><em>Confirmado tras {fail_count} chequeos consecutivos fallidos '
             f'(umbral: {threshold}). No es una alerta transitoria.</em></p>'
-            '<p>Todas las conversaciones de WhatsApp y consultas a Claude AI '
-            'han sido pausadas hasta que se recarguen los creditos.</p>'
+            f'<p><strong>Alcance:</strong> {scope_msg}</p>'
             '<p><strong>Accion requerida:</strong> Recargar creditos en el servicio '
             'afectado. El sistema se reactivara automaticamente en el proximo chequeo (30 min).</p>'
         )
 
         mail = self.env['mail.mail'].sudo().create({
-            'subject': '[UEIPAB] AI Agent — Creditos Agotados',
+            'subject': f'[UEIPAB] AI Agent — Creditos Agotados ({label})',
             'body_html': body_html,
             'email_from': 'soporte@ueipab.edu.ve',
             'email_to': 'soporte@ueipab.edu.ve',
@@ -2916,7 +2952,7 @@ class AiAgentConversation(models.Model):
             'auto_delete': True,
         })
         mail.send()
-        _logger.warning("Credit Guard: ALERT sent — %s", '; '.join(problems))
+        _logger.warning("Credit Guard [%s]: ALERT sent — %s", label, detail)
 
     @api.model
     def _cron_start_ack_reminders(self):
