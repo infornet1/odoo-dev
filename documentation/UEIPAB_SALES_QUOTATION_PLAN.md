@@ -237,6 +237,25 @@ Parent asks price → Glenda emits ACTION:QUOTE:<n_students>
 **Remaining business question:**
 - [ ] Date limits per concept (e.g. must everything be paid by 30/09?) — currently no constraint enforced
 
+### Sales → Invoicing full cycle — VALIDATED end-to-end in testing (S00007, 2026-06-11)
+
+Simulated the complete business process on the live-Glenda quote S00007 ($973.20, 2 hijos):
+
+| Stage | UI action | What Odoo does | Verified |
+|---|---|---|---|
+| 1. Quotation (`draft`) | Glenda ACTION:QUOTE or manual | Priced proposal; nothing financial; PDF prints blank date lines | ✓ |
+| 2. Confirm (`sale`) | **Confirm** button | All lines → "to invoice" (`invoice_policy=order`); **0 customer emails** (suppression) | ✓ |
+| 3. Payment plan | Enter `Fecha de pago acordada` per line → **Generar Plan de Pagos** | 4 draft invoices by date group (15/07 $375.02 · 15/08 $131.16 · 01/09 $375.02 · 01/10 $92.00 = $973.20); SO → `invoiced`; smart button links | ✓ |
+| 4. Post (`draft`→`posted`) | Accounting → Confirm invoice | Became INV/2026/00002 — real receivable; instantly visible to Glenda balance query + WA/email reminders (zero new code) | ✓ |
+| 5. Payment | **Register Payment** on invoice | `payment_state=paid`, residual $0; parent solvency reflects immediately | ✓ |
+
+**Key insight:** draft invoices are an invisible queued schedule (no debt, no reminders); each tranche becomes collectible only when Finance posts it.
+
+**Open process decision (Gustavo, thinking it over 2026-06-11):**
+- [ ] Who posts the scheduled drafts: Finance manually at each due date, **or** a small cron that auto-posts convenio invoices N days before `invoice_date_due`?
+
+**Cleanup pending:** S00007 testing carries simulation data (1 posted+paid invoice, 3 drafts); prod S00003 (Gustavo's live test quote) awaiting delete decision.
+
 ---
 
 ## 11. Phase 7 — Production Deployment Runbook (prepared 2026-06-11)
