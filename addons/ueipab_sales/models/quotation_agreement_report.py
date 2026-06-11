@@ -32,8 +32,11 @@ class QuotationAgreementReport(models.AbstractModel):
             llamado = self.env['sale.order']._ueipab_llamado_for_date(ref_date)
             n_students = int(max(order.order_line.mapped('product_uom_qty') or [1]))
 
+            plan_lines = order.order_line.filtered(lambda l: not l.display_type)
+
             reports.append({
                 'order': order,
+                'plan_lines': plan_lines,
                 'partner': order.partner_id,
                 'company': order.company_id,
                 'llamado': llamado,

@@ -143,7 +143,43 @@
                             <strong>⚠ <t t-esc="report['bcv_note']"/></strong>
                         </div>
 
-                        <!-- 5/6. Condiciones -->
+                        <!-- 5. Convenio de pago — fechas acordadas (1er llamado only) -->
+                        <t t-if="report['llamado']['convenio']">
+                            <h5 style="background-color: #2e7d32; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
+                                CONVENIO DE PAGO — FECHAS ACORDADAS
+                            </h5>
+                            <table class="table table-sm table-bordered" style="font-size: 8.5pt; margin-bottom: 4px;">
+                                <thead style="background-color: #e8f5e9;">
+                                    <tr>
+                                        <th style="width: 55%;">Concepto</th>
+                                        <th style="width: 20%; text-align: right;">Monto USD</th>
+                                        <th style="width: 25%; text-align: center;">Fecha de pago acordada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="report['plan_lines']" t-as="line">
+                                        <tr>
+                                            <td><t t-esc="line.product_id.name"/></td>
+                                            <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
+                                            <td style="text-align: center;">
+                                                <t t-if="line.ueipab_payment_due_date">
+                                                    <strong><span t-field="line.ueipab_payment_due_date"
+                                                                  t-options='{"format": "dd/MM/yyyy"}'/></strong>
+                                                </t>
+                                                <t t-else="">____/____/______</t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <p style="font-size: 7pt; color: #666; margin: 0 0 10px 0;">
+                                Las fechas de pago definitivas se establecen y confirman al momento de la firma
+                                de este convenio en la institución. Cada concepto será facturado con vencimiento
+                                en la fecha acordada.
+                            </p>
+                        </t>
+
+                        <!-- 6. Condiciones -->
                         <h5 style="background-color: #455a64; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
                             CONDICIONES
                         </h5>

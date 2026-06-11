@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Sales Enhancements',
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'category': 'Sales',
     'summary': 'Enrollment quotation engine (Glenda AI + Sales team) with Acuerdo de Inscripción PDF',
     'description': """

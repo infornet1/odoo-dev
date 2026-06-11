@@ -11,6 +11,15 @@
                 <field name="is_glenda_quote" readonly="1"/>
                 <field name="quote_channel" readonly="1" invisible="not is_glenda_quote"/>
             </xpath>
+            <xpath expr="//field[@name='order_line']//tree//field[@name='price_subtotal']" position="before">
+                <field name="ueipab_payment_due_date" optional="show"/>
+            </xpath>
+            <xpath expr="//button[@name='action_quotation_send'][1]" position="before">
+                <button name="action_generate_payment_plan" string="Generar Plan de Pagos"
+                        type="object" class="btn-secondary"
+                        invisible="state != 'sale'"
+                        confirm="Generar una factura borrador por cada fecha de pago acordada? Verifique que las fechas definitivas fueron confirmadas con el representante en la firma del convenio."/>
+            </xpath>
             <xpath expr="//div[hasclass('oe_title')]" position="before">
                 <widget name="web_ribbon" title="Cotización Glenda (IA)" bg_color="text-bg-info"
                         invisible="not is_glenda_quote"/>

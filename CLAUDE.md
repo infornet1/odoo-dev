@@ -103,7 +103,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
-| ueipab_sales | 17.0.1.0.0 | testing only — quotation engine (see UEIPAB_SALES_QUOTATION_PLAN.md) |
+| ueipab_sales | 17.0.1.1.0 | testing only — quotation engine + convenio payment plan (see UEIPAB_SALES_QUOTATION_PLAN.md) |
 
 ---
 

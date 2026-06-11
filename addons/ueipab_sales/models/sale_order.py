@@ -59,6 +59,16 @@ UEIPAB_BCV_NOTE = ("NOTA IMPORTANTE: Todos los montos están expresados en USD. 
                    "Debe ser pagado a la tasa BCV del día.")
 
 
+class SaleOrderLine(models.Model):
+    _inherit = 'sale.order.line'
+
+    ueipab_payment_due_date = fields.Date(
+        string='Fecha de pago acordada', copy=False,
+        help='Convenio 1er Llamado: fecha acordada con el representante para '
+             'pagar este concepto. La fecha definitiva se establece al momento '
+             'de la firma en la institución.')
+
+
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
@@ -85,6 +95,74 @@ class SaleOrder(models.Model):
                 "ueipab_sales: suppressed customer mail for AI quote %s", self.name)
             return
         return super()._send_order_notification_mail(mail_template)
+
+    # ── Convenio payment plan (1er llamado) ──────────────────────────────────
+
+    def action_generate_payment_plan(self):
+        """Create one draft invoice per agreed due date (convenio de pago).
+
+        Called at premise signing, AFTER the order is confirmed and the final
+        due dates are set on every line. Each invoice gets invoice_date_due =
+        the agreed date; the existing WA/email reminder infra and Glenda
+        balance queries then track them with no extra code.
+        """
+        self.ensure_one()
+        if self.state != 'sale':
+            raise UserError(_(
+                "Confirme la cotización primero (al momento de la firma del "
+                "convenio en la institución)."))
+        if self.invoice_ids.filtered(lambda m: m.state != 'cancel'):
+            raise UserError(_(
+                "Esta orden ya tiene facturas generadas. Anule el plan "
+                "existente antes de regenerarlo."))
+        plan_lines = self.order_line.filtered(lambda l: not l.display_type)
+        missing = plan_lines.filtered(lambda l: not l.ueipab_payment_due_date)
+        if missing:
+            raise UserError(_(
+                "Faltan fechas de pago acordadas en: %s. Las fechas "
+                "definitivas se establecen al firmar el convenio.")
+                % ', '.join(missing.mapped('product_id.name')))
+
+        groups = {}
+        for line in plan_lines:
+            groups.setdefault(line.ueipab_payment_due_date,
+                              self.env['sale.order.line'])
+            groups[line.ueipab_payment_due_date] |= line
+
+        moves = self.env['account.move']
+        for due_date in sorted(groups):
+            lines = groups[due_date]
+            moves |= self.env['account.move'].create({
+                'move_type': 'out_invoice',
+                'partner_id': self.partner_id.id,
+                'currency_id': self.currency_id.id,
+                'invoice_origin': self.name,
+                'invoice_date_due': due_date,
+                'invoice_payment_term_id': False,
+                'narration': UEIPAB_BCV_NOTE,
+                'invoice_line_ids': [(0, 0, {
+                    'product_id': l.product_id.id,
+                    'name': l.name,
+                    'quantity': l.product_uom_qty,
+                    'price_unit': l.price_unit,
+                    'tax_ids': [(6, 0, l.tax_id.ids)],
+                    'sale_line_ids': [(6, 0, [l.id])],
+                }) for l in lines],
+            })
+
+        _logger.info(
+            "ueipab_sales: payment plan %s — %d invoices (%s) total %.2f",
+            self.name, len(moves),
+            ', '.join(str(d) for d in sorted(groups)),
+            sum(moves.mapped('amount_total')))
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Plan de Pagos %s') % self.name,
+            'res_model': 'account.move',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', moves.ids)],
+        }
 
     # ── Enrollment quote engine ──────────────────────────────────────────────
 
