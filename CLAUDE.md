@@ -97,13 +97,13 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.5 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.59.2 | both — ACTION:QUOTE + Telegram bold fix (prod deployed 2026-06-11) |
+| ueipab_ai_agent | 17.0.1.59.3 | both — ACTION:QUOTE + Telegram bold fix + live pricing ground truth (2026-06-11) |
 | ueipab_attendance_report | 17.0.1.6.23 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
-| ueipab_sales | 17.0.1.1.0 | both — quotation engine + convenio payment plan (prod deployed 2026-06-11, see UEIPAB_SALES_QUOTATION_PLAN.md) |
+| ueipab_sales | 17.0.1.2.0 | both — quotation engine + convenio payment plan + `get_pricing_ground_truth()` (see UEIPAB_SALES_QUOTATION_PLAN.md) |
 
 ---
 
@@ -222,7 +222,9 @@ See [GLENDA_TELEGRAM_CHANNEL.md](documentation/GLENDA_TELEGRAM_CHANNEL.md) for f
 
 **Cache:** `school.family_billing_json` (199 families); `scripts/sync_family_billing.py --live` — cron 07:30 VET. Lookup: phone → fuzzy student name. Injected block includes monthly, discount, forecast, annual costs (qty × $111.58 hasta 31 jul / $116.58 desde 1 ago = seguro $30.58 + inglés $35/$40 + olimpiadas $10 + enciclopedia $36).
 
-**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical.
+**Glenda AI Supervisor (Feature #70):** `scripts/glenda_supervisor.py`; scores 1–5; CEO email + OdooBot DM + WA if critical. Cron every 2h weekdays 07:00–21:00 VET (reduced from hourly 2026-06-11; `REVIEW_WINDOW_HOURS=2` must match cadence).
+
+**Pricing Ground Truth (single source, 2026-06-11):** `sale.order.get_pricing_ground_truth()` (ueipab_sales) composes the canonical 2026-2027 rates block from `UEIPAB_LLAMADOS` + live product prices. Consumers: Glenda prompt (`_get_pricing_block()` in general_inquiry.py), `glenda_supervisor.py` + `pagos_faq_email_checker.py` (XML-RPC, `__PRICING_GROUND_TRUTH__` placeholder), each with a static `_PRICING_FALLBACK`. **A price change = edit the product in Odoo; never re-type prices into prompts.** Incident history: stale inglés $25/$101,58 caused false supervisor CRITICALs + prod over-quoting (2026-06-11).
 
 ### Freescout Pagos@ Bridge (Feature #74)
 
