@@ -962,6 +962,9 @@ class AiAgentConversation(models.Model):
             _logger.info("DRY_RUN [WA → %s]: %s", self.phone, text[:80])
             return 0
         if self.channel == 'telegram':
+            # Telegram sends with parse_mode=HTML: Claude's markdown bold
+            # (**text**) would render as literal asterisks.
+            text = _re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
             resp = self.env['ai.agent.telegram.service'].send_message(
                 self.telegram_chat_id, text)
             if not resp.get('ok'):

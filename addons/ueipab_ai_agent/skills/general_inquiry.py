@@ -1379,10 +1379,18 @@ class GeneralInquirySkill:
             "📋 Cotización generada por Glenda: %s — %d alumno(s) — $%s USD (%s)"
         ) % (quote['name'], n_students, self._fmt_usd(quote['amount_total']),
              quote['llamado_name']))
-        return self._format_quote_message(quote)
+        return self._format_quote_message(quote, channel=conversation.channel or 'whatsapp')
 
-    def _format_quote_message(self, quote):
-        """Build the customer-facing quote message from create_ai_quote()'s dict."""
+    def _format_quote_message(self, quote, channel='whatsapp'):
+        """Build the customer-facing quote message from create_ai_quote()'s dict.
+
+        Bold markup is channel-specific: Telegram sends with parse_mode=HTML
+        (*asterisks* render literally), WhatsApp uses *asterisk* bold.
+        """
+        if channel == 'telegram':
+            b, _b = '<b>', '</b>'
+        else:
+            b = _b = '*'
         label = 'alumno' if quote['n_students'] == 1 else 'alumnos'
         try:
             from datetime import datetime as _dt
@@ -1391,7 +1399,7 @@ class GeneralInquirySkill:
             valid = quote['validity_date']
 
         lines = [
-            f"📋 *Cotización {quote['name']} — Inscripción 2026-2027*",
+            f"📋 {b}Cotización {quote['name']} — Inscripción 2026-2027{_b}",
             f"{quote['llamado_name']} · {quote['n_students']} {label}",
             "",
         ]
@@ -1402,7 +1410,7 @@ class GeneralInquirySkill:
             )
         lines += [
             "",
-            f"💰 *TOTAL PRIMER MES: ${self._fmt_usd(quote['amount_total'])} USD*",
+            f"💰 {b}TOTAL PRIMER MES: ${self._fmt_usd(quote['amount_total'])} USD{_b}",
             f"Tarifas válidas hasta el {valid}.",
             "",
             f"⚠ {quote['bcv_note']}",
@@ -1410,7 +1418,7 @@ class GeneralInquirySkill:
         if quote.get('convenio'):
             lines += [
                 "",
-                "✍️ Con el *convenio de pago* del 1er llamado puedes planificar las "
+                f"✍️ Con el {b}convenio de pago{_b} del 1er llamado puedes planificar las "
                 "fechas de pago de cada concepto. Las fechas definitivas se acuerdan "
                 "y firman en la institución (lunes a viernes). ¡Te esperamos!",
             ]
