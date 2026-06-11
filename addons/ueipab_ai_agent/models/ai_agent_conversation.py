@@ -1361,8 +1361,8 @@ class AiAgentConversation(models.Model):
         keyboard = [
             [{'text': '📱 Compartir mi número (recomendado)', 'request_contact': True}],
             ["1️⃣  Mi estado de cuenta / saldo"],
-            ["2️⃣  Propuesta económica 2026-2027"],
-            ["3️⃣  Inscripción anticipada y matrícula"],
+            ["2️⃣  Tarifas y cotización 2026-2027"],
+            ["3️⃣  Inscripción: proceso y convenio"],
             ["4️⃣  Información general (horarios, uniformes)"],
             ["5️⃣  Otro asunto"],
         ]
