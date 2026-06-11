@@ -117,7 +117,9 @@ class ClaudeService(models.AbstractModel):
         Retry policy: up to 2 retries on HTTP 429 (3s, 6s delays).
         OpenAI fallback: activated when ai_agent.openai_fallback_enabled=True and:
           - Claude 429 persists after all retries, OR
-          - ai_agent.credits_ok=False (credits exhausted)
+          - ai_agent.credits_ok=False (Claude spend limit reached — this flag
+            covers the Claude leg only; WhatsApp sends are gated separately
+            by ai_agent.wa_credits_ok in whatsapp_service)
 
         Returns dict: {'content', 'input_tokens', 'output_tokens'}
         """

@@ -86,12 +86,12 @@ class WhatsAppService(models.AbstractModel):
         Respects anti-spam throttling interval between sends.
         Returns dict with message_id on success.
         """
-        # Credit guard kill switch
-        credits_ok = self.env['ir.config_parameter'].sudo().get_param(
-            'ai_agent.credits_ok', 'True').lower() == 'true'
-        if not credits_ok:
-            _logger.warning("Credit Guard: WhatsApp send blocked — credits depleted")
-            raise UserError(_("AI Agent desactivado: creditos insuficientes. "
+        # Credit guard kill switch — WA leg only (Telegram/OdooBot unaffected)
+        wa_credits_ok = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.wa_credits_ok', 'True').lower() == 'true'
+        if not wa_credits_ok:
+            _logger.warning("Credit Guard: WhatsApp send blocked — WA credits depleted")
+            raise UserError(_("Envios WhatsApp desactivados: creditos WhatsApp insuficientes. "
                               "Contacte soporte@ueipab.edu.ve."))
 
         global _last_send_time
@@ -140,11 +140,11 @@ class WhatsAppService(models.AbstractModel):
             caption: Optional text caption displayed below the image
         Returns dict with message_id on success.
         """
-        credits_ok = self.env['ir.config_parameter'].sudo().get_param(
-            'ai_agent.credits_ok', 'True').lower() == 'true'
-        if not credits_ok:
-            _logger.warning("Credit Guard: WhatsApp send blocked — credits depleted")
-            raise UserError(_("AI Agent desactivado: creditos insuficientes. "
+        wa_credits_ok = self.env['ir.config_parameter'].sudo().get_param(
+            'ai_agent.wa_credits_ok', 'True').lower() == 'true'
+        if not wa_credits_ok:
+            _logger.warning("Credit Guard: WhatsApp send blocked — WA credits depleted")
+            raise UserError(_("Envios WhatsApp desactivados: creditos WhatsApp insuficientes. "
                               "Contacte soporte@ueipab.edu.ve."))
 
         global _last_send_time

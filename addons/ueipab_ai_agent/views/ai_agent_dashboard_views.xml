@@ -30,7 +30,11 @@
                     </div>
                     <div class="alert alert-danger text-center" role="alert"
                          invisible="credits_ok == 'ok'">
-                        <strong>CREDITOS AGOTADOS:</strong> Kill switch activado — todas las llamadas salientes estan bloqueadas.
+                        <strong>CREDITOS IA AGOTADOS:</strong> Kill switch Claude activado — respuestas de IA bloqueadas en todos los canales.
+                    </div>
+                    <div class="alert alert-warning text-center" role="alert"
+                         invisible="wa_credits_ok == 'ok'">
+                        <strong>CREDITOS WHATSAPP AGOTADOS:</strong> Envios WhatsApp bloqueados — Telegram y OdooBot siguen activos.
                     </div>
 
                     <!-- Estado General (always visible above tabs) -->
@@ -43,6 +47,9 @@
                             <field name="credits_ok" widget="badge"
                                    decoration-success="credits_ok == 'ok'"
                                    decoration-danger="credits_ok == 'error'"/>
+                            <field name="wa_credits_ok" widget="badge"
+                                   decoration-success="wa_credits_ok == 'ok'"
+                                   decoration-danger="wa_credits_ok == 'error'"/>
                             <button name="action_toggle_production_mode"
                                     string="Activar Modo Produccion"
                                     type="object" class="btn-danger"
