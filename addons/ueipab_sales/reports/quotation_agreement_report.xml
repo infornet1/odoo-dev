@@ -28,7 +28,7 @@
                                 <td style="width: 18%; text-align: right; vertical-align: middle; font-size: 8pt; color: #444;">
                                     <strong>Nro:</strong> <span t-esc="report['order'].name"/><br/>
                                     <strong>Fecha:</strong> <span t-esc="report['date_str']"/><br/>
-                                    <strong>Válido hasta:</strong><br/>
+                                    <strong>Promo Válida hasta:</strong><br/>
                                     <span style="color: #d32f2f; font-weight: bold;" t-esc="report['validity_str']"/>
                                 </td>
                             </tr>
