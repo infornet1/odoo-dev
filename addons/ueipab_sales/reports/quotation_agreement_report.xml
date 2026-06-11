@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acuerdo de Inscripción 2026-2027 — PDF Template -->
+
+    <template id="quotation_agreement">
+        <t t-call="web.html_container">
+            <t t-foreach="reports" t-as="report">
+                <t t-call="web.basic_layout">
+                    <div class="page" style="font-size: 9pt;">
+
+                        <!-- 1. Header: logo + title -->
+                        <table style="width: 100%; margin-bottom: 12px;">
+                            <tr>
+                                <td style="width: 18%; vertical-align: middle; text-align: center; padding: 10px 6px;">
+                                    <img t-att-src="image_data_uri(report['company'].logo)"
+                                         style="max-height: 49px; max-width: 49px; display: block; margin: 0 auto;"/>
+                                </td>
+                                <td style="width: 64%; text-align: center; vertical-align: middle;">
+                                    <h3 style="margin: 0; font-size: 13pt;">ACUERDO DE INSCRIPCIÓN</h3>
+                                    <p style="margin: 2px 0 0 0; font-size: 10pt; font-weight: bold;">
+                                        Período Escolar 2026-2027
+                                    </p>
+                                    <p style="margin: 2px 0 0 0; font-size: 8pt; color: #666;">
+                                        <span t-esc="report['company'].name"/>
+                                    </p>
+                                </td>
+                                <td style="width: 18%; text-align: right; vertical-align: middle; font-size: 8pt; color: #444;">
+                                    <strong>Nro:</strong> <span t-esc="report['order'].name"/><br/>
+                                    <strong>Fecha:</strong> <span t-esc="report['date_str']"/><br/>
+                                    <strong>Válido hasta:</strong><br/>
+                                    <span style="color: #d32f2f; font-weight: bold;" t-esc="report['validity_str']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 2. Representante -->
+                        <table class="table table-sm table-bordered" style="margin-bottom: 10px; font-size: 8.5pt;">
+                            <tr>
+                                <td style="width: 22%; background-color: #f8f9fa;"><strong>Representante:</strong></td>
+                                <td style="width: 45%;"><t t-esc="report['partner'].name"/></td>
+                                <td style="width: 13%; background-color: #f8f9fa;"><strong>Cédula/RIF:</strong></td>
+                                <td style="width: 20%;"><t t-esc="report['partner'].vat or '________________'"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f8f9fa;"><strong>Teléfono:</strong></td>
+                                <td><t t-esc="report['partner'].mobile or report['partner'].phone or '________________'"/></td>
+                                <td style="background-color: #f8f9fa;"><strong>Estudiantes:</strong></td>
+                                <td><t t-esc="report['n_students']"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f8f9fa;"><strong>Correo:</strong></td>
+                                <td colspan="3"><t t-esc="report['partner'].email or '________________'"/></td>
+                            </tr>
+                        </table>
+
+                        <!-- 3. Llamado / promoción box -->
+                        <div style="border: 2px solid #1565c0; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; background-color: #e3f2fd;">
+                            <strong style="font-size: 9.5pt; color: #1565c0;">
+                                <t t-esc="report['llamado']['name']"/>
+                            </strong>
+                            <span style="font-size: 8pt; color: #444;">
+                                — Tarifas válidas hasta el <strong t-esc="report['validity_str']"/>.
+                            </span>
+                            <t t-if="report['llamado']['convenio']">
+                                <div style="font-size: 8pt; margin-top: 2px;">
+                                    Incluye la firma de <strong>convenio de pago a tarifa preferencial</strong>:
+                                    permite cancelar julio y agosto con normalidad y planificar el pago de
+                                    inscripción, septiembre, seguro escolar y enciclopedias.
+                                    Requisito: estar solvente al menos con el mes de junio 2026.
+                                </div>
+                            </t>
+                        </div>
+
+                        <!-- 4. Pricing table -->
+                        <h5 style="background-color: #1565c0; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
+                            DETALLE DE COSTOS (USD)
+                        </h5>
+                        <table class="table table-sm table-bordered" style="font-size: 8.5pt; margin-bottom: 4px;">
+                            <thead style="background-color: #e3f2fd;">
+                                <tr>
+                                    <th style="width: 50%;">Concepto</th>
+                                    <th style="width: 12%; text-align: center;">Estudiantes</th>
+                                    <th style="width: 19%; text-align: right;">Precio Unit. USD</th>
+                                    <th style="width: 19%; text-align: right;">Subtotal USD</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="report['ins_lines']" t-as="line">
+                                    <tr>
+                                        <td><t t-esc="line.product_id.name"/></td>
+                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
+                                    </tr>
+                                </t>
+                                <t t-foreach="report['men_lines']" t-as="line">
+                                    <tr>
+                                        <td>
+                                            <t t-esc="line.product_id.name"/>
+                                            <span style="font-size: 7pt; color: #666;"> (mensualidad — 10 cuotas sep-jun)</span>
+                                        </td>
+                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
+                                    </tr>
+                                </t>
+                                <t t-foreach="report['anu_lines']" t-as="line">
+                                    <tr>
+                                        <td>
+                                            <t t-esc="line.product_id.name"/>
+                                            <span style="font-size: 7pt; color: #666;"> (costo anual)</span>
+                                        </td>
+                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
+                                    </tr>
+                                </t>
+                                <t t-foreach="report['other_lines']" t-as="line">
+                                    <tr>
+                                        <td><t t-esc="line.name"/></td>
+                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
+                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                    <td colspan="3" style="text-align: right;">TOTAL PRIMER MES (USD)</td>
+                                    <td style="text-align: right; font-size: 10pt;">
+                                        $<t t-esc="'%.2f' % report['order'].amount_total"/>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p style="font-size: 7pt; color: #666; margin: 0 0 10px 0;">
+                            El total mostrado corresponde al primer mes (inscripción + 1 mensualidad + costos anuales).
+                            Las mensualidades siguientes se facturan mensualmente al precio unitario indicado.
+                        </p>
+
+                        <!-- BCV note -->
+                        <div style="border: 1px solid #f9a825; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; background-color: #fff8e1; font-size: 8.5pt;">
+                            <strong>⚠ <t t-esc="report['bcv_note']"/></strong>
+                        </div>
+
+                        <!-- 5/6. Condiciones -->
+                        <h5 style="background-color: #455a64; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
+                            CONDICIONES
+                        </h5>
+                        <ul style="font-size: 8pt; color: #333; margin-bottom: 14px; padding-left: 18px;">
+                            <li>Las tarifas de este acuerdo son válidas únicamente dentro del período del llamado indicado
+                                (hasta el <span t-esc="report['validity_str']"/>). Vencido el plazo, aplican las tarifas
+                                del siguiente llamado según el comunicado oficial del 10/06/2026.</li>
+                            <t t-if="report['llamado']['convenio']">
+                                <li>La firma del convenio de pago requiere estar solvente al menos con el mes de junio 2026.</li>
+                            </t>
+                            <t t-else="">
+                                <li>La inscripción requiere estar solvente con el período escolar 2025-2026.</li>
+                            </t>
+                            <li>A partir del 17/07/2026 las mensualidades de julio y agosto se facturan por anticipado
+                                en el estado de cuenta.</li>
+                            <li>A partir del 01/09/2026 quedan descontinuadas la modalidad de facturación a crédito y
+                                las excepciones de descuento discrecional.</li>
+                            <li>Este documento es de carácter informativo y no constituye factura.</li>
+                        </ul>
+
+                        <!-- 7. Signature blocks -->
+                        <table style="width: 100%; margin-top: 28px; font-size: 8.5pt;">
+                            <tr>
+                                <td style="width: 45%; text-align: center;">
+                                    <div style="border-top: 1px solid #333; padding-top: 4px;">
+                                        <strong>El Representante</strong><br/>
+                                        <span t-esc="report['partner'].name"/><br/>
+                                        C.I./RIF: <span t-esc="report['partner'].vat or '________________'"/><br/>
+                                        Fecha: ____/____/______
+                                    </div>
+                                </td>
+                                <td style="width: 10%;"></td>
+                                <td style="width: 45%; text-align: center;">
+                                    <div style="border-top: 1px solid #333; padding-top: 4px;">
+                                        <strong>Por la Institución</strong><br/>
+                                        <span t-esc="report['company'].name"/><br/>
+                                        Administración<br/>
+                                        Fecha: ____/____/______
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="font-size: 7pt; color: #999; text-align: center; margin-top: 16px;">
+                            Documento generado el <span t-esc="report['date_str']"/> ·
+                            <span t-esc="report['order'].name"/> ·
+                            pagos@ueipab.edu.ve
+                        </p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

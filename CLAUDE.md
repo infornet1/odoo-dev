@@ -97,12 +97,13 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.5 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.57.20 | both |
+| ueipab_ai_agent | 17.0.1.58.1 | both |
 | ueipab_attendance_report | 17.0.1.6.23 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
+| ueipab_sales | 17.0.1.0.0 | testing only — quotation engine (see UEIPAB_SALES_QUOTATION_PLAN.md) |
 
 ---
 
@@ -459,7 +460,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 - **Image support:** Multimodal — Glenda sees screenshots (WA: MassivaMóvil URL; Telegram: `file_id → get_file_url()`)
 - **Re-trigger:** `ACTION:ALTERNATIVE_PHONE:04XXX` → pre-fills wizard with new number
 - **Email verification:** `ACTION:VERIFY_EMAIL:email` → sends verification email
-- **Credit Guard:** Kill switch `ai_agent.credits_ok`, checks WA + Claude spend every 30 min
+- **Credit Guard (v58.0 split):** Two independent kill switches checked every 30 min — `ai_agent.credits_ok` (Claude spend; gates AI replies on ALL channels) and `ai_agent.wa_credits_ok` (MassivaMóvil sends; gates WA sends only). Separate fail counters `credits_fail_count` / `wa_credits_fail_count`. Split after 2026-06-09 incident: low WA sends (26/1000) muted Telegram for >24h
 - **Health Monitor:** Dual-layer SPAM detection + auto-failover to backup number
 - **General Inquiry:** Handles unsolicited inbound (WA + Telegram) — identifies contact, routes to `pagos@` or `soporte@`
 - **Identity ring (v57.20):** Turn 1 for any unverified contact (placeholder partner) → Glenda sends identification prompt instead of answering; Telegram includes phone-share button; no Claude call until identified
@@ -497,6 +498,8 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 **Ops/Infra:** [Meta WA Migration](documentation/META_CLOUD_API_MIGRATION_PLAN.md) · [Production](documentation/PRODUCTION_ENVIRONMENT.md) · [WebSocket/Nginx](documentation/WEBSOCKET_NGINX_FIX.md) · [Finanzas Spoofing](documentation/FINANZAS_EMAIL_SPOOFING_FIX.md) · [Combined Fix](documentation/COMBINED_FIX_PROCEDURE.md) · [Bounce Processor](documentation/BOUNCE_EMAIL_PROCESSOR.md) · [Bounce Cleanup](documentation/BOUNCE_EMAIL_CLEANUP_PROCEDURE.md) · [Akdemia Pipeline](documentation/AKDEMIA_DATA_PIPELINE.md) · [Freescout Plan](documentation/FREESCOUT_API_MIGRATION_PLAN.md)
 
 **Attendance Enhancement:** [Smart Alert Plan](documentation/ATTENDANCE_SMART_ALERT_PLAN.md) — multi-signal confidence engine (asistencia + WiFi + Classroom + email); Python engine + optional AI narrative; Phases 1–4
+
+**Sales / Quotations:** [UEIPAB Sales Quotation Plan](documentation/UEIPAB_SALES_QUOTATION_PLAN.md) — `ueipab_sales` module + product-backed quote engine (3 llamados 2026-2027, comunicado 10/06/2026); Glenda `ACTION:QUOTE` + Sales team UI; PDF "Acuerdo de Inscripción" (Relación pattern); status: PLANNING, testing-first; blocked on 2 discount-stacking decisions
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 

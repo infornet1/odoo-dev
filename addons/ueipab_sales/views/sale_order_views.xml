@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Form: AI quote flags in Other Info tab -->
+    <record id="view_order_form_ueipab" model="ir.ui.view">
+        <field name="name">sale.order.form.ueipab</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='other_information']//group[@name='sale_info']" position="inside">
+                <field name="is_glenda_quote" readonly="1"/>
+                <field name="quote_channel" readonly="1" invisible="not is_glenda_quote"/>
+            </xpath>
+            <xpath expr="//div[hasclass('oe_title')]" position="before">
+                <widget name="web_ribbon" title="Cotización Glenda (IA)" bg_color="text-bg-info"
+                        invisible="not is_glenda_quote"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Quotation list: optional columns -->
+    <record id="view_quotation_tree_ueipab" model="ir.ui.view">
+        <field name="name">sale.order.tree.quotation.ueipab</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree" position="inside">
+                <field name="is_glenda_quote" optional="show"/>
+                <field name="quote_channel" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Search: AI quote filter -->
+    <record id="view_sales_order_filter_ueipab" model="ir.ui.view">
+        <field name="name">sale.order.search.ueipab</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <filter string="Cotizaciones Glenda (IA)" name="filter_glenda_quotes"
+                        domain="[('is_glenda_quote', '=', True)]"/>
+                <filter string="Cotizaciones Manuales" name="filter_manual_quotes"
+                        domain="[('is_glenda_quote', '=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

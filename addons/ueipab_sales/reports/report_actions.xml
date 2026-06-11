@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Paper format — same recipe as Relación de Liquidación -->
+    <record id="paperformat_quotation_agreement" model="report.paperformat">
+        <field name="name">Acuerdo de Inscripción Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">12</field>
+        <field name="margin_right">12</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <record id="action_report_quotation_agreement" model="ir.actions.report">
+        <field name="name">Acuerdo de Inscripción</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_sales.quotation_agreement</field>
+        <field name="report_file">ueipab_sales.quotation_agreement</field>
+        <field name="paperformat_id" ref="paperformat_quotation_agreement"/>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Acuerdo_Inscripcion_%s' % (object.partner_id.name.replace(' ', '_'))</field>
+    </record>
+
+</odoo>
