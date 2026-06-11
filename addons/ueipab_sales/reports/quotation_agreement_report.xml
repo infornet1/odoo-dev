@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Acuerdo de Inscripción 2026-2027 — PDF Template -->
+    <!-- Acuerdo de Inscripción 2026-2027 — PDF Template (single-page layout) -->
 
     <template id="quotation_agreement">
         <t t-call="web.html_container">
             <t t-foreach="reports" t-as="report">
                 <t t-call="web.basic_layout">
+                    <t t-set="convenio" t-value="report['llamado']['convenio']"/>
                     <div class="page" style="font-size: 9pt;">
 
                         <!-- 1. Header: logo + title -->
-                        <table style="width: 100%; margin-bottom: 12px;">
+                        <table style="width: 100%; margin-bottom: 8px;">
                             <tr>
-                                <td style="width: 18%; vertical-align: middle; text-align: center; padding: 10px 6px;">
+                                <td style="width: 18%; vertical-align: middle; text-align: center; padding: 8px 6px;">
                                     <img t-att-src="image_data_uri(report['company'].logo)"
                                          style="max-height: 49px; max-width: 49px; display: block; margin: 0 auto;"/>
                                 </td>
@@ -34,7 +35,7 @@
                         </table>
 
                         <!-- 2. Representante -->
-                        <table class="table table-sm table-bordered" style="margin-bottom: 10px; font-size: 8.5pt;">
+                        <table class="table table-sm table-bordered" style="margin-bottom: 8px; font-size: 8.5pt;">
                             <tr>
                                 <td style="width: 22%; background-color: #f8f9fa;"><strong>Representante:</strong></td>
                                 <td style="width: 45%;"><t t-esc="report['partner'].name"/></td>
@@ -54,14 +55,14 @@
                         </table>
 
                         <!-- 3. Llamado / promoción box -->
-                        <div style="border: 2px solid #1565c0; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; background-color: #e3f2fd;">
+                        <div style="border: 2px solid #1565c0; border-radius: 4px; padding: 5px 10px; margin-bottom: 8px; background-color: #e3f2fd;">
                             <strong style="font-size: 9.5pt; color: #1565c0;">
                                 <t t-esc="report['llamado']['name']"/>
                             </strong>
                             <span style="font-size: 8pt; color: #444;">
                                 — Tarifas válidas hasta el <strong t-esc="report['validity_str']"/>.
                             </span>
-                            <t t-if="report['llamado']['convenio']">
+                            <t t-if="convenio">
                                 <div style="font-size: 8pt; margin-top: 2px;">
                                     Incluye la firma de <strong>convenio de pago a tarifa preferencial</strong>:
                                     permite cancelar julio y agosto con normalidad y planificar el pago de
@@ -71,123 +72,80 @@
                             </t>
                         </div>
 
-                        <!-- 4. Pricing table -->
-                        <h5 style="background-color: #1565c0; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
+                        <!-- 4. Pricing table (+ convenio date column on 1er llamado) -->
+                        <h5 style="background-color: #1565c0; color: white; padding: 3px 8px; margin: 0 0 5px 0; font-size: 9pt;">
                             DETALLE DE COSTOS (USD)
+                            <t t-if="convenio"> · CONVENIO DE PAGO — FECHAS ACORDADAS</t>
                         </h5>
-                        <table class="table table-sm table-bordered" style="font-size: 8.5pt; margin-bottom: 4px;">
+                        <table class="table table-sm table-bordered" style="font-size: 8.5pt; margin-bottom: 3px;">
                             <thead style="background-color: #e3f2fd;">
                                 <tr>
-                                    <th style="width: 50%;">Concepto</th>
-                                    <th style="width: 12%; text-align: center;">Estudiantes</th>
-                                    <th style="width: 19%; text-align: right;">Precio Unit. USD</th>
-                                    <th style="width: 19%; text-align: right;">Subtotal USD</th>
+                                    <th>Concepto</th>
+                                    <th style="width: 10%; text-align: center;">Estud.</th>
+                                    <th style="width: 15%; text-align: right;">Precio Unit.</th>
+                                    <th style="width: 15%; text-align: right;">Subtotal</th>
+                                    <th t-if="convenio" style="width: 18%; text-align: center; background-color: #e8f5e9;">Fecha de pago acordada</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="report['ins_lines']" t-as="line">
-                                    <tr>
-                                        <td><t t-esc="line.product_id.name"/></td>
-                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
-                                    </tr>
-                                </t>
-                                <t t-foreach="report['men_lines']" t-as="line">
+                                <t t-foreach="report['ins_lines'] + report['men_lines'] + report['anu_lines'] + report['other_lines']" t-as="line">
                                     <tr>
                                         <td>
-                                            <t t-esc="line.product_id.name"/>
-                                            <span style="font-size: 7pt; color: #666;"> (mensualidad — 10 cuotas sep-jun)</span>
+                                            <t t-esc="line.product_id.name or line.name"/>
+                                            <t t-if="line in report['men_lines']">
+                                                <span style="font-size: 7pt; color: #666;"> (10 cuotas sep-jun)</span>
+                                            </t>
+                                            <t t-if="line in report['anu_lines']">
+                                                <span style="font-size: 7pt; color: #666;"> (anual)</span>
+                                            </t>
                                         </td>
                                         <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
                                         <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
                                         <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
-                                    </tr>
-                                </t>
-                                <t t-foreach="report['anu_lines']" t-as="line">
-                                    <tr>
-                                        <td>
-                                            <t t-esc="line.product_id.name"/>
-                                            <span style="font-size: 7pt; color: #666;"> (costo anual)</span>
+                                        <td t-if="convenio" style="text-align: center; background-color: #f1f8e9;">
+                                            <t t-if="line.ueipab_payment_due_date">
+                                                <strong><span t-field="line.ueipab_payment_due_date"
+                                                              t-options='{"format": "dd/MM/yyyy"}'/></strong>
+                                            </t>
+                                            <t t-else="">____/____/______</t>
                                         </td>
-                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
-                                    </tr>
-                                </t>
-                                <t t-foreach="report['other_lines']" t-as="line">
-                                    <tr>
-                                        <td><t t-esc="line.name"/></td>
-                                        <td style="text-align: center;"><t t-esc="'%g' % line.product_uom_qty"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_unit"/></td>
-                                        <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
                                     </tr>
                                 </t>
                             </tbody>
                             <tfoot>
                                 <tr style="background-color: #f8f9fa; font-weight: bold;">
-                                    <td colspan="3" style="text-align: right;">TOTAL PRIMER MES (USD)</td>
+                                    <td t-att-colspan="3" style="text-align: right;">TOTAL PRIMER MES (USD)</td>
                                     <td style="text-align: right; font-size: 10pt;">
                                         $<t t-esc="'%.2f' % report['order'].amount_total"/>
                                     </td>
+                                    <td t-if="convenio" style="background-color: #f1f8e9;"></td>
                                 </tr>
                             </tfoot>
                         </table>
-                        <p style="font-size: 7pt; color: #666; margin: 0 0 10px 0;">
-                            El total mostrado corresponde al primer mes (inscripción + 1 mensualidad + costos anuales).
-                            Las mensualidades siguientes se facturan mensualmente al precio unitario indicado.
+                        <p style="font-size: 7pt; color: #666; margin: 0 0 6px 0;">
+                            El total corresponde al primer mes (inscripción + 1 mensualidad + costos anuales);
+                            las mensualidades siguientes se facturan al precio unitario indicado.
+                            <t t-if="convenio">
+                                Las fechas de pago definitivas se establecen y confirman al momento de la firma
+                                de este convenio en la institución; cada concepto será facturado con vencimiento
+                                en la fecha acordada.
+                            </t>
                         </p>
 
                         <!-- BCV note -->
-                        <div style="border: 1px solid #f9a825; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; background-color: #fff8e1; font-size: 8.5pt;">
+                        <div style="border: 1px solid #f9a825; border-radius: 4px; padding: 5px 10px; margin-bottom: 8px; background-color: #fff8e1; font-size: 8.5pt;">
                             <strong>⚠ <t t-esc="report['bcv_note']"/></strong>
                         </div>
 
-                        <!-- 5. Convenio de pago — fechas acordadas (1er llamado only) -->
-                        <t t-if="report['llamado']['convenio']">
-                            <h5 style="background-color: #2e7d32; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
-                                CONVENIO DE PAGO — FECHAS ACORDADAS
-                            </h5>
-                            <table class="table table-sm table-bordered" style="font-size: 8.5pt; margin-bottom: 4px;">
-                                <thead style="background-color: #e8f5e9;">
-                                    <tr>
-                                        <th style="width: 55%;">Concepto</th>
-                                        <th style="width: 20%; text-align: right;">Monto USD</th>
-                                        <th style="width: 25%; text-align: center;">Fecha de pago acordada</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-foreach="report['plan_lines']" t-as="line">
-                                        <tr>
-                                            <td><t t-esc="line.product_id.name"/></td>
-                                            <td style="text-align: right;"><t t-esc="'%.2f' % line.price_subtotal"/></td>
-                                            <td style="text-align: center;">
-                                                <t t-if="line.ueipab_payment_due_date">
-                                                    <strong><span t-field="line.ueipab_payment_due_date"
-                                                                  t-options='{"format": "dd/MM/yyyy"}'/></strong>
-                                                </t>
-                                                <t t-else="">____/____/______</t>
-                                            </td>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
-                            <p style="font-size: 7pt; color: #666; margin: 0 0 10px 0;">
-                                Las fechas de pago definitivas se establecen y confirman al momento de la firma
-                                de este convenio en la institución. Cada concepto será facturado con vencimiento
-                                en la fecha acordada.
-                            </p>
-                        </t>
-
-                        <!-- 6. Condiciones -->
-                        <h5 style="background-color: #455a64; color: white; padding: 4px 8px; margin: 0 0 6px 0; font-size: 9pt;">
+                        <!-- 5. Condiciones -->
+                        <h5 style="background-color: #455a64; color: white; padding: 3px 8px; margin: 0 0 5px 0; font-size: 9pt;">
                             CONDICIONES
                         </h5>
-                        <ul style="font-size: 8pt; color: #333; margin-bottom: 14px; padding-left: 18px;">
+                        <ul style="font-size: 7.5pt; color: #333; margin-bottom: 8px; padding-left: 18px;">
                             <li>Las tarifas de este acuerdo son válidas únicamente dentro del período del llamado indicado
                                 (hasta el <span t-esc="report['validity_str']"/>). Vencido el plazo, aplican las tarifas
                                 del siguiente llamado según el comunicado oficial del 10/06/2026.</li>
-                            <t t-if="report['llamado']['convenio']">
+                            <t t-if="convenio">
                                 <li>La firma del convenio de pago requiere estar solvente al menos con el mes de junio 2026.</li>
                             </t>
                             <t t-else="">
@@ -200,8 +158,8 @@
                             <li>Este documento es de carácter informativo y no constituye factura.</li>
                         </ul>
 
-                        <!-- 7. Signature blocks -->
-                        <table style="width: 100%; margin-top: 28px; font-size: 8.5pt;">
+                        <!-- 6. Signature blocks -->
+                        <table style="width: 100%; margin-top: 18px; font-size: 8.5pt;">
                             <tr>
                                 <td style="width: 45%; text-align: center;">
                                     <div style="border-top: 1px solid #333; padding-top: 4px;">
@@ -223,7 +181,7 @@
                             </tr>
                         </table>
 
-                        <p style="font-size: 7pt; color: #999; text-align: center; margin-top: 16px;">
+                        <p style="font-size: 7pt; color: #999; text-align: center; margin-top: 8px;">
                             Documento generado el <span t-esc="report['date_str']"/> ·
                             <span t-esc="report['order'].name"/> ·
                             pagos@ueipab.edu.ve
