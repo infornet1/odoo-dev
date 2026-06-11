@@ -239,7 +239,30 @@ Parent asks price → Glenda emits ACTION:QUOTE:<n_students>
 
 ---
 
-## 11. References
+## 11. Phase 7 — Production Deployment Runbook (prepared 2026-06-11)
+
+**Pre-flight audit (read-only, 2026-06-11) ✅:** `sale`/`sale_management`/`sale_pdf_quote_builder` installed; `ueipab_ai_agent` at 17.0.1.58.1; clone-reference `product.template` id=8 MENSUALIDAD confirmed (consu, tax Exento, USD, categ All); 0 `*2627*` products; 0 quotation templates; only SO = S00001 (Gustavo test, state=sent → cancel+delete); `portal_confirmation_pay=True` (must disable); `sale.default_confirmation_template=11` (suppression override covers Glenda quotes); Telegram active, WA `dry_run=True`.
+
+**Package contents (single maintenance window, ~10 min):**
+| # | Step | Command / action |
+|---|------|------------------|
+| 1 | DB backup | `docker exec ueipab17_postgres_1 pg_dump -U odoo DB_UEIPAB \| gzip > /backup/DB_UEIPAB_pre_ueipab_sales_$(date +%Y%m%d_%H%M).sql.gz` |
+| 2 | Copy modules | tar `ueipab_sales/` + `ueipab_ai_agent/` from dev → scp → backup old `ueipab_ai_agent` dir on prod → extract both into `/home/vision/ueipab17/addons/` |
+| 3 | Install + upgrade | `docker exec ueipab17 /usr/bin/odoo -d DB_UEIPAB -i ueipab_sales -u ueipab_ai_agent --stop-after-init --no-http` |
+| 4 | **Restart container** | `docker restart ueipab17` — MANDATORY (stale-registry lesson: web workers keep old registry after out-of-process `-i`/`-u`; causes Owl "field is undefined") |
+| 5 | Catalog | `docker exec -i ueipab17 /usr/bin/odoo shell -d DB_UEIPAB --no-http < scripts/setup_ueipab_sales_catalog.py` (idempotent; 17 products + settings + 12 templates; self-commits) |
+| 6 | Post-deploy config + cleanup | `scripts/prod_post_deploy_ueipab_sales.py` (XML-RPC): `portal_confirmation_pay=False`; `ueipab_sales.suppress_ai_quote_emails=True` explicit; cancel+delete S00001 |
+| 7 | Verification | same script: 17 products / 12 templates; `is_glenda_quote`+`ueipab_payment_due_date` in `fields_get`; report binding "Acuerdo de Inscripción" on sale.order; module versions 1.1.0 / 1.59.2; smoke `create_ai_quote(7, 2)` → expect $973.20 → cancel+delete; **0 outgoing customer mails** |
+| 8 | Live validation | Gustavo asks @GlendaUeipabBot (now prod v59.2) for a 2-hijos quote → ACTION:QUOTE → exact totals + bold rendering |
+| 9 | Docs | CLAUDE.md module table + memory + CHANGELOG; commit & push |
+
+**Rollback:** restore `ueipab_ai_agent.backup_*` dir, remove `ueipab_sales/` dir, `odoo -u ueipab_ai_agent --stop-after-init`, restart. DB backup from step 1 only needed if data corruption (none expected — additive changes only).
+
+**Risk notes:** ai_agent 58.1→59.2 prompt change goes live on prod Telegram immediately (desired — prod currently over-quotes ~$20 on 2 hijos by missing hermanos-on-promo). Products/templates are new records — no collision. `_send_order_notification_mail` suppression guards Glenda quotes from auto-email (validated in testing: 0 mails on confirm).
+
+---
+
+## 12. References
 
 - Relación PDF pattern: `addons/ueipab_payroll_enhancements/models/liquidacion_breakdown_report.py` + `reports/liquidacion_breakdown_report.xml` + `reports/report_actions.xml`
 - Logo: `https://odoo.ueipab.edu.ve/web/image/res.company/1/logo` (1080×1080)

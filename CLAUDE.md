@@ -97,7 +97,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.70.5 | both |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.59.0 testing / 17.0.1.58.1 prod | ACTION:QUOTE in testing only |
+| ueipab_ai_agent | 17.0.1.59.2 testing / 17.0.1.58.1 prod | ACTION:QUOTE + Telegram bold fix in testing; prod deploy prepared (plan §11) |
 | ueipab_attendance_report | 17.0.1.6.23 | both |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -499,7 +499,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **Attendance Enhancement:** [Smart Alert Plan](documentation/ATTENDANCE_SMART_ALERT_PLAN.md) — multi-signal confidence engine (asistencia + WiFi + Classroom + email); Python engine + optional AI narrative; Phases 1–4
 
-**Sales / Quotations:** [UEIPAB Sales Quotation Plan](documentation/UEIPAB_SALES_QUOTATION_PLAN.md) — `ueipab_sales` module + product-backed quote engine (3 llamados 2026-2027, comunicado 10/06/2026); Glenda `ACTION:QUOTE` + Sales team UI; PDF "Acuerdo de Inscripción" (Relación pattern); status: PLANNING, testing-first; blocked on 2 discount-stacking decisions
+**Sales / Quotations:** [UEIPAB Sales Quotation Plan](documentation/UEIPAB_SALES_QUOTATION_PLAN.md) — `ueipab_sales` module + product-backed quote engine (3 llamados 2026-2027, comunicado 10/06/2026); Glenda `ACTION:QUOTE` + Sales team UI; PDF "Acuerdo de Inscripción" (Relación pattern); status: VALIDATED in testing (live Telegram quotes S00007/S00008, totals exact); prod deployment runbook ready (plan §11) + `scripts/prod_post_deploy_ueipab_sales.py`
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 
