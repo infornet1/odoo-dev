@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_enrollment_journey_support,enrollment.journey support,model_enrollment_journey,group_enrollment_support,1,1,1,1
+access_enrollment_journey_student_support,enrollment.journey.student support,model_enrollment_journey_student,group_enrollment_support,1,1,1,1
+access_enrollment_journey_user,enrollment.journey user,model_enrollment_journey,base.group_user,1,0,0,0
+access_enrollment_journey_student_user,enrollment.journey.student user,model_enrollment_journey_student,base.group_user,1,0,0,0
