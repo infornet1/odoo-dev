@@ -195,6 +195,178 @@
                             pagos@ueipab.edu.ve
                         </p>
                     </div>
+
+                    <!-- ============ PAGE 2: Términos y Condiciones (anexo vinculante) ============ -->
+                    <div class="page" style="page-break-before: always; font-size: 7.2pt; line-height: 1.15; color: #222; text-align: justify;">
+
+                        <!-- Header -->
+                        <table style="width: 100%; margin-bottom: 2px;">
+                            <tr>
+                                <td style="width: 12%; vertical-align: middle; text-align: center; padding: 4px;">
+                                    <img t-att-src="image_data_uri(report['company'].logo)"
+                                         style="max-height: 34px; max-width: 34px; display: block; margin: 0 auto;"/>
+                                </td>
+                                <td style="width: 64%; text-align: center; vertical-align: middle;">
+                                    <h4 style="margin: 0; font-size: 10.5pt;">TÉRMINOS Y CONDICIONES DEL CONVENIO DE PAGO</h4>
+                                    <p style="margin: 1px 0 0 0; font-size: 8pt; font-weight: bold; color: #444;">
+                                        (Anexo Vinculante al Acuerdo de Inscripción)
+                                    </p>
+                                </td>
+                                <td style="width: 24%; text-align: right; vertical-align: middle; font-size: 7.2pt; color: #444;">
+                                    <strong>Ref:</strong> <span t-esc="report['order'].name"/><br/>
+                                    <strong>Fecha:</strong> <span t-esc="report['date_str']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin: 0 0 3px 0; font-size: 7.2pt;">
+                            Los presentes Términos y Condiciones regulan el Convenio Especial de Pago para la
+                            Prestación de Servicio Educativo y Actividades Extracurriculares correspondiente al
+                            Período Escolar 2026-2027. Al firmar el documento antecedente denominado
+                            "Acuerdo de Inscripción", el REPRESENTANTE declara conocer, comprender y aceptar
+                            sin reservas las siguientes estipulaciones:
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">1. INTEGRACIÓN DE DATOS Y VALIDEZ</p>
+                        <p style="margin: 0;">
+                            Se establece formalmente que la identificación de la institución (EL PRESTADOR DE
+                            SERVICIOS), los datos de identidad y contacto del REPRESENTANTE, la identificación
+                            del o los ESTUDIANTES, así como los montos, conceptos y el cronograma de vencimientos,
+                            son única y exclusivamente los detallados en el encabezado y en la tabla
+                            "DETALLE DE COSTOS (USD) CONVENIO DE PAGO - FECHAS ACORDADAS" del Acuerdo de
+                            Inscripción antecedente, el cual forma un todo indivisible con este texto.
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">2. DEL OBJETO Y CRONOGRAMA DE COMPROMISO</p>
+                        <p style="margin: 0;">
+                            El servicio consistirá en instrucción académica adaptada a los parámetros del
+                            Ministerio del Poder Popular para la Educación. Como contraprestación, el
+                            REPRESENTANTE se obliga a pagar la matrícula, seguros, guías y mensualidades
+                            respetando estrictamente las fechas límite indicadas en la tabla de costos del
+                            Acuerdo (Inscripción, Mensualidad de Septiembre, Seguro Escolar, Guía de Inglés,
+                            Olimpiadas y Enciclopedia).
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">3. VIGENCIA Y CONDICIONES DE PROMOCIÓN</p>
+                        <ul style="margin: 0; padding-left: 14px;">
+                            <li><strong>Vigencia:</strong> El presente convenio rige desde el inicio del proceso
+                                hasta el mes de agosto de 2027, correspondiente al año escolar completo. No aplica
+                                la tácita reconducción ni prórrogas automáticas.</li>
+                            <li><strong>Validez de Tarifas:</strong> Las tarifas preferenciales acordadas son
+                                válidas únicamente si se paga dentro del plazo del llamado indicado en el Acuerdo
+                                (según Promo del 31/07/2026). Cumplido el plazo sin concretarse el pago, se aplicarán las
+                                tarifas regulares vigentes.</li>
+                        </ul>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">4. POLÍTICA DE FACTURACIÓN, DESCUENTOS Y MONEDA</p>
+                        <ul style="margin: 0; padding-left: 14px;">
+                            <li><strong>Moneda de Cuenta:</strong> Todos los montos están expresados en dólares
+                                estadounidenses (USD) y deberán ser pagados en bolívares a la tasa oficial del
+                                Banco Central de Venezuela (BCV) del día del pago, o en divisas.</li>
+                            <li><strong>Solvencia Previa:</strong> La validez de este convenio requiere
+                                obligatoriamente que el Representante se encuentre solvente al menos con el mes
+                                de junio de 2026.</li>
+                            <li><strong>Fin de Excepciones:</strong> De conformidad con las condiciones de la
+                                institución, a partir del 01/09/2026 quedan descontinuadas la modalidad de
+                                facturación a crédito y las excepciones de descuento discrecional. El
+                                incumplimiento o mora anulará de inmediato cualquier tarifa preferencial por
+                                hermanos o convenios especiales.</li>
+                        </ul>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">5. CANALES DE PAGO AUTORIZADOS</p>
+                        <p style="margin: 0 0 2px 0;">
+                            Los pagos se realizarán a nombre de <strong>Instituto Privado Andrés Bello C.A.
+                            (RIF J-080086171)</strong> a través de transferencia bancaria, depósito corriente,
+                            Pago Móvil o mediante la plataforma de financiamiento digital autorizada:
+                        </p>
+                        <table style="width: 100%; font-size: 6.8pt; margin: 1px 0 2px 0; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #e3f2fd;">
+                                    <th style="width: 28%; border: 1px solid #bbb; padding: 1px 5px; text-align: left;">Banco</th>
+                                    <th style="width: 44%; border: 1px solid #bbb; padding: 1px 5px; text-align: left;">Cuenta Corriente</th>
+                                    <th style="width: 28%; border: 1px solid #bbb; padding: 1px 5px; text-align: left;">Pago Móvil</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="border: 1px solid #bbb; padding: 1px 5px;">Banco Plaza (0138)</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0138-0032-47-0320013870</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0414-2337463</td></tr>
+                                <tr><td style="border: 1px solid #bbb; padding: 1px 5px;">Banco Mercantil (0105)</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0105-0069-93-1069377856</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0414-1906296</td></tr>
+                                <tr><td style="border: 1px solid #bbb; padding: 1px 5px;">Bancamiga (0172)</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0172-0702-40-7024953106</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0414-4375222</td></tr>
+                                <tr><td style="border: 1px solid #bbb; padding: 1px 5px;">Banco Banplus (0174)</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0174-0127-12-1274138559</td><td style="border: 1px solid #bbb; padding: 1px 5px;">0414-1906296</td></tr>
+                                <tr>
+                                    <td style="border: 1px solid #bbb; padding: 1px 5px;"><strong>Cashea</strong></td>
+                                    <td colspan="2" style="border: 1px solid #bbb; padding: 1px 5px;">Pagos y cuotas financiadas a través de la aplicación móvil
+                                        (sujeto a las condiciones de la plataforma y validación en las taquillas
+                                        de la institución).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">6. RETIRO ANTICIPADO Y MOROSIDAD</p>
+                        <ul style="margin: 0; padding-left: 14px;">
+                            <li><strong>Retiro:</strong> Si el Representante decide retirar al alumno antes de
+                                finalizar el año, deberá cancelar todas las mensualidades causadas hasta la fecha
+                                del trámite formal. No se procesará el retiro ni se liberará documentación
+                                definitiva si existen saldos deudores.</li>
+                            <li><strong>Cobranza:</strong> Las notificaciones ordinarias de cobro se realizarán
+                                por los canales informales y formales aportados en el Acuerdo (Email, WhatsApp).
+                                En caso de mora prolongada, el caso pasará al Departamento Legal, corriendo el
+                                Representante con los costos y honorarios generados.</li>
+                            <li><strong>Reserva de Admisión:</strong> La morosidad reiterada facultará a la
+                                institución a reservarse el derecho de inscripción para el próximo periodo escolar
+                                (2027-2028), por cuanto la falta de pago afecta directamente los costos operativos
+                                y la estructura de personal del plantel.</li>
+                        </ul>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">7. PROTECCIÓN DE LA CONTINUIDAD PEDAGÓGICA (LOPNNA)</p>
+                        <p style="margin: 0;">
+                            En situaciones de atraso persistente, EL PRESTADOR DE SERVICIOS podrá remitir el caso
+                            a los órganos competentes (Defensoría del Pueblo, Defensoría Escolar, CEDNNA y SUNDDE)
+                            para evaluar la realidad socioeconómica familiar y dictar las medidas que garanticen
+                            los derechos consagrados en los Arts. 54 y 55 de la LOPNNA, sin menoscabo del derecho
+                            de la institución a exigir la contraprestación de su servicio privado.
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">8. AJUSTES ARANCELARIOS</p>
+                        <p style="margin: 0;">
+                            Los montos de las mensualidades podrán ser revisados y modificados durante el año
+                            escolar por la Asamblea del Consejo Educativo, únicamente cuando existan cambios
+                            macroeconómicos, políticas cambiarias nacionales o leyes de la República que afecten
+                            directamente la estructura de costos de la institución.
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">9. NOTIFICACIONES, DOMICILIO Y JURISDICCIÓN</p>
+                        <p style="margin: 0;">
+                            El Representante convalida el número telefónico y el correo electrónico registrados
+                            en el Acuerdo de Inscripción antecedente como sus domicilios electrónicos legales para
+                            toda citación o notificación. Para todos los efectos derivados de este contrato, las
+                            partes eligen de forma exclusiva y excluyente como domicilio especial a la ciudad de
+                            El Tigre, Municipio Simón Rodríguez del Estado Anzoátegui, a la jurisdicción de cuyos
+                            tribunales declaran someterse expresamente.
+                        </p>
+
+                        <!-- Declaración de aceptación -->
+                        <div style="border: 1px solid #1565c0; border-radius: 4px; padding: 4px 8px; margin-top: 5px; background-color: #e3f2fd; font-size: 7.2pt;">
+                            <strong>DECLARACIÓN DE ACEPTACIÓN:</strong>
+                            Al estampar la firma en el documento principal "Acuerdo de Inscripción" (identificado
+                            con el número de control correlativo impreso en el mismo, Ref.
+                            <strong t-esc="report['order'].name"/>), el Representante ratifica que ha leído de
+                            manera detenida, comprende y acepta vincularse jurídicamente bajo los presentes
+                            Términos y Condiciones, manifestando su conformidad y procediendo a la colocación de
+                            sus firmas y huellas dactilares en el respectivo acuerdo.
+                            <table style="width: 100%; margin-top: 3px;">
+                                <tr>
+                                    <td style="font-size: 6.8pt; color: #888; text-align: left; vertical-align: bottom;">
+                                        Anexo de Términos y Condiciones ·
+                                        <span t-esc="report['order'].name"/> ·
+                                        pagos@ueipab.edu.ve
+                                    </td>
+                                    <td style="font-size: 7.8pt; text-align: right; vertical-align: bottom;">
+                                        Iniciales del Representante: ______________
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </t>
             </t>
         </t>
