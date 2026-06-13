@@ -463,3 +463,45 @@ No version bump needed on `ueipab_payroll_enhancements`.
 - [Payslip ACK System](PAYSLIP_ACKNOWLEDGMENT_SYSTEM.md) — ACK pattern to mirror
 - [Batch Email Wizard](BATCH_EMAIL_WIZARD.md) — sending pattern reference
 - [Changelog](CHANGELOG.md)
+
+---
+
+## Appendix A — Attendance Daily Alert Operational Reference
+
+**Script:** `scripts/attendance_daily_alert.py`
+
+**Cron schedule (`/etc/cron.d/attendance_daily_alert`):**
+- `30 11 * * 1-5` — morning 11:30 VET: recap yesterday (no attendance / missing exit / <5h) → HTML email to employee CC recursoshumanos@. Skips if yesterday was weekend or holiday.
+- `30 23 * * 1-5` — evening 23:30 VET: employees with check_in but no check_out → SSH to Router 2 (`172.28.10.10` ZeroTier) → Mikrotik hotspot logout log. WiFi found + <20:00 VET + after check_in → write that time. Fallback → 14:00 VET (18:00 UTC). No email sent.
+
+Special-schedule employees (ids 571/606/610) skipped entirely in both modes.
+
+**State file:** `attendance_daily_alert_state.json` — keys `morning_DATE_EMPID` / `evening_DATE_EMPID`; entries >14 days pruned. WiFi coverage: 8/45 employees in `payroll_db.wifi_hotspot_users`.
+
+**Correction button:** `get_fix_url_for_employee(emp_id, date)` looks up matching `hr.attendance.report` (state=sent/draft) → injects "📝 Solicitar Corrección" link to `/attendance-fix/<token>`. Falls back to plain card if no report. CC `recursoshumanos@` via `email_cc`.
+
+**Attendance record source tracing:** `hr_attendance.in_mode` / `out_mode` fields: `kiosk` / `systray` / `manual` / empty (sync scripts). Also `in_ip_address`, `in_browser`, `create_uid=4` (public/kiosk). Timestamps = server-side UTC. For kiosk records: production Odoo server's clock at HTTP POST receipt.
+
+---
+
+## Appendix B — Correction Wizard (v6.21–6.23)
+
+**Rejection wizard (v6.21):** Clicking ❌ Rechazar on `hr.attendance.correction` opens `hr.attendance.rejection.wizard`. Manager types optional reason → `action_reject(reason=...)` writes it before firing email → employee receives red "Observación de RRHH" block. `rejection_reason` on form is `readonly=1` (audit only).
+
+**CC policy (v6.22):** All correction events (submit/approve/reject) CC `recursoshumanos@` + `arcides.arzola@` via `_build_cc()`. Guard: if ARCIDES is the employee, omit from CC. `email_values={'email_cc': self._build_cc()}` overrides template's own CC.
+
+**Double-submit guard (v6.23):** `/attendance-fix/<token>` JS disables submit button + shows bottom banner on first click — prevents race-condition duplicate `hr.attendance.correction` records from double-taps.
+
+---
+
+## Appendix C — Biweekly Report Wizard Technical Patterns (v6.4+)
+
+- **Employee default:** `_get_payroll_employees()` — latest closed `hr.payslip.run` employees (e.g. MAYO15 = 44). Fallback: `contract_ids.state='open'`. File: `wizard/hr_attendance_report_wizard.py`
+- **Resend skips acknowledged:** `action_resend_reports()` domain includes `('state','!=','acknowledged')`. Never re-emails employees who already confirmed.
+- **No UI timeout:** `force_send=False` in `_send_emails()` — emails queue as `state='outgoing'`, mail queue cron delivers. Before: 44 × 2.5s = 110s → HTTP worker killed.
+- **Mail queue cron:** id=3 in production. Manual trigger: `execute_kw(..., 'ir.cron', 'method_direct_trigger', [[3]])`.
+- **ACK CC (v6.4):** `_notify_rrhh()` fires on `/attendance-ack/<token>` only. CC to `recursoshumanos@` on ACK confirmation, NOT on reminder send.
+- **States:** `draft` → `sent` (queued) → `acknowledged`. `is_historical` records auto-acknowledged on create.
+- **ORM query fields:** `date_from`, `date_to`, `month` (int), `year` (int), `quincena` (`'1'`/`'2'`). NOT `period_start`/`period_end` — raise `ValueError`.
+- **Production email template:** id=53 (`ueipab_attendance_report.email_template_attendance_report`).
+- **Test account exclusion:** "Administrador 3Dv" has duplicate `hr.employee` ids 574 and 764 (both `tdv.devs@gmail.com`). Exclude: `('employee_id','not in',[574,764])`.

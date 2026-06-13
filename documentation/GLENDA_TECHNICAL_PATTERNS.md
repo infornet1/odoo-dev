@@ -95,3 +95,43 @@ Reference for all Glenda-specific implementation details. See also [AI_AGENT_MOD
 - **Tarifas 2025-2026 (hasta 31 ago):** $197,38 regular / $162,39 pronto pago (10 primeros días)
 - **Tarifas 2026-2027 (inscripción anticipada hasta 31 jul):** inscripción $187,51 / mensualidad sep $197,38; puede prepagar meses adicionales a $197,38 c/u con descuentos hermanos
 - **Nueva mensualidad desde 1 sep 2026:** $218,88 regular / $207,93 pronto pago (5% dto) — preliminar
+
+---
+
+## Freescout Pagos@ Bridge (Feature #74) — Technical Patterns
+
+**`pagos_faq_email_checker.py`** — 100% REST API (no pymysql). `fs_get_conversations_page()` + `fs_get_conversation_detail()`. Never replies to customers directly; both `responder` and `escalar` actions post **internal notes only**:
+- `responder` → "💬 Borrador de respuesta sugerida por Glenda FAQ" note; human reviews and sends manually. Subject prefix: `[FAQ-AI]`.
+- `escalar` → "⚠️ Escalación sugerida por Glenda FAQ" note with reason + detail. Subject prefix: `[FAQ-AI][ESCALAR]`.
+
+**Knowledge block (2026-06-08):** Opción A confirmed ($218,88/$207,93), voting/timeline sections removed; early-bird offer leads responses about 2026-2027 rates.
+
+**`pagos_receipt_processor.py`** key patterns:
+- **Email lookup:** `ilike` (not `=ilike`) — Odoo stores multi-email as `a@x.com;b@x.com`; exact match fails (v57.10).
+- **Google Sheet fallback:** email miss → `sheets_lookup_by_email()` checks `Customers!B2:J` → `odoo_find_partner_by_name()`. Spreadsheet: `1Oi3Zw1OLFPVuHMe9rJ7cXKSD7_itHRF0bL4oBkKBPzA`.
+- **Advance payment:** invoice match fails + balance=0 → `is_advance_payment=True`; payment created+confirmed via `action_post()` (v57.11).
+- **Bridge upsert:** `upsert_freescout_task()` at every non-skipped exit.
+- **`action_reprocess()` (v57.11/v57.12):** advance-payment path → GPT-4o-mini Vision on thread image.
+- **`_parse_monto(v)`:** normalises Venezuelan comma-decimal (`'85.039,58'` → `85039.58`).
+- **`_load_fs_config()`:** reads `ir.config_parameter`; file fallback dev-only.
+
+**`ai.agent.freescout.task`** — UI: AI Agent → Operaciones → Pagos Freescout. Status: pending/identified/no_partner/no_receipt/duplicate/success/error.
+
+**`sync_customers_sheet.py`** — syncs `Customers!B2:J` → `school.customers_sheet_json` (email→name). Cron: 11:30 UTC.
+
+---
+
+## Absence Notification System (Feature #58)
+
+**Script:** `scripts/absence_processor.py` | **Cron:** `/etc/cron.d/absence_processor` — weekdays 06:00–17:00 VET
+
+- **Entry:** email parent→soporte@ OR WA/Telegram `ACTION:NOTIFY_ABSENCE:name|grade|reason` → Freescout conv → cron
+- **Per-conv:** assign Josefina (user_id=8), CC soporte@+arcides.arzola@+norka.larosa@(media)/david.hernandez@(prim)+teachers, OdooBot DM, 24h follow-up
+- **Teacher lookup:** `control_asistencias` DB `profesor_seccion` JOIN `usuario`; grade→`id_grado` via `_GRADE_PATTERNS`
+- **Detection:** keyword pre-filter → Haiku extracts fields; failure → skip (no false positives). Marker: `[AUSENCIA]` prefix.
+
+## Glenda School Account Help (Feature #59)
+
+**Action:** `ACTION:SCHOOL_ACCOUNT_HELP:cedula|student_name|grade` — 3-factor verify: (1) partner by phone/Telegram; (2) cédula matches `res.partner.vat` (mismatch → deny); (3) student fuzzy-matched in `school.student_directory_json`.
+
+**Directory:** `scripts/sync_google_directory.py --live`; cron 07:00 VET; 224 accounts. Name: exact → word-overlap ≥2. Cédula: strip `-`, `V/E/J/G/P`. Akdemia reset: `https://edge.akdemia.com/login#resetPasswordModal`; FS UNASSIGNED soporte@.
