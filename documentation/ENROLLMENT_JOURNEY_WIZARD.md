@@ -1,45 +1,70 @@
 # Enrollment Journey Wizard — 2026-2027 Academic Period
 
-**Status:** IN PROGRESS | **Created:** 2026-06-12 | **Updated:** 2026-06-13 (v0.3.0) | **Owner:** Gustavo Perdomo
+**Status:** IN PROGRESS | **Created:** 2026-06-12 | **Updated:** 2026-06-13 (v0.4.0) | **Owner:** Gustavo Perdomo
 **Style reference:** https://odoo.ueipab.edu.ve/mora-policy/ (`/var/www/mora/index.html` — Poppins, navy `#1a2c5b` / gold `#f0c400` / teal palette, `.timeline` vertical component)
 
 ---
 
 ## 1. Concept
 
-A customer-facing **web timeline page** where each parent (Representante) can see, in real time, where their family stands in the 2026-2027 enrollment process — and what comes next. Internally it is a **macro follow-up wizard**: each of the 6 steps is *cleared* by the responsible team (hybrid: manual clearance by Customer Support + soft automatic green validations where Odoo/Google data can confirm it), and the customer's page reflects progress instantly.
+A customer-facing **web timeline page** where each parent (Representante) can see, in real time, where their family stands in the 2026-2027 enrollment process — and what comes next. Internally it is a **macro follow-up wizard**: each of the 9 steps is *cleared* by the responsible team (hybrid: manual clearance by Customer Support + soft automatic green validations where Odoo/Google data can confirm it), and the customer's page reflects progress instantly.
 
 **Glenda is always present** on the page as a floating AI assistant bubble — one click away for any question about the enrollment process.
 
 ```
 Parent opens /enrollment-journey/<token>
-┌──────────────────────────────────────────────┐
-│  🏫 Proceso de Inscripción 2026-2027          │
-│  Familia: PEREZ — 2 estudiantes               │
-│                                              │
-│  ✅ 1. Cotización confirmada                  │
-│  ✅ 2. Acuerdo firmado                        │
-│  🔵 3. Registro Akdemia          ← estás aquí │
-│  ⚪ 4. Cuenta de correo @ueipab               │
-│  ⚪ 5. Google Classroom                       │
-│  ⚪ 6. Contrato educativo final               │
-│                                              │
-│                      [🤖 Glenda — pregúntame] │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  🏫 Proceso de Inscripción 2026-2027                  │
+│  Familia: PEREZ — 2 estudiantes                       │
+│                                                      │
+│  🏛️ INSCRIPCIÓN FORMAL                                │
+│  ✅ 1. Cotización confirmada                          │
+│  ✅ 2. Acuerdo de Inscripción firmado                 │
+│  📋 3. Contrato Educativo firmado (en custodia)       │
+│                                                      │
+│  💻 ACTIVACIÓN DE PLATAFORMAS                         │
+│  ✅ 4. Registro Akdemia completo                      │
+│  🔵 5. Cuenta Dawere habilitada     ← estás aquí      │
+│  ⚪ 6. Cuenta @ueipab.edu.ve actualizada              │
+│  ⚪ 7. Google Classroom                               │
+│                                                      │
+│  📁 CIERRE ADMINISTRATIVO                             │
+│  ⚪ 8. Guía de Inglés entregada                       │
+│  ⚪ 9. Expediente físico actualizado                  │
+│                                                      │
+│                          [🤖 Glenda — pregúntame]    │
+└──────────────────────────────────────────────────────┘
 ```
+
+**Hard gate:** Steps 4-9 cannot be marked done while any Block 1 step (1-3) is incomplete — `UserError` raised.
 
 ---
 
-## 2. The 6 Steps — owners, soft checks, clearance rules
+## 2. The 9 Steps — owners, soft checks, clearance rules
 
-| # | Step (customer-facing label) | Cleared by | Soft auto-validation (green check source) | Manual clearance |
-|---|------------------------------|-----------|--------------------------------------------|------------------|
-| 1 | **Cotización confirmada** — Sales order confirmed | Auto | `sale.order.state == 'sale'` (the family's enrollment quote, `ueipab_sales` engine) | Override allowed |
-| 2 | **Acuerdo de Inscripción firmado** — customer signs off the quotation | Support | Phase 1: portal signature is OFF (`require_signature=False`, read-only portal). Soft check available later via `sale.order.signed_on` if we enable Odoo portal signature. Today the artifact = printed/PDF Acuerdo v1.2.1 with initials on the T&C annex | ✅ Support confirms signed Acuerdo received (upload scan optional) |
-| 3 | **Registro Akdemia completo** — parent finished all Akdemia platform steps | Support | Future: akdemia_scraper cross-check (student appears active in scraped 2026-2027 data) | ✅ Support confirms after verifying in Akdemia |
-| 4 | **Cuenta de correo @ueipab.edu.ve** — Google account updated to correct OU, or new account created | IT/Support | `school.student_directory_json` (sync_google_directory.py, 224 accts, cron 07:00 VET): student email exists → green. OU correctness = manual | ✅ IT confirms OU move / new account |
-| 5 | **Google Classroom** — student enrolled per grade/class (each teacher has own Classroom) | IT/Academic | Future: Google Classroom API roster check per course. Phase 1: none | ✅ Academic coordinator confirms |
-| 6 | **Contrato educativo final firmado** — signed once the quotation payment schedule is fully paid | Finance/Support | Payment plan invoices all paid: every posted `account.move` linked to the order has `amount_residual == 0` AND no remaining unposted tranche → green "payment complete". Contract doc generated via odoo_api_bridge | ✅ Support confirms signed contract on file |
+### Block 1 — Inscripción Formal (support, single enrollment visit)
+
+| # | Step (customer-facing label) | Cleared by | Soft auto-validation | Manual clearance |
+|---|------------------------------|-----------|----------------------|------------------|
+| 1 | **Cotización confirmada** | Auto | `sale.order.state == 'sale'` | Override allowed |
+| 2 | **Acuerdo de Inscripción firmado** | Support | None (portal signature OFF) | ✅ Support confirms signed Acuerdo PDF received |
+| 3 | **Contrato Educativo firmado** | Support | Auto-release: all order invoices `amount_residual==0` | ✅ Support confirms signed contract on file; contract retained until payment plan complete |
+
+### Block 2 — Activación de Plataformas (IT + academic, 1-3 weeks after visit)
+
+| # | Step (customer-facing label) | Cleared by | Soft auto-validation | Manual clearance |
+|---|------------------------------|-----------|----------------------|------------------|
+| 4 | **Registro Akdemia completo** | Support | Future: akdemia_scraper cross-check | ✅ Support confirms in Akdemia |
+| 5 | **Cuenta Dawere habilitada** | IT | None | ✅ IT provisions account, sends credentials |
+| 6 | **Cuenta @ueipab.edu.ve actualizada** | IT | `school.student_directory_json` email exists | ✅ IT confirms OU move / new account |
+| 7 | **Google Classroom** | IT/Academic | Future: Classroom API roster check | ✅ Academic coordinator confirms |
+
+### Block 3 — Cierre Administrativo (support/admin, within first week)
+
+| # | Step (customer-facing label) | Cleared by | Soft auto-validation | Manual clearance |
+|---|------------------------------|-----------|----------------------|------------------|
+| 8 | **Guía de Inglés entregada** | Support | None | ✅ Support confirms guide handed to parent |
+| 9 | **Expediente físico actualizado** | Admin | None | ✅ Admin confirms physical file complete |
 
 **Step-state model (per step):** `pending` ⚪ → `in_progress` 🔵 → `done_auto` ✅ (soft check passed) / `done_manual` ✅ (cleared by staff) / `blocked` 🔴 (with reason shown to customer in soft language).
 
@@ -117,8 +142,9 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
 - [x] **Phase 3 — Customer page:** ✅ 2026-06-12 — `/enrollment-journey/<token>` (auth=public) mora-policy-styled: hero, animated progress bar, vertical timeline (green/pulsing blue/grey/amber states), student chips, Glenda FAB. Mobile-first. Live: http://dev.ueipab.edu.ve:8019/enrollment-journey/4f3c497f-7a41-428a-8896-b42fa224988f
 - [x] **Phase 4 — Glenda bubble:** ✅ 2026-06-12 — floating 🤖 FAB → slide-up card → Telegram deep link `t.me/GlendaUeipabBot?start=ENROLL_<token[:8]>`. Phase 1 complete; Glenda ENROLL_ handler + journey context injection = Phase 4b (pending).
 - [x] **Phase 5 — Step 6 contract (QWeb PDF):** ✅ 2026-06-13 — 2-page "Contrato Servicio Educativo Privado - Orden de Servicio" QWeb PDF bound to `enrollment.journey`. Page 1: institution + representante + students table (name/cédula/grade/@ueipab email) + insurance section (conditional) + service summary + dual signatures. Page 2-3: full 10-clause T&C verbatim (Términos y Condiciones de la Prestación de Servicios Educativos). Auto-sequence `CSE-2627-XXXX` assigned on first print. Snapshot locked at signing (contract_number + contract_date). v3 PDF reviewed and approved by Gustavo 2026-06-13.
-- [x] **Phase 5b — Contract escrow workflow (Option B):** ✅ 2026-06-13 — `contract_retained` (Boolean) + `contract_released_date` (Date) on `enrollment.journey`. Step 6 clear → auto `contract_retained=True`. Staff "📋 Liberar contrato" button → manual release. Soft-check hook: all `order_id.invoice_ids` `amount_residual==0` → auto-release. Customer page: retained → amber 📋 "en custodia" card; released → green ✓ + 🎉 celebration. Demo journey (id=1) shows retained state.
-- [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 4 (directory JSON) + step 6 contract-release cron = pending.
+- [x] **Phase 5b — Contract escrow workflow (Option B):** ✅ 2026-06-13 — `contract_retained` (Boolean) + `contract_released_date` (Date) on `enrollment.journey`. Step 3 clear → auto `contract_retained=True`. Staff "📋 Liberar contrato" button → manual release. Soft-check hook: all `order_id.invoice_ids` `amount_residual==0` → auto-release. Customer page: retained → amber 📋 "en custodia" card; released → green ✓ + 🎉 celebration.
+- [x] **v0.4.0 — 9-step 3-block workflow:** ✅ 2026-06-13 — Restructured from 6 → 9 steps in 3 blocks. `BLOCK_DEFS` + `BLOCK1_STEPS` constants added. Hard gate prevents Block 2/3 clearance until Block 1 complete. Customer page renders block section headers. Contract escrow moved to step 3 (enrollment visit, not end). New steps 5 (Dawere), 8 (Guía Inglés), 9 (Expediente). DB verified: 27 step columns. Demo journey (id=1) reset: Block 1 done + retained, step 4 done, steps 5-9 pending (44%).
+- [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 6 (directory JSON) + step 3 contract-release cron = pending.
 - [ ] **Phase 4b — Glenda ENROLL_ handler:** `_handle_telegram_start(ENROLL_<token>)` → inject journey step context into prompt so Glenda answers "¿qué me falta?" precisely.
 - [ ] **Phase 1b — Student import:** "📥 Importar estudiantes" button — publish `school.akdemia_students_json` param (extend existing `akdemia_api_sync.py` cron), match partner VAT → guardian cédula, auto-fill student lines + grade auto-promote (+1 for 2026-2027). Staff editable before signing.
 - [ ] **Phase 6 — Comms:** journey link in quote-confirmation message (Glenda/email); optional step-completion push notifications.
