@@ -40,11 +40,23 @@ class EnrollmentJourneyPage(http.Controller):
 
         # timeline nodes
         nodes = []
-        current_done = True
         for idx, (prefix, title, hint) in enumerate(STEP_DEFS, start=1):
             state = j[prefix + '_state']
             cleared_at = j[prefix + '_cleared_at']
-            if state in DONE_STATES:
+            if state in DONE_STATES and idx == 6:
+                if j.contract_retained:
+                    cls, icon = 'retained', '📋'
+                    meta = 'Contrato firmado — en custodia'
+                    body = ('<p class="step-hint retained-msg">'
+                            'Tu contrato fue firmado y está en resguardo en nuestras instalaciones. '
+                            'Se te entregará al completar el cronograma de pagos establecido.'
+                            '</p>')
+                else:
+                    rel_date = j.contract_released_date
+                    cls, icon = 'done', '✓'
+                    meta = ('Contrato entregado · %s' % rel_date.strftime('%d/%m/%Y')) if rel_date else 'Contrato entregado'
+                    body = '<p class="step-hint">🎉 ¡Felicitaciones! Tu proceso de inscripción 2026-2027 está completo.</p>'
+            elif state in DONE_STATES:
                 cls, icon = 'done', '✓'
                 meta = ('Completado · %s' % cleared_at.strftime('%d/%m/%Y')) if cleared_at else 'Completado'
                 body = ''
@@ -135,6 +147,11 @@ box-shadow:0 4px 18px rgba(26,44,91,.08)}}
 padding:3px 10px;border-radius:999px}}
 .tl-meta{{font-size:12px;color:var(--muted);margin-top:2px}}
 .done .tl-meta{{color:var(--green);font-weight:500}}
+.retained .tl-dot{{background:var(--amber);color:#fff;font-size:20px}}
+.retained .tl-card{{border:2px solid var(--amber)}}
+.retained .tl-meta{{color:var(--amber);font-weight:500}}
+.retained-msg{{font-size:13.5px;margin-top:8px;color:#7d5000;background:#fff8e6;
+border-left:3px solid var(--amber);padding:8px 12px;border-radius:0 8px 8px 0}}
 .step-hint{{font-size:13.5px;margin-top:8px;color:var(--text)}}
 footer{{text-align:center;font-size:12.5px;color:var(--muted);padding:24px;line-height:1.8}}
 footer a{{color:var(--blue);text-decoration:none}}

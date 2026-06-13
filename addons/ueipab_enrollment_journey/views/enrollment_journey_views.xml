@@ -112,9 +112,17 @@
                                 <field name="step6_state"/>
                                 <field name="step6_cleared_by"/>
                                 <field name="step6_cleared_at"/>
-                                <button name="action_clear_step" type="object" string="✅ Completar"
+                                <field name="contract_retained" readonly="1"
+                                       invisible="step6_state not in ('done_auto','done_manual')"/>
+                                <field name="contract_released_date" readonly="1"
+                                       invisible="contract_retained or step6_state not in ('done_auto','done_manual')"/>
+                                <button name="action_clear_step" type="object" string="✅ Contrato firmado (custodia)"
                                         context="{'step': 6}" class="btn-success"
                                         invisible="step6_state in ('done_auto','done_manual')"/>
+                                <button name="action_release_contract" type="object"
+                                        string="📋 Liberar contrato al Representante"
+                                        class="btn-primary"
+                                        invisible="not contract_retained or step6_state not in ('done_auto','done_manual')"/>
                                 <button name="action_reopen_step" type="object" string="↩️ Reabrir"
                                         context="{'step': 6}"
                                         invisible="step6_state not in ('done_auto','done_manual')"/>

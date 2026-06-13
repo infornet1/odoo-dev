@@ -46,6 +46,9 @@ class EnrollmentJourney(models.Model):
 
     contract_number = fields.Char(string='Nro. de Control', copy=False, readonly=True)
     contract_date = fields.Date(string='Fecha del Contrato', copy=False)
+    contract_retained = fields.Boolean(string='Contrato en custodia', default=False,
+                                       help='El contrato fue firmado pero permanece retenido hasta completar el cronograma de pagos.')
+    contract_released_date = fields.Date(string='Fecha de entrega del contrato', readonly=True, copy=False)
 
     step1_state = fields.Selection(STEP_STATES, default='pending', string='1. Cotización')
     step2_state = fields.Selection(STEP_STATES, default='pending', string='2. Acuerdo firmado')
@@ -111,7 +114,19 @@ class EnrollmentJourney(models.Model):
         if state in DONE_STATES:
             vals[prefix + '_cleared_by'] = self.env.uid
             vals[prefix + '_cleared_at'] = fields.Datetime.now()
+            if idx == 6:
+                vals['contract_retained'] = True
+        elif idx == 6 and state not in DONE_STATES:
+            vals['contract_retained'] = False
+            vals['contract_released_date'] = False
         self.write(vals)
+
+    def action_release_contract(self):
+        self.ensure_one()
+        self.write({
+            'contract_retained': False,
+            'contract_released_date': fields.Date.context_today(self),
+        })
 
     def action_clear_step(self):
         self._set_step(self.env.context.get('step', 0), 'done_manual')
@@ -132,13 +147,24 @@ class EnrollmentJourney(models.Model):
         return self.env.ref(
             'ueipab_enrollment_journey.action_report_enrollment_contract').report_action(self)
 
-    # -- soft checks (skeleton: step 1 only; steps 4/6 in Phase 2) ----
+    # -- soft checks (step 1 + step 6 contract release) ----------------
     def action_run_soft_checks(self):
         for rec in self:
+            # Step 1: order confirmed
             if rec.order_id and rec.order_id.state == 'sale' \
                     and rec.step1_state not in DONE_STATES:
                 rec.step1_state = 'done_auto'
                 rec.step1_cleared_at = fields.Datetime.now()
+
+            # Step 6 release: all posted invoices fully paid → release contract from custody
+            if rec.step6_state in DONE_STATES and rec.contract_retained and rec.order_id:
+                invoices = rec.order_id.invoice_ids.filtered(
+                    lambda inv: inv.state == 'posted'
+                    and inv.move_type in ('out_invoice', 'out_refund')
+                )
+                if invoices and all(inv.amount_residual == 0 for inv in invoices):
+                    rec.contract_retained = False
+                    rec.contract_released_date = fields.Date.context_today(rec)
 
 
 class EnrollmentJourneyStudent(models.Model):
