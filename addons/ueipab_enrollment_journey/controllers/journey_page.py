@@ -5,7 +5,7 @@ from odoo import http
 from odoo.http import request
 
 from odoo.addons.ueipab_enrollment_journey.models.enrollment_journey import (
-    STEP_DEFS, DONE_STATES,
+    STEP_DEFS, BLOCK_DEFS, DONE_STATES,
 )
 
 TELEGRAM_BOT = 'GlendaUeipabBot'
@@ -31,59 +31,83 @@ class EnrollmentJourneyPage(http.Controller):
         n_students = len(students) or (
             int(sum(l.product_uom_qty for l in j.order_id.order_line[:1])) if j.order_id else 0)
 
-        # student chips
         student_chips = ''.join(
             '<span class="chip">🎓 %s%s</span>' % (
                 escape(s.name), ' · %s' % escape(s.grade) if s.grade else '')
             for s in students
         ) or '<span class="chip">🎓 %d estudiante(s)</span>' % n_students
 
-        # timeline nodes
-        nodes = []
+        # Build step data indexed by step number (1-9)
+        step_data = {}
         for idx, (prefix, title, hint) in enumerate(STEP_DEFS, start=1):
             state = j[prefix + '_state']
             cleared_at = j[prefix + '_cleared_at']
-            if state in DONE_STATES and idx == 6:
+
+            if state in DONE_STATES and idx == 3:
+                # Contract step — show escrow or released sub-state
                 if j.contract_retained:
-                    cls, icon = 'retained', '📋'
-                    meta = 'Contrato firmado — en custodia'
-                    body = ('<p class="step-hint retained-msg">'
-                            'Tu contrato fue firmado y está en resguardo en nuestras instalaciones. '
-                            'Se te entregará al completar el cronograma de pagos establecido.'
-                            '</p>')
+                    step_data[idx] = dict(
+                        cls='retained', icon='📋',
+                        title=title,
+                        meta='Contrato firmado — en custodia',
+                        body=('<p class="step-hint retained-msg">'
+                              'Tu contrato fue firmado y está en resguardo en nuestras instalaciones. '
+                              'Se te entregará al completar el plan de pagos establecido.'
+                              '</p>'),
+                    )
                 else:
                     rel_date = j.contract_released_date
-                    cls, icon = 'done', '✓'
-                    meta = ('Contrato entregado · %s' % rel_date.strftime('%d/%m/%Y')) if rel_date else 'Contrato entregado'
-                    body = '<p class="step-hint">🎉 ¡Felicitaciones! Tu proceso de inscripción 2026-2027 está completo.</p>'
+                    meta = ('Contrato entregado · %s' % rel_date.strftime('%d/%m/%Y')) \
+                        if rel_date else 'Contrato entregado'
+                    step_data[idx] = dict(
+                        cls='done', icon='✓',
+                        title=title,
+                        meta=meta,
+                        body='<p class="step-hint">🎉 Tu contrato ha sido entregado. ¡Inscripción formal completa!</p>',
+                    )
             elif state in DONE_STATES:
-                cls, icon = 'done', '✓'
                 meta = ('Completado · %s' % cleared_at.strftime('%d/%m/%Y')) if cleared_at else 'Completado'
-                body = ''
+                step_data[idx] = dict(cls='done', icon='✓', title=title, meta=meta, body='')
             elif idx == j.current_step:
-                cls, icon = 'current', str(idx)
-                meta = 'Paso actual'
-                body = '<p class="step-hint">%s</p>' % escape(hint)
+                step_data[idx] = dict(
+                    cls='current', icon=str(idx), title=title,
+                    meta='Paso actual',
+                    body='<p class="step-hint">%s</p>' % escape(hint),
+                )
             elif state == 'blocked':
-                cls, icon = 'blocked', '!'
-                meta = 'En revisión por nuestro equipo'
-                body = ''
+                step_data[idx] = dict(
+                    cls='blocked', icon='!', title=title,
+                    meta='En revisión por nuestro equipo', body='',
+                )
             else:
-                cls, icon = 'pending', str(idx)
-                meta = 'Próximamente'
-                body = ''
-            badge = '<span class="badge-here">ESTÁS AQUÍ</span>' if cls == 'current' else ''
-            nodes.append(f"""
-            <div class="tl-item {cls}">
-              <div class="tl-dot">{icon}</div>
+                step_data[idx] = dict(
+                    cls='pending', icon=str(idx), title=title,
+                    meta='Próximamente', body='',
+                )
+
+        # Render blocks with section headers
+        sections = []
+        for block_title, step_nums in BLOCK_DEFS:
+            nodes = []
+            for idx in step_nums:
+                d = step_data[idx]
+                badge = '<span class="badge-here">ESTÁS AQUÍ</span>' if d['cls'] == 'current' else ''
+                nodes.append(f"""
+            <div class="tl-item {d['cls']}">
+              <div class="tl-dot">{d['icon']}</div>
               <div class="tl-card">
-                <div class="tl-head"><h3>{idx}. {escape(title)}</h3>{badge}</div>
-                <div class="tl-meta">{meta}</div>
-                {body}
+                <div class="tl-head"><h3>{idx}. {escape(d['title'])}</h3>{badge}</div>
+                <div class="tl-meta">{d['meta']}</div>
+                {d['body']}
               </div>
             </div>""")
+            sections.append(f"""
+          <div class="block-section">
+            <div class="block-header">{escape(block_title)}</div>
+            <div class="timeline">{''.join(nodes)}</div>
+          </div>""")
 
-        timeline = ''.join(nodes)
+        timeline_html = ''.join(sections)
         tg_link = f'https://t.me/{TELEGRAM_BOT}?start=ENROLL_{j.access_token[:8]}'
 
         return f"""<!DOCTYPE html>
@@ -123,8 +147,13 @@ font-size:13px;font-weight:500;border-radius:999px;padding:4px 14px;margin:3px 6
 .progress-fill{{background:linear-gradient(90deg,var(--teal),var(--green));height:100%;border-radius:999px;
 width:{j.progress_pct}%;transition:width .6s}}
 .progress-label{{font-size:12px;color:var(--muted);margin-top:6px}}
+/* Block sections */
+.block-section{{margin-bottom:28px}}
+.block-header{{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.5px;
+text-transform:uppercase;padding:8px 4px 10px;border-bottom:2px solid #dce6f5;margin-bottom:16px}}
+/* Timeline */
 .timeline{{position:relative;padding-left:8px}}
-.tl-item{{position:relative;display:flex;gap:18px;padding-bottom:26px}}
+.tl-item{{position:relative;display:flex;gap:18px;padding-bottom:20px}}
 .tl-item::before{{content:'';position:absolute;left:21px;top:46px;bottom:0;width:3px;background:#d4deef}}
 .tl-item:last-child::before{{display:none}}
 .tl-item.done::before{{background:var(--green)}}
@@ -134,11 +163,13 @@ font-weight:700;font-size:16px;z-index:1;border:3px solid var(--white);box-shado
 .current .tl-dot{{background:var(--blue);color:#fff;animation:pulse 1.8s infinite}}
 .pending .tl-dot{{background:#cfd9ea;color:#7589a8}}
 .blocked .tl-dot{{background:var(--amber);color:#fff}}
+.retained .tl-dot{{background:var(--amber);color:#fff;font-size:20px}}
 @keyframes pulse{{0%{{box-shadow:0 0 0 0 rgba(36,113,163,.45)}}70%{{box-shadow:0 0 0 14px rgba(36,113,163,0)}}
 100%{{box-shadow:0 0 0 0 rgba(36,113,163,0)}}}}
 .tl-card{{flex:1;background:var(--white);border-radius:14px;padding:16px 20px;
 box-shadow:0 4px 18px rgba(26,44,91,.08)}}
 .current .tl-card{{border:2px solid var(--blue)}}
+.retained .tl-card{{border:2px solid var(--amber)}}
 .done .tl-card{{opacity:.92}}
 .pending .tl-card{{opacity:.65}}
 .tl-head{{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}}
@@ -147,15 +178,12 @@ box-shadow:0 4px 18px rgba(26,44,91,.08)}}
 padding:3px 10px;border-radius:999px}}
 .tl-meta{{font-size:12px;color:var(--muted);margin-top:2px}}
 .done .tl-meta{{color:var(--green);font-weight:500}}
-.retained .tl-dot{{background:var(--amber);color:#fff;font-size:20px}}
-.retained .tl-card{{border:2px solid var(--amber)}}
 .retained .tl-meta{{color:var(--amber);font-weight:500}}
+.step-hint{{font-size:13.5px;margin-top:8px;color:var(--text)}}
 .retained-msg{{font-size:13.5px;margin-top:8px;color:#7d5000;background:#fff8e6;
 border-left:3px solid var(--amber);padding:8px 12px;border-radius:0 8px 8px 0}}
-.step-hint{{font-size:13.5px;margin-top:8px;color:var(--text)}}
 footer{{text-align:center;font-size:12.5px;color:var(--muted);padding:24px;line-height:1.8}}
 footer a{{color:var(--blue);text-decoration:none}}
-/* Glenda bubble */
 .glenda-fab{{position:fixed;right:20px;bottom:20px;z-index:200;width:64px;height:64px;border-radius:50%;
 background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;
 font-size:30px;cursor:pointer;box-shadow:0 6px 24px rgba(26,44,91,.35);border:3px solid var(--white);
@@ -190,9 +218,9 @@ padding:10px;border-radius:10px;text-decoration:none}}
     <div class="yr">Año escolar {escape(j.academic_year)}{' · ' + escape(j.order_id.name) if j.order_id else ''}</div>
     {student_chips}
     <div class="progress-track"><div class="progress-fill"></div></div>
-    <div class="progress-label">{j.progress_pct}% completado — paso {j.current_step} de 6</div>
+    <div class="progress-label">{j.progress_pct}% completado — paso {j.current_step} de {len(STEP_DEFS)}</div>
   </div>
-  <div class="timeline">{timeline}</div>
+  {timeline_html}
 </div>
 <footer>
   ¿Dudas? Escríbenos a <a href="mailto:pagos@ueipab.edu.ve">pagos@ueipab.edu.ve</a>

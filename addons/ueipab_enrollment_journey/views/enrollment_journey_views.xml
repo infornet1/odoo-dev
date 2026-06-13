@@ -11,12 +11,16 @@
                 <field name="academic_year"/>
                 <field name="progress_pct" widget="progressbar"/>
                 <field name="current_step"/>
-                <field name="step1_state"/>
-                <field name="step2_state"/>
+                <field name="step1_state" optional="hide"/>
+                <field name="step2_state" optional="hide"/>
                 <field name="step3_state"/>
-                <field name="step4_state"/>
-                <field name="step5_state"/>
-                <field name="step6_state"/>
+                <field name="step4_state" optional="hide"/>
+                <field name="step5_state" optional="hide"/>
+                <field name="step6_state" optional="hide"/>
+                <field name="step7_state" optional="hide"/>
+                <field name="step8_state" optional="hide"/>
+                <field name="step9_state" optional="hide"/>
+                <field name="contract_retained" optional="hide"/>
             </tree>
         </field>
     </record>
@@ -53,6 +57,10 @@
                     </group>
                     <notebook>
                         <page string="Pasos">
+
+                            <!-- BLOQUE 1 — Inscripción Formal -->
+                            <separator string="🏛️ Bloque 1 — Inscripción Formal"/>
+
                             <group string="1. Cotización confirmada">
                                 <field name="step1_state"/>
                                 <field name="step1_cleared_by"/>
@@ -64,6 +72,7 @@
                                         context="{'step': 1}"
                                         invisible="step1_state not in ('done_auto','done_manual')"/>
                             </group>
+
                             <group string="2. Acuerdo de Inscripción firmado">
                                 <field name="step2_state"/>
                                 <field name="step2_cleared_by"/>
@@ -75,18 +84,32 @@
                                         context="{'step': 2}"
                                         invisible="step2_state not in ('done_auto','done_manual')"/>
                             </group>
-                            <group string="3. Registro Akdemia completo">
+
+                            <group string="3. Contrato Educativo firmado">
                                 <field name="step3_state"/>
                                 <field name="step3_cleared_by"/>
                                 <field name="step3_cleared_at"/>
-                                <button name="action_clear_step" type="object" string="✅ Completar"
+                                <field name="contract_retained" readonly="1"
+                                       invisible="step3_state not in ('done_auto','done_manual')"/>
+                                <field name="contract_released_date" readonly="1"
+                                       invisible="contract_retained or step3_state not in ('done_auto','done_manual')"/>
+                                <button name="action_clear_step" type="object"
+                                        string="✅ Contrato firmado (en custodia)"
                                         context="{'step': 3}" class="btn-success"
                                         invisible="step3_state in ('done_auto','done_manual')"/>
+                                <button name="action_release_contract" type="object"
+                                        string="📋 Liberar contrato al Representante"
+                                        class="btn-primary"
+                                        invisible="not contract_retained or step3_state not in ('done_auto','done_manual')"/>
                                 <button name="action_reopen_step" type="object" string="↩️ Reabrir"
                                         context="{'step': 3}"
                                         invisible="step3_state not in ('done_auto','done_manual')"/>
                             </group>
-                            <group string="4. Cuenta de correo @ueipab.edu.ve">
+
+                            <!-- BLOQUE 2 — Activación de Plataformas -->
+                            <separator string="💻 Bloque 2 — Activación de Plataformas"/>
+
+                            <group string="4. Registro Akdemia completo">
                                 <field name="step4_state"/>
                                 <field name="step4_cleared_by"/>
                                 <field name="step4_cleared_at"/>
@@ -97,7 +120,8 @@
                                         context="{'step': 4}"
                                         invisible="step4_state not in ('done_auto','done_manual')"/>
                             </group>
-                            <group string="5. Google Classroom">
+
+                            <group string="5. Cuenta Dawere habilitada">
                                 <field name="step5_state"/>
                                 <field name="step5_cleared_by"/>
                                 <field name="step5_cleared_at"/>
@@ -108,25 +132,58 @@
                                         context="{'step': 5}"
                                         invisible="step5_state not in ('done_auto','done_manual')"/>
                             </group>
-                            <group string="6. Contrato educativo final">
+
+                            <group string="6. Cuenta @ueipab.edu.ve actualizada">
                                 <field name="step6_state"/>
                                 <field name="step6_cleared_by"/>
                                 <field name="step6_cleared_at"/>
-                                <field name="contract_retained" readonly="1"
-                                       invisible="step6_state not in ('done_auto','done_manual')"/>
-                                <field name="contract_released_date" readonly="1"
-                                       invisible="contract_retained or step6_state not in ('done_auto','done_manual')"/>
-                                <button name="action_clear_step" type="object" string="✅ Contrato firmado (custodia)"
+                                <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 6}" class="btn-success"
                                         invisible="step6_state in ('done_auto','done_manual')"/>
-                                <button name="action_release_contract" type="object"
-                                        string="📋 Liberar contrato al Representante"
-                                        class="btn-primary"
-                                        invisible="not contract_retained or step6_state not in ('done_auto','done_manual')"/>
                                 <button name="action_reopen_step" type="object" string="↩️ Reabrir"
                                         context="{'step': 6}"
                                         invisible="step6_state not in ('done_auto','done_manual')"/>
                             </group>
+
+                            <group string="7. Google Classroom">
+                                <field name="step7_state"/>
+                                <field name="step7_cleared_by"/>
+                                <field name="step7_cleared_at"/>
+                                <button name="action_clear_step" type="object" string="✅ Completar"
+                                        context="{'step': 7}" class="btn-success"
+                                        invisible="step7_state in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object" string="↩️ Reabrir"
+                                        context="{'step': 7}"
+                                        invisible="step7_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <!-- BLOQUE 3 — Cierre Administrativo -->
+                            <separator string="📁 Bloque 3 — Cierre Administrativo"/>
+
+                            <group string="8. Guía de Inglés entregada">
+                                <field name="step8_state"/>
+                                <field name="step8_cleared_by"/>
+                                <field name="step8_cleared_at"/>
+                                <button name="action_clear_step" type="object" string="✅ Completar"
+                                        context="{'step': 8}" class="btn-success"
+                                        invisible="step8_state in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object" string="↩️ Reabrir"
+                                        context="{'step': 8}"
+                                        invisible="step8_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <group string="9. Expediente físico actualizado">
+                                <field name="step9_state"/>
+                                <field name="step9_cleared_by"/>
+                                <field name="step9_cleared_at"/>
+                                <button name="action_clear_step" type="object" string="✅ Completar"
+                                        context="{'step': 9}" class="btn-success"
+                                        invisible="step9_state in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object" string="↩️ Reabrir"
+                                        context="{'step': 9}"
+                                        invisible="step9_state not in ('done_auto','done_manual')"/>
+                            </group>
+
                         </page>
                         <page string="Estudiantes">
                             <field name="student_ids">
