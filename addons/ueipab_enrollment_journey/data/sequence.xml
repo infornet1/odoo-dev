@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="sequence_enrollment_contract" model="ir.sequence">
+        <field name="name">Contrato de Servicio Educativo</field>
+        <field name="code">enrollment.contract</field>
+        <field name="prefix">CSE-2627-</field>
+        <field name="padding">4</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+    </record>
+</odoo>

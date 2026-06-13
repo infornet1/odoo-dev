@@ -1,6 +1,6 @@
 # Enrollment Journey Wizard — 2026-2027 Academic Period
 
-**Status:** DESIGN (analysis phase) | **Created:** 2026-06-12 | **Owner:** Gustavo Perdomo
+**Status:** IN PROGRESS (skeleton + contract PDF built in testing) | **Created:** 2026-06-12 | **Updated:** 2026-06-13 | **Owner:** Gustavo Perdomo
 **Style reference:** https://odoo.ueipab.edu.ve/mora-policy/ (`/var/www/mora/index.html` — Poppins, navy `#1a2c5b` / gold `#f0c400` / teal palette, `.timeline` vertical component)
 
 ---
@@ -112,26 +112,38 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
 
 ## 5. Implementation phases (tracking checklist)
 
-- [ ] **Phase 0 — Decisions (Gustavo):** see §6 open questions
-- [ ] **Phase 1 — Model + staff UI (testing):** `enrollment.journey` + log, auto-create on quote confirm, backend kanban/list with clear/re-open buttons, security groups (Support clears 2-4, IT 4-5, Finance 6 — or single support group?)
-- [ ] **Phase 2 — Soft checks engine:** step 1 (order state), step 4 (directory JSON lookup), step 6 (payment-plan residuals); cron + recompute button
-- [ ] **Phase 3 — Customer page:** `/enrollment-journey/<token>` mora-policy-styled timeline; mobile-first (parents open from WA/Telegram)
-- [ ] **Phase 4 — Glenda bubble + context:** floating avatar + deep links; `ENROLL_` start handler; journey context block in prompt
-- [ ] **Phase 5 — Step 6 contract refresh:** review Google Docs template `1LuML0ud…` content for 2026-2027; re-point generator at Odoo order data (or rebuild as QWeb PDF like the Acuerdo — decision)
-- [ ] **Phase 6 — Comms:** journey link delivered in quote-confirmation message (Glenda channels) + email; optional step-completion notifications
+- [x] **Phase 0 — Decisions (Gustavo):** ✅ 2026-06-12 — new module ✓; keep Acuerdo PDF ✓; QWeb contract PDF (not Google Docs) ✓; single Enrollment Support group for now ✓; legal snapshot model (draft→signed→amended) ✓
+- [x] **Phase 1 — Model + staff UI (testing):** ✅ 2026-06-12 — `ueipab_enrollment_journey` v0.2.0 installed in testing. `enrollment.journey` + `enrollment.journey.student` (name/cédula/grade/institutional_email/insurance_policy). Backend: Sales → "Inscripción 2026-2027" list+form, ✅ Completar / ↩️ Reabrir buttons per step with audit (cleared_by/cleared_at), 🔄 Validaciones + 🌐 Ver página + 🖨️ Imprimir buttons in header.
+- [x] **Phase 3 — Customer page:** ✅ 2026-06-12 — `/enrollment-journey/<token>` (auth=public) mora-policy-styled: hero, animated progress bar, vertical timeline (green/pulsing blue/grey/amber states), student chips, Glenda FAB. Mobile-first. Live: http://dev.ueipab.edu.ve:8019/enrollment-journey/4f3c497f-7a41-428a-8896-b42fa224988f
+- [x] **Phase 4 — Glenda bubble:** ✅ 2026-06-12 — floating 🤖 FAB → slide-up card → Telegram deep link `t.me/GlendaUeipabBot?start=ENROLL_<token[:8]>`. Phase 1 complete; Glenda ENROLL_ handler + journey context injection = Phase 4b (pending).
+- [x] **Phase 5 — Step 6 contract (QWeb PDF):** ✅ 2026-06-13 — 2-page "Contrato Servicio Educativo Privado - Orden de Servicio" QWeb PDF bound to `enrollment.journey`. Page 1: institution + representante + students table (name/cédula/grade/@ueipab email) + insurance section (conditional) + service summary + dual signatures. Page 2-3: full 10-clause T&C verbatim (Términos y Condiciones de la Prestación de Servicios Educativos). Auto-sequence `CSE-2627-XXXX` assigned on first print. Snapshot locked at signing (contract_number + contract_date). v3 PDF reviewed and approved by Gustavo 2026-06-13.
+- [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 4 (directory JSON) + 6 (invoice residuals) + cron = pending.
+- [ ] **Phase 4b — Glenda ENROLL_ handler:** `_handle_telegram_start(ENROLL_<token>)` → inject journey step context into prompt so Glenda answers "¿qué me falta?" precisely.
+- [ ] **Phase 1b — Student import:** "📥 Importar estudiantes" button — publish `school.akdemia_students_json` param (extend existing `akdemia_api_sync.py` cron), match partner VAT → guardian cédula, auto-fill student lines + grade auto-promote (+1 for 2026-2027). Staff editable before signing.
+- [ ] **Phase 6 — Comms:** journey link in quote-confirmation message (Glenda/email); optional step-completion push notifications.
 - [ ] **Phase 7 — Prod deploy + runbook**
+
+### Phase-0 Architecture decisions (locked)
+| Question | Decision |
+|---|---|
+| Module home | New `ueipab_enrollment_journey` (depends ueipab_sales) |
+| Step 2 signature | Manual (staff confirms signed Acuerdo PDF received) |
+| Step 6 contract | QWeb 2-page PDF bound to `enrollment.journey` (not Google Docs) |
+| Clearance roles | Single `group_enrollment_support` for now |
+| Contract model | Snapshot: draft → signed → amended (never overwrite signed lines) |
+| Student data | One-shot import from Akdemia cached param; no sync cron against imported rows |
+| Insurance policy | Manual field (Seguros Caracas hasn't issued 2026-2027 policies yet) |
 
 ---
 
-## 6. Open questions (Phase 0)
+## 6. Open questions (Phase 0) — STATUS: RESOLVED ✅
 
-1. **Module home:** extend `ueipab_sales` vs new `ueipab_enrollment_journey`? (Recommend new module — different lifecycle, depends on ueipab_sales.)
-2. **Step 2 signature:** keep manual (signed paper/PDF Acuerdo) or enable Odoo portal signature (`require_signature=True`) for a fully digital sign-off? Portal signature would make Step 2 a soft check too.
-3. **Step 6 contract:** keep Google Docs copy mechanism (odoo_api_bridge) or rebuild as Odoo QWeb PDF (same pattern as Acuerdo — versionable, no MariaDB dependency)?
-4. **Clearance roles:** one "Enrollment Support" group clears everything, or per-step role split (Support/IT/Academic/Finance)?
-5. **Journey creation trigger:** auto on every confirmed 2026-2027 enrollment order, or manually by support for committed families only?
-6. **Notifications:** notify parent on each step completion (Telegram/email) or page-only (pull, no push)?
-7. **URL & hosting:** serve from Odoo prod (`odoo.ueipab.edu.ve/enrollment-journey/<token>`) — confirm; nginx already proxies Odoo so no new vhost needed.
+All Phase-0 decisions locked 2026-06-12/13. See Phase-0 Architecture decisions table in §5.
+
+**Still open (next discussions):**
+- **Journey creation trigger:** auto on every confirmed 2026-2027 enrollment order, or manually by support for committed families only?
+- **Clearance role split (future):** once volume grows, split Support (steps 2-3) / IT (4-5) / Finance (6) into separate groups?
+- **Notifications (Phase 6):** push notification per step completion via Telegram/email, or page-only pull?
 
 ---
 

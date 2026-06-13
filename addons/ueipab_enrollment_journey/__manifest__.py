@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Enrollment Journey',
-    'version': '17.0.0.1.0',
+    'version': '17.0.0.2.0',
     'category': 'Sales',
     'summary': 'Customer-facing enrollment journey wizard 2026-2027 (6-step timeline + hybrid clearance)',
     'description': """
@@ -20,7 +20,9 @@ See documentation/ENROLLMENT_JOURNEY_WIZARD.md
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',
+        'data/sequence.xml',
         'views/enrollment_journey_views.xml',
+        'reports/enrollment_contract_views.xml',
     ],
     'installable': True,
     'application': False,

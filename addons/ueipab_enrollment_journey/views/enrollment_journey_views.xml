@@ -30,7 +30,9 @@
                     <button name="action_run_soft_checks" type="object"
                             string="🔄 Validaciones automáticas" class="btn-secondary"/>
                     <button name="action_open_journey_page" type="object"
-                            string="🌐 Ver página del Representante" class="btn-primary"/>
+                            string="🌐 Ver página del Representante" class="btn-secondary"/>
+                    <button name="action_print_contract" type="object"
+                            string="🖨️ Imprimir Contrato" class="btn-primary"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -43,6 +45,8 @@
                             <field name="progress_pct" widget="progressbar"/>
                         </group>
                         <group>
+                            <field name="contract_number" readonly="1"/>
+                            <field name="contract_date"/>
                             <field name="journey_url" widget="url" readonly="1"/>
                             <field name="access_token" readonly="1" groups="base.group_system"/>
                         </group>
@@ -120,6 +124,7 @@
                             <field name="student_ids">
                                 <tree editable="bottom">
                                     <field name="name"/>
+                                    <field name="cedula"/>
                                     <field name="grade"/>
                                     <field name="institutional_email"/>
                                     <field name="insurance_policy"/>

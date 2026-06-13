@@ -44,6 +44,9 @@ class EnrollmentJourney(models.Model):
 
     student_ids = fields.One2many('enrollment.journey.student', 'journey_id', string='Estudiantes')
 
+    contract_number = fields.Char(string='Nro. de Control', copy=False, readonly=True)
+    contract_date = fields.Date(string='Fecha del Contrato', copy=False)
+
     step1_state = fields.Selection(STEP_STATES, default='pending', string='1. Cotización')
     step2_state = fields.Selection(STEP_STATES, default='pending', string='2. Acuerdo firmado')
     step3_state = fields.Selection(STEP_STATES, default='pending', string='3. Akdemia')
@@ -120,6 +123,15 @@ class EnrollmentJourney(models.Model):
         self.ensure_one()
         return {'type': 'ir.actions.act_url', 'url': self.journey_url, 'target': 'new'}
 
+    def action_print_contract(self):
+        for rec in self:
+            if not rec.contract_number:
+                rec.contract_number = self.env['ir.sequence'].next_by_code('enrollment.contract')
+            if not rec.contract_date:
+                rec.contract_date = fields.Date.context_today(rec)
+        return self.env.ref(
+            'ueipab_enrollment_journey.action_report_enrollment_contract').report_action(self)
+
     # -- soft checks (skeleton: step 1 only; steps 4/6 in Phase 2) ----
     def action_run_soft_checks(self):
         for rec in self:
@@ -135,6 +147,7 @@ class EnrollmentJourneyStudent(models.Model):
 
     journey_id = fields.Many2one('enrollment.journey', required=True, ondelete='cascade')
     name = fields.Char(string='Estudiante', required=True)
+    cedula = fields.Char(string='Cédula/Cédula Escolar')
     grade = fields.Char(string='Grado/Año')
     institutional_email = fields.Char(string='Correo @ueipab')
     insurance_policy = fields.Char(string='Nº Póliza Seguro')

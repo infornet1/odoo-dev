@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Paper format — same as Acuerdo (Letter portrait, thin margins) -->
+    <record id="paperformat_enrollment_contract" model="report.paperformat">
+        <field name="name">Contrato Servicio Educativo Format</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">12</field>
+        <field name="margin_right">12</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <record id="action_report_enrollment_contract" model="ir.actions.report">
+        <field name="name">Contrato de Servicio Educativo</field>
+        <field name="model">enrollment.journey</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ueipab_enrollment_journey.enrollment_contract</field>
+        <field name="report_file">ueipab_enrollment_journey.enrollment_contract</field>
+        <field name="paperformat_id" ref="paperformat_enrollment_contract"/>
+        <field name="binding_model_id" ref="ueipab_enrollment_journey.model_enrollment_journey"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Contrato_Educativo_%s' % (object.partner_id.name.replace(' ','_'))</field>
+    </record>
+
+    <!-- ================================================================
+         PAGE 1 — Contrato Servicio Educativo Privado - Orden de Servicio
+         PAGE 2 — Términos y Condiciones (full verbatim)
+         ================================================================ -->
+    <template id="enrollment_contract">
+        <t t-call="web.html_container">
+            <t t-foreach="reports" t-as="report">
+                <t t-call="web.basic_layout">
+
+                    <!-- ===== PAGE 1: CONTRACT ORDER ===== -->
+                    <div class="page" style="font-size: 9pt; font-family: Arial, sans-serif; color: #1a1a1a;">
+
+                        <!-- HEADER -->
+                        <table style="width:100%; margin-bottom:10px; border-bottom:2px solid #1a2c5b;">
+                            <tr>
+                                <td style="width:16%; vertical-align:middle; text-align:center; padding:6px 4px;">
+                                    <img t-att-src="image_data_uri(report['company'].logo)"
+                                         style="max-height:52px; max-width:52px; display:block; margin:0 auto;"/>
+                                </td>
+                                <td style="width:62%; text-align:center; vertical-align:middle; padding:4px;">
+                                    <div style="font-size:13pt; font-weight:bold; color:#1a2c5b;">
+                                        CONTRATO SERVICIO EDUCATIVO PRIVADO - ORDEN DE SERVICIO
+                                    </div>
+                                    <div style="font-size:9.5pt; font-weight:bold; margin-top:2px;">
+                                        Período Escolar 2026–2027
+                                    </div>
+                                    <div style="font-size:8pt; color:#555; margin-top:1px;">
+                                        <t t-esc="report['company'].name"/>
+                                        <t t-if="report['company'].vat"> | RIF: <t t-esc="report['company'].vat"/></t>
+                                    </div>
+                                </td>
+                                <td style="width:22%; text-align:right; vertical-align:middle; font-size:8pt; color:#333; padding:4px;">
+                                    <table style="width:100%; border:1px solid #1a2c5b; border-radius:4px;">
+                                        <tr><td style="background:#1a2c5b; color:#fff; font-weight:bold; padding:2px 6px;">Nro. de Control</td></tr>
+                                        <tr><td style="padding:3px 6px; font-size:10pt; font-weight:bold; color:#1a2c5b;">
+                                            <t t-esc="report['journey'].contract_number or '___________'"/>
+                                        </td></tr>
+                                        <tr><td style="padding:1px 6px; font-size:7.5pt;">
+                                            <strong>Fecha:</strong> <t t-esc="report['date_str']"/>
+                                        </td></tr>
+                                        <t t-if="report['order']">
+                                        <tr><td style="padding:1px 6px; font-size:7.5pt;">
+                                            <strong>Ref. Cotización:</strong> <t t-esc="report['order'].name"/>
+                                        </td></tr>
+                                        </t>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- SECTION A: INSTITUTION DATA -->
+                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
+                            A. DATOS DE LA INSTITUCIÓN (PRESTADOR DE SERVICIOS)
+                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt;">
+                            <tr>
+                                <td style="width:28%; background:#f0f4fa;"><strong>Razón Social:</strong></td>
+                                <td>Instituto Privado "Andrés Bello" C.A.</td>
+                                <td style="width:18%; background:#f0f4fa;"><strong>RIF:</strong></td>
+                                <td>J-080086171</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Dirección:</strong></td>
+                                <td colspan="3"><t t-esc="report['company'].street or 'El Tigre, Municipio Simón Rodríguez, Estado Anzoátegui'"/></td>
+                            </tr>
+                        </table>
+
+                        <!-- SECTION B: REPRESENTATIVE DATA -->
+                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
+                            B. DATOS DEL REPRESENTANTE (PARTE CONTRATANTE)
+                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt;">
+                            <tr>
+                                <td style="width:28%; background:#f0f4fa;"><strong>Nombre y Apellido:</strong></td>
+                                <td><t t-esc="report['partner'].name"/></td>
+                                <td style="width:18%; background:#f0f4fa;"><strong>Cédula / RIF:</strong></td>
+                                <td><t t-esc="report['partner'].vat or '________________'"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Teléfono:</strong></td>
+                                <td><t t-esc="report['partner'].mobile or report['partner'].phone or '________________'"/></td>
+                                <td style="background:#f0f4fa;"><strong>Correo:</strong></td>
+                                <td><t t-esc="report['partner'].email or '________________'"/></td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Dirección:</strong></td>
+                                <td colspan="3"><t t-esc="(report['partner'].street or '') + ('  ' + report['partner'].city if report['partner'].city else '')"/></td>
+                            </tr>
+                        </table>
+
+                        <!-- SECTION C: STUDENTS -->
+                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
+                            C. ESTUDIANTE(S) MATRICULADO(S) — PERÍODO 2026-2027
+                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt; width:100%;">
+                            <thead style="background:#e8edf5;">
+                                <tr>
+                                    <th style="text-align:center; width:4%;">Nro.</th>
+                                    <th style="width:30%;">Nombre del Estudiante</th>
+                                    <th style="width:18%;">Cédula / C.E.</th>
+                                    <th style="width:18%;">Grado / Año</th>
+                                    <th style="width:30%;">Correo Institucional (@ueipab.edu.ve)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="report['students']" t-as="student">
+                                <tr>
+                                    <td style="text-align:center;"><t t-esc="student_index + 1"/></td>
+                                    <td><t t-esc="student.name"/></td>
+                                    <td><t t-esc="student.cedula or '________________'"/></td>
+                                    <td><t t-esc="student.grade or '________________'"/></td>
+                                    <td style="font-size:7.8pt;"><t t-esc="student.institutional_email or '________________'"/></td>
+                                </tr>
+                                </t>
+                                <t t-if="not report['students']">
+                                <tr>
+                                    <td colspan="5" style="text-align:center; color:#999; font-style:italic;">
+                                        (Sin estudiantes registrados)
+                                    </td>
+                                </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- SECTION D: INSURANCE -->
+                        <t t-if="any(s.insurance_policy for s in report['students'])">
+                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
+                            D. PÓLIZA DE SEGURO ESCOLAR — SEGUROS CARACAS
+                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt; width:100%;">
+                            <thead style="background:#e8edf5;">
+                                <tr>
+                                    <th style="width:50%;">Estudiante</th>
+                                    <th style="width:25%;">Grado</th>
+                                    <th style="width:25%;">Nro. de Póliza</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="report['students']" t-as="student">
+                                <tr>
+                                    <td><t t-esc="student.name"/></td>
+                                    <td><t t-esc="student.grade or ''"/></td>
+                                    <td><t t-esc="student.insurance_policy or '________________'"/></td>
+                                </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        </t>
+
+                        <!-- SECTION E: SERVICE SUMMARY -->
+                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
+                            E. RESUMEN DEL SERVICIO CONTRATADO
+                        </div>
+                        <table class="table table-sm table-bordered" style="margin-bottom:10px; font-size:8.5pt;">
+                            <tr>
+                                <td style="width:35%; background:#f0f4fa;"><strong>Tipo de Servicio:</strong></td>
+                                <td>Educación Básica y Diversificada Privada</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Vigencia del contrato:</strong></td>
+                                <td>01 de septiembre de 2026 al 31 de agosto de 2027</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Contraprestación anual:</strong></td>
+                                <td>Trece (13) aportes de <strong>$218,88 USD</strong> c/u (inscripción + 12 mensualidades)</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Moneda de referencia:</strong></td>
+                                <td>USD — pagadero en USD, Bs. (tasa BCV del día) o criptomonedas autorizadas</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Resoluciones MPPE:</strong></td>
+                                <td>Nros. 009 y 024</td>
+                            </tr>
+                        </table>
+
+                        <!-- SIGNATURES -->
+                        <div style="margin-top:16px;">
+                            <table style="width:100%; font-size:8.5pt;">
+                                <tr>
+                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                        <div style="border-top:1px solid #333; padding-top:4px; margin-top:30px;">
+                                            <strong>INSTITUCIÓN</strong><br/>
+                                            <span style="font-size:7.5pt; color:#555;">
+                                                Instituto Privado "Andrés Bello" C.A.<br/>
+                                                RIF J-080086171
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="width:10%;"/>
+                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                        <div style="border-top:1px solid #333; padding-top:4px; margin-top:30px;">
+                                            <strong>REPRESENTANTE</strong><br/>
+                                            <span style="font-size:7.5pt; color:#555;">
+                                                <t t-esc="report['partner'].name"/><br/>
+                                                C.I.: <t t-esc="report['partner'].vat or '______________'"/>
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div style="margin-top:8px; font-size:7pt; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:4px;">
+                            Este documento forma un cuerpo jurídico indivisible con los Términos y Condiciones de la Prestación de Servicios Educativos adjuntos en la página siguiente.
+                        </div>
+
+                    </div><!-- end page 1 -->
+
+
+                    <!-- ===== PAGE 2: TÉRMINOS Y CONDICIONES ===== -->
+                    <div class="page" style="page-break-before: always; font-size: 7.3pt; line-height: 1.25; color: #1a1a1a; text-align: justify; font-family: Arial, sans-serif;">
+
+                        <!-- Page 2 header (compact) -->
+                        <table style="width:100%; margin-bottom:6px; border-bottom:2px solid #1a2c5b;">
+                            <tr>
+                                <td style="width:14%; vertical-align:middle; text-align:center;">
+                                    <img t-att-src="image_data_uri(report['company'].logo)"
+                                         style="max-height:36px; max-width:36px; display:block; margin:0 auto;"/>
+                                </td>
+                                <td style="text-align:center; vertical-align:middle;">
+                                    <div style="font-size:10pt; font-weight:bold; color:#1a2c5b;">
+                                        TÉRMINOS Y CONDICIONES DE LA PRESTACIÓN DE SERVICIOS EDUCATIVOS
+                                    </div>
+                                    <div style="font-size:7.5pt; font-weight:bold;">
+                                        Anexo Regulatorio Vinculante — Período Escolar 2026-2027
+                                    </div>
+                                </td>
+                                <td style="width:20%; text-align:right; font-size:7pt; color:#555; vertical-align:middle;">
+                                    Ref.: <t t-esc="report['journey'].contract_number or '___________'"/><br/>
+                                    Fecha: <t t-esc="report['date_str']"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin:0 0 4px 0;">
+                            Los presentes Términos y Condiciones regulan la prestación del servicio educativo brindado por <strong>LA INSTITUCIÓN</strong> (Instituto Privado "Andrés Bello" C.A., RIF J-080086171). Al formalizar la inscripción y validar la relación de costos antecedente, el <strong>REPRESENTANTE</strong> declara conocer, comprender y aceptar sin reservas las siguientes cláusulas operativas y legales:
+                        </p>
+
+                        <!-- Clause 1 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">1. INTEGRACIÓN DE DATOS Y VINCULACIÓN DIRECTA</p>
+                        <p style="margin:0 0 3px 0;">
+                            Se establece formalmente que la identificación completa de las partes (Directiva de la Institución y el Representante), la identificación del estudiante, el nivel educativo asignado según Contrato Servicio Educativo Privado - Orden de Servicio y el número de control correlativo, se dan por reproducidos, vinculados y validados directamente desde el cuadro de relación y base de datos que antecede cronológicamente a este anexo, formando un único cuerpo jurídico indivisible.
+                        </p>
+
+                        <!-- Clause 2 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">2. VIGENCIA DEL SERVICIO</p>
+                        <p style="margin:0 0 3px 0;">
+                            El contrato rige estrictamente por Un (01) año escolar, fijándose su vigencia ininterrumpida desde el <strong>1 de septiembre de 2026</strong> hasta el <strong>31 de agosto de 2027</strong>, ambos días inclusive. La prestación efectiva de las actividades pedagógicas presenciales o académicas se limitará al mínimo de ciento ochenta (180) días hábiles fijados por la Ley Orgánica de Educación. Este convenio se resuelve de pleno derecho al término del plazo fijado (el 31 de agosto de 2027), por lo que no existirán prórrogas automáticas ni la tácita reconducción para períodos posteriores.
+                        </p>
+
+                        <!-- Clause 3 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">3. OBLIGACIÓN FINANCIERA Y ARANCELES</p>
+                        <ul style="margin:0 0 3px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Estructura de Aranceles:</strong> La contraprestación económica por el año lectivo se compone de trece (13) aportes financieros de igual valor, fijados en <strong>$218,88 USD</strong> cada uno, discriminados de la siguiente manera:
+                                <ul style="margin:1px 0; padding-left:12px;">
+                                    <li>a) <strong>Inscripción:</strong> Un (1) pago único anual por derecho a matrícula de $218,88 USD.</li>
+                                    <li>b) <strong>Escolaridad:</strong> Doce (12) mensualidades consecutivas de $218,88 USD cada una, correspondientes al servicio educativo comprendido desde el 1 de septiembre de 2026 hasta el 31 de agosto de 2027.</li>
+                                </ul>
+                            </li>
+                            <li style="margin-bottom:1px;"><strong>Unidad de Cuenta:</strong> Los montos están tasados en dólares estadounidenses (USD) como referencia económica. Podrán ser liquidados en dicha moneda, criptomonedas autorizadas o en bolívares calculados estrictamente a la tasa oficial del Banco Central de Venezuela (BCV) vigente el día del pago.</li>
+                            <li><strong>Ajustes y Diferencias:</strong> Las tarifas se rigen por la estructura de costos aprobada en la Asamblea Escolar bajo las Resoluciones 009 y 024 del MPPE. En caso de realizarse pagos por adelantado, el Representante se compromete a cancelar las diferencias que puedan generarse por reajustes aprobados debido a variaciones macroeconómicas o leyes nacionales dentro del período del 1 de septiembre de 2026 al 31 de agosto de 2027.</li>
+                        </ul>
+
+                        <!-- Clause 4 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">4. CONDICIONES DE PAGO, MORA Y RETIROS</p>
+                        <ul style="margin:0 0 3px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Plazo de Pago:</strong> Las mensualidades deben cancelarse puntualmente dentro de los primeros diez (10) días continuos de cada mes calendario.</li>
+                            <li style="margin-bottom:1px;"><strong>Efectos de la Mora:</strong> El retraso en el pago transcurrido dicho plazo constituye mora automática y facultará a la institución a suspender cualquier descuento, beneficio o tarifa preferencial que le hubiere sido otorgado temporalmente al Representante.</li>
+                            <li><strong>Retiro Anticipado:</strong> Si el Representante decide retirar al alumno antes del 31 de agosto de 2027, deberá liquidar la totalidad de las mensualidades causadas y pendientes acumuladas hasta el cierre del trámite administrativo. No se procesará el retiro definitivo ni se liberará documentación académica si existen saldos deudores.</li>
+                        </ul>
+
+                        <!-- Clause 5 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">5. CANALES DE PAGO AUTORIZADOS</p>
+                        <p style="margin:0 0 1px 0;">Los pagos se realizarán a nombre de <strong>Instituto Privado Andrés Bello C.A.</strong> (RIF J-080086171) a través de transferencia bancaria, depósito corriente, Pago Móvil o mediante la plataforma de financiamiento digital autorizada:</p>
+                        <table style="width:100%; font-size:7pt; border-collapse:collapse; margin-bottom:3px; table-layout:fixed;">
+                            <colgroup>
+                                <col style="width:30%;"/>
+                                <col style="width:42%;"/>
+                                <col style="width:28%;"/>
+                            </colgroup>
+                            <tr style="background:#e8edf5;">
+                                <th style="padding:2px 6px; border:1px solid #ccc; text-align:left;">Banco</th>
+                                <th style="padding:2px 6px; border:1px solid #ccc; text-align:left;">Cuenta Corriente</th>
+                                <th style="padding:2px 6px; border:1px solid #ccc; text-align:left;">Pago Móvil</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">Banco Plaza (0138)</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; letter-spacing:-0.2px;">0138-0032-47-0320013870</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">0414-2337463</td>
+                            </tr>
+                            <tr style="background:#f9f9f9;">
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">Banco Mercantil (0105)</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; letter-spacing:-0.2px;">0105-0069-93-1069377856</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">0414-1906296</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">Bancamiga (0172)</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; letter-spacing:-0.2px;">0172-0702-40-7024953106</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">0414-4375222</td>
+                            </tr>
+                            <tr style="background:#f9f9f9;">
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">Banco Banplus (0174)</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; letter-spacing:-0.2px;">0174-0127-12-1274138559</td>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">0414-1906296</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:2px 6px; border:1px solid #ccc; white-space:nowrap;">Cashea</td>
+                                <td colspan="2" style="padding:2px 6px; border:1px solid #ccc;">Pagos y cuotas financiadas a través de la aplicación móvil (sujeto a condiciones de la plataforma y validación en taquillas).</td>
+                            </tr>
+                        </table>
+                        <p style="margin:0 0 3px 0; font-size:6.8pt; color:#555;">
+                            <em>Para otros medios de pago válidos y consultas administrativas: www.ueipab.edu.ve</em>
+                        </p>
+
+                        <!-- Clause 6 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">6. RESPONSABILIDAD POR DAÑOS MATERIALES</p>
+                        <p style="margin:0 0 3px 0;">
+                            El Representante asume la responsabilidad civil por cualquier daño material verificable que su representado ocasione al mobiliario, infraestructura o recursos didácticos del plantel. Se obliga a reponer o reparar el bien afectado bajo los mismos parámetros de calidad original en un lapso no mayor a cinco (05) días hábiles tras la demostración del hecho, sin perjuicio de las acciones legales a que hubiera lugar.
+                        </p>
+
+                        <!-- Clause 7 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">7. CORRESPONSABILIDAD ACADÉMICA Y ASISTENCIA</p>
+                        <p style="margin:0 0 1px 0;">Es obligación del Representante involucrarse activamente en el desarrollo educativo del alumno, comprometiéndose a:</p>
+                        <ul style="margin:0 0 3px 0; padding-left:12px;">
+                            <li>Asistir a todas las asambleas y reuniones convocadas por la institución o el Consejo Educativo.</li>
+                            <li>Retirar personalmente los cortes de notas y boletines informativos de calificaciones al final de cada lapso escolar.</li>
+                            <li>Acatar con prontitud los llamados y citaciones de las autoridades o coordinaciones del plantel.</li>
+                        </ul>
+
+                        <!-- Clause 8 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">8. NORMAS DE CONVIVENCIA, BIOSEGURIDAD Y OBJETOS PROHIBIDOS</p>
+                        <ul style="margin:0 0 3px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Dispositivos Electrónicos:</strong> Queda estrictamente prohibido que el estudiante ingrese al plantel con teléfonos celulares, tablets, cámaras o consolas de videojuegos. LA INSTITUCIÓN no se hace responsable por el extravío, hurto o daño de dichos equipos, siendo su custodia exclusiva responsabilidad del alumno.</li>
+                            <li style="margin-bottom:1px;"><strong>Protocolo de Salud y Convivencia:</strong> El Representante velará por el cumplimiento de los Acuerdos de Paz, Convivencia Escolar y Comunitaria. Asimismo, se compromete a no enviar al estudiante al plantel si presenta síntomas evidentes de malestar general, gripe o resfriado común.</li>
+                            <li><strong>Imagen Institucional:</strong> Se debe garantizar el uso correcto, limpio y pulcro del uniforme escolar (regular y deportivo), así como el cumplimiento de las normas de aseo personal idóneas.</li>
+                        </ul>
+
+                        <!-- Clause 9 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">9. RESERVA DE ADMISIÓN Y MEDIDAS DE PROTECCIÓN (LOPNNA)</p>
+                        <ul style="margin:0 0 3px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Derecho de Inscripción Futura:</strong> La mora reiterada o el impago recurrente de las mensualidades escolares dentro del lapso contractualmente establecido será causa suficiente para que LA INSTITUCIÓN se reserve el derecho de no admitir la inscripción del estudiante para el próximo período escolar 2027-2028, dado que dichos factores afectan directamente los costos operativos y compromisos laborales del plantel.</li>
+                            <li><strong>Protección del Alumno:</strong> En casos de retraso prolongado en los pagos, la administración remitirá el expediente ante los órganos competentes (Defensoría del Pueblo, Defensoría Escolar, CEDNNA y SUNDDE) para activar los mecanismos que protejan la continuidad pedagógica del alumno (Arts. 54 y 55 LOPNNA) de acuerdo a la realidad socioeconómica familiar, sin que esto extinga la obligación de pago con el plantel.</li>
+                        </ul>
+
+                        <!-- Clause 10 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">10. DOMICILIO ELECTRÓNICO, CITACIONES Y JURISDICCIÓN</p>
+                        <ul style="margin:0 0 4px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Notificaciones:</strong> El Representante valida como domicilios legales para cualquier notificación, recordatorio o citación formal, el número telefónico y el correo electrónico registrados en la Orden de Servicio antecedente. Cualquier modificación en los datos de contacto debe ser informada de inmediato a la Dirección del plantel.</li>
+                            <li><strong>Jurisdicción:</strong> Para todos los efectos legales y judiciales derivados del incumplimiento de las obligaciones de este contrato, las partes eligen de forma exclusiva y excluyente como domicilio especial a la ciudad de El Tigre, Municipio Simón Rodríguez del Estado Anzoátegui, a la jurisdicción de cuyos tribunales declaran someterse de manera expresa.</li>
+                        </ul>
+
+                        <!-- Page 2 signatures -->
+                        <div style="margin-top:10px;">
+                            <table style="width:100%; font-size:8pt;">
+                                <tr>
+                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                        <div style="border-top:1px solid #333; padding-top:4px; margin-top:28px;">
+                                            <strong>INSTITUCIÓN</strong><br/>
+                                            <span style="font-size:7pt; color:#555;">Instituto Privado "Andrés Bello" C.A. | RIF J-080086171</span>
+                                        </div>
+                                    </td>
+                                    <td style="width:10%;"/>
+                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                        <div style="border-top:1px solid #333; padding-top:4px; margin-top:28px;">
+                                            <strong>REPRESENTANTE</strong><br/>
+                                            <span style="font-size:7pt; color:#555;">
+                                                <t t-esc="report['partner'].name"/> | C.I.: <t t-esc="report['partner'].vat or '______________'"/>
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div style="margin-top:6px; font-size:6.5pt; color:#aaa; text-align:center; border-top:1px solid #eee; padding-top:3px;">
+                            Contrato CSE-2627 · Instituto Privado "Andrés Bello" C.A. · El Tigre, Anzoátegui · Período 2026-2027
+                        </div>
+
+                    </div><!-- end page 2 -->
+
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>
