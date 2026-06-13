@@ -1,6 +1,6 @@
 # Enrollment Journey Wizard — 2026-2027 Academic Period
 
-**Status:** IN PROGRESS (skeleton + contract PDF built in testing) | **Created:** 2026-06-12 | **Updated:** 2026-06-13 | **Owner:** Gustavo Perdomo
+**Status:** IN PROGRESS | **Created:** 2026-06-12 | **Updated:** 2026-06-13 (v0.3.0) | **Owner:** Gustavo Perdomo
 **Style reference:** https://odoo.ueipab.edu.ve/mora-policy/ (`/var/www/mora/index.html` — Poppins, navy `#1a2c5b` / gold `#f0c400` / teal palette, `.timeline` vertical component)
 
 ---
@@ -117,7 +117,8 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
 - [x] **Phase 3 — Customer page:** ✅ 2026-06-12 — `/enrollment-journey/<token>` (auth=public) mora-policy-styled: hero, animated progress bar, vertical timeline (green/pulsing blue/grey/amber states), student chips, Glenda FAB. Mobile-first. Live: http://dev.ueipab.edu.ve:8019/enrollment-journey/4f3c497f-7a41-428a-8896-b42fa224988f
 - [x] **Phase 4 — Glenda bubble:** ✅ 2026-06-12 — floating 🤖 FAB → slide-up card → Telegram deep link `t.me/GlendaUeipabBot?start=ENROLL_<token[:8]>`. Phase 1 complete; Glenda ENROLL_ handler + journey context injection = Phase 4b (pending).
 - [x] **Phase 5 — Step 6 contract (QWeb PDF):** ✅ 2026-06-13 — 2-page "Contrato Servicio Educativo Privado - Orden de Servicio" QWeb PDF bound to `enrollment.journey`. Page 1: institution + representante + students table (name/cédula/grade/@ueipab email) + insurance section (conditional) + service summary + dual signatures. Page 2-3: full 10-clause T&C verbatim (Términos y Condiciones de la Prestación de Servicios Educativos). Auto-sequence `CSE-2627-XXXX` assigned on first print. Snapshot locked at signing (contract_number + contract_date). v3 PDF reviewed and approved by Gustavo 2026-06-13.
-- [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 4 (directory JSON) + 6 (invoice residuals) + cron = pending.
+- [x] **Phase 5b — Contract escrow workflow (Option B):** ✅ 2026-06-13 — `contract_retained` (Boolean) + `contract_released_date` (Date) on `enrollment.journey`. Step 6 clear → auto `contract_retained=True`. Staff "📋 Liberar contrato" button → manual release. Soft-check hook: all `order_id.invoice_ids` `amount_residual==0` → auto-release. Customer page: retained → amber 📋 "en custodia" card; released → green ✓ + 🎉 celebration. Demo journey (id=1) shows retained state.
+- [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 4 (directory JSON) + step 6 contract-release cron = pending.
 - [ ] **Phase 4b — Glenda ENROLL_ handler:** `_handle_telegram_start(ENROLL_<token>)` → inject journey step context into prompt so Glenda answers "¿qué me falta?" precisely.
 - [ ] **Phase 1b — Student import:** "📥 Importar estudiantes" button — publish `school.akdemia_students_json` param (extend existing `akdemia_api_sync.py` cron), match partner VAT → guardian cédula, auto-fill student lines + grade auto-promote (+1 for 2026-2027). Staff editable before signing.
 - [ ] **Phase 6 — Comms:** journey link in quote-confirmation message (Glenda/email); optional step-completion push notifications.

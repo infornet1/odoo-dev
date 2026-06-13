@@ -104,7 +104,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 | ueipab_sales | 17.0.1.2.1 | both — quotation engine + T&C annex page 2 on Acuerdo PDF (see UEIPAB_SALES_QUOTATION_PLAN.md) |
-| ueipab_enrollment_journey | 17.0.0.2.0 | testing only — 6-step customer timeline + hybrid staff clearance + Glenda bubble + 2-page QWeb contract PDF (CSE-2627-XXXX) — see ENROLLMENT_JOURNEY_WIZARD.md |
+| ueipab_enrollment_journey | 17.0.0.3.0 | testing only — 6-step customer timeline + hybrid staff clearance + Glenda bubble + 2-page QWeb contract PDF (CSE-2627-XXXX) + contract escrow (contract_retained) — see ENROLLMENT_JOURNEY_WIZARD.md |
 
 ---
 
