@@ -204,6 +204,17 @@ Parent asks price → Glenda emits ACTION:QUOTE:<n_students>
 - [x] Sample rendered (S00004, 2 hermanos, $973.20) — sent to Gustavo
 - [x] Layout approval by Gustavo (2026-06-11, v3 — logo reduced 35% to 49px, centered in first header cell with padding; test mails 1112/1113/1114)
 
+### v1.2.1 — T&C annex page 2 ✅ 2026-06-12 (both envs)
+- [x] Page 2 "TÉRMINOS Y CONDICIONES DEL CONVENIO DE PAGO (Anexo Vinculante)" — 9 sections, bank channels table, Declaración de Aceptación + Iniciales line; renders on every quote. Fit on one Letter page: 7.2pt body / line-height 1.15 / 6.8pt bank table. Wording "(según Promo del 31/07/2026)".
+- [x] Verified: testing S00007 + prod S00003 both exactly 2 pages.
+
+### v1.2.2 — QR verification seal ✅ 2026-06-15 (testing; pending prod deploy)
+- [x] New `controllers/` package: `quote_verify.py` — `/verify-quote/<token>` public route (`auth='public'`, `website=False`). Valid token → branded ✅ DOCUMENTO VÁLIDO page (order name, partner, students, dates, amount, line detail, state). Invalid → 404 "Documento no encontrado". Uses `.format()` not `%`-formatting (CSS `width:100%` causes `ValueError` with `%` operator).
+- [x] `models/quotation_agreement_report.py`: added `_make_qr_b64(url)` helper (`qrcode` lib, already in container); `order._portal_ensure_token()` on every render; `verify_url = base_url + '/verify-quote/' + access_token`; `qr_b64` passed to template.
+- [x] Page 1 signature row: QR at **50pt** (4th column, `vertical-align: bottom`, `width: 58pt` cell). Caption: "Escanear para verificar / autenticidad del documento" at 5.5pt.
+- [x] Page 2 T&C: **no QR** — T&C page has zero height headroom (fills Letter 10mm/10mm to the boundary); any addition overflows to page 3. Page 1 QR is sufficient for document authentication.
+- [x] **Root cause of 3-page overflow (diagnosed 2026-06-15):** original QR at 72pt made the page-1 signature row taller than the text columns (89px), adding ~17px to page-1 content and spilling it onto a new sheet. Fix: reduce to 50pt so row height is driven by text columns (not image). Verified with S00007 (6-line convenio order — worst case): exactly 2 pages.
+
 ### Phase 6 — Glenda `ACTION:QUOTE` (testing) ✅ 2026-06-11 — ai_agent v17.0.1.59.0 (testing only)
 - [x] `_handle_quote_action()` + `_format_quote_message()` in `skills/general_inquiry.py` → `sale.order.create_ai_quote()`; `quote_message` sent as separate message in `ai_agent_conversation.py` (normal + handoff/resolve paths); Venezuelan number format ($973,20); chatter log on conversation
 - [x] Prompt rewritten: COTIZACIÓN block → ACTION:QUOTE instruction + 3-llamado conversational knowledge (convenio, solvencia junio L1 / 31-jul L2 / total L3, fechas definitivas en la institución, 17/07 advance billing, USD+BCV); price-reply structure updated; "no HANDOFF same turn as QUOTE" rule
