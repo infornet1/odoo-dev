@@ -119,18 +119,18 @@
                             </tr>
                         </table>
 
-                        <!-- SECTION C: STUDENTS -->
+                        <!-- SECTION C: STUDENTS + INSURANCE (merged) -->
                         <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
-                            C. ESTUDIANTE(S) MATRICULADO(S) — PERÍODO 2026-2027
+                            C. ESTUDIANTE(S) MATRICULADO(S) Y COBERTURA DE SEGURO — PERÍODO 2026-2027
                         </div>
                         <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt; width:100%;">
                             <thead style="background:#e8edf5;">
                                 <tr>
                                     <th style="text-align:center; width:4%;">Nro.</th>
-                                    <th style="width:30%;">Nombre del Estudiante</th>
+                                    <th style="width:32%;">Nombre del Estudiante</th>
                                     <th style="width:18%;">Cédula / C.E.</th>
-                                    <th style="width:18%;">Grado / Año</th>
-                                    <th style="width:30%;">Correo Institucional (@ueipab.edu.ve)</th>
+                                    <th style="width:16%;">Grado / Año</th>
+                                    <th style="width:30%;">Nro. Póliza Seguro Escolar (Seguros Caracas)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -140,7 +140,7 @@
                                     <td><t t-esc="student.name"/></td>
                                     <td><t t-esc="student.cedula or '________________'"/></td>
                                     <td><t t-esc="student.grade or '________________'"/></td>
-                                    <td style="font-size:7.8pt;"><t t-esc="student.institutional_email or '________________'"/></td>
+                                    <td><t t-esc="student.insurance_policy or '________________'"/></td>
                                 </tr>
                                 </t>
                                 <t t-if="not report['students']">
@@ -153,38 +153,13 @@
                             </tbody>
                         </table>
 
-                        <!-- SECTION D: INSURANCE -->
-                        <t t-if="any(s.insurance_policy for s in report['students'])">
-                        <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
-                            D. PÓLIZA DE SEGURO ESCOLAR — SEGUROS CARACAS
-                        </div>
-                        <table class="table table-sm table-bordered" style="margin-bottom:8px; font-size:8.5pt; width:100%;">
-                            <thead style="background:#e8edf5;">
-                                <tr>
-                                    <th style="width:50%;">Estudiante</th>
-                                    <th style="width:25%;">Grado</th>
-                                    <th style="width:25%;">Nro. de Póliza</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="report['students']" t-as="student">
-                                <tr>
-                                    <td><t t-esc="student.name"/></td>
-                                    <td><t t-esc="student.grade or ''"/></td>
-                                    <td><t t-esc="student.insurance_policy or '________________'"/></td>
-                                </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                        </t>
-
                         <!-- SECTION E: SERVICE SUMMARY -->
                         <div style="background:#1a2c5b; color:#fff; font-weight:bold; font-size:8.5pt; padding:3px 8px; margin-bottom:4px;">
-                            E. RESUMEN DEL SERVICIO CONTRATADO
+                            E. RESUMEN DEL SERVICIO CONTRATADO — OBLIGACIÓN MÁXIMA
                         </div>
-                        <table class="table table-sm table-bordered" style="margin-bottom:10px; font-size:8.5pt;">
+                        <table class="table table-sm table-bordered" style="margin-bottom:6px; font-size:8.5pt;">
                             <tr>
-                                <td style="width:35%; background:#f0f4fa;"><strong>Tipo de Servicio:</strong></td>
+                                <td style="width:42%; background:#f0f4fa;"><strong>Tipo de Servicio:</strong></td>
                                 <td>Educación Básica y Diversificada Privada</td>
                             </tr>
                             <tr>
@@ -192,8 +167,20 @@
                                 <td>01 de septiembre de 2026 al 31 de agosto de 2027</td>
                             </tr>
                             <tr>
-                                <td style="background:#f0f4fa;"><strong>Contraprestación anual:</strong></td>
-                                <td>Trece (13) aportes de <strong>$218,88 USD</strong> c/u (inscripción + 12 mensualidades)</td>
+                                <td style="background:#f0f4fa;"><strong>Arancel máximo por aporte (por estudiante):</strong></td>
+                                <td><strong>$218,88 USD</strong></td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Estudiantes matriculados:</strong></td>
+                                <td><t t-esc="report['n_students']"/> estudiante(s)</td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Total aportes del período:</strong></td>
+                                <td>13 (inscripción + 12 mensualidades)</td>
+                            </tr>
+                            <tr style="background:#eaf4eb;">
+                                <td style="background:#d4edda;"><strong>Obligación máxima total del período:</strong></td>
+                                <td><strong>$<t t-esc="'%.2f' % report['ceiling_total']"/> USD</strong></td>
                             </tr>
                             <tr>
                                 <td style="background:#f0f4fa;"><strong>Moneda de referencia:</strong></td>
@@ -203,7 +190,58 @@
                                 <td style="background:#f0f4fa;"><strong>Resoluciones MPPE:</strong></td>
                                 <td>Nros. 009 y 024</td>
                             </tr>
+                            <t t-if="report['order']">
+                            <tr>
+                                <td style="background:#f0f4fa;"><strong>Acuerdo de Inscripción complementario:</strong></td>
+                                <td>Ref. <strong><t t-esc="report['order'].name"/></strong> — establece las condiciones comerciales específicas acordadas entre las partes.</td>
+                            </tr>
+                            </t>
                         </table>
+
+                        <!-- SECTION F: EARLY PAYMENT BENEFIT + QR VERIFICATION -->
+                        <div style="background:#fff8e6; border:1px solid #e6a817; border-left:4px solid #e6a817;
+                                    border-radius:4px; padding:8px 10px; margin-bottom:10px; font-size:8.3pt;">
+                            <div style="font-weight:bold; color:#7d5000; margin-bottom:5px;">
+                                📌 F. BENEFICIO POR PAGO PUNTUAL — CONDICIÓN ÚNICA DE DESCUENTO
+                            </div>
+                            <table style="width:100%; border-collapse:collapse;">
+                                <tr>
+                                    <!-- QR column -->
+                                    <td style="width:72pt; vertical-align:middle; text-align:center; padding-right:10px;">
+                                        <t t-if="report['qr_b64']">
+                                            <img t-att-src="report['qr_b64']"
+                                                 style="width:70pt; height:70pt; display:block; margin:0 auto;"/>
+                                            <div style="font-size:6pt; color:#7d5000; margin-top:2px; text-align:center;">
+                                                Verificar documento
+                                            </div>
+                                        </t>
+                                    </td>
+                                    <!-- Text column -->
+                                    <td style="vertical-align:middle; color:#5a3800;">
+                                        <t t-if="report['order']">
+                                        <p style="margin:0 0 4px 0;">
+                                            El REPRESENTANTE podrá aplicar la tarifa preferencial del
+                                            <strong>Acuerdo Ref. <t t-esc="report['order'].name"/></strong>
+                                            siempre que cada aporte sea pagado dentro de los
+                                            <strong>primeros diez (10) días continuos</strong> del mes correspondiente.
+                                        </p>
+                                        </t>
+                                        <t t-if="not report['order']">
+                                        <p style="margin:0 0 4px 0;">
+                                            Todo aporte debe pagarse dentro de los
+                                            <strong>primeros diez (10) días continuos</strong> del mes correspondiente
+                                            para mantener cualquier tarifa preferencial acordada.
+                                        </p>
+                                        </t>
+                                        <p style="margin:0; font-size:7.8pt;">
+                                            Vencido dicho plazo opera mora automática y se aplica el arancel máximo
+                                            de <strong>$218,88 USD por estudiante</strong> conforme a la
+                                            <strong>Cláusula 4</strong> de los Términos y Condiciones adjuntos.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
 
                         <!-- SIGNATURES -->
                         <div style="margin-top:16px;">
@@ -296,7 +334,7 @@
                         <!-- Clause 4 -->
                         <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">4. CONDICIONES DE PAGO, MORA Y RETIROS</p>
                         <ul style="margin:0 0 3px 0; padding-left:12px;">
-                            <li style="margin-bottom:1px;"><strong>Plazo de Pago:</strong> Las mensualidades deben cancelarse puntualmente dentro de los primeros diez (10) días continuos de cada mes calendario.</li>
+                            <li style="margin-bottom:1px;"><strong>Plazo de Pago:</strong> Las mensualidades deben pagarse puntualmente dentro de los primeros diez (10) días continuos de cada mes calendario.</li>
                             <li style="margin-bottom:1px;"><strong>Efectos de la Mora:</strong> El retraso en el pago transcurrido dicho plazo constituye mora automática y facultará a la institución a suspender cualquier descuento, beneficio o tarifa preferencial que le hubiere sido otorgado temporalmente al Representante.</li>
                             <li><strong>Retiro Anticipado:</strong> Si el Representante decide retirar al alumno antes del 31 de agosto de 2027, deberá liquidar la totalidad de las mensualidades causadas y pendientes acumuladas hasta el cierre del trámite administrativo. No se procesará el retiro definitivo ni se liberará documentación académica si existen saldos deudores.</li>
                         </ul>

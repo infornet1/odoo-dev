@@ -104,7 +104,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 | ueipab_sales | 17.0.1.2.1 | both — quotation engine + T&C annex page 2 on Acuerdo PDF (see UEIPAB_SALES_QUOTATION_PLAN.md) |
-| ueipab_enrollment_journey | 17.0.0.4.0 | testing only — 9-step 3-block timeline (🏛️ Inscripción Formal / 💻 Activación Plataformas / 📁 Cierre Administrativo), hard Block 1 gate, contract escrow step 3, Glenda bubble, QWeb PDF CSE-2627-XXXX — see ENROLLMENT_JOURNEY_WIZARD.md |
+| ueipab_enrollment_journey | 17.0.0.4.1 | testing only — 9-step 3-block timeline (🏛️ Inscripción Formal / 💻 Activación Plataformas / 📁 Cierre Administrativo), hard Block 1 gate, contract escrow step 3, Glenda bubble, QWeb PDF CSE-2627-XXXX + QR verification `/verify-contract/<token>` — see ENROLLMENT_JOURNEY_WIZARD.md |
 
 ---
 
@@ -390,7 +390,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **Sales / Quotations:** [UEIPAB Sales Quotation Plan](documentation/UEIPAB_SALES_QUOTATION_PLAN.md) — **DEPLOYED TO PRODUCTION 2026-06-11**; 17 products + 12 templates; smoke test $973.20 exact.
 
-**Enrollment:** [Enrollment Journey Wizard](documentation/ENROLLMENT_JOURNEY_WIZARD.md) — `ueipab_enrollment_journey` v0.4.0 testing; 9-step 3-block customer timeline + QWeb contract PDF (CSE-2627-XXXX).
+**Enrollment:** [Enrollment Journey Wizard](documentation/ENROLLMENT_JOURNEY_WIZARD.md) — `ueipab_enrollment_journey` v0.4.1 testing; 9-step 3-block customer timeline + QWeb contract PDF (CSE-2627-XXXX) + QR document verification (`/verify-contract/<token>`).
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 

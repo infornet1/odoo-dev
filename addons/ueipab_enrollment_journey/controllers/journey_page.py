@@ -13,6 +13,123 @@ TELEGRAM_BOT = 'GlendaUeipabBot'
 
 class EnrollmentJourneyPage(http.Controller):
 
+    @http.route('/verify-contract/<string:token>', type='http',
+                auth='public', website=False, csrf=False)
+    def verify_contract(self, token, **kw):
+        j = request.env['enrollment.journey'].sudo().search(
+            [('access_token', '=', token), ('active', '=', True)], limit=1)
+        if not j:
+            return request.make_response(
+                self._render_invalid_contract(),
+                headers=[('Content-Type', 'text/html; charset=utf-8')],
+                status=404)
+        return request.make_response(
+            self._render_valid_contract(j),
+            headers=[('Content-Type', 'text/html; charset=utf-8')])
+
+    def _render_valid_contract(self, j):
+        from datetime import datetime
+        partner_name = escape(j.partner_id.name or '')
+        contract_num = escape(j.contract_number or '—')
+        date_str = j.contract_date.strftime('%d/%m/%Y') if j.contract_date else '—'
+        n = len(j.student_ids) or '—'
+        now = datetime.now().strftime('%d/%m/%Y %H:%M')
+        student_rows = ''.join(
+            '<tr><td style="padding:3px 8px;">%s</td><td style="padding:3px 8px;color:#555;">%s</td></tr>' % (
+                escape(s.name), escape(s.grade or ''))
+            for s in j.student_ids
+        ) or '<tr><td colspan="2" style="padding:3px 8px;color:#999;">%s estudiante(s) registrado(s)</td></tr>' % n
+        return """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Verificación de Contrato — UEIPAB</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Arial,sans-serif;background:#f0f4fa;color:#1a1a1a;min-height:100vh;
+display:flex;align-items:center;justify-content:center;padding:24px}}
+.card{{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(26,44,91,.14);
+max-width:520px;width:100%;overflow:hidden}}
+.card-header{{background:#1a2c5b;color:#fff;padding:20px 28px;text-align:center}}
+.card-header .badge{{display:inline-block;background:#27ae60;color:#fff;
+font-size:13px;font-weight:700;padding:5px 18px;border-radius:999px;margin-bottom:10px;
+letter-spacing:.5px}}
+.card-header h1{{font-size:18px;font-weight:700;margin-bottom:2px}}
+.card-header p{{font-size:12px;color:#cdd9ee}}
+.card-body{{padding:24px 28px}}
+.check-icon{{text-align:center;font-size:56px;margin-bottom:12px}}
+table{{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:12px}}
+td{{padding:7px 4px;border-bottom:1px solid #eef2f8}}
+td:first-child{{color:#555;width:46%;}}
+td:last-child{{font-weight:600;color:#1a2c5b}}
+.students-section{{background:#f8faff;border-radius:8px;padding:12px 14px;margin-top:8px;font-size:13px}}
+.students-section h4{{font-size:12px;font-weight:700;color:#1a2c5b;letter-spacing:.5px;
+text-transform:uppercase;margin-bottom:8px}}
+.students-table td{{border-bottom:1px solid #e8edf5;font-weight:normal;color:#2c3e50}}
+.footer{{text-align:center;font-size:11px;color:#999;padding:14px 28px 20px;border-top:1px solid #f0f0f0}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="badge">✓ DOCUMENTO VÁLIDO</div>
+    <h1>Instituto Privado Andrés Bello, C.A.</h1>
+    <p>Verificación de Contrato de Servicio Educativo</p>
+  </div>
+  <div class="card-body">
+    <div class="check-icon">✅</div>
+    <table>
+      <tr><td>Nro. de Contrato</td><td>{contract_num}</td></tr>
+      <tr><td>Representante</td><td>{partner_name}</td></tr>
+      <tr><td>Fecha del contrato</td><td>{date_str}</td></tr>
+      <tr><td>Período escolar</td><td>2026 – 2027</td></tr>
+      <tr><td>Estado</td><td style="color:#27ae60;">Vigente ✓</td></tr>
+    </table>
+    <div class="students-section">
+      <h4>Estudiantes matriculados</h4>
+      <table class="students-table">{student_rows}</table>
+    </div>
+  </div>
+  <div class="footer">
+    Verificación realizada el {now} · RIF J-080086171<br/>
+    <a href="https://ueipab.edu.ve" style="color:#2471a3;">ueipab.edu.ve</a>
+  </div>
+</div>
+</body>
+</html>""".format(contract_num=contract_num, partner_name=partner_name,
+                  date_str=date_str, student_rows=student_rows, now=now)
+
+    def _render_invalid_contract(self):
+        return """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contrato No Encontrado — UEIPAB</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Arial,sans-serif;background:#f0f4fa;min-height:100vh;
+display:flex;align-items:center;justify-content:center;padding:24px}}
+.card{{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(26,44,91,.14);
+max-width:480px;width:100%;text-align:center;padding:40px 32px}}
+.icon{{font-size:52px;margin-bottom:16px}}
+h1{{font-size:20px;color:#1a2c5b;margin-bottom:8px}}
+p{{color:#555;font-size:14px;line-height:1.6}}
+a{{color:#2471a3}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">❌</div>
+  <h1>Documento no encontrado</h1>
+  <p>El código QR escaneado no corresponde a ningún contrato válido en nuestros registros.<br/>
+  Si cree que es un error, contáctenos en
+  <a href="mailto:pagos@ueipab.edu.ve">pagos@ueipab.edu.ve</a>.</p>
+</div>
+</body>
+</html>"""
+
     @http.route('/enrollment-journey/<string:token>', type='http',
                 auth='public', website=False, csrf=False)
     def journey_page(self, token, **kw):

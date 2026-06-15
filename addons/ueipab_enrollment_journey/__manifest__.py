@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'UEIPAB Enrollment Journey',
-    'version': '17.0.0.4.0',
+    'version': '17.0.0.4.1',
     'category': 'Sales',
     'summary': 'Customer-facing enrollment journey wizard 2026-2027 (9-step 3-block timeline + hybrid clearance)',
     'description': """
