@@ -414,7 +414,7 @@
                             <li><strong>Jurisdicción:</strong> Para todos los efectos legales y judiciales derivados del incumplimiento de las obligaciones de este contrato, las partes eligen de forma exclusiva y excluyente como domicilio especial a la ciudad de El Tigre, Municipio Simón Rodríguez del Estado Anzoátegui, a la jurisdicción de cuyos tribunales declaran someterse de manera expresa.</li>
                         </ul>
 
-                        <!-- Page 2 signatures -->
+                        <!-- Page 2 signatures + QR seal -->
                         <div style="margin-top:10px;">
                             <table style="width:100%; font-size:8pt;">
                                 <tr>
@@ -424,14 +424,24 @@
                                             <span style="font-size:7pt; color:#555;">Instituto Privado "Andrés Bello" C.A. | RIF J-080086171</span>
                                         </div>
                                     </td>
-                                    <td style="width:10%;"/>
-                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                    <td style="width:8%;"/>
+                                    <td style="text-align:center; padding:0 10px;">
                                         <div style="border-top:1px solid #333; padding-top:4px; margin-top:28px;">
                                             <strong>REPRESENTANTE</strong><br/>
                                             <span style="font-size:7pt; color:#555;">
                                                 <t t-esc="report['partner'].name"/> | C.I.: <t t-esc="report['partner'].vat or '______________'"/>
                                             </span>
                                         </div>
+                                    </td>
+                                    <!-- QR: same seal, bottom-right -->
+                                    <td style="width:72pt; vertical-align:bottom; text-align:center; padding-left:8px;">
+                                        <t t-if="report['qr_b64']">
+                                            <img t-att-src="report['qr_b64']"
+                                                 style="width:66pt; height:66pt; display:block; margin:0 auto;"/>
+                                            <div style="font-size:6pt; color:#aaa; margin-top:2px; line-height:1.3; text-align:center;">
+                                                Escanear para verificar<br/>autenticidad
+                                            </div>
+                                        </t>
                                     </td>
                                 </tr>
                             </table>
