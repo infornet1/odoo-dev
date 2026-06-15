@@ -198,56 +198,40 @@
                             </t>
                         </table>
 
-                        <!-- SECTION F: EARLY PAYMENT BENEFIT + QR VERIFICATION -->
+                        <!-- SECTION F: EARLY PAYMENT BENEFIT -->
                         <div style="background:#fff8e6; border:1px solid #e6a817; border-left:4px solid #e6a817;
-                                    border-radius:4px; padding:8px 10px; margin-bottom:10px; font-size:8.3pt;">
-                            <div style="font-weight:bold; color:#7d5000; margin-bottom:5px;">
+                                    border-radius:4px; padding:8px 12px; margin-bottom:10px; font-size:8.3pt;">
+                            <div style="font-weight:bold; color:#7d5000; margin-bottom:3px;">
                                 📌 F. BENEFICIO POR PAGO PUNTUAL — CONDICIÓN ÚNICA DE DESCUENTO
                             </div>
-                            <table style="width:100%; border-collapse:collapse;">
-                                <tr>
-                                    <!-- QR column -->
-                                    <td style="width:72pt; vertical-align:middle; text-align:center; padding-right:10px;">
-                                        <t t-if="report['qr_b64']">
-                                            <img t-att-src="report['qr_b64']"
-                                                 style="width:70pt; height:70pt; display:block; margin:0 auto;"/>
-                                            <div style="font-size:6pt; color:#7d5000; margin-top:2px; text-align:center;">
-                                                Verificar documento
-                                            </div>
-                                        </t>
-                                    </td>
-                                    <!-- Text column -->
-                                    <td style="vertical-align:middle; color:#5a3800;">
-                                        <t t-if="report['order']">
-                                        <p style="margin:0 0 4px 0;">
-                                            El REPRESENTANTE podrá aplicar la tarifa preferencial del
-                                            <strong>Acuerdo Ref. <t t-esc="report['order'].name"/></strong>
-                                            siempre que cada aporte sea pagado dentro de los
-                                            <strong>primeros diez (10) días continuos</strong> del mes correspondiente.
-                                        </p>
-                                        </t>
-                                        <t t-if="not report['order']">
-                                        <p style="margin:0 0 4px 0;">
-                                            Todo aporte debe pagarse dentro de los
-                                            <strong>primeros diez (10) días continuos</strong> del mes correspondiente
-                                            para mantener cualquier tarifa preferencial acordada.
-                                        </p>
-                                        </t>
-                                        <p style="margin:0; font-size:7.8pt;">
-                                            Vencido dicho plazo opera mora automática y se aplica el arancel máximo
-                                            de <strong>$218,88 USD por estudiante</strong> conforme a la
-                                            <strong>Cláusula 4</strong> de los Términos y Condiciones adjuntos.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
+                            <t t-if="report['order']">
+                            <p style="margin:0 0 3px 0; color:#5a3800;">
+                                El REPRESENTANTE podrá aplicar la tarifa preferencial del
+                                <strong>Acuerdo Ref. <t t-esc="report['order'].name"/></strong>
+                                siempre que cada aporte sea pagado dentro de los
+                                <strong>primeros diez (10) días continuos</strong> del mes correspondiente.
+                            </p>
+                            </t>
+                            <t t-if="not report['order']">
+                            <p style="margin:0 0 3px 0; color:#5a3800;">
+                                Todo aporte debe pagarse dentro de los
+                                <strong>primeros diez (10) días continuos</strong> del mes correspondiente
+                                para mantener cualquier tarifa preferencial acordada.
+                            </p>
+                            </t>
+                            <p style="margin:0; color:#5a3800; font-size:7.8pt;">
+                                Vencido dicho plazo opera mora automática y se aplica el arancel máximo
+                                de <strong>$218,88 USD por estudiante</strong> conforme a la
+                                <strong>Cláusula 4</strong> de los Términos y Condiciones adjuntos.
+                            </p>
                         </div>
 
-                        <!-- SIGNATURES -->
-                        <div style="margin-top:16px;">
+                        <!-- SIGNATURES + QR — QR anchored bottom-right as document seal -->
+                        <div style="margin-top:14px;">
                             <table style="width:100%; font-size:8.5pt;">
                                 <tr>
-                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                    <!-- INSTITUCIÓN signature -->
+                                    <td style="text-align:center; padding:0 8px;">
                                         <div style="border-top:1px solid #333; padding-top:4px; margin-top:30px;">
                                             <strong>INSTITUCIÓN</strong><br/>
                                             <span style="font-size:7.5pt; color:#555;">
@@ -256,8 +240,9 @@
                                             </span>
                                         </div>
                                     </td>
-                                    <td style="width:10%;"/>
-                                    <td style="width:45%; text-align:center; padding:0 10px;">
+                                    <td style="width:8%;"/>
+                                    <!-- REPRESENTANTE signature -->
+                                    <td style="text-align:center; padding:0 8px;">
                                         <div style="border-top:1px solid #333; padding-top:4px; margin-top:30px;">
                                             <strong>REPRESENTANTE</strong><br/>
                                             <span style="font-size:7.5pt; color:#555;">
@@ -265,6 +250,16 @@
                                                 C.I.: <t t-esc="report['partner'].vat or '______________'"/>
                                             </span>
                                         </div>
+                                    </td>
+                                    <!-- QR: document seal, bottom-right -->
+                                    <td style="width:82pt; vertical-align:bottom; text-align:center; padding-left:8px;">
+                                        <t t-if="report['qr_b64']">
+                                            <img t-att-src="report['qr_b64']"
+                                                 style="width:76pt; height:76pt; display:block; margin:0 auto;"/>
+                                            <div style="font-size:6pt; color:#888; margin-top:2px; line-height:1.3; text-align:center;">
+                                                Escanear para verificar<br/>autenticidad del documento
+                                            </div>
+                                        </t>
                                     </td>
                                 </tr>
                             </table>
