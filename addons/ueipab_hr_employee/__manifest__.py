@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB HR Employee Extensions',
-    'version': '17.0.1.3.0',
+    'version': '17.0.1.4.0',
     'category': 'Human Resources',
     'summary': 'Venezuelan employee fields + Private Info Request system for UEIPAB',
     'description': """
