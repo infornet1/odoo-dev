@@ -12,10 +12,13 @@ Enhancement:
 """
 
 import base64
+import logging
 import uuid
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 class HrPayslip(models.Model):
@@ -303,6 +306,44 @@ class HrPayslip(models.Model):
     # ========================================
     # BUSINESS METHODS
     # ========================================
+
+    def unlink(self):
+        """Override to refuse draft batch payslips instead of deleting them.
+
+        When a user deletes a payslip from a batch's slip_ids list, this
+        intercepts the delete, sets the payslip to Rejected state, detaches it
+        from the batch, and posts an audit chatter note — preserving the record.
+
+        Only applies to: state == 'draft' AND payslip_run_id is set.
+        All other cases (no batch, already cancelled, etc.) follow normal deletion.
+        """
+        to_refuse = self.filtered(lambda s: s.state == 'draft' and s.payslip_run_id)
+        to_delete = self - to_refuse
+
+        for slip in to_refuse:
+            batch_name = slip.payslip_run_id.name
+            user_name = self.env.user.name
+            now_str = fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
+            slip.message_post(
+                body=_(
+                    "Refused and removed from batch <b>%s</b> by %s on %s. "
+                    "Record preserved for audit — not deleted."
+                ) % (batch_name, user_name, now_str)
+            )
+            _logger.info(
+                "Payslip %s (%s) refused and removed from batch '%s' by user %s (id=%s) "
+                "— record preserved as audit trail.",
+                slip.number or slip.name,
+                slip.employee_id.name,
+                batch_name,
+                user_name,
+                self.env.user.id,
+            )
+            slip.write({'state': 'cancel', 'payslip_run_id': False})
+
+        if to_delete:
+            return super(HrPayslip, to_delete).unlink()
+        return True
 
     def action_payslip_cancel(self):
         """Cancel payslip and its journal entry when confirmed.

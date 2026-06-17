@@ -4,6 +4,39 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-17 — payslip batch: refuse-instead-of-delete audit trail (v1.72.0)
+
+**Type:** Enhancement | **Module:** `ueipab_payroll_enhancements` → `models/hr_payslip.py`
+
+### Problem
+
+When a user clicked the delete (trash) icon on a payslip row inside a batch's `slip_ids` list, Odoo called `hr.payslip.unlink()` which permanently deleted the record from the database. No audit trail was left — there was no way to know which employee's payslip existed in the batch, who removed it, or when.
+
+Example: JUNIO15 batch, employee Camila, SLIP/842 was deleted from the prod DB with no trace.
+
+### Fix
+
+Added `unlink()` override in `HrPayslip` (ueipab_payroll_enhancements). For any **draft payslip that belongs to a batch**, the override intercepts the delete and instead:
+
+1. Posts a chatter note on the payslip: *"Refused and removed from batch JUNIO15 by [user] on [date]. Record preserved for audit — not deleted."*
+2. Logs `_logger.info()` to the server log (batch name, employee, user id, timestamp)
+3. Sets `state = 'cancel'` (Rejected) and clears `payslip_run_id` so the row disappears from the batch UI
+
+All other cases (payslips with no batch, already-cancelled payslips) continue with normal deletion via `super().unlink()`.
+
+### Behaviour after fix
+
+- Delete icon on batch slip → row disappears (UX unchanged)
+- Payslip survives in DB as "Rejected", findable in Payslips list
+- Chatter on the payslip records batch name, user, and timestamp
+- `Total Net Payable` on the batch updates automatically: `payslip_run_id = False` removes the record from `slip_ids`, which fires `@api.depends('slip_ids')` → recomputes stored total
+
+### Deployed
+
+Testing + production — 2026-06-17.
+
+---
+
 ## 2026-06-09 — partner_ack: voting deadline guard (budget_consulta_2026_2027)
 
 **Type:** Bug fix | **File:** `addons/ueipab_attendance_report/controllers/partner_ack.py`
