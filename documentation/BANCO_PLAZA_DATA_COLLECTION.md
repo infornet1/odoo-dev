@@ -1,8 +1,8 @@
 # Banco Plaza Employee Data Collection Campaign
 
-**Status:** Dry-run validated — ready to go live  
+**Status:** 🟢 LIVE — blast sent 2026-06-17, collecting responses  
 **Module:** `ueipab_hr_employee` v17.0.1.4.0  
-**Created:** 2026-06-16
+**Created:** 2026-06-16 | **Blast sent:** 2026-06-17 23:57 UTC
 
 ---
 
@@ -121,27 +121,51 @@ python3 scripts/sync_banco_plaza_xlsx.py --apply
 
 ## Go-Live Checklist
 
-1. **Validate full flow** with test employee (email → form → submit → ACK emails)
-2. **Flip dry-run off** in prod Odoo:
-   ```python
-   # via Odoo shell or XML-RPC
-   env['ir.config_parameter'].sudo().set_param('banco_plaza.dry_run', 'False')
-   ```
-3. **Send blast to all employees:**
-   ```bash
-   python3 scripts/send_banco_plaza_data_blast.py --live
-   ```
-4. **Monitor** responses in `banco_plaza.submissions` (prod Odoo param)
-5. **Close campaign** when collection is complete:
-   ```python
-   env['ir.config_parameter'].sudo().set_param('banco_plaza.campaign_open', 'False')
-   ```
-6. **Sync XLSX:**
-   ```bash
-   python3 scripts/sync_banco_plaza_xlsx.py          # preview
-   python3 scripts/sync_banco_plaza_xlsx.py --apply  # write
-   ```
-7. Submit completed XLSX to Banco Plaza
+- [x] Validate full flow with test employee (ARCIDES dry-run 2026-06-16)
+- [x] Flip dry-run off (`banco_plaza.dry_run = 'False'`)
+- [x] Blast sent to all 44 employees — 2026-06-17 23:57 UTC (mail ids 7725–7768)
+  - ✅ OK (0 missing): 2 — ALEJANDRA LOPEZ, GUSTAVO PERDOMO
+  - ⚠️ Missing 1 field: 2 — GLADYS BRITO, LUISA ABREU
+  - ⚠️ Missing 2 fields: 26 employees
+  - ⚠️ Missing 4 fields: 14 employees
+- [ ] Collect responses (monitor with `sync_banco_plaza_xlsx.py`)
+- [ ] Close campaign when done: `banco_plaza.campaign_open = 'False'`
+- [ ] Sync XLSX and submit to Banco Plaza
+
+---
+
+## Monitoring & Closing the Campaign
+
+### Check submission progress (safe, read-only, run anytime)
+
+```bash
+python3 scripts/sync_banco_plaza_xlsx.py
+```
+
+Shows count of submissions received, per-employee diff (what would change in XLSX), and timestamp + submit count per employee. The XLSX file is **not touched** until `--apply` is passed.
+
+### Write submissions to XLSX
+
+```bash
+python3 scripts/sync_banco_plaza_xlsx.py --apply
+```
+
+Run this on-demand — no need to do it after every submission. Typically run once or twice toward the end of the campaign, or right before the Banco Plaza deadline.
+
+### Close the campaign (disables form for all employees)
+
+```python
+# via XML-RPC from dev server
+models.execute_kw(db, uid, key, 'ir.config_parameter', 'set_param',
+    ['banco_plaza.campaign_open', 'False'])
+```
+
+Or via Odoo shell on prod:
+```python
+env['ir.config_parameter'].sudo().set_param('banco_plaza.campaign_open', 'False')
+```
+
+After closing: run `sync_banco_plaza_xlsx.py --apply` for the final write, then submit the XLSX to Banco Plaza.
 
 ---
 
@@ -157,4 +181,4 @@ python3 scripts/sync_banco_plaza_xlsx.py --apply
 - **Row:** 10 in XLSX
 - **Token:** `44f1a3285e79b67968f3bf48`
 - **Form URL:** `https://odoo.ueipab.edu.ve/banco-plaza-form/44f1a3285e79b67968f3bf48`
-- **Dry-run submission recorded:** 2026-06-16 19:53 (test values — not real data)
+- **Dry-run submission:** 2026-06-16 19:53 (dummy values J/M/412/4840948) — **cleared** before live blast to avoid pre-filling ARCIDES's form with test data
