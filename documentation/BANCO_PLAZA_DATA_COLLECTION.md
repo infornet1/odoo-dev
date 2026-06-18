@@ -128,7 +128,7 @@ python3 scripts/sync_banco_plaza_xlsx.py --apply
   - ⚠️ Missing 1 field: 2 — GLADYS BRITO, LUISA ABREU
   - ⚠️ Missing 2 fields: 26 employees
   - ⚠️ Missing 4 fields: 14 employees
-- [ ] Collect responses (monitor with `sync_banco_plaza_xlsx.py`)
+- [~] Collect responses (monitor with `sync_banco_plaza_xlsx.py`) — **30/44 submitted as of 2026-06-18**
 - [ ] Close campaign when done: `banco_plaza.campaign_open = 'False'`
 - [ ] Sync XLSX and submit to Banco Plaza
 
@@ -191,6 +191,35 @@ Spanish accented characters are **not accepted by Banco Plaza** and must be repl
 **`sync_banco_plaza_xlsx.py` normalizes automatically** — `_normalize()` is applied to `segundo_nombre` and `segundo_apellido` on every `--apply` run. Employees may type accented names in the form; they will always land in the XLSX as clean ASCII.
 
 Manual normalization run 2026-06-18 cleaned 11 cells (GUZMÁN, VELÁSQUEZ, YÉPEZ, PADRÓN, RONDÓN, JOSÉ ×3, ARÉVALO, PATIÑO).
+
+## Manual Name Entry (national ID copies)
+
+When employees don't respond in time, HR can fill in Segundo Nombre + Segundo Apellido directly from scanned national ID copies and then resend a reminder so the employee still confirms their phone number.
+
+**Workflow:**
+1. Edit XLSX directly (openpyxl, col D = Segundo Nombre, col F = Segundo Apellido)
+2. Run `--send-employee NAME` to refresh `banco_plaza.employees` param in prod Odoo and send reminder — employee sees names pre-filled, only needs to confirm/add phone
+
+**Done 2026-06-18** — 12 employees filled from national ID copies + reminder emails sent (mail ids 7865–7877):
+
+| Employee | Segundo Nombre | Segundo Apellido |
+|---|---|---|
+| ANDRES MORALES | JOSE | PERALES |
+| AUDREY GARCIA | LUCIA | AREYAN |
+| CAMILA ROSSATO | ISABEL | ROJAS |
+| DANIEL BONGIANNI | OMAR | MOSQUEDA |
+| ISMARY ARCILA | ANDREINA | SALAZAR |
+| JOSE HERNANDEZ | GREGORIO | GARCIA |
+| LEIDYMAR ARAY | DEL CARMEN | MENESES |
+| MARIELA PRADO | JUDITH | MARTINEZ |
+| NORKA LA ROSA | JOSEFINA | BLANCO |
+| PABLO NAVARRO | ANTONIO | *(blank — no segundo apellido)* |
+| YARITZA BRUCES | YOSELY | CASANOVA |
+| ZARETH FARIAS | NOHEMI | HERNANDEZ |
+
+**Cédula corrections:**
+- RAFAEL PEREZ: XLSX had `28595198` → corrected to `37383811` (2026-06-18)
+- MIGUEL ROMERO: XLSX had blank → filled `8263626` (2026-06-18)
 
 ---
 
