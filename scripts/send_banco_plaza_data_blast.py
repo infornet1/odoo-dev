@@ -448,17 +448,19 @@ def _trigger_queue(models, db, uid, key):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--live',          action='store_true',
-                    help='Send to real employees')
+                    help='Send to real employees (all)')
     ap.add_argument('--test-employee', metavar='NAME',
                     help='Send only this employee (partial name match, CEO inbox)')
+    ap.add_argument('--send-employee', metavar='NAME',
+                    help='Send only this employee to their REAL inbox (partial name match)')
     args = ap.parse_args()
 
-    # --test-employee always forces dry-run (CEO inbox)
-    dry_run = not args.live or bool(args.test_employee)
+    # --test-employee → dry-run (CEO); --send-employee → live single employee; --live → all live
+    dry_run = not (args.live or args.send_employee)
 
     log.info("Mode: %s%s",
              'DRY-RUN (CEO only)' if dry_run else 'LIVE',
-             f' — filter: {args.test_employee}' if args.test_employee else '')
+             f' — filter: {args.test_employee or args.send_employee}' if (args.test_employee or args.send_employee) else '')
 
     employees = _load_xlsx()
     models, db, uid, key = _connect()
@@ -469,14 +471,15 @@ def main():
 
     # Filter to single employee if requested
     target = employees
-    if args.test_employee:
-        needle = args.test_employee.upper()
+    name_filter = args.test_employee or args.send_employee
+    if name_filter:
+        needle = name_filter.upper()
         target = [e for e in employees
                   if needle in e['primer_nombre'].upper()
                   or needle in e['primer_apellido'].upper()]
         if not target:
             log.error("No employee matching '%s'. Available: %s",
-                      args.test_employee,
+                      name_filter,
                       ', '.join(e['primer_nombre'] for e in employees))
             sys.exit(1)
         log.info("Filtered to %d employee(s): %s",

@@ -174,6 +174,24 @@ After closing: run `sync_banco_plaza_xlsx.py --apply` for the final write, then 
 - `VALID_OPS` check removed — any 3-digit numeric code accepted (covers 422 and future carriers)
 - Three employees had corrupt phone data in XLSX (operadora=41, numero=48321963 = backup WA number): LUIS RODRIGUEZ, MARIA FIGUERA, ROBERT QUIJADA — these are treated as PENDIENTE by the blast script
 
+## Accent Normalization
+
+Spanish accented characters are **not accepted by Banco Plaza** and must be replaced with plain ASCII equivalents before submission.
+
+| Special | Replace |
+|---------|---------|
+| Á/á | A |
+| É/é | E |
+| Í/í | I |
+| Ó/ó | O |
+| Ú/ú, Ü/ü | U |
+| Ñ/ñ | N |
+| Ç/ç | C |
+
+**`sync_banco_plaza_xlsx.py` normalizes automatically** — `_normalize()` is applied to `segundo_nombre` and `segundo_apellido` on every `--apply` run. Employees may type accented names in the form; they will always land in the XLSX as clean ASCII.
+
+Manual normalization run 2026-06-18 cleaned 11 cells (GUZMÁN, VELÁSQUEZ, YÉPEZ, PADRÓN, RONDÓN, JOSÉ ×3, ARÉVALO, PATIÑO).
+
 ---
 
 ## ARCIDES ARZOLA — Test Employee

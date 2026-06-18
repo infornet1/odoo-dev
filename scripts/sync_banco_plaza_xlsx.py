@@ -20,6 +20,20 @@ import xmlrpc.client
 
 import openpyxl
 
+ACCENT_MAP = {
+    'á':'A','é':'E','í':'I','ó':'O','ú':'U','ü':'U','ñ':'N','ç':'C',
+    'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ü':'U','Ñ':'N','Ç':'C',
+    'à':'A','â':'A','ä':'A','ã':'A','è':'E','ê':'E','ë':'E',
+    'î':'I','ï':'I','ô':'O','ö':'O','õ':'O','û':'U',
+    'À':'A','Â':'A','Ä':'A','Ã':'A','È':'E','Ê':'E','Ë':'E',
+    'Î':'I','Ï':'I','Ô':'O','Ö':'O','Õ':'O','Û':'U',
+}
+
+def _normalize(val):
+    if not val:
+        return val
+    return ''.join(ACCENT_MAP.get(c, c) for c in str(val))
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s',
@@ -89,7 +103,7 @@ def main():
         # D — Segundo Nombre
         if sub.get('segundo_nombre') is not None:
             old = ws.cell(row, 4).value
-            new = sub['segundo_nombre'] or None
+            new = _normalize(sub['segundo_nombre']) or None
             if old != new:
                 changes.append(f'D: {old!r} → {new!r}')
                 if args.apply:
@@ -98,7 +112,7 @@ def main():
         # F — Segundo Apellido
         if sub.get('segundo_apellido') is not None:
             old = ws.cell(row, 6).value
-            new = sub['segundo_apellido'] or None
+            new = _normalize(sub['segundo_apellido']) or None
             if old != new:
                 changes.append(f'F: {old!r} → {new!r}')
                 if args.apply:
