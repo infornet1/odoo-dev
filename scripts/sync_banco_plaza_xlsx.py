@@ -127,11 +127,11 @@ def main():
                 if args.apply:
                     ws.cell(row, 15).value = new
 
-        # P — Número
+        # P — Número (kept as string to preserve leading zeros, e.g. 0932115)
         if sub.get('numero'):
             old = ws.cell(row, 16).value
-            new = int(sub['numero'])
-            if old != new:
+            new = str(sub['numero'])
+            if str(old) != new:
                 changes.append(f'P: {old!r} → {new!r}')
                 if args.apply:
                     ws.cell(row, 16).value = new
