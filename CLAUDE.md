@@ -94,7 +94,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | Module | Version | Notes |
 |--------|---------|-------|
 | hr_payroll_community | 17.0.1.0.0 | testing only |
-| ueipab_payroll_enhancements | 17.0.1.71.0 | both |
+| ueipab_payroll_enhancements | 17.0.1.73.0 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.59.3 | both — ACTION:QUOTE + Telegram bold fix + live pricing ground truth (2026-06-11) |

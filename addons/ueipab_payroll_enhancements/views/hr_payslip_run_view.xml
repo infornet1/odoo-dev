@@ -63,6 +63,30 @@
                     <i class="fa fa-check"/> Dates OK
                 </span>
                 <field name="date_check_acknowledged" invisible="1"/>
+                <field name="advance_warning_count" invisible="1"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- ========================================
+         Enhancement 1b: Period Advance Warning on Batch
+         ======================================== -->
+    <record id="hr_payslip_run_form_advance_period_warning" model="ir.ui.view">
+        <field name="name">hr.payslip.run.form.advance.period.warning</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="inherit_id" ref="hr_payroll_community.hr_payslip_run_view_form"/>
+        <field name="priority">29</field>
+        <field name="arch" type="xml">
+            <field name="slip_ids" position="before">
+                <div class="alert alert-warning mb-2"
+                     role="alert"
+                     invisible="advance_warning_count == 0">
+                    ⚡ <strong>Adelantos Previos Detectados:</strong>
+                    Hay <strong><field name="advance_warning_count" readonly="1" nolabel="1" class="d-inline"/></strong>
+                    empleado(s) en este lote con pagos adelanto confirmados para el mismo período.
+                    Verifique que la deducción <strong>VE_LOAN_DED_V2</strong> esté incluida en sus nóminas
+                    antes de procesar este lote.
+                </div>
             </field>
         </field>
     </record>

@@ -12,16 +12,22 @@
         <field name="inherit_id" ref="hr_payroll_community.hr_payslip_view_form"/>
         <field name="arch" type="xml">
 
-            <!-- Add payslip_run_state field (hidden, for visibility control) -->
+            <!-- Add payslip_run_state + advance warning fields (hidden, for visibility control) -->
             <field name="state" position="before">
                 <field name="payslip_run_state" invisible="1"/>
+                <field name="has_period_advance" invisible="1"/>
+                <field name="advance_warning_slip_names" invisible="1"/>
             </field>
 
-            <!-- Período Parcial toggle — shown after credit_note in main group -->
+            <!-- Período Parcial + Es Pago Adelanto toggles after credit_note -->
             <field name="credit_note" position="after">
                 <field name="is_partial_quincena"
                        widget="boolean_toggle"
                        string="Período Parcial (prorratear)"
+                       readonly="state != 'draft'"/>
+                <field name="is_advance_payment"
+                       widget="boolean_toggle"
+                       string="Es Pago Adelanto"
                        readonly="state != 'draft'"/>
             </field>
 
@@ -56,6 +62,14 @@
                      invisible="payslip_run_state != 'cancel'">
                     <strong>Cancelled Batch:</strong> This payslip belongs to a cancelled batch and cannot be modified.
                     To reopen, first set the batch to draft.
+                </div>
+                <div class="alert alert-warning mb-0"
+                     role="alert"
+                     invisible="not has_period_advance">
+                    ⚡ <strong>Adelanto Previo Detectado:</strong>
+                    Este empleado ya tiene un pago adelanto confirmado para este período
+                    (<field name="advance_warning_slip_names" readonly="1" nolabel="1" class="d-inline fw-bold"/>).
+                    Verifique que la deducción <strong>VE_LOAN_DED_V2</strong> esté incluida en esta nómina.
                 </div>
             </header>
 

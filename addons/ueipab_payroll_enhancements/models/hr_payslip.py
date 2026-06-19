@@ -167,6 +167,52 @@ class HrPayslip(models.Model):
     )
 
     # ========================================
+    # STANDALONE ADVANCE PAYMENT
+    # ========================================
+
+    is_advance_payment = fields.Boolean(
+        string='Es Pago Adelanto',
+        default=False,
+        help='Marca este comprobante individual como pago adelanto de salario. '
+             'Usar cuando el empleado recibe un adelanto fuera de un lote batch. '
+             'No usar junto a Nota de Crédito.',
+    )
+
+    has_period_advance = fields.Boolean(
+        string='Tiene Adelanto Este Período',
+        compute='_compute_has_period_advance',
+        store=False,
+    )
+
+    advance_warning_slip_names = fields.Char(
+        string='Adelantos Confirmados',
+        compute='_compute_has_period_advance',
+        store=False,
+    )
+
+    @api.depends('employee_id', 'date_from', 'date_to', 'is_advance_payment', 'credit_note')
+    def _compute_has_period_advance(self):
+        for slip in self:
+            if (slip.is_advance_payment or slip.credit_note
+                    or not slip.employee_id or not slip.date_from or not slip.date_to):
+                slip.has_period_advance = False
+                slip.advance_warning_slip_names = False
+                continue
+            advances = self.env['hr.payslip'].search([
+                ('id', '!=', slip.id if isinstance(slip.id, int) else 0),
+                ('employee_id', '=', slip.employee_id.id),
+                ('is_advance_payment', '=', True),
+                ('state', 'in', ['done', 'paid']),
+                ('date_from', '<=', slip.date_to),
+                ('date_to', '>=', slip.date_from),
+                ('credit_note', '=', False),
+            ])
+            slip.has_period_advance = bool(advances)
+            slip.advance_warning_slip_names = ', '.join(
+                a.number or a.name for a in advances
+            ) if advances else False
+
+    # ========================================
     # EMAIL TEMPLATE HELPER METHODS
     # ========================================
 

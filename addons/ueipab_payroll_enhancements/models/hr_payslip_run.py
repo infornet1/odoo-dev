@@ -134,6 +134,23 @@ class HrPayslipRun(models.Model):
     )
 
     # ========================================
+    # STANDALONE ADVANCE WARNING
+    # ========================================
+
+    advance_warning_count = fields.Integer(
+        string='Empleados con Adelanto Este Período',
+        compute='_compute_advance_warning_count',
+        store=False,
+    )
+
+    @api.depends('slip_ids', 'slip_ids.has_period_advance')
+    def _compute_advance_warning_count(self):
+        for batch in self:
+            batch.advance_warning_count = sum(
+                1 for s in batch.slip_ids if s.has_period_advance
+            )
+
+    # ========================================
     # ONCHANGE METHODS
     # ========================================
 
