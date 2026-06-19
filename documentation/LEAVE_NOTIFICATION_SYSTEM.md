@@ -7,12 +7,25 @@
 
 ---
 
+## Odoo-level CC on Outcomes (v17.0.1.6.27, 2026-06-19)
+
+`ueipab_attendance_report/models/hr_leave.py` overrides `hr.leave` to CC `recursoshumanos@ueipab.edu.ve` **immediately** (synchronous, no cron delay) when a leave reaches a final state:
+
+- `_validate_leave_request` override → `message_notify` to RRHH after the employee approval email is sent
+- `action_refuse` override → `message_notify` to RRHH after the employee refusal email is sent
+
+Both use `holiday.sudo().message_notify(...)` so they work regardless of the approver's access level.  The script's `notified_validate_*` / `notified_refuse_*` entries remain as a ~15-min safety net (intentional slight duplication for outcome states).
+
+---
+
 ## leave_notification.py (Feature #76)
 
 Polls `hr.leave` for actionable states every 15 min:
 - `confirm` → "📋 Nueva Solicitud de Permiso" email to `recursoshumanos@ueipab.edu.ve` (blue header)
 - `validate1` → "🔔 Segunda Validación Requerida" email to `recursoshumanos@ueipab.edu.ve` (orange header)
-- State file `scripts/leave_notification_state.json` tracks `notified_confirm_{id}` / `notified_validate1_{id}` separately — a confirm→validate1 transition fires a second email
+- `validate` / `refuse` → also handled here as safety net; primary path is now the Odoo-level CC above
+- All events CC `arcides.arzola@ueipab.edu.ve` (omitted if the leave is for ARCIDES himself)
+- State file `scripts/leave_notification_state.json` tracks `notified_confirm_{id}` / `notified_validate1_{id}` / `notified_validate_{id}` / `notified_refuse_{id}` separately — a confirm→validate1 transition fires a second email
 - Test: `python3 scripts/leave_notification.py --test-email gustavo.perdomo@ueipab.edu.ve`
 
 ---
