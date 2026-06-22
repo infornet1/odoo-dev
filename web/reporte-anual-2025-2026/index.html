@@ -458,10 +458,35 @@
   <p>Sigamos construyendo juntos esta historia de excelencia. Reafirma la continuidad de tu(s)
      representado(s) para el próximo año escolar — con cupo y tarifa preferencial por inscripción temprana
      (hasta el 31 de julio de 2026).</p>
-  <a href="https://wa.me/584148321963?text=Hola%2C%20deseo%20reafirmar%20mi%20continuidad%20para%202026-2027" class="cta-btn" target="_blank" rel="noopener">Reafirmar mi continuidad →</a>
-  <p class="cta-note">Cada familia recibe su enlace personal de inscripción por correo y WhatsApp.
+  <a id="cta-btn" href="https://wa.me/584148321963?text=Hola%2C%20deseo%20reafirmar%20mi%20continuidad%20para%202026-2027" class="cta-btn" target="_blank" rel="noopener">Reafirmar mi continuidad →</a>
+  <p id="cta-note" class="cta-note">Cada familia recibe su enlace personal de inscripción por correo y WhatsApp.
      ¿Dudas? Escríbenos a soporte@ueipab.edu.ve</p>
 </section>
+
+<script>
+  /* Phase 2: when arriving from the enrollment-journey blast with
+     ?j=<journey_url>, point the CTA back to that parent's personal journey.
+     Strict same-domain validation (…ueipab.edu.ve/enrollment-journey/<uuid>)
+     prevents open-redirect abuse; otherwise the WhatsApp fallback stays. */
+  (function () {
+    try {
+      var j = new URLSearchParams(window.location.search).get('j');
+      var valid = j && /^https?:\/\/[a-z0-9.\-]*ueipab\.edu\.ve(:\d+)?\/enrollment-journey\/[0-9a-fA-F-]{36}$/.test(j);
+      if (!valid) return;
+      var btn = document.getElementById('cta-btn');
+      var note = document.getElementById('cta-note');
+      if (btn) {
+        btn.setAttribute('href', j);
+        btn.removeAttribute('target');
+        btn.removeAttribute('rel');
+        btn.textContent = 'Continuar mi inscripción →';
+      }
+      if (note) {
+        note.textContent = 'Te llevaremos de vuelta a tu proceso de inscripción personalizado.';
+      }
+    } catch (e) { /* keep WhatsApp fallback */ }
+  })();
+</script>
 
 <div class="divider"></div>
 <footer>
