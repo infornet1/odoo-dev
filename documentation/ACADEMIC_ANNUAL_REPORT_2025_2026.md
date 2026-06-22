@@ -179,13 +179,37 @@ checklist. Populate it as info is located.
 
 ## 8. Suggested phasing
 
-- **Phase 0 (now):** approve structure §3, confirm route + survey mechanism,
-  start logo sourcing (§5) and content gathering (§6).
-- **Phase 1:** build the static report page (mora-style enhanced), placeholder
-  data, real Kurios/AI/partner sections.
-- **Phase 2:** wire the tokenized continuity-survey CTA + tracking.
-- **Phase 3:** announce via email blast + Glenda WA/Telegram; monitor
-  reaffirmations.
+- **Phase 0:** ✅ DONE — structure approved, route + survey mechanism confirmed,
+  all 9 logos hosted (§5), content skeleton drafted (§6).
+- **Phase 1:** ✅ DONE (2026-06-22) — static report page built & **LIVE**. See
+  deployment block below.
+- **Phase 2:** wire the CTA to the per-parent `/enrollment-journey/<token>`
+  (currently a WhatsApp fallback link) + add the "Reporte Anual →" button to the
+  journey blast email (`_build_blast_email_html()`).
+- **Phase 3:** populate real data (replace `.ph` placeholders), then announce via
+  the journey blast + Glenda WA/Telegram; monitor reaffirmations.
+
+## 9. Phase 1 deployment (LIVE 2026-06-22)
+
+| Item | Value |
+|------|-------|
+| **URL** | https://dev.ueipab.edu.ve/reporte-anual-2025-2026/ (HTTP 200) |
+| **Served from** | `/var/www/dev/reporte-anual-2025-2026/index.html` |
+| **Source (tracked)** | `web/reporte-anual-2025-2026/index.html` (this repo) |
+| **nginx** | `location /reporte-anual-2025-2026/` alias block added to `/etc/nginx/sites-available/dev.ueipab.edu.ve` (mirrors mora-policy; backup `*.bak-<ts>`), `nginx -t` OK, reloaded |
+| **Design** | mora-policy CSS system (Poppins, navy/blue/gold/teal), enhanced |
+| **Scenes built** | nav · hero · year-in-numbers · director letter · 3 momentos · achievements (Kurios real) · Glenda · partner wall (9 logos, 3 groups) · CTA · footer |
+
+**Editing for real data:** placeholders are wrapped in `<span class="ph">…</span>`
+(highlighted yellow on the page). Search the HTML for `class="ph"` and the
+`<!-- VERIFY -->` comment (stat counts). Remove the `.ph` highlight styling before
+the public announcement. To redeploy after editing the tracked source:
+`cp web/reporte-anual-2025-2026/index.html /var/www/dev/reporte-anual-2025-2026/`.
+
+**Known follow-ups:** CTA currently links to a WhatsApp fallback
+(`wa.me/584148321963`) — swap to the per-parent journey token in Phase 2; DO logo
+is a dark-navy SVG tile (intentional brand block; request transparent variant if
+undesired); stat counts (+200 students, +40 staff) are estimates flagged to verify.
 
 ## Related
 
