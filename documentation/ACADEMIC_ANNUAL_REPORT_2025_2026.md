@@ -184,8 +184,13 @@ checklist. Populate it as info is located.
 - **Phase 1:** ✅ DONE (2026-06-22) — static report page built & **LIVE**. See
   deployment block below.
 - **Phase 2:** ✅ DONE (2026-06-22) — bidirectional journey ↔ report wiring. See §10.
-- **Phase 3:** populate real data (replace `.ph` placeholders), then announce via
-  the journey blast + Glenda WA/Telegram; monitor reaffirmations.
+- **Phase 3:** ⏸️ **ON HOLD (2026-06-22)** — page is live with placeholders; the
+  CEO will provide real data, then we replace the `.ph` placeholders, remove the
+  `.ph` highlight styling, verify the stat counts, and announce via the journey
+  blast + Glenda WA/Telegram. **To resume,** the CEO supplies (see
+  [CONTENT_DRAFT](ACADEMIC_ANNUAL_REPORT_CONTENT_DRAFT.md) checklist): director's
+  name/title + logro 2/3; Momento I & II themes + hitos (+ scene photos →
+  `/flyers/annual/`); ORM olympics results; verified student/staff counts.
 
 ## 9. Phase 1 deployment (LIVE 2026-06-22)
 
