@@ -181,6 +181,28 @@ is what releases each batch immediately.
   batch (instead of catching the SSL EOF on the first call) to suppress the
   cosmetic `reconnecting…` warning at every boundary. Functionally irrelevant.
 
+## Desafío 12 correction edition (2026-06-22)
+
+After the first blast, the **Desafío 12** team (Fabriccio Figueroa · Mariana
+Farías · Luis Goite) was found to have been **involuntarily omitted** and a
+claim was raised to the event judges. Correction handled by a second script
+`scripts/send_robotics_kurios_d12_correction.py` (forked from this one):
+
+- **Approach A (integrated):** full newsletter + a D12 recognition block placed
+  right after the Desafío 14 ranking — sincere omission acknowledgment card →
+  D12 poster (`desafio12.jpg`) → names card → dedicated 5-photo gallery
+  (`missing-desafio12-album1..5.jpeg`). No invented medal — celebrates their
+  "destacada participación".
+- **Subject:** `¡Debut de oro! El Andrés Bello brilla con los Desafíos 12 y 14 en Robótica 🏆`
+- **Recipients (5, each individual):** 4 D12 families
+  (`luis.goite@`, `velamaria.pqt@`, `maderamariana@`, `figueroays@`) +
+  **`todalacomunidad@ueipab.edu.ve`** → intentional **full-community re-send** of
+  the corrected edition.
+- **`--live` guard:** refuses to send when the recipient list is empty.
+- State file `/root/kurios/kurios_d12_state.json` (separate from the first run).
+- **Sent 2026-06-22 from prod** (`systemd-run --unit=kurios-d12`): 5/5,
+  `Result=success`, zero failures.
+
 ## Log
 
 - **2026-06-22** — Built script + media hosting; dry-run 268→286 deliverable
