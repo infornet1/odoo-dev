@@ -1,0 +1,660 @@
+#!/usr/bin/env python3
+"""
+Newsletter: ¡Oro Regional en Robótica Kurios! — Email Blast
+============================================================
+Celebra el 1er lugar (medalla de oro, Desafío #14) del Instituto Privado
+"Andrés Bello" en el Torneo Regional de Robótica Kurios — Zona Oriente,
+disputado el sábado 20 de junio en el Colegio Integral El Manglar
+(Nueva Barcelona, Edo. Anzoátegui).
+
+Campeones: Isaac Carrillo · Jadasa Mayz · Andrés Córdoba
+
+FROM:      soporte@ueipab.edu.ve   (Instituto Andrés Bello)
+REPLY-TO:  soporte@ueipab.edu.ve
+SUBJECT:   ¡EL ANDRÉS BELLO SE ADUEÑA DEL ORO EN EL REGIONAL DE ROBÓTICA KURIOS!🏅🤖
+
+Recipients are the hard-coded community list below — every address is sent
+its OWN individual email (one mail.mail per address, deduped case-insensitive).
+
+Media is served from /var/www/dev/flyers/kurios/ → https://dev.ueipab.edu.ve/flyers/kurios/
+
+Usage:
+    python3 scripts/send_robotics_kurios_newsletter.py            # dry-run (lists recipients)
+    python3 scripts/send_robotics_kurios_newsletter.py --preview  # CEO only (real send)
+    python3 scripts/send_robotics_kurios_newsletter.py --live     # full community blast
+"""
+
+import argparse
+import json
+import logging
+import os
+import re
+import socket
+import ssl
+import sys
+import time
+import xmlrpc.client
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+log = logging.getLogger(__name__)
+
+# ── Constants ──────────────────────────────────────────────────────────────────
+
+PROD_CFG   = os.environ.get('KURIOS_PROD_CFG', '/opt/odoo-dev/config/production.json')
+
+ODOO_URL   = 'https://odoo.ueipab.edu.ve'
+LOGO_URL   = f'{ODOO_URL}/web/image/res.company/1/logo'        # 1080×1080 square logo
+MEDIA_BASE = 'https://dev.ueipab.edu.ve/flyers/kurios'
+
+EMAIL_FROM = 'Colegio Andrés Bello - Soporte <soporte@ueipab.edu.ve>'
+REPLY_TO   = 'soporte@ueipab.edu.ve'
+SUBJECT    = '¡Debut de oro! El Andrés Bello brilla con los Desafíos 12 y 14 en Robótica 🏆'
+
+CEO_EMAIL  = 'gustavo.perdomo@ueipab.edu.ve'
+CEO_NAME   = 'Gustavo Perdomo'
+
+MAIL_QUEUE_CRON_ID = 3
+SEND_DELAY         = 0.15    # tiny pause between individual mail.mail creates
+BATCH_SIZE         = 10      # emails released per batch
+BATCH_INTERVAL     = 140     # seconds to wait between batches
+
+# Resume/idempotency: every successfully-queued address is persisted here so a
+# crash + re-run never re-sends. Override path with KURIOS_STATE.
+STATE_FILE = os.environ.get('KURIOS_STATE', '/tmp/kurios_sent_state.json')
+
+# ── Community recipient list (raw — every address gets its own email) ───────────
+
+RAW_RECIPIENTS = """
+# Desafío-12 correction list (approved by Gustavo 2026-06-22):
+# 4 Desafío-12 families + whole-community alias. Each gets its own email.
+luis.goite@gmail.com
+velamaria.pqt@gmail.com
+maderamariana@gmail.com
+figueroays@gmail.com
+todalacomunidad@ueipab.edu.ve
+"""
+
+# Addresses with confirmed hard-bounce DSNs — skip to avoid noise
+SKIP_EMAILS = {
+    'olysamg@gmail.com',     # EMIRO GONZALEZ — failing since 2026-05-17 (conv #44815)
+}
+
+_EMAIL_RE = re.compile(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}')
+
+
+def _parse_recipients():
+    """Flatten the raw blob into a deduped (case-insensitive) ordered email list."""
+    seen, out = set(), []
+    for token in _EMAIL_RE.findall(RAW_RECIPIENTS):
+        e = token.strip()
+        k = e.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(e)
+    return out
+
+
+# ── Config + XML-RPC ───────────────────────────────────────────────────────────
+
+def _load_prod_cfg():
+    cfg = json.load(open(PROD_CFG))['production']['xmlrpc']
+    return cfg['url'], cfg['db'], cfg['user'], cfg['api_key']
+
+
+_CONN = {}   # holds live {url, models, db, uid, key}
+
+# Transient transport errors that mean "the socket died, just reconnect & retry"
+_RETRYABLE = (ssl.SSLError, socket.error, OSError, ConnectionError,
+              xmlrpc.client.ProtocolError, xmlrpc.client.Fault, EOFError)
+
+
+def _connect():
+    """(Re)establish the XML-RPC connection and store it in _CONN."""
+    url, db, user, key = _load_prod_cfg()
+    common = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/common')
+    uid = common.authenticate(db, user, key, {})
+    if not uid:
+        raise RuntimeError('XML-RPC authentication failed')
+    _CONN.update(url=url, db=db, uid=uid, key=key,
+                 models=xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/object'))
+    return uid
+
+
+def call(model, method, args=None, kw=None, tries=4):
+    """execute_kw with auto-reconnect. Survives idle-killed sockets between batches."""
+    last = None
+    for attempt in range(1, tries + 1):
+        try:
+            return _CONN['models'].execute_kw(
+                _CONN['db'], _CONN['uid'], _CONN['key'],
+                model, method, args or [[]], kw or {})
+        except _RETRYABLE as e:
+            last = e
+            log.warning("call %s.%s failed (attempt %d/%d): %s — reconnecting…",
+                        model, method, attempt, tries, e)
+            time.sleep(min(2 * attempt, 8))
+            try:
+                _connect()
+            except Exception as ce:
+                log.warning("reconnect failed: %s", ce)
+    raise RuntimeError(f"call {model}.{method} failed after {tries} attempts: {last}")
+
+
+# ── Resume state ───────────────────────────────────────────────────────────────
+
+def _load_state():
+    try:
+        return set(x.lower() for x in json.load(open(STATE_FILE)))
+    except (FileNotFoundError, ValueError):
+        return set()
+
+
+def _save_state(sent_set):
+    tmp = STATE_FILE + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(sorted(sent_set), f)
+    os.replace(tmp, STATE_FILE)
+
+
+# ── HTML helpers ───────────────────────────────────────────────────────────────
+
+def _full_img(src, alt):
+    return (
+        f'<a href="{MEDIA_BASE}/{src}" target="_blank" style="text-decoration:none;">'
+        f'<img src="{MEDIA_BASE}/{src}" alt="{alt}" width="600" '
+        f'style="width:100%;max-width:536px;height:auto;display:block;border-radius:12px;'
+        f'border:1px solid #e3e8f0;"/></a>'
+    )
+
+
+def _video_block(poster, mp4, label, caption):
+    """A 'flagged' featured-video card: clickable poster + prominent play button."""
+    return f"""
+  <tr>
+    <td style="padding:6px 32px 4px;">
+      <div style="display:inline-block;background:#ffd400;color:#1a1a6e;font-size:11px;
+                  font-weight:bold;padding:4px 12px;border-radius:14px;letter-spacing:0.5px;">
+        ⭐ DESTACADO &bull; 🎥 {label}
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 32px 6px;position:relative;">
+      <a href="{MEDIA_BASE}/{mp4}" target="_blank" style="text-decoration:none;display:block;">
+        <img src="{MEDIA_BASE}/{poster}" alt="{caption}" width="600"
+             style="width:100%;max-width:536px;height:auto;display:block;border-radius:12px;
+                    border:3px solid #ffd400;"/>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding:0 32px 6px;text-align:center;">
+      <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+        <tr><td align="center" style="border-radius:26px;background:#1a1a6e;
+                   box-shadow:0 4px 12px rgba(26,26,110,0.32);">
+          <a href="{MEDIA_BASE}/{mp4}" target="_blank"
+             style="display:inline-block;background:linear-gradient(135deg,#1a1a6e,#2b6fd6);
+                    color:#fff;text-decoration:none;font-size:14px;font-weight:bold;
+                    padding:11px 34px;border-radius:26px;">
+            ▶️ Reproducir video
+          </a>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 32px 18px;text-align:center;">
+      <p style="margin:0;color:#888;font-size:12px;font-style:italic;">{caption}</p>
+    </td>
+  </tr>"""
+
+
+# ── HTML builder ───────────────────────────────────────────────────────────────
+
+def _build_html(is_preview: bool = False) -> str:
+    preview_banner = (
+        '<div style="background:#1a1a6e;color:#fff;padding:14px 18px;font-size:12px;line-height:1.65;">'
+        '<b>📋 PROPUESTA INTERNA — revisi&oacute;n de Gustavo (NO enviado a nadie m&aacute;s)</b><br/>'
+        'Edici&oacute;n <b>corregida</b> del bolet&iacute;n Kurios: a&ntilde;ade un bloque de '
+        '<b>reconocimiento al Equipo Desaf&iacute;o 12</b> (Fabriccio, Mariana, Luis) + su '
+        'galer&iacute;a, flagueando con tacto la <b>omisi&oacute;n involuntaria</b>.<br/>'
+        '<b>Por confirmar antes de enviar:</b> (1) <b>lista corta</b> de destinatarios; '
+        '(2) ortograf&iacute;a/acentos de los nombres; (3) si mencionamos un '
+        '<b>resultado/puesto</b> espec&iacute;fico del Desaf&iacute;o 12; '
+        '(4) enfoque: <b>integrado</b> (este) vs. <b>correo dedicado</b> solo al equipo D12; '
+        '(5) asunto actual: &ldquo;¡Debut de oro! El Andr&eacute;s Bello brilla con los Desaf&iacute;os 12 y 14&rdquo;.'
+        '</div>'
+    ) if is_preview else ''
+
+    # Photo album: 6–21 minus 8 & 14 (used as video posters) → 2-column grid
+    album_ids = [6, 7, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21]
+    album_rows = ''
+    for i in range(0, len(album_ids), 2):
+        pair = album_ids[i:i + 2]
+        cells = ''
+        for n in pair:
+            cells += (
+                f'<td width="50%" style="padding:5px;" valign="top">'
+                f'<a href="{MEDIA_BASE}/{n}.jpeg" target="_blank">'
+                f'<img src="{MEDIA_BASE}/{n}.jpeg" alt="Robótica Kurios foto {n}" width="258" '
+                f'style="width:100%;height:auto;display:block;border-radius:9px;border:1px solid #e3e8f0;"/>'
+                f'</a></td>'
+            )
+        if len(pair) == 1:
+            cells += '<td width="50%" style="padding:5px;">&nbsp;</td>'
+        album_rows += f'<tr>{cells}</tr>'
+
+    # Desafío 12 gallery (the omitted team) — 2-column grid
+    d12_imgs = [f'missing-desafio12-album{n}' for n in range(1, 6)]
+    d12_rows = ''
+    for i in range(0, len(d12_imgs), 2):
+        pair = d12_imgs[i:i + 2]
+        cells = ''
+        for src in pair:
+            cells += (
+                f'<td width="50%" style="padding:5px;" valign="top">'
+                f'<a href="{MEDIA_BASE}/{src}.jpeg" target="_blank">'
+                f'<img src="{MEDIA_BASE}/{src}.jpeg" alt="Equipo Desafío 12 — Kurios" width="258" '
+                f'style="width:100%;height:auto;display:block;border-radius:9px;border:1px solid #cdd9f0;"/>'
+                f'</a></td>'
+            )
+        if len(pair) == 1:
+            cells += '<td width="50%" style="padding:5px;">&nbsp;</td>'
+        d12_rows += f'<tr>{cells}</tr>'
+
+    # Promotional flyers a–f — single row (clickable thumbnails)
+    flyer_files = ['a', 'b', 'c', 'd', 'e', 'f']
+    flyer_titles = {
+        'a': 'STEAM &amp; Fútbol — Historia Copa Mundial',
+        'b': 'Inscripciones Abiertas 2026-2027',
+        'c': 'Clases de Robótica (alianza Kurios)',
+        'd': 'Curso de Dibujo y Pintura',
+        'e': 'Bachillerato Virtual 100% online',
+        'f': 'Cursos de Inglés After School (MOA)',
+    }
+    flyer_cells = ''
+    for f in flyer_files:
+        flyer_cells += (
+            f'<td width="16%" style="padding:3px;" valign="top">'
+            f'<a href="{MEDIA_BASE}/{f}.jpeg" target="_blank" title="{flyer_titles[f]}">'
+            f'<img src="{MEDIA_BASE}/{f}.jpeg" alt="{flyer_titles[f]}" width="88" '
+            f'style="width:100%;height:auto;display:block;border-radius:6px;border:1px solid #e3e8f0;"/>'
+            f'</a></td>'
+        )
+
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>¡Oro Regional en Robótica Kurios!</title>
+</head>
+<body style="margin:0;padding:0;background:#eef1f8;font-family:Arial,Helvetica,sans-serif;">
+{preview_banner}
+<table cellpadding="0" cellspacing="0" width="100%" style="background:#eef1f8;">
+<tr><td align="center" style="padding:24px 10px;">
+<table cellpadding="0" cellspacing="0" width="600"
+       style="max-width:600px;background:#fff;border-radius:16px;overflow:hidden;
+              box-shadow:0 4px 28px rgba(0,0,0,0.12);">
+
+  <!-- ══ HEADER ══ -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#1a1a6e 0%,#2b6fd6 100%);
+               padding:34px 32px 26px;text-align:center;">
+      <img src="{LOGO_URL}" alt="Instituto Andr&eacute;s Bello" width="78" height="78"
+           style="border-radius:50%;border:3px solid rgba(255,212,0,0.85);
+                  display:block;margin:0 auto 12px;"/>
+      <h1 style="margin:0;color:#fff;font-size:20px;font-weight:bold;line-height:1.3;">
+        Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo;
+      </h1>
+      <p style="margin:4px 0 14px;color:rgba(255,255,255,0.82);font-size:13px;">
+        El Tigre, Estado Anzo&aacute;tegui
+      </p>
+      <div style="display:inline-block;background:#ffd400;border-radius:22px;padding:9px 24px;">
+        <span style="color:#1a1a6e;font-size:15px;font-weight:bold;">
+          🏅🤖 ¡CAMPEONES REGIONALES DE ROB&Oacute;TICA KURIOS!
+        </span>
+      </div>
+    </td>
+  </tr>
+
+  <!-- ══ HERO POSTER ══ -->
+  <tr>
+    <td style="padding:0;">
+      <img src="{MEDIA_BASE}/2.jpeg" alt="Torneo Regional de Rob&oacute;tica y Tecnolog&iacute;a Kurios — Desaf&iacute;o 14"
+           width="600" style="width:100%;height:auto;display:block;"/>
+    </td>
+  </tr>
+
+  <!-- ══ HEADLINE ══ -->
+  <tr>
+    <td style="padding:26px 32px 6px;text-align:center;">
+      <h2 style="margin:0;color:#1a1a6e;font-size:23px;font-weight:bold;line-height:1.25;">
+        ¡El Andr&eacute;s Bello se adue&ntilde;a del oro en el<br/>Regional de Rob&oacute;tica Kurios! 🏆
+      </h2>
+      <p style="margin:10px 0 0;color:#2b6fd6;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:0.6px;">
+        El Tigre &bull; Zona Oriente &bull; S&aacute;bado 20 de junio
+      </p>
+    </td>
+  </tr>
+
+  <!-- ══ LEAD ══ -->
+  <tr>
+    <td style="padding:14px 32px 6px;">
+      <p style="margin:0 0 14px;color:#444;font-size:14px;line-height:1.8;">
+        La delegaci&oacute;n estudiantil del Instituto Privado <strong>&ldquo;Andr&eacute;s Bello&rdquo;</strong>
+        inscribi&oacute; su nombre en lo m&aacute;s alto de la tecnolog&iacute;a oriental al titularse
+        <strong>campeones absolutos</strong> en el <strong>Torneo Regional de Rob&oacute;tica de la Zona
+        Oriente</strong>, celebrado en las instalaciones del <strong>Colegio Integral El Manglar</strong>
+        (Nueva Barcelona, Edo. Anzo&aacute;tegui).
+      </p>
+      <p style="margin:0;color:#444;font-size:14px;line-height:1.8;">
+        En un evento de alta exigencia cient&iacute;fica que reuni&oacute; a las instituciones m&aacute;s
+        destacadas de la regi&oacute;n, nuestros brillantes alumnos demostraron la fuerza del talento
+        tigrense con una impecable aplicaci&oacute;n de la metodolog&iacute;a <strong>STEAM</strong>.
+      </p>
+    </td>
+  </tr>
+
+  <!-- ══ CHAMPIONS CARD ══ -->
+  <tr>
+    <td style="padding:18px 32px 6px;">
+      <table cellpadding="0" cellspacing="0" width="100%"
+             style="background:linear-gradient(135deg,#fff8e1,#fff3c4);
+                    border:2px solid #ffd400;border-radius:14px;">
+        <tr>
+          <td style="padding:20px 22px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:#b37a00;font-weight:bold;
+                      text-transform:uppercase;letter-spacing:1px;">⚙️ Nuestros Campeones</p>
+            <p style="margin:0 0 10px;font-size:20px;color:#1a1a6e;font-weight:bold;line-height:1.4;">
+              Isaac Carrillo<br/>Jadasa Mayz<br/>Andr&eacute;s C&oacute;rdoba
+            </p>
+            <div style="display:inline-block;background:#1a1a6e;border-radius:10px;padding:10px 18px;">
+              <span style="color:#ffd400;font-size:15px;font-weight:bold;">
+                🥇 Medalla de Oro &bull; 1er Lugar &bull; Desaf&iacute;o #14
+              </span>
+            </div>
+            <p style="margin:12px 0 0;font-size:13px;color:#555;line-height:1.6;">
+              Una de las pruebas de <strong>mayor dificultad t&eacute;cnica</strong> de la
+              competencia Kurios — superada con el <strong>mejor tiempo del torneo</strong>. ⏱️
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ RESULTS RANKING IMAGE ══ -->
+  <tr>
+    <td style="padding:18px 32px 6px;text-align:center;">
+      <p style="margin:0 0 10px;font-size:12px;color:#1a1a6e;font-weight:bold;
+                text-transform:uppercase;letter-spacing:0.8px;">📊 Tabla de Posiciones — Final Desaf&iacute;o 14</p>
+      {_full_img('4.jpeg', 'Tabla de posiciones final — Andr&eacute;s Bello 1er lugar 03:49')}
+    </td>
+  </tr>
+
+  <!-- ══ DESAFÍO 12 — RECONOCIMIENTO (corrección de omisión) ══ -->
+  <tr>
+    <td style="padding:26px 32px 4px;">
+      <table cellpadding="0" cellspacing="0" width="100%"
+             style="background:#eef4ff;border-left:4px solid #2b6fd6;border-radius:0 10px 10px 0;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;font-size:11px;color:#1a4f9c;font-weight:bold;
+                    text-transform:uppercase;letter-spacing:0.6px;">💙 Un reconocimiento que faltaba</p>
+          <p style="margin:0;font-size:13px;color:#444;line-height:1.75;">
+            Nuestra celebraci&oacute;n no estar&iacute;a completa sin honrar a otro grupo de
+            talentosos estudiantes que tambi&eacute;n represent&oacute; con orgullo al Andr&eacute;s
+            Bello en este mismo torneo. Por un <strong>lamentable e involuntario error de
+            omisi&oacute;n</strong> no aparecieron en nuestra comunicaci&oacute;n anterior;
+            subsanamos con gusto esa falta y los celebramos como se merecen. 🙏
+          </p>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:14px 32px 4px;text-align:center;">
+      <h3 style="margin:0 0 12px;color:#1a1a6e;font-size:18px;font-weight:bold;">
+        🤖 Equipo Desaf&iacute;o 12
+      </h3>
+      {_full_img('desafio12.jpg', 'Equipo Desaf&iacute;o 12 — Fabriccio Figueroa, Mariana Far&iacute;as, Luis Goite')}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:14px 32px 6px;">
+      <table cellpadding="0" cellspacing="0" width="100%"
+             style="background:linear-gradient(135deg,#eaf1ff,#dce8ff);
+                    border:2px solid #2b6fd6;border-radius:14px;">
+        <tr><td style="padding:18px 22px;text-align:center;">
+          <p style="margin:0 0 4px;font-size:12px;color:#1a4f9c;font-weight:bold;
+                    text-transform:uppercase;letter-spacing:1px;">⚙️ Tambi&eacute;n nos hicieron vibrar</p>
+          <p style="margin:0 0 8px;font-size:19px;color:#1a1a6e;font-weight:bold;line-height:1.4;">
+            Fabriccio Figueroa<br/>Mariana Far&iacute;as<br/>Luis Goite
+          </p>
+          <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
+            Por su destacada participaci&oacute;n en el <strong>Desaf&iacute;o 12</strong> de la
+            competencia Kurios, representando al Andr&eacute;s Bello con dedicaci&oacute;n y talento. 💙
+          </p>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:18px 27px 6px;text-align:center;">
+      <h3 style="margin:0 0 8px;color:#1a1a6e;font-size:16px;font-weight:bold;">
+        📸 El Equipo Desaf&iacute;o 12 en acci&oacute;n
+      </h3>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 22px 8px;">
+      <table cellpadding="0" cellspacing="0" width="100%">
+        {d12_rows}
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ FEATURED VIDEOS (flagged) ══ -->
+  <tr>
+    <td style="padding:22px 32px 4px;text-align:center;">
+      <h3 style="margin:0;color:#1a1a6e;font-size:17px;font-weight:bold;">
+        🎬 Revive los momentos en video
+      </h3>
+    </td>
+  </tr>
+{_video_block('8.jpeg', '3.mp4', 'Video 1 — ¡Momento de triunfo!', 'La emoci&oacute;n de la victoria tigrense.')}
+{_video_block('14.jpeg', '2-2.mp4', 'Video 2 — En la cancha', 'Nuestro equipo en plena acci&oacute;n durante el Desaf&iacute;o 14.')}
+
+  <!-- ══ HIGHLIGHT PHOTOS ══ -->
+  <tr>
+    <td style="padding:8px 32px 6px;text-align:center;">
+      <h3 style="margin:0 0 12px;color:#1a1a6e;font-size:17px;font-weight:bold;">
+        🏆 En el podio
+      </h3>
+      {_full_img('5.jpeg', 'Estudiantes premiados en el escenario del Colegio Integral El Manglar')}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 32px 6px;text-align:center;">
+      {_full_img('1.jpeg', 'Collage Kurios Robotics 2026 — momentos de triunfo y trabajo en equipo')}
+    </td>
+  </tr>
+
+  <!-- ══ PHOTO ALBUM ══ -->
+  <tr>
+    <td style="padding:24px 27px 6px;text-align:center;">
+      <h3 style="margin:0 0 6px;color:#1a1a6e;font-size:17px;font-weight:bold;">
+        📸 &Aacute;lbum de la jornada
+      </h3>
+      <p style="margin:0 0 8px;color:#888;font-size:12px;">Toca cualquier foto para verla en grande.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 22px 8px;">
+      <table cellpadding="0" cellspacing="0" width="100%">
+        {album_rows}
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ CLOSING ══ -->
+  <tr>
+    <td style="padding:18px 32px 8px;">
+      <p style="margin:0 0 12px;color:#444;font-size:14px;line-height:1.8;">
+        Este triunfo premia el esfuerzo, la disciplina y las horas de preparaci&oacute;n de este
+        extraordinario tr&iacute;o de estudiantes y sus profesores especialistas, y reafirma nuestro
+        compromiso de avanzar firmemente hacia la <strong>excelencia acad&eacute;mica y tecnol&oacute;gica</strong>.
+      </p>
+      <p style="margin:0;color:#1a1a6e;font-size:15px;line-height:1.7;font-weight:bold;text-align:center;">
+        Desde la gran familia del Andr&eacute;s Bello, ¡felicitamos de coraz&oacute;n a
+        Isaac, Jadasa y Andr&eacute;s! 💙🏆<br/>
+        <span style="font-weight:normal;color:#555;font-size:13px;">
+          ¡Gracias por hacernos vibrar de orgullo y demostrar que somos verdaderos triunfadores!
+        </span>
+      </p>
+    </td>
+  </tr>
+
+  <!-- ══ PROMO FLYERS ROW ══ -->
+  <tr>
+    <td style="padding:22px 28px 6px;text-align:center;border-top:1px solid #eef1f8;">
+      <h3 style="margin:16px 0 4px;color:#1a1a6e;font-size:16px;font-weight:bold;">
+        ✨ Conoce nuestra oferta educativa
+      </h3>
+      <p style="margin:0 0 10px;color:#888;font-size:12px;">Inscripciones 2026-2027 abiertas &bull; ¡Cont&aacute;ctanos!</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 20px 18px;">
+      <table cellpadding="0" cellspacing="0" width="100%"><tr>
+        {flyer_cells}
+      </tr></table>
+    </td>
+  </tr>
+
+  <!-- ══ FOOTER ══ -->
+  <tr>
+    <td style="background:#1a1a6e;padding:20px 32px;text-align:center;">
+      <p style="margin:0 0 6px;font-size:13px;color:#ffd400;font-weight:bold;">
+        Instituto Privado &ldquo;Andr&eacute;s Bello&rdquo;
+      </p>
+      <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.78);line-height:1.7;">
+        El Tigre, Edo. Anzo&aacute;tegui &bull; RIF J-08008617-1<br/>
+        📷 @ueipab &bull; 🌐 www.ueipab.edu.ve<br/>
+        Consultas: <a href="mailto:soporte@ueipab.edu.ve"
+                      style="color:#9ec5ff;">soporte@ueipab.edu.ve</a>
+        &bull; 📱 0414-8321963 / 0424-8944898
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+
+# ── Send helpers ───────────────────────────────────────────────────────────────
+
+def _create_mail(to_email, html):
+    mail_id = call('mail.mail', 'create', [[{
+        'subject':     SUBJECT,
+        'email_from':  EMAIL_FROM,
+        'reply_to':    REPLY_TO,
+        'email_to':    to_email,
+        'body_html':   html,
+        'state':       'outgoing',
+        'auto_delete': True,
+    }]])
+    log.info("Queued → %s (mail.mail id=%s)", to_email, mail_id)
+    return mail_id
+
+
+def _trigger_mail_queue():
+    log.info("Triggering mail queue cron (id=%d)…", MAIL_QUEUE_CRON_ID)
+    call('ir.cron', 'method_direct_trigger', [[MAIL_QUEUE_CRON_ID]])
+    log.info("Mail queue triggered.")
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description='Robotics Kurios newsletter blast')
+    parser.add_argument('--preview', action='store_true', help='Send only to CEO for review')
+    parser.add_argument('--live', action='store_true', help='Send to the full community list')
+    args = parser.parse_args()
+
+    dry_run = not (args.preview or args.live)
+
+    recipients = _parse_recipients()
+    log.info("Parsed %d unique recipient addresses from community list.", len(recipients))
+
+    if dry_run:
+        log.info("DRY-RUN — no emails sent. Use --preview (CEO) or --live (full blast).")
+        for e in recipients:
+            tag = '  [SKIP-bounce]' if e.lower() in SKIP_EMAILS else ''
+            log.info("  would send → %s%s", e, tag)
+        log.info("Total deliverable: %d (skipping %d known bounce).",
+                 len([e for e in recipients if e.lower() not in SKIP_EMAILS]),
+                 len([e for e in recipients if e.lower() in SKIP_EMAILS]))
+        return
+
+    if args.live and not recipients:
+        log.error("GUARD: --live blocked — the short correction list is empty. "
+                  "Add Desafío-12 recipients to RAW_RECIPIENTS first.")
+        sys.exit(2)
+
+    _connect()
+    log.info("Connected to Odoo (%s / %s)", ODOO_URL, _CONN['db'])
+
+    if args.preview:
+        _create_mail(CEO_EMAIL, _build_html(is_preview=True))
+        _trigger_mail_queue()
+        log.info("Preview sent to %s", CEO_EMAIL)
+        return
+
+    html = _build_html(is_preview=False)
+    already = _load_state()                  # addresses sent on a previous (possibly crashed) run
+    deliverable = [e for e in recipients
+                   if e.lower() not in SKIP_EMAILS and e.lower() not in already]
+    skipped = len([e for e in recipients if e.lower() in SKIP_EMAILS])
+    resumed = len([e for e in recipients if e.lower() in already])
+    total = len(deliverable)
+    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE if total else 0
+    eta_min = max(0, total_batches - 1) * BATCH_INTERVAL / 60.0
+    log.info("BLAST START — %d to send | %d already-sent (resume) | %d skipped | "
+             "%d batches of %d | %ds between | ETA ~%.0f min",
+             total, resumed, skipped, total_batches, BATCH_SIZE, BATCH_INTERVAL, eta_min)
+    if total == 0:
+        log.info("Nothing to send — state file already covers every address.")
+        return
+
+    sent_set = set(already)
+    sent = 0
+    for bi in range(total_batches):
+        batch = deliverable[bi * BATCH_SIZE:(bi + 1) * BATCH_SIZE]
+        for e in batch:
+            _create_mail(e, html)            # one individual email per address
+            sent_set.add(e.lower())
+            _save_state(sent_set)            # persist after every send → crash-safe resume
+            sent += 1
+            time.sleep(SEND_DELAY)
+        _trigger_mail_queue()                # release this batch from the queue
+        log.info("◆ Batch %d/%d released — %d/%d this run (%d total incl. resume).",
+                 bi + 1, total_batches, sent, total, len(sent_set))
+        if bi < total_batches - 1:
+            log.info("Waiting %ds before next batch…", BATCH_INTERVAL)
+            time.sleep(BATCH_INTERVAL)
+
+    log.info("DONE — queued this run: %d | resumed: %d | skipped: %d | grand total sent: %d",
+             sent, resumed, skipped, len(sent_set))
+
+
+if __name__ == '__main__':
+    main()
