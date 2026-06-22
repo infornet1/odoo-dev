@@ -94,34 +94,38 @@ WhatsApp/Telegram push, linking to the report.
 
 ## 5. Partner / ally ecosystem — logo asset checklist
 
-⚠️ **None of the partner logos are on the server yet** (only UEIPAB's own
-`ueipab_logo.png` / `school_logo.png` and the Kurios poster wordmark). To source
-and host under e.g. `/var/www/dev/flyers/partners/` →
-`https://dev.ueipab.edu.ve/flyers/partners/<name>.png`:
+**✅ ALL 9 logos hosted (2026-06-22).** CEO uploaded to
+`/home/ftpuser/odoo-dev/annual-rpt-2526/`; staged to
+`/var/www/dev/flyers/partners/`, all verified **HTTP 200**. Base URL:
+`https://dev.ueipab.edu.ve/flyers/partners/<file>`.
 
-| Partner | Role (proposed copy) | Logo status | Source / link |
-|---------|----------------------|-------------|---------------|
-| **Kurios** | Robótica educativa & STEAM | ⏳ extract from posters / get clean PNG | kuriosedu.com / posters |
-| **MOA (MoA School)** | Programa de inglés After School | ⏳ need PNG | ceo@moaeducation.com |
-| **Akdemia** | Plataforma de gestión académica | ⏳ need PNG | akdemia.com |
-| **Motores por la Paz** | Coordina el programa de **olimpiadas estudiantiles ORM** (lengua y matemática) | ✅ hosted `partners/logo-motores-por-la-paz.jpg` (150×150, gris) | IG [@motoresporlapaz](https://www.instagram.com/motoresporlapaz/) |
-| **ORM Venezuela** | Olimpiadas de **lengua y matemática** (gestionadas por Motores por la Paz) | ✅ hosted `partners/logo-orm.jpg` (150×150) | IG [@orm_venezuela](https://www.instagram.com/orm_venezuela/) |
-| **Digital Ocean** | Infraestructura cloud | ⏳ official brand asset | digitalocean.com/press |
-| **Odoo** | ERP / gestión institucional | ⏳ official brand asset | odoo.com/brand-assets |
-| **Comercial Caracas** | Proveedor local (aliado comercial) | ⏳ need logo | local vendor |
-| **Ferretería Veramar** | Proveedor local (aliado comercial) | ⏳ need logo | local vendor |
+| Partner | Role (proposed copy) | Logo file | Source / link |
+|---------|----------------------|-----------|---------------|
+| **Kurios** | Robótica educativa & STEAM | ✅ `logo-kurios.jpg` | IG / kuriosedu.com |
+| **MOA (MoA School)** | Programa de inglés After School | ✅ `logo-moa.jpg` | ceo@moaeducation.com |
+| **Akdemia** | Plataforma de gestión académica | ✅ `logo-akdemia.jpg` | akdemia.com |
+| **Motores por la Paz** | Coordina el programa de **olimpiadas estudiantiles ORM** (lengua y matemática) | ✅ `logo-motores-por-la-paz.jpg` (150×150, gris) | IG [@motoresporlapaz](https://www.instagram.com/motoresporlapaz/) |
+| **ORM Venezuela** | Olimpiadas de **lengua y matemática** (gestionadas por Motores por la Paz) | ✅ `logo-orm.jpg` (150×150) | IG [@orm_venezuela](https://www.instagram.com/orm_venezuela/) |
+| **Digital Ocean** | Infraestructura cloud | ✅ `logo-digitalocean.svg` (oficial, 200×65, fondo navy) | digitalocean.com |
+| **Odoo** | ERP / gestión institucional | ✅ `logo-odoo.jpg` (anillo "O" morado) | odoo.com |
+| **Comercial Caracas** | Proveedor local (aliado comercial) | ✅ `logo-comercialcaracas.jpg` | local vendor |
+| **Ferretería Veramar** | Proveedor local (aliado comercial) | ✅ `logo-veramar.jpg` | local vendor |
 
-**✅ Hosted (2026-06-22):** CEO uploaded to `/home/ftpuser/odoo-dev/annual-rpt-2526/`;
-staged to `/var/www/dev/flyers/partners/` and verified HTTP 200:
-- `https://dev.ueipab.edu.ve/flyers/partners/logo-motores-por-la-paz.jpg`
-- `https://dev.ueipab.edu.ve/flyers/partners/logo-orm.jpg`
+**⚠️ Asset notes:**
+- **Digital Ocean** — uploaded the **official wordmark SVG** (white logo on navy
+  `#031B4E`). CEO also flagged the **referral badge** option:
+  `https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg`
+  linking to `digitalocean.com/?refcode=e16f543b7f99…` — that *earns referral
+  credit* but reads as a "Referral Badge", not a clean partner logo. **Decision
+  needed:** clean wordmark on the wall (recommended for visual consistency) vs.
+  referral badge (affiliate benefit). Can also put the clean logo on the wall and
+  the referral link in the footer — best of both.
+- The DO SVG has a dark background; on a white logo wall it'll render as a navy
+  tile. Either keep as-is (intentional brand block) or request a transparent
+  variant. The two 150×150 JPEGs (Motores/ORM) are low-res but fine as thumbnails.
+- `veramar.jpg` was renamed to `logo-veramar.jpg` for naming consistency.
 
-Both are small **150×150** JPEGs (the Motores propeller mark is greyscale/low-res)
-— fine as logo-wall thumbnails; request higher-res PNGs if we want them larger.
-Remaining 7 partner logos still to source go in the same `partners/` folder.
-
-**Grouping (9 partners):** mixing education partners with infrastructure and
-local vendors on one wall is unusual — **group them** so each reads intentionally:
+**Grouping (9 partners)** — group so each reads intentionally:
 - **Aliados Académicos:** Kurios · MOA · Akdemia · **Motores por la Paz** · **ORM Venezuela**
 - **Tecnología & Plataforma:** Digital Ocean · Odoo
 - **Aliados Comerciales / Proveedores:** Comercial Caracas · Ferretería Veramar
@@ -132,12 +136,19 @@ manages the ORM olympic programme) — present them adjacent, or as one combined
 
 ## 6. Content to gather (⏳ from the school)
 
+**📝 Skeleton drafted →
+[ACADEMIC_ANNUAL_REPORT_CONTENT_DRAFT.md](ACADEMIC_ANNUAL_REPORT_CONTENT_DRAFT.md)**
+— a fill-in companion with: a ready-to-edit **director's letter** draft, a
+**year-in-numbers** stat grid (pre-filled estimates flagged "verify"), the
+**3-momentos** per-lapso structure, a **Glenda** blurb, and a CEO data-request
+checklist. Populate it as info is located.
+
 - Per-lapso (I, II, III momento): theme + 2–3 headline achievements + photos.
 - Year-in-numbers stats (students, teachers, graduandos, % aprobación, eventos).
-- Director's letter (or I draft for approval).
-- Confirmed achievement list (Kurios robotics ✅ already have; others?).
+- Director's letter (draft ready in the skeleton — approve/edit).
+- Confirmed achievement list (Kurios robotics ✅ already have; ORM olimpiadas? others?).
 - Glenda announcement angle for parents (benefits, not tech).
-- Final continuity-survey questions + where reaffirmations are stored.
+- Scene photos → upload to a new `/var/www/dev/flyers/annual/` folder.
 
 ## 7. Decisions (RESOLVED 2026-06-22)
 
@@ -153,10 +164,10 @@ manages the ORM olympic programme) — present them adjacent, or as one combined
    Logos `logo-motores-por-la-paz.jpg` + `logo-orm.jpg` — ✅ uploaded & hosted.
 
 **Still open:**
-- ⏳ Source the remaining **7** logos (Kurios, MOA, Akdemia, Digital Ocean, Odoo,
-  Comercial Caracas, Ferretería Veramar) + the two local-vendor roles.
-  DO + Odoo auto-grabbable. (2/9 done: Motores por la Paz + ORM.)
-- ⏳ Per-lapso content, year-in-numbers stats, director's letter (§6).
+- ✅ **All 9 partner logos hosted** (2026-06-22) — see §5. (One sub-decision: DO
+  clean wordmark vs. referral badge.)
+- ⏳ Per-lapso content, year-in-numbers stats, director's letter — skeleton
+  drafted (§6 → CONTENT_DRAFT); CEO to populate real data.
 6. **Timing / sequencing** — ✅ **DECIDED: option (b)** (CEO agreed 2026-06-22).
    The report and the enrollment-journey blast launch **together**: the journey
    Step-0 blast embeds the report link, and Glenda also pushes it via
