@@ -203,6 +203,41 @@ claim was raised to the event judges. Correction handled by a second script
 - **Sent 2026-06-22 from prod** (`systemd-run --unit=kurios-d12`): 5/5,
   `Result=success`, zero failures.
 
+## All-teams recap edition (2026-06-22)
+
+A third edition celebrating **every** competition team (not just the Desafío 14
+champions). Script `scripts/send_robotics_kurios_recap.py` (forked from the
+original), same prod/batching/resilience infra.
+
+- **Subject:** `Orgullo tigrense: nuestros 7 equipos en el Regional de Robótica Kurios 🤖💙`
+- **Structure:** header → hero (`2.jpeg`) → "¡Felicitaciones a TODOS nuestros
+  equipos!" headline + reframed lead (7 teams; gold in D14; pride for all) →
+  **D14 gold champions card** → **all-teams gallery** (one full-width poster +
+  name caption per team) → collage (`1.jpeg`) → closing → flyers → footer.
+- **Deliberately removed** (redundant with the first blast to the same audience):
+  the Desafío 14 ranking image and the two "Revive los momentos en video" blocks.
+- **Teams featured (7 / 19 students), no invented placements:**
+  | Poster | Team | Students |
+  |--------|------|----------|
+  | `2.jpeg` | Desafío 14 🥇 ORO | Isaac Carrillo · Jadasa Mayz · Andrés Córdoba |
+  | `desafio3.jpg` | Desafío 3 | Rael Tenorio · Athena Cruz |
+  | `desafio4.jpg` | Desafío 4 | Lucía Pereira · Saileh Muñoz · Miranda Cuellar |
+  | `desafio5.jpg` | Desafío 5 | Lucía González · Héctor Calles · Alexandra Sánchez |
+  | `desafio7a.jpg` | Desafío 7 (A) | Santiago Martínez · Pedro Chanchamire · Álvaro Laya |
+  | `desafio12.jpg` | Desafío 12 | Fabriccio Figueroa · Mariana Farías · Luis Goite |
+  | `desafio-unidad111r.jpg` | Unidad 111 R | Sabrina Torres · Sebastián Delgado · Ariela Figueroa |
+- **Recipients:** community list + `todalacomunidad@` → **270 parsed / 269
+  deliverable** (`olysamg@` bounce skipped). One individual email each.
+- **State file:** `/root/kurios/kurios_recap_state.json`.
+- **Status (2026-06-22):** built, preview-tested to the CEO; **awaiting `go`**
+  for the `--live` prod blast. Fire command:
+  ```bash
+  systemd-run --unit=kurios-recap --collect \
+    --setenv=KURIOS_PROD_CFG=/root/kurios/kurios_prod_creds.json \
+    --setenv=KURIOS_STATE=/root/kurios/kurios_recap_state.json \
+    python3 /root/kurios/send_robotics_kurios_recap.py --live
+  ```
+
 ## Log
 
 - **2026-06-22** — Built script + media hosting; dry-run 268→286 deliverable
