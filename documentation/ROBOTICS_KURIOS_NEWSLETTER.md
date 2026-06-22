@@ -229,8 +229,10 @@ original), same prod/batching/resilience infra.
 - **Recipients:** community list + `todalacomunidad@` → **270 parsed / 269
   deliverable** (`olysamg@` bounce skipped). One individual email each.
 - **State file:** `/root/kurios/kurios_recap_state.json`.
-- **Status (2026-06-22):** built, preview-tested to the CEO; **awaiting `go`**
-  for the `--live` prod blast. Fire command:
+- **Status: SENT 2026-06-22** from prod (`systemd-run --unit=kurios-recap`):
+  **269/269 sent, 0 failures** (`exception` flat at 232 baseline), 27 batches,
+  `Result=success`. `todalacomunidad@` released in batch 1 (full-community
+  fan-out). Fire command used:
   ```bash
   systemd-run --unit=kurios-recap --collect \
     --setenv=KURIOS_PROD_CFG=/root/kurios/kurios_prod_creds.json \
