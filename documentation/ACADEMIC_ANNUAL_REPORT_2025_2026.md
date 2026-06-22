@@ -183,9 +183,7 @@ checklist. Populate it as info is located.
   all 9 logos hosted (§5), content skeleton drafted (§6).
 - **Phase 1:** ✅ DONE (2026-06-22) — static report page built & **LIVE**. See
   deployment block below.
-- **Phase 2:** wire the CTA to the per-parent `/enrollment-journey/<token>`
-  (currently a WhatsApp fallback link) + add the "Reporte Anual →" button to the
-  journey blast email (`_build_blast_email_html()`).
+- **Phase 2:** ✅ DONE (2026-06-22) — bidirectional journey ↔ report wiring. See §10.
 - **Phase 3:** populate real data (replace `.ph` placeholders), then announce via
   the journey blast + Glenda WA/Telegram; monitor reaffirmations.
 
@@ -206,10 +204,45 @@ checklist. Populate it as info is located.
 the public announcement. To redeploy after editing the tracked source:
 `cp web/reporte-anual-2025-2026/index.html /var/www/dev/reporte-anual-2025-2026/`.
 
-**Known follow-ups:** CTA currently links to a WhatsApp fallback
-(`wa.me/584148321963`) — swap to the per-parent journey token in Phase 2; DO logo
-is a dark-navy SVG tile (intentional brand block; request transparent variant if
-undesired); stat counts (+200 students, +40 staff) are estimates flagged to verify.
+**Known follow-ups:** DO logo is a dark-navy SVG tile (intentional brand block;
+request transparent variant if undesired); stat counts (+200 students, +40 staff)
+are estimates flagged to verify.
+
+## 10. Phase 2 — journey ↔ report wiring (DONE 2026-06-22, testing)
+
+Bidirectional link between the report page and each parent's enrollment journey:
+
+**A. Report → journey (static page JS).** The CTA reads `?j=<journey_url>` from
+the URL; if it passes a strict same-domain regex
+(`…ueipab.edu.ve(:port)?/enrollment-journey/<uuid>`) the button is rewritten to
+that journey link and relabelled "Continuar mi inscripción →". Otherwise the
+WhatsApp fallback (`wa.me/584148321963`) stays. **Open-redirect guard verified**
+in-browser: a forged `?j=https://evil.com/…` correctly keeps the fallback.
+
+**B. Journey blast → report (Odoo).** `_build_blast_email_html()` now embeds a
+secondary "📘 Ver el Reporte Anual 2025-2026 →" card (new helper
+`_report_cta_block()`), linking to
+`https://dev.ueipab.edu.ve/reporte-anual-2025-2026/?j=<urlencoded journey_url>`.
+Constants: `REPORT_URL` + `from urllib.parse import quote`. This realises timing
+option (b): the blast carries the report, the report routes back to the journey.
+
+**Why `?j=<full url>` and not `?t=<token>`:** in testing `web.base.url =
+http://dev.ueipab.edu.ve:8019` (Odoo on :8019, HTTP) while the report is on
+`https://dev.ueipab.edu.ve` (:443). Passing the full per-record `journey_url`
+keeps the static page env-agnostic — no hardcoded scheme/port.
+
+**Verification (testing):** module upgraded to **17.0.0.6.0**; email round-trip
+checked (link encodes/decodes correctly, JS regex passes); in-browser DOM test of
+all 3 cases (valid / forged / no-param) passed; preview emailed to
+`gustavo.perdomo@` (mail.mail sent).
+
+**⚠️ Commit note:** the report page + this doc are committed. The **Odoo module
+edits (`models/enrollment_journey.py` report-CTA block + helper + constant +
+manifest bump to 0.6.0) are applied & live in testing but LEFT UNCOMMITTED** —
+they sit on top of large pre-existing uncommitted WIP in the same module (the
+Step-0 continuity-survey feature: ~900 lines across model/controller/views). Fold
+the report-CTA edit into that feature's commit when it lands; don't commit the
+module in isolation. enrollment_journey is **testing-only** (not in production).
 
 ## Related
 
