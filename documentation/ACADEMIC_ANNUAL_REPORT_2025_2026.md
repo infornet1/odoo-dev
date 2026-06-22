@@ -157,17 +157,14 @@ manages the ORM olympic programme) — present them adjacent, or as one combined
   Comercial Caracas, Ferretería Veramar) + the two local-vendor roles.
   DO + Odoo auto-grabbable. (2/9 done: Motores por la Paz + ORM.)
 - ⏳ Per-lapso content, year-in-numbers stats, director's letter (§6).
-- ⏳ **Timing** — when to publish/announce the report (see below).
-
-**On "timing":** the enrollment-journey Step-0 blast is the conversion engine and
-is already live (tokens issued, e.g. the CEO's sample link). The question is
-**sequencing**: do we (a) publish the report first and let it *precede* the
-journey blast — report builds the emotional case, then the journey email arrives
-as the "act now" follow-up; (b) launch them *together* — the journey blast links
-out to the report; or (c) send the report to families who have **not yet**
-confirmed in the journey, as a re-engagement nudge. Recommendation: **(b)** —
-embed the report link in the journey blast and also push it via Glenda WA/Telegram,
-so every parent sees the credibility story at the moment of decision.
+6. **Timing / sequencing** — ✅ **DECIDED: option (b)** (CEO agreed 2026-06-22).
+   The report and the enrollment-journey blast launch **together**: the journey
+   Step-0 blast embeds the report link, and Glenda also pushes it via
+   WhatsApp/Telegram — so every parent meets the credibility story at the moment
+   of decision (rather than as a separate mailing). Implication: the report page
+   must be **published before** the next journey blast wave goes out, and the
+   journey `_build_blast_email_html()` body should gain a "Lee nuestro Reporte
+   Anual →" button linking to `/reporte-anual-2025-2026/`.
 
 ## 8. Suggested phasing
 
