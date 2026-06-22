@@ -239,6 +239,15 @@ original), same prod/batching/resilience infra.
     --setenv=KURIOS_STATE=/root/kurios/kurios_recap_state.json \
     python3 /root/kurios/send_robotics_kurios_recap.py --live
   ```
+- **Single-address top-up:** `--to EMAIL` does a real send of the production
+  newsletter to ONE explicit address, reusing the same resume state file so it
+  can never double-send (skips if the address is already in state). Use for
+  late add-ons that were not in the original community list:
+  ```bash
+  KURIOS_PROD_CFG=/root/kurios/kurios_prod_creds.json \
+  KURIOS_STATE=/root/kurios/kurios_recap_state.json \
+    python3 /root/kurios/send_robotics_kurios_recap.py --to someone@example.com
+  ```
 
 ## Log
 
@@ -251,3 +260,6 @@ original), same prod/batching/resilience infra.
   with the 10 already-sent; **relaunched and completed at 14:09 VET**.
   Final: **286/286 sent, 0 failures** (`exception` flat at 232 baseline),
   10 resumed, 1 bounce skipped. systemd `Result=success`.
+- **2026-06-22 ~22:03 VET** — Added `--to EMAIL` single-send option to the recap
+  script; delivered the all-teams recap to one late add-on, `mperrinocanelon@`
+  (`mail.mail id=8580`, auto-deleted on successful send). Recap state **269 → 270**.
