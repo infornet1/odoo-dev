@@ -60,22 +60,33 @@ Base: the **`/mora-policy/`** look (clean cards, brand palette, generous spacing
 
 ## 4. Technical approach (recommendation + options)
 
-**Recommended hybrid:**
-- **Report page = static HTML/CSS** served via nginx alias — same pattern as
-  mora-policy (`alias /var/www/dev/<dir>/`). Fast, fully designable, no Odoo load.
-  Proposed route: **`/reporte-anual-2025-2026/`** (or `/annual-report/`).
-- **Survey = tokenized Odoo route** for per-parent tracking of who reaffirmed.
-  Reuse an existing pattern:
-  - `partner.communication.ack` (used by PDVSA/Representante continuity campaigns), **or**
-  - a `survey.survey` form, **or**
-  - the `notice-ack/<token>` style public route.
-  Each parent gets a **personalized link** (`…/reporte-anual-2025-2026/?t=<token>`
-  or a Glenda/WA/email blast link) so the CTA pre-identifies them and records the
-  reaffirmation against their partner record.
+**DECIDED (2026-06-22):**
+- **Report page = static HTML/CSS**, **generic for all** (no per-parent token on
+  the report itself), served via nginx alias — same pattern as mora-policy
+  (`alias /var/www/dev/<dir>/`). Fast, fully designable, no Odoo load.
+  Route: **`/reporte-anual-2025-2026/`**.
+- **No new survey mechanism.** The continuity reaffirmation IS the existing
+  **`enrollment.journey`** Step-0 flow — that's the "survey." The annual report
+  is the credibility on-ramp whose final CTA links each parent into that journey.
+  - **Existing blast template (located):** `enrollment.journey.action_send_blast_email()`
+    in `addons/ueipab_enrollment_journey/models/enrollment_journey.py:311`, HTML
+    built by `_build_blast_email_html()` (`:352`).
+    Subject: *"Proceso de Inscripción 2026-2027 — Confirme la continuidad de
+    su(s) representado(s)"*; from/cc `soporte@`; one `mail.mail` per record;
+    tracks `blast_sent_date` / `email_missing` / `email_bounced`.
+  - **Per-parent link:** the journey token route
+    **`/enrollment-journey/<access_token>`** (controller `journey_page.py:142`;
+    confirm `:165` / decline `:184`). `access_token` = uuid4 per record;
+    `journey_url` computed field. Example live link given by CEO:
+    `/enrollment-journey/4f3c497f-7a41-428a-8896-b42fa224988f`.
+  - **Tracking:** confirm/decline already updates `continuation_status` on the
+    `enrollment.journey` record — so "who reaffirmed" is read straight off that
+    model. No `partner.communication.ack` / `survey.survey` needed.
 
-**Alternative:** full Odoo QWeb controller (`auth='public'`) rendering the whole
-page per-token — better if we want heavy personalization (parent name, their
-student's specific achievements). Trade-off: more dev + Odoo render load.
+**Personalization split:** the **report page is generic** (same for everyone);
+**personalization lives in the CTA** — the button deep-links to that parent's
+own `/enrollment-journey/<token>` (their name + students rendered by the journey,
+not the report). Best of both: one cacheable static page + per-parent conversion.
 
 **Delivery:** announce via the same proven prod email-blast infra
 ([prod blast pattern](../scripts/send_robotics_kurios_recap.py)) + Glenda
@@ -88,22 +99,36 @@ WhatsApp/Telegram push, linking to the report.
 and host under e.g. `/var/www/dev/flyers/partners/` →
 `https://dev.ueipab.edu.ve/flyers/partners/<name>.png`:
 
-| Partner | Role (proposed copy) | Logo status | Likely source |
+| Partner | Role (proposed copy) | Logo status | Source / link |
 |---------|----------------------|-------------|---------------|
 | **Kurios** | Robótica educativa & STEAM | ⏳ extract from posters / get clean PNG | kuriosedu.com / posters |
 | **MOA (MoA School)** | Programa de inglés After School | ⏳ need PNG | ceo@moaeducation.com |
 | **Akdemia** | Plataforma de gestión académica | ⏳ need PNG | akdemia.com |
-| **Fundación La Paz** | *(role to confirm)* | ⏳ need PNG + role | — |
+| **Motores por la Paz** | Coordina el programa de **olimpiadas estudiantiles ORM** (lengua y matemática) | ✅ hosted `partners/logo-motores-por-la-paz.jpg` (150×150, gris) | IG [@motoresporlapaz](https://www.instagram.com/motoresporlapaz/) |
+| **ORM Venezuela** | Olimpiadas de **lengua y matemática** (gestionadas por Motores por la Paz) | ✅ hosted `partners/logo-orm.jpg` (150×150) | IG [@orm_venezuela](https://www.instagram.com/orm_venezuela/) |
 | **Digital Ocean** | Infraestructura cloud | ⏳ official brand asset | digitalocean.com/press |
 | **Odoo** | ERP / gestión institucional | ⏳ official brand asset | odoo.com/brand-assets |
 | **Comercial Caracas** | Proveedor local (aliado comercial) | ⏳ need logo | local vendor |
 | **Ferretería Veramar** | Proveedor local (aliado comercial) | ⏳ need logo | local vendor |
 
-**Note:** mixing education partners (Kurios/MOA/Akdemia) with infrastructure
-(DO/Odoo) and **local vendors** (Comercial Caracas / Ferretería Veramar) on one
-wall is unusual. Suggestion: **group them** — "Aliados Académicos", "Tecnología
-& Plataforma", "Aliados Comerciales / Proveedores" — so each reads intentionally.
-Confirm Fundación La Paz's role so its copy is accurate.
+**✅ Hosted (2026-06-22):** CEO uploaded to `/home/ftpuser/odoo-dev/annual-rpt-2526/`;
+staged to `/var/www/dev/flyers/partners/` and verified HTTP 200:
+- `https://dev.ueipab.edu.ve/flyers/partners/logo-motores-por-la-paz.jpg`
+- `https://dev.ueipab.edu.ve/flyers/partners/logo-orm.jpg`
+
+Both are small **150×150** JPEGs (the Motores propeller mark is greyscale/low-res)
+— fine as logo-wall thumbnails; request higher-res PNGs if we want them larger.
+Remaining 7 partner logos still to source go in the same `partners/` folder.
+
+**Grouping (9 partners):** mixing education partners with infrastructure and
+local vendors on one wall is unusual — **group them** so each reads intentionally:
+- **Aliados Académicos:** Kurios · MOA · Akdemia · **Motores por la Paz** · **ORM Venezuela**
+- **Tecnología & Plataforma:** Digital Ocean · Odoo
+- **Aliados Comerciales / Proveedores:** Comercial Caracas · Ferretería Veramar
+
+**Note:** Motores por la Paz ↔ ORM are a coordinated pair (Motores por la Paz
+manages the ORM olympic programme) — present them adjacent, or as one combined
+"Motores por la Paz · ORM" card to avoid reading as two unrelated logos.
 
 ## 6. Content to gather (⏳ from the school)
 
@@ -114,16 +139,35 @@ Confirm Fundación La Paz's role so its copy is accurate.
 - Glenda announcement angle for parents (benefits, not tech).
 - Final continuity-survey questions + where reaffirmations are stored.
 
-## 7. Open questions / decisions
+## 7. Decisions (RESOLVED 2026-06-22)
 
-1. **Route name** — `/reporte-anual-2025-2026/` vs `/annual-report/` vs other?
-2. **Survey mechanism** — `partner.communication.ack`, `survey.survey`, or new
-   token route? (Affects how we track who reaffirmed.)
-3. **Personalization depth** — generic page for all, or per-parent token with
-   their student's name/achievements?
-4. **Language** — Spanish only (parent-facing), correct.
-5. **Fundación La Paz** role + which local-vendor logos we can actually obtain.
-6. **Timing** — relative to the 2026–2027 continuity survey launch.
+1. **Route** — ✅ `/reporte-anual-2025-2026/`.
+2. **Survey mechanism** — ✅ **none new**; reuse the existing `enrollment.journey`
+   Step-0 blast + `/enrollment-journey/<token>` confirm/decline as the
+   reaffirmation. See §4.
+3. **Personalization depth** — ✅ **generic page for all**; personalization lives
+   only in the CTA (deep-link to the parent's `/enrollment-journey/<token>`).
+4. **Language** — ✅ Spanish only (parent-facing).
+5. **Academic-olympics partners** — ✅ corrected: it's **Motores por la Paz**
+   (coordinates the **ORM** lengua/matemática olympics), plus add **ORM Venezuela**.
+   Logos `logo-motores-por-la-paz.jpg` + `logo-orm.jpg` — ✅ uploaded & hosted.
+
+**Still open:**
+- ⏳ Source the remaining **7** logos (Kurios, MOA, Akdemia, Digital Ocean, Odoo,
+  Comercial Caracas, Ferretería Veramar) + the two local-vendor roles.
+  DO + Odoo auto-grabbable. (2/9 done: Motores por la Paz + ORM.)
+- ⏳ Per-lapso content, year-in-numbers stats, director's letter (§6).
+- ⏳ **Timing** — when to publish/announce the report (see below).
+
+**On "timing":** the enrollment-journey Step-0 blast is the conversion engine and
+is already live (tokens issued, e.g. the CEO's sample link). The question is
+**sequencing**: do we (a) publish the report first and let it *precede* the
+journey blast — report builds the emotional case, then the journey email arrives
+as the "act now" follow-up; (b) launch them *together* — the journey blast links
+out to the report; or (c) send the report to families who have **not yet**
+confirmed in the journey, as a re-engagement nudge. Recommendation: **(b)** —
+embed the report link in the journey blast and also push it via Glenda WA/Telegram,
+so every parent sees the credibility story at the moment of decision.
 
 ## 8. Suggested phasing
 
