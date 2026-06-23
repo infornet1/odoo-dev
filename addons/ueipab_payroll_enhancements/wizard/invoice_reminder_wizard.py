@@ -35,6 +35,7 @@ class InvoiceReminderWizard(models.TransientModel):
         ('both',  'Representante + PDVSA'),
         ('rep',   'Representante Only'),
         ('pdvsa', 'PDVSA Only'),
+        ('all',   'Todos con saldo pendiente'),
     ], string='Segment', default='both', required=True)
 
     include_vip = fields.Boolean(
@@ -42,6 +43,13 @@ class InvoiceReminderWizard(models.TransientModel):
         default=False,
         help='VIP customers are excluded from automated sends. '
              'Enable this to include them in a manual send.',
+    )
+
+    override_pdvsa_rule = fields.Boolean(
+        string='Anular reglas PDVSA',
+        default=False,
+        help='Anula las exclusiones PDVSA (regla de adelanto 30% y fiscal_check). '
+             'Con esto, todo partner PDVSA con saldo pendiente recibe recordatorio.',
     )
 
     line_ids = fields.One2many(
@@ -83,24 +91,59 @@ class InvoiceReminderWizard(models.TransientModel):
 
     @api.model
     def default_get(self, fields_list):
+        # NOTE: line_ids deliberately NOT populated here. Returning x2many
+        # commands from default_get triggered an Owl render crash (v70.5).
+        # The list is instead pre-filled by action_open_wizard() before the
+        # form renders, so the dialog always opens populated (no force-refresh).
         return super().default_get(fields_list)
 
-    @api.onchange('tag_filter', 'include_vip')
+    @api.model
+    def action_open_wizard(self):
+        """Menu entry point: create + pre-populate the wizard, then open it.
+
+        Populating on a real (transient) record via ORM before the form opens
+        avoids both failure modes: the default_get Owl crash AND the empty-list
+        bug from relying on onchange firing on dialog open.
+        """
+        wiz = self.create({})
+        wiz.line_ids = [(5, 0, 0)] + wiz._compute_lines('both')
+        return {
+            'type':      'ir.actions.act_window',
+            'name':      'Recordatorio de Saldo por Email',
+            'res_model': self._name,
+            'res_id':    wiz.id,
+            'view_mode': 'form',
+            'target':    'new',
+        }
+
+    @api.onchange('tag_filter', 'include_vip', 'override_pdvsa_rule')
     def _onchange_tag_filter(self):
         self.line_ids = [(5, 0, 0)] + self._compute_lines(
-            self.tag_filter or 'both', include_vip=self.include_vip or False)
+            self.tag_filter or 'both',
+            include_vip=self.include_vip or False,
+            override_pdvsa=self.override_pdvsa_rule or False)
 
-    def _compute_lines(self, tag_filter, include_vip=False):
-        tags = {
-            'both':  [TAG_REP, TAG_PDVSA],
-            'rep':   [TAG_REP],
-            'pdvsa': [TAG_PDVSA],
-        }[tag_filter]
-
-        partners = self.env['res.partner'].search([
-            ('category_id', 'in', tags),
-            ('active', '=', True),
-        ])
+    def _compute_lines(self, tag_filter, include_vip=False, override_pdvsa=False):
+        if tag_filter == 'all':
+            # AR customers: any partner with a posted, unpaid customer invoice.
+            # Naturally restricts to real receivables (incl. untagged partners),
+            # without pulling in vendors/contacts that have no AR balance.
+            unpaid_all = self.env['account.move'].search([
+                ('move_type', 'in', ['out_invoice', 'out_receipt']),
+                ('state', '=', 'posted'),
+                ('payment_state', 'not in', ['paid', 'reversed']),
+            ])
+            partners = unpaid_all.mapped('partner_id').filtered(lambda p: p.active)
+        else:
+            tags = {
+                'both':  [TAG_REP, TAG_PDVSA],
+                'rep':   [TAG_REP],
+                'pdvsa': [TAG_PDVSA],
+            }[tag_filter]
+            partners = self.env['res.partner'].search([
+                ('category_id', 'in', tags),
+                ('active', '=', True),
+            ])
         if not partners:
             return []
 
@@ -146,10 +189,16 @@ class InvoiceReminderWizard(models.TransientModel):
             pid      = p.id
             vat      = (p.vat or '').strip().upper()
             balance  = balance_map.get(pid, 0.0)
-            is_pdvsa = TAG_PDVSA in p.category_id.ids
-            tag_label = 'PDVSA' if is_pdvsa else 'REP'
+            cat_ids  = p.category_id.ids
+            is_pdvsa = TAG_PDVSA in cat_ids
+            if is_pdvsa:
+                tag_label = 'PDVSA'
+            elif TAG_REP in cat_ids:
+                tag_label = 'REP'
+            else:
+                tag_label = '—'
             latest   = latest_map.get(pid, {})
-            is_vip   = TAG_VIP in p.category_id.ids
+            is_vip   = TAG_VIP in cat_ids
 
             # Business logic exclusions — apply to both email and WA
             biz_skip = False
@@ -157,9 +206,9 @@ class InvoiceReminderWizard(models.TransientModel):
                 biz_skip = 'VIP_EXCLUDED'
             elif vat and vat in employee_vats:
                 biz_skip = 'IS_EMPLOYEE'
-            elif is_pdvsa and latest.get('fiscal_check'):
+            elif is_pdvsa and not override_pdvsa and latest.get('fiscal_check'):
                 biz_skip = 'PDVSA_FISCAL_EXCLUDED'
-            elif is_pdvsa and latest.get('payment_state') == 'partial':
+            elif is_pdvsa and not override_pdvsa and latest.get('payment_state') == 'partial':
                 total    = latest.get('amount_total') or 0.0
                 residual = latest.get('amount_residual') or 0.0
                 if total > 0 and ((total - residual) / total * 100) >= 30.0:
@@ -199,7 +248,8 @@ class InvoiceReminderWizard(models.TransientModel):
 
     def action_refresh(self):
         self.line_ids = [(5, 0, 0)] + self._compute_lines(
-            self.tag_filter, include_vip=self.include_vip)
+            self.tag_filter, include_vip=self.include_vip,
+            override_pdvsa=self.override_pdvsa_rule)
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
 
