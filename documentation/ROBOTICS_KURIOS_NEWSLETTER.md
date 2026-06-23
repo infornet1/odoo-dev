@@ -202,6 +202,15 @@ claim was raised to the event judges. Correction handled by a second script
 - State file `/root/kurios/kurios_d12_state.json` (separate from the first run).
 - **Sent 2026-06-22 from prod** (`systemd-run --unit=kurios-d12`): 5/5,
   `Result=success`, zero failures.
+- **`--to EMAIL` single-address top-up (added 2026-06-23):** same idempotent
+  one-off send as the recap script (skips if the address is already in
+  `kurios_d12_state.json` → never double-sends). Old prod copy backed up as
+  `send_robotics_kurios_d12_correction.py.bak-toflag`.
+  ```bash
+  KURIOS_PROD_CFG=/root/kurios/kurios_prod_creds.json \
+  KURIOS_STATE=/root/kurios/kurios_d12_state.json \
+    python3 /root/kurios/send_robotics_kurios_d12_correction.py --to someone@example.com
+  ```
 
 ## All-teams recap edition (2026-06-22)
 
@@ -263,3 +272,10 @@ original), same prod/batching/resilience infra.
 - **2026-06-22 ~22:03 VET** — Added `--to EMAIL` single-send option to the recap
   script; delivered the all-teams recap to one late add-on, `mperrinocanelon@`
   (`mail.mail id=8580`, auto-deleted on successful send). Recap state **269 → 270**.
+- **2026-06-23 ~13:16 VET** — Ported the same `--to EMAIL` option into the
+  **D12 correction** script (it previously had only `--live`/`--preview`).
+  Delivered **both** of the last two editions to one reviewer address,
+  `alperdomo57@gmail.com`, from prod: recap (`mail.mail id=8856`) + D12
+  correction (`mail.mail id=8857`), both auto-deleted on successful send.
+  Address was in neither ledger beforehand → clean one-off; both state files now
+  record it. Recap state **270 → 271**, D12 state **5 → 6**.
