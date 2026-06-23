@@ -311,9 +311,15 @@ Analysis date: 2026-06-01. Ground truth: **SMS1** (Representante) and **SMS2** (
 skips BOTH PDVSA exclusions (`PDVSA_ADVANCE_PAID` 30% advance **and**
 `PDVSA_FISCAL_EXCLUDED` fiscal_check) so every PDVSA partner with a balance is
 reminded; left off, the conservative behaviour is unchanged. Also shipped the
-same release: populate-on-open (server action, fixes empty-list bug) + new `all`
-segment (surfaces untagged AR customers, partly obsoleting Fix 2 for *sending*).
-Verified: PDVSA sendable 4 → 33 with override ON. Original analysis kept below.
+same release: new `all` segment (surfaces untagged AR customers, partly
+obsoleting Fix 2 for *sending*). Verified: PDVSA sendable 4 → 33 with override
+ON. Original analysis kept below.
+
+> ⚠️ **Note (v1.74.1):** a "populate-on-open" attempt (server action that
+> pre-filled the list before the form mounted) was **reverted** — mounting the
+> wizard with rows already present re-triggers the Owl `this.fiber.bdom is null`
+> crash. The list still fills post-mount via onchange. The empty-list /
+> force-refresh annoyance therefore remains open and needs a crash-safe fix.
 
 **Impact: +7 PDVSA partners currently blocked.**
 
