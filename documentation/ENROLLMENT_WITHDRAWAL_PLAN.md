@@ -1,6 +1,6 @@
 # Enrollment Withdrawal (Egreso / Retiro) Plan — 2025-2026
 
-**Status:** ✅ DESIGN APPROVED — D1–D4 settled 2026-06-23, ready for Phase 1 (no code yet)
+**Status:** 🛠️ PHASE 1 DONE 2026-06-23 (v0.7.0) — model live in testing; Phases 2-4 pending
 **Created:** 2026-06-23
 **Module:** `ueipab_enrollment_journey` (same module — new sibling model)
 **Related:** [ENROLLMENT_JOURNEY_WIZARD.md](ENROLLMENT_JOURNEY_WIZARD.md) · memory `project-enrollment-journey`
@@ -170,8 +170,12 @@ reimplementation.
 
 ## 10. Implementation Phases (once approved)
 
-1. **Phase 1 — Model + steps:** `enrollment.withdrawal`, `WITHDRAWAL_STEP_DEFS`,
-   state machine, gate, completion logic, reference fields.
+1. **Phase 1 — Model + steps:** ✅ **DONE 2026-06-23 (v0.7.0)** — `enrollment.withdrawal`
+   (`models/enrollment_withdrawal.py`), `WITHDRAWAL_STEP_DEFS`, state machine
+   (`state` in_progress/completed + `progress_pct`), hard gate (steps 3-5 require
+   1+2), `_set_step` clearance + chatter audit, `solvencia_ref`/`sige_ref`,
+   per-family related fields from `journey_id`, security. Smoke-tested
+   (gate/completion/reopen/related/chatter), testing-only.
 2. **Phase 2 — Staff UI:** form (step buttons + refs), list (state badge),
    menu item.
 3. **Phase 3 — Notifications:** step-2 and step-5 emails (reusing helpers);
