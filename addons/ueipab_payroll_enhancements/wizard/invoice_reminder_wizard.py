@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 from collections import defaultdict
 from odoo import models, fields, api, _
@@ -13,6 +14,10 @@ MIN_BALANCE = 1.00
 LOGO_URL  = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 RATE_URL  = 'https://odoo.ueipab.edu.ve/tasas-de-cambios'
 WA_TRIGGER_PARAM = 'wa_invoice_reminder.trigger_at'
+# Ad-hoc payload the WA script consumes when triggered from this wizard, so WA
+# sends EXACTLY the selected list (incl. the `all` segment + PDVSA override),
+# instead of the script's own tag-based / Sheets-phone logic.
+WA_ADHOC_PARAM   = 'wa_invoice_reminder.adhoc_payload'
 MONTHS_ES = {1:'enero',2:'febrero',3:'marzo',4:'abril',5:'mayo',6:'junio',
              7:'julio',8:'agosto',9:'septiembre',10:'octubre',11:'noviembre',12:'diciembre'}
 
@@ -310,18 +315,78 @@ class InvoiceReminderWizard(models.TransientModel):
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
 
+    @staticmethod
+    def _normalise_ve_mobile(raw):
+        """Normalise an Odoo mobile to MassivaMóvil format '+58XXXXXXXXXX'.
+
+        Handles '0414-1906296', '+58 414 190 6296', '4141906296', etc.
+        Returns '' if it can't produce a 10-digit VE mobile core.
+        """
+        digits = ''.join(c for c in (raw or '') if c.isdigit())
+        if not digits:
+            return ''
+        if digits.startswith('58') and len(digits) >= 12:
+            core = digits[2:]
+        elif digits.startswith('0'):
+            core = digits[1:]
+        else:
+            core = digits
+        if len(core) < 10:
+            return ''
+        return '+58' + core[-10:]
+
+    def _build_wa_payload(self, lines):
+        """Build the ad-hoc payload the WA script will send verbatim.
+
+        Phone = Odoo `mobile` (normalised). Message variant by tag: PDVSA rows
+        get the 35%-advance template (with the latest invoice month);
+        everyone else (REP + untagged `all`) gets the generic template.
+        """
+        pdvsa = lines.filtered(lambda l: l.tag == 'PDVSA')
+        month_map = {}
+        for pid in pdvsa.mapped('partner_id').ids:
+            inv = self.env['account.move'].search([
+                ('partner_id', '=', pid),
+                ('move_type', 'in', ['out_invoice', 'out_receipt']),
+                ('state', '=', 'posted'),
+            ], order='invoice_date desc', limit=1)
+            if inv and inv.invoice_date:
+                month_map[pid] = inv.invoice_date.month
+
+        items = []
+        for l in lines:
+            phone = self._normalise_ve_mobile(l.mobile)
+            if not phone:
+                continue
+            items.append({
+                'partner_id': l.partner_id.id,
+                'name':       l.partner_id.name,
+                'phone':      phone,
+                'balance':    round(l.balance, 2),
+                'is_pdvsa':   l.tag == 'PDVSA',
+                'month':      month_map.get(l.partner_id.id),
+            })
+        return items
+
     def action_send_wa(self):
         self.ensure_one()
         self._sync_eligibility()
         wa_eligible = self.line_ids.filtered(lambda l: l.wa_will_send and l.selected)
         if not wa_eligible:
             raise UserError(_('No hay partners con número móvil elegibles para WA.'))
-        # Write trigger param — dev server poller picks this up within 5 min and runs the script
-        self.env['ir.config_parameter'].sudo().set_param(
-            WA_TRIGGER_PARAM,
-            fields.Datetime.now().isoformat(),
-        )
+
+        payload = self._build_wa_payload(wa_eligible)
+        if not payload:
+            raise UserError(_('Ningún partner seleccionado tiene un móvil válido '
+                              '(+58...) en Odoo para enviar por WA.'))
+
+        P = self.env['ir.config_parameter'].sudo()
+        # Payload first, trigger last — so the poller never fires on a half-written state.
+        P.set_param(WA_ADHOC_PARAM, json.dumps(payload))
+        P.set_param(WA_TRIGGER_PARAM, fields.Datetime.now().isoformat())
         self.wa_queued_at = fields.Datetime.now()
+        _logger.info("WA ad-hoc queued: %d partners (segment=%s, override=%s)",
+                     len(payload), self.tag_filter, self.override_pdvsa_rule)
         return {'type': 'ir.actions.act_window', 'res_model': self._name,
                 'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
 
