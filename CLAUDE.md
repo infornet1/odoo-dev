@@ -94,7 +94,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | Module | Version | Notes |
 |--------|---------|-------|
 | hr_payroll_community | 17.0.1.0.0 | testing only |
-| ueipab_payroll_enhancements | 17.0.1.74.1 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner + invoice-reminder wizard: `all` segment + `override_pdvsa_rule` toggle (2026-06-23). ⚠️ populate-on-open via server action was REVERTED in v1.74.1 — mounting the form with rows present re-triggers the Owl `this.fiber.bdom is null` crash; list must fill post-mount via onchange |
+| ueipab_payroll_enhancements | 17.0.1.74.2 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner + invoice-reminder wizard: `all` segment ("Todos con saldo pendiente" — **implies PDVSA override**, no toggle) + `override_pdvsa_rule` toggle for segmented modes + `_sync_eligibility()` authoritative send (2026-06-23). ⚠️ populate-on-open via server action REVERTED in v1.74.1 — COLD-mounting the form with rows present re-triggers the Owl `this.fiber.bdom is null` crash; list must fill post-mount via onchange (warm reloads from in-form buttons are fine) |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.59.4 | both — ⚠️ **Banco de Venezuela UNAVAILABLE** (2026-06-23): Glenda's MEDIOS DE PAGO knowledge no longer offers BdV (0102); see note below. + ACTION:QUOTE + live pricing ground truth (2026-06-11) |
