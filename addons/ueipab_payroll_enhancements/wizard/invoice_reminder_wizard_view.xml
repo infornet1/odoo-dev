@@ -90,22 +90,22 @@
   </record>
 
   <!-- ── Action ──
-       Server action (not a plain act_window) so the wizard is created and its
-       partner list pre-populated BEFORE the form renders. This fixes the
-       "empty list on open / force-refresh" bug without re-introducing the
-       default_get Owl render crash. -->
-  <record id="action_invoice_reminder_wizard_server" model="ir.actions.server">
+       Plain act_window: the form MUST mount with an empty list. Mounting with
+       rows already present (default_get or a pre-populating server action)
+       re-triggers the Owl `this.fiber.bdom is null` crash. The list is filled
+       post-mount by _onchange_tag_filter (see the model). -->
+  <record id="action_invoice_reminder_wizard" model="ir.actions.act_window">
     <field name="name">Recordatorio de Saldo por Email</field>
-    <field name="model_id" ref="model_account_invoice_reminder_wizard"/>
-    <field name="state">code</field>
-    <field name="code">action = model.action_open_wizard()</field>
+    <field name="res_model">account.invoice.reminder.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
   </record>
 
   <!-- ── Menu: Accounting > Customers > Send Balance Reminder ── -->
   <menuitem id="menu_invoice_reminder_wizard"
             name="Recordatorio de Saldo (Email)"
             parent="account.menu_finance_receivables"
-            action="action_invoice_reminder_wizard_server"
+            action="action_invoice_reminder_wizard"
             sequence="99"/>
 
 </odoo>
