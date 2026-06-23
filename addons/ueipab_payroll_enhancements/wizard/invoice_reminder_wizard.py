@@ -92,29 +92,11 @@ class InvoiceReminderWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         # NOTE: line_ids deliberately NOT populated here. Returning x2many
-        # commands from default_get triggered an Owl render crash (v70.5).
-        # The list is instead pre-filled by action_open_wizard() before the
-        # form renders, so the dialog always opens populated (no force-refresh).
+        # commands from default_get — or opening the form on a record that
+        # already has rows — re-triggers the Owl `this.fiber.bdom is null`
+        # crash. The form must mount with an EMPTY list; _onchange_tag_filter
+        # fills it post-mount (Odoo runs onchange on new-record load).
         return super().default_get(fields_list)
-
-    @api.model
-    def action_open_wizard(self):
-        """Menu entry point: create + pre-populate the wizard, then open it.
-
-        Populating on a real (transient) record via ORM before the form opens
-        avoids both failure modes: the default_get Owl crash AND the empty-list
-        bug from relying on onchange firing on dialog open.
-        """
-        wiz = self.create({})
-        wiz.line_ids = [(5, 0, 0)] + wiz._compute_lines('both')
-        return {
-            'type':      'ir.actions.act_window',
-            'name':      'Recordatorio de Saldo por Email',
-            'res_model': self._name,
-            'res_id':    wiz.id,
-            'view_mode': 'form',
-            'target':    'new',
-        }
 
     @api.onchange('tag_filter', 'include_vip', 'override_pdvsa_rule')
     def _onchange_tag_filter(self):
