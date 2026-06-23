@@ -318,7 +318,7 @@ See [Full Documentation](documentation/BOUNCE_EMAIL_PROCESSOR.md).
 - **Config:** `/opt/odoo-dev/config/whatsapp_massiva.json` (gitignored)
 - **Auth:** API secret key param (not OAuth), key name `ueipab1`
 - **Primary Account (dedicated):** +584148321989 | **Backup:** +584248944898 | **Tertiary (emergency):** +584148321963
-- **⚠️ BACKUP active** (+584248944898) since 2026-05-22; `dry_run=True` — WA paused, Telegram active. See PENDING section for restore steps.
+- **⚠️ BACKUP active** (+584248944898) since 2026-05-22; dedicated primary +584148321989 still broken (Massiva ticket). **WA UN-PAUSED 2026-06-23** (`ai_agent.dry_run=False`) — Glenda WA + invoice blasts now deliver **via the backup** number. Test send OK (messageId 86659). Telegram active. ⚠️ Glenda now auto-replies to incoming WA (incl. any backlog) from the backup.
 - **Anti-spam:** Min 120s between sends
 - **Send:** `POST /api/send/whatsapp` | **Validate:** `GET /api/validate/whatsapp` | **Receive:** `GET /api/get/wa.received`
 - **Webhook payload:** `secret`, `type=whatsapp`, `data{id, wid, phone, message, attachment, timestamp}`
@@ -362,7 +362,7 @@ See [Full Documentation](documentation/AI_AGENT_MODULE.md) and [Glenda Technical
 ### Key Features + Live Flags
 
 See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md) for the full feature list. Critical runtime state:
-- **`dry_run=True`** (WA paused); **`ai_agent.credits_ok`** (Claude kill switch); **`ai_agent.wa_credits_ok`** (WA sends kill switch — split after 2026-06-09 incident)
+- **`dry_run=False`** (WA LIVE via backup since 2026-06-23 — was True/paused); **`ai_agent.credits_ok`** (Claude kill switch); **`ai_agent.wa_credits_ok`** (WA sends kill switch — split after 2026-06-09 incident)
 - **Credit Guard (v58.0):** Two independent kill switches checked every 30 min. `credits_ok=False` mutes ALL channels; `wa_credits_ok=False` mutes WA only.
 - **Identity ring (v57.20):** Turn 1 for unverified contacts → identification prompt, no Claude call until identified
 - **Re-trigger stuck conv:** `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
@@ -418,7 +418,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 - **Josefina Phase 2** — `LIQUID_OTHER_DED_V2` rule to deduct $420.87 overpayment. See `documentation/JOSEFINA_RODRIGUEZ_OVERPAYMENT_RESOLUTION.md`.
 
 **PENDING — External / Infrastructure:**
-- **WA Primary +584148321989 broken** (2026-05-22) — Massiva support ticket open. Once fixed: reconnect → restore config params → clear flagged_phone. Restore Glenda WA: set `ai_agent.dry_run=False` in prod.
+- **WA Primary +584148321989 broken** (2026-05-22) — Massiva support ticket open. Once fixed: reconnect → restore config params → clear flagged_phone → set the dedicated number back to `primary=True` in `whatsapp_massiva.json` (currently the **backup +584248944898 is `primary=True`** and serving all sends). **NOTE: WA already UN-PAUSED 2026-06-23 (`ai_agent.dry_run=False`) — Glenda WA + invoice blasts deliver via the backup now.**
 - **`/etc/cron.d/wa_primary_relay`** — fires every 5 min in DRY_RUN (no `--live`). Remove or re-add `--live` once Massiva fixes primary.
 
 **PENDING — Refactor:**
