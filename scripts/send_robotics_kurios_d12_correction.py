@@ -588,9 +588,12 @@ def main():
     parser = argparse.ArgumentParser(description='Robotics Kurios newsletter blast')
     parser.add_argument('--preview', action='store_true', help='Send only to CEO for review')
     parser.add_argument('--live', action='store_true', help='Send to the full community list')
+    parser.add_argument('--to', metavar='EMAIL',
+                        help='Real send of the production newsletter to ONE explicit address '
+                             '(reuses the resume state file → never double-sends)')
     args = parser.parse_args()
 
-    dry_run = not (args.preview or args.live)
+    dry_run = not (args.preview or args.live or args.to)
 
     recipients = _parse_recipients()
     log.info("Parsed %d unique recipient addresses from community list.", len(recipients))
@@ -617,6 +620,19 @@ def main():
         _create_mail(CEO_EMAIL, _build_html(is_preview=True))
         _trigger_mail_queue()
         log.info("Preview sent to %s", CEO_EMAIL)
+        return
+
+    if args.to:
+        target = args.to.strip()
+        already = _load_state()
+        if target.lower() in already:
+            log.info("Already sent to %s (in state file) — nothing to do.", target)
+            return
+        _create_mail(target, _build_html(is_preview=False))
+        _trigger_mail_queue()
+        already.add(target.lower())
+        _save_state(already)
+        log.info("Newsletter sent to %s (added to resume state).", target)
         return
 
     html = _build_html(is_preview=False)
