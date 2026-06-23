@@ -15,6 +15,12 @@ SOPORTE_EMAIL = 'soporte@ueipab.edu.ve'
 # backend link ("Ver expediente en Odoo →") and must NEVER reach customers,
 # who are not yet involved in the Odoo business process.
 PAGOS_EMAIL = 'pagos@ueipab.edu.ve'
+# Admissions/finance follow-up team CC'd on the CONFIRMED internal notification.
+CONFIRMED_INTERNAL_CC = (
+    'lorena.reyes@ueipab.edu.ve,'
+    'arcides.arzola@ueipab.edu.ve,'
+    'josefina.rodriguez@ueipab.edu.ve'
+)
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 # Public annual-report page (static, nginx). The blast links here with
 # ?j=<journey_url> so the report's CTA can route the parent back to their journey.
@@ -461,21 +467,26 @@ class EnrollmentJourney(models.Model):
             subject_customer = 'Confirmación recibida — Inscripción 2026-2027'
             internal_html = self._build_confirmed_notification_html(audience='internal')
             customer_html = self._build_confirmed_notification_html(audience='customer')
+            internal_cc = CONFIRMED_INTERNAL_CC
         else:
             subject_internal = '[S0 No Continúa] Familia %s' % self.partner_id.name
             subject_customer = 'Hemos recibido su respuesta — Inscripción 2026-2027'
             internal_html = self._build_declined_notification_html(audience='internal')
             customer_html = self._build_declined_notification_html(audience='customer')
+            internal_cc = False
 
         Mail = self.env['mail.mail'].sudo()
-        # 1) Internal staff copy — pagos@ only (Odoo backend link)
-        Mail.create({
+        # 1) Internal staff copy — pagos@ (+ admissions/finance CC on confirm)
+        internal_vals = {
             'subject': subject_internal,
             'email_from': SOPORTE_EMAIL,
             'email_to': PAGOS_EMAIL,
             'body_html': internal_html,
             'state': 'outgoing',
-        })
+        }
+        if internal_cc:
+            internal_vals['email_cc'] = internal_cc
+        Mail.create(internal_vals)
         # 2) Customer copy — parent only, assisted-flow link, no Odoo references
         if partner_email:
             Mail.create({
