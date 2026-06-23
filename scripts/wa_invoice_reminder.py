@@ -78,9 +78,10 @@ MONTHS_ES = {
 }
 
 TEMPLATE_REP = (
-    "Colegio Andrés Bello informa su saldo de cuotas pendiente por ref {deuda} "
-    "pagaderos a la tasa BCV oficial https://bit.ly/tasabcv\n\n"
-    "Este es un gentil recordatorio automático enviado desde nuestro sistema de cobranzas"
+    "Colegio Andrés Bello le informa que su saldo pendiente es de {deuda}. "
+    "Le invitamos a protegerse de la volatilidad cambiaria pagando a la tasa "
+    "BCV oficial, la cual puede consultar en nuestro monitor https://bit.ly/tasabcv\n\n"
+    "Este es un gentil recordatorio automático de nuestro sistema de cobranzas"
 )
 
 TEMPLATE_PDVSA = (
