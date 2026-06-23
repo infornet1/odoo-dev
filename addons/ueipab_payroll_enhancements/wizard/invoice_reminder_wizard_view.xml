@@ -14,8 +14,14 @@
           <group string="Configuración">
             <field name="tag_filter" widget="radio" options="{'horizontal': true}"/>
             <field name="include_vip" widget="boolean_toggle"/>
+            <!-- Irrelevant for 'rep' (no PDVSA) and 'all' (override is implicit). -->
             <field name="override_pdvsa_rule" widget="boolean_toggle"
-                   invisible="tag_filter == 'rep'"/>
+                   invisible="tag_filter in ('rep', 'all')"/>
+            <div class="text-muted" colspan="2"
+                 invisible="tag_filter != 'all'">
+              ℹ️ «Todos con saldo pendiente» incluye automáticamente a los
+              clientes PDVSA (sin las exclusiones de fiscal_check ni del 30%).
+            </div>
           </group>
           <group string="Resumen">
             <field name="partner_count" string="Email: enviarán"/>

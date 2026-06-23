@@ -107,6 +107,10 @@ class InvoiceReminderWizard(models.TransientModel):
 
     def _compute_lines(self, tag_filter, include_vip=False, override_pdvsa=False):
         if tag_filter == 'all':
+            # "Todos con saldo pendiente" means literally everyone with a
+            # balance — the PDVSA carve-outs (fiscal_check + 30% advance) do
+            # NOT apply in this segment, so the override is implicit/forced.
+            override_pdvsa = True
             # AR customers: any partner with a posted, unpaid customer invoice.
             # Naturally restricts to real receivables (incl. untagged partners),
             # without pulling in vendors/contacts that have no AR balance.
@@ -228,6 +232,31 @@ class InvoiceReminderWizard(models.TransientModel):
 
     # ── Actions ───────────────────────────────────────────────────────────
 
+    def _sync_eligibility(self):
+        """Recompute line eligibility from the LIVE flags before sending.
+
+        The in-form list is filled by onchange, but toggling the override
+        (or include_vip) does not always re-render the x2many in the Owl
+        client, leaving `will_send` stale — e.g. PDVSA rows keep
+        `will_send=False` computed while the override was still off, so the
+        send silently drops them even though the user enabled the override.
+        Rebuilding here makes the send authoritative. User-deselected
+        *eligible* rows are preserved; excluded rows (will_send False) are not
+        treated as deselections so the override can re-enable them.
+        """
+        self.ensure_one()
+        user_deselected = set(
+            self.line_ids
+            .filtered(lambda l: l.will_send and not l.selected)
+            .mapped('partner_id').ids)
+        self.line_ids = [(5, 0, 0)] + self._compute_lines(
+            self.tag_filter, include_vip=self.include_vip,
+            override_pdvsa=self.override_pdvsa_rule)
+        if user_deselected:
+            for l in self.line_ids.filtered(
+                    lambda l: l.partner_id.id in user_deselected):
+                l.selected = False
+
     def action_refresh(self):
         self.line_ids = [(5, 0, 0)] + self._compute_lines(
             self.tag_filter, include_vip=self.include_vip,
@@ -237,6 +266,7 @@ class InvoiceReminderWizard(models.TransientModel):
 
     def action_send(self):
         self.ensure_one()
+        self._sync_eligibility()
         to_send = self.line_ids.filtered(lambda l: l.will_send and l.selected)
         if not to_send:
             raise UserError(_('No partners selected to send.'))
