@@ -80,10 +80,12 @@ def main():
         clear_trigger(db, uid, pw, models, param_id)
         return
 
-    log.info("Trigger found (queued %s) — launching WA script.", trigger_val)
+    log.info("Trigger found (queued %s) — launching WA script (ad-hoc).", trigger_val)
     clear_trigger(db, uid, pw, models, param_id)
 
-    result = subprocess.run([sys.executable, WA_SCRIPT, '--live'])
+    # --adhoc: send EXACTLY the wizard's selected list (payload param), not the
+    # tag-based daily blast. The script force-dry-runs if WA is paused globally.
+    result = subprocess.run([sys.executable, WA_SCRIPT, '--live', '--adhoc'])
     log.info("WA script exited with code %d.", result.returncode)
 
 

@@ -59,6 +59,14 @@ TAG_REPRESENTANTE       = 25
 TAG_REPRESENTANTE_PDVSA = 26
 TAG_VIP                 = 30   # VIP customers — excluded from automated sends
 
+# Ad-hoc mode: the Odoo wizard ("Enviar WA") writes this param with the EXACT
+# selected list (partner + Odoo mobile + tag). With --adhoc we send that list
+# verbatim instead of the tag-based / Sheets-phone logic.
+ADHOC_PARAM   = 'wa_invoice_reminder.adhoc_payload'
+# Global WA pause switch (shared with Glenda). When True, even --live is forced
+# to dry-run so the armed wizard button can't fire while WA is paused.
+WA_PAUSE_PARAM = 'ai_agent.dry_run'
+
 MIN_BALANCE_USD  = 1.00   # skip near-zero rounding residuals
 ANTI_SPAM_MIN    = 120    # seconds
 ANTI_SPAM_MAX    = 140
@@ -361,6 +369,61 @@ def load_partners_with_balances(db, uid, pw, models, vat_filter=None):
 # Step 4 — Build send list
 # ============================================================================
 
+def get_param(db, uid, pw, models, key):
+    rows = models.execute_kw(db, uid, pw, 'ir.config_parameter', 'search_read',
+        [[['key', '=', key]]], {'fields': ['id', 'value'], 'limit': 1})
+    if not rows:
+        return None, None
+    return rows[0]['id'], rows[0]['value']
+
+
+def load_adhoc_payload(db, uid, pw, models):
+    """Read + clear (consume-once) the wizard's ad-hoc payload param.
+
+    Returns a list of items: {partner_id, name, phone, balance, is_pdvsa, month}.
+    Clearing immediately mirrors the poller's handling of trigger_at and
+    prevents a stale payload from being re-sent on a later run.
+    """
+    pid, value = get_param(db, uid, pw, models, ADHOC_PARAM)
+    if pid:
+        models.execute_kw(db, uid, pw, 'ir.config_parameter', 'write',
+            [[pid], {'value': ''}])
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except (ValueError, TypeError):
+        log.error("Ad-hoc payload is not valid JSON — ignoring.")
+        return None
+
+
+def build_adhoc_send_list(payload, state):
+    """Turn the wizard payload into the send-list shape, applying same-day dedup."""
+    to_send, skipped = [], []
+    for item in payload or []:
+        pid   = item.get('partner_id')
+        phone = item.get('phone')
+        if not phone:
+            skipped.append({**item, 'name': item.get('name', ''), 'reason': 'NO_PHONE'})
+            continue
+        if already_sent_today(state, pid):
+            skipped.append({**item, 'name': item.get('name', ''),
+                            'reason': 'ALREADY_SENT_TODAY'})
+            continue
+        month = item.get('month')
+        to_send.append({
+            'id':               pid,
+            'name':             item.get('name', ''),
+            'vat':              '',
+            'is_pdvsa':         bool(item.get('is_pdvsa')),
+            'balance':          float(item.get('balance') or 0.0),
+            'invoice_month_es': MONTHS_ES.get(month) if month else last_month_es(),
+            'phone':            phone,
+            'skip_reason':      None,
+        })
+    return to_send, skipped
+
+
 def build_send_list(partners, sheet_phones, state):
     """Cross-reference partners with sheet phones, apply dedup. Returns (to_send, skipped)."""
     to_send = []
@@ -462,11 +525,14 @@ def main():
                         help='Send messages (default: dry run)')
     parser.add_argument('--partner-vat', metavar='VAT',
                         help='Limit to a single partner VAT for testing')
+    parser.add_argument('--adhoc', action='store_true',
+                        help='Send the wizard ad-hoc payload (exact selected list) '
+                             'instead of the tag-based daily blast')
     args   = parser.parse_args()
     dry_run = not args.live
 
     print("=" * 80)
-    print(f"  WA INVOICE REMINDER")
+    print(f"  WA INVOICE REMINDER{'  [AD-HOC / wizard list]' if args.adhoc else ''}")
     print(f"  Date:  {date.today()}")
     print(f"  Mode:  {'*** DRY RUN ***' if dry_run else '*** LIVE — sending via MassivaMóvil ***'}")
     print("=" * 80)
@@ -474,24 +540,41 @@ def main():
     log.info("Loading WA config...")
     wa_cfg = load_wa_config()
 
-    log.info("Loading Google Sheets eligible phones...")
-    sheet_phones = load_sheet_phones()
-    log.info("  %d eligible rows with phone", len(sheet_phones))
-
     log.info("Connecting to Odoo production...")
     db, uid, pw, models = odoo_connect()
     ceo_phone = get_ceo_phone(db, uid, pw, models)
 
-    vat_filter = [args.partner_vat.strip().upper()] if args.partner_vat else None
-    log.info("Loading partners + invoice balances...")
-    partners = load_partners_with_balances(db, uid, pw, models, vat_filter=vat_filter)
-    log.info("  %d tagged partners loaded", len(partners))
+    # Global WA pause: if WhatsApp is paused system-wide, force dry-run so the
+    # wizard's (now armed) WA button cannot fire real sends while paused.
+    if not dry_run:
+        _, paused = get_param(db, uid, pw, models, WA_PAUSE_PARAM)
+        if str(paused) == 'True':
+            log.warning("WA is paused globally (%s=True) — forcing DRY RUN.", WA_PAUSE_PARAM)
+            dry_run = True
 
     log.info("Loading state file...")
     state = load_state()
 
-    log.info("Building send list...")
-    to_send, skipped = build_send_list(partners, sheet_phones, state)
+    if args.adhoc:
+        log.info("Loading ad-hoc payload from wizard...")
+        payload = load_adhoc_payload(db, uid, pw, models)
+        if not payload:
+            print("\n  No ad-hoc payload to send. Exiting.")
+            return
+        log.info("  %d partners in payload", len(payload))
+        to_send, skipped = build_adhoc_send_list(payload, state)
+    else:
+        log.info("Loading Google Sheets eligible phones...")
+        sheet_phones = load_sheet_phones()
+        log.info("  %d eligible rows with phone", len(sheet_phones))
+
+        vat_filter = [args.partner_vat.strip().upper()] if args.partner_vat else None
+        log.info("Loading partners + invoice balances...")
+        partners = load_partners_with_balances(db, uid, pw, models, vat_filter=vat_filter)
+        log.info("  %d tagged partners loaded", len(partners))
+
+        log.info("Building send list...")
+        to_send, skipped = build_send_list(partners, sheet_phones, state)
 
     # ── Print plan ──────────────────────────────────────────────────────────
 
