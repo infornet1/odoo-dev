@@ -14,6 +14,8 @@
           <group string="Configuración">
             <field name="tag_filter" widget="radio" options="{'horizontal': true}"/>
             <field name="include_vip" widget="boolean_toggle"/>
+            <field name="override_pdvsa_rule" widget="boolean_toggle"
+                   invisible="tag_filter == 'rep'"/>
           </group>
           <group string="Resumen">
             <field name="partner_count" string="Email: enviarán"/>
@@ -87,19 +89,23 @@
     </field>
   </record>
 
-  <!-- ── Action ── -->
-  <record id="action_invoice_reminder_wizard" model="ir.actions.act_window">
+  <!-- ── Action ──
+       Server action (not a plain act_window) so the wizard is created and its
+       partner list pre-populated BEFORE the form renders. This fixes the
+       "empty list on open / force-refresh" bug without re-introducing the
+       default_get Owl render crash. -->
+  <record id="action_invoice_reminder_wizard_server" model="ir.actions.server">
     <field name="name">Recordatorio de Saldo por Email</field>
-    <field name="res_model">account.invoice.reminder.wizard</field>
-    <field name="view_mode">form</field>
-    <field name="target">new</field>
+    <field name="model_id" ref="model_account_invoice_reminder_wizard"/>
+    <field name="state">code</field>
+    <field name="code">action = model.action_open_wizard()</field>
   </record>
 
   <!-- ── Menu: Accounting > Customers > Send Balance Reminder ── -->
   <menuitem id="menu_invoice_reminder_wizard"
             name="Recordatorio de Saldo (Email)"
             parent="account.menu_finance_receivables"
-            action="action_invoice_reminder_wizard"
+            action="action_invoice_reminder_wizard_server"
             sequence="99"/>
 
 </odoo>
