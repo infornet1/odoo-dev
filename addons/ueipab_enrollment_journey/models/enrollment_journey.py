@@ -11,6 +11,10 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 SOPORTE_EMAIL = 'soporte@ueipab.edu.ve'
+# Internal staff inbox for S0 response notifications. These carry the Odoo
+# backend link ("Ver expediente en Odoo →") and must NEVER reach customers,
+# who are not yet involved in the Odoo business process.
+PAGOS_EMAIL = 'pagos@ueipab.edu.ve'
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 # Public annual-report page (static, nginx). The blast links here with
 # ?j=<journey_url> so the report's CTA can route the parent back to their journey.
@@ -442,36 +446,67 @@ class EnrollmentJourney(models.Model):
     # -- Response notification (Moment 2) ---------------------------------
 
     def _send_response_notification(self, response_type):
-        """Auto-fires when parent POSTs confirm or decline from the public page."""
+        """Auto-fires when parent POSTs confirm or decline from the public page.
+
+        Splits into TWO emails so the customer never sees the Odoo backend:
+          1) Internal staff copy → pagos@ ONLY, carries the "Ver expediente en
+             Odoo →" button (backend link).
+          2) Customer copy → parent, with the "Ver flujo de proceso inscripción
+             asistido →" button (public journey page) and no Odoo references.
+        """
         self.ensure_one()
         partner_email = self.partner_id.email or ''
         if response_type == 'confirmed':
-            subject = '[S0 Confirmada] Familia %s' % self.partner_id.name
-            body_html = self._build_confirmed_notification_html()
+            subject_internal = '[S0 Confirmada] Familia %s' % self.partner_id.name
+            subject_customer = 'Confirmación recibida — Inscripción 2026-2027'
+            internal_html = self._build_confirmed_notification_html(audience='internal')
+            customer_html = self._build_confirmed_notification_html(audience='customer')
         else:
-            subject = '[S0 No Continúa] Familia %s' % self.partner_id.name
-            body_html = self._build_declined_notification_html()
-        mail_vals = {
-            'subject': subject,
+            subject_internal = '[S0 No Continúa] Familia %s' % self.partner_id.name
+            subject_customer = 'Hemos recibido su respuesta — Inscripción 2026-2027'
+            internal_html = self._build_declined_notification_html(audience='internal')
+            customer_html = self._build_declined_notification_html(audience='customer')
+
+        Mail = self.env['mail.mail'].sudo()
+        # 1) Internal staff copy — pagos@ only (Odoo backend link)
+        Mail.create({
+            'subject': subject_internal,
             'email_from': SOPORTE_EMAIL,
-            'email_to': SOPORTE_EMAIL,
-            'body_html': body_html,
+            'email_to': PAGOS_EMAIL,
+            'body_html': internal_html,
             'state': 'outgoing',
-        }
+        })
+        # 2) Customer copy — parent only, assisted-flow link, no Odoo references
         if partner_email:
-            mail_vals['email_cc'] = partner_email
-        self.env['mail.mail'].sudo().create(mail_vals)
+            Mail.create({
+                'subject': subject_customer,
+                'email_from': SOPORTE_EMAIL,
+                'email_to': partner_email,
+                'reply_to': SOPORTE_EMAIL,
+                'body_html': customer_html,
+                'state': 'outgoing',
+            })
         try:
             self.env.ref('base.ir_cron_mail_scheduler_action').sudo().method_direct_trigger()
         except Exception:
             pass
 
-    def _build_confirmed_notification_html(self):
+    def _build_confirmed_notification_html(self, audience='internal'):
         partner_name = self.partner_id.name or '—'
         confirmed_at = self.confirmation_date
         dt_str = confirmed_at.strftime('%d/%m/%Y %H:%M') if confirmed_at else '—'
         students = self._student_dicts(for_step0=True)
-        backend_url = self._backend_url()
+
+        if audience == 'customer':
+            # No Odoo references — point the parent at their public assisted flow.
+            lead_line = ('Puede seguir el avance de su inscripción desde su flujo '
+                         'asistido en línea, cuando lo desee.')
+            cta = _cta_button(self.journey_url,
+                              'Ver flujo de proceso inscripción asistido →', '#27ae60')
+        else:
+            lead_line = ('El proceso de inscripción puede avanzar. Acceda al registro '
+                         'en Odoo para continuar con los pasos del Bloque 1.')
+            cta = _cta_button(self._backend_url(), 'Ver expediente en Odoo →', '#27ae60')
 
         body = """
 <div style="background:#eafaf1;border-left:4px solid #27ae60;padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:20px;">
@@ -494,13 +529,14 @@ class EnrollmentJourney(models.Model):
 </p>
 {student_list}
 <p style="font-size:13px;color:#4a5568;margin:16px 0 4px;line-height:1.6;">
-  El proceso de inscripción puede avanzar. Acceda al registro en Odoo para continuar con los pasos del Bloque 1.
+  {lead_line}
 </p>
 {cta}""".format(
             partner_name=partner_name,
             dt_str=dt_str,
             student_list=_student_list_html(students),
-            cta=_cta_button(backend_url, 'Ver expediente en Odoo →', '#27ae60'),
+            lead_line=lead_line,
+            cta=cta,
         )
         return _email_wrapper(
             header_title='Familia confirmó continuidad',
@@ -509,13 +545,18 @@ class EnrollmentJourney(models.Model):
             body_html=body,
         )
 
-    def _build_declined_notification_html(self):
+    def _build_declined_notification_html(self, audience='internal'):
         partner_name = self.partner_id.name or '—'
         declined_at = self.decline_date
         dt_str = declined_at.strftime('%d/%m/%Y %H:%M') if declined_at else '—'
         reason = self.decline_reason or '<em style="color:#8096b4;">No especificado</em>'
         students = self._student_dicts(for_step0=True)
-        backend_url = self._backend_url()
+
+        if audience == 'customer':
+            cta = _cta_button(self.journey_url,
+                              'Ver flujo de proceso inscripción asistido →', '#e67e22')
+        else:
+            cta = _cta_button(self._backend_url(), 'Ver expediente en Odoo →', '#e67e22')
 
         body = """
 <div style="background:#fef9e7;border-left:4px solid #e67e22;padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:20px;">
@@ -552,7 +593,7 @@ class EnrollmentJourney(models.Model):
             dt_str=dt_str,
             student_list=_student_list_html(students),
             reason=reason,
-            cta=_cta_button(backend_url, 'Ver expediente en Odoo →', '#e67e22'),
+            cta=cta,
         )
         return _email_wrapper(
             header_title='Familia no continuará en 2026-2027',
