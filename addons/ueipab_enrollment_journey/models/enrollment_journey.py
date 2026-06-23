@@ -15,8 +15,9 @@ SOPORTE_EMAIL = 'soporte@ueipab.edu.ve'
 # backend link ("Ver expediente en Odoo →") and must NEVER reach customers,
 # who are not yet involved in the Odoo business process.
 PAGOS_EMAIL = 'pagos@ueipab.edu.ve'
-# Admissions/finance follow-up team CC'd on the CONFIRMED internal notification.
-CONFIRMED_INTERNAL_CC = (
+# Admissions/finance follow-up team CC'd on the internal S0 notifications
+# (both confirmed and declined).
+INTERNAL_S0_CC = (
     'lorena.reyes@ueipab.edu.ve,'
     'arcides.arzola@ueipab.edu.ve,'
     'josefina.rodriguez@ueipab.edu.ve'
@@ -467,13 +468,13 @@ class EnrollmentJourney(models.Model):
             subject_customer = 'Confirmación recibida — Inscripción 2026-2027'
             internal_html = self._build_confirmed_notification_html(audience='internal')
             customer_html = self._build_confirmed_notification_html(audience='customer')
-            internal_cc = CONFIRMED_INTERNAL_CC
+            internal_cc = INTERNAL_S0_CC
         else:
             subject_internal = '[S0 No Continúa] Familia %s' % self.partner_id.name
             subject_customer = 'Hemos recibido su respuesta — Inscripción 2026-2027'
             internal_html = self._build_declined_notification_html(audience='internal')
             customer_html = self._build_declined_notification_html(audience='customer')
-            internal_cc = False
+            internal_cc = INTERNAL_S0_CC
 
         Mail = self.env['mail.mail'].sudo()
         # 1) Internal staff copy — pagos@ (+ admissions/finance CC on confirm)
