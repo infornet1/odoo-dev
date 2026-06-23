@@ -5,21 +5,23 @@
         <field name="name">enrollment.journey.tree</field>
         <field name="model">enrollment.journey</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree decoration-warning="continuation_status == 'pending'"
+                  decoration-success="continuation_status == 'confirmed'"
+                  decoration-danger="continuation_status == 'declined'">
                 <field name="partner_id"/>
-                <field name="order_id"/>
-                <field name="academic_year"/>
+                <field name="continuation_status" widget="badge"
+                       decoration-warning="continuation_status == 'pending'"
+                       decoration-success="continuation_status == 'confirmed'"
+                       decoration-danger="continuation_status == 'declined'"/>
+                <field name="blast_sent_date" optional="show" string="Email S0"/>
+                <field name="email_missing" optional="show" string="Sin email"/>
+                <field name="email_bounced" optional="show" string="Rebotado"/>
+                <field name="wa_sent_date" optional="show" string="WA enviado"/>
+                <field name="phone_missing" optional="show" string="Sin tel."/>
+                <field name="order_id" optional="hide"/>
                 <field name="progress_pct" widget="progressbar"/>
-                <field name="current_step"/>
-                <field name="step1_state" optional="hide"/>
-                <field name="step2_state" optional="hide"/>
-                <field name="step3_state"/>
-                <field name="step4_state" optional="hide"/>
-                <field name="step5_state" optional="hide"/>
-                <field name="step6_state" optional="hide"/>
-                <field name="step7_state" optional="hide"/>
-                <field name="step8_state" optional="hide"/>
-                <field name="step9_state" optional="hide"/>
+                <field name="current_step" optional="hide"/>
+                <field name="step3_state" optional="hide"/>
                 <field name="contract_retained" optional="hide"/>
             </tree>
         </field>
@@ -31,6 +33,21 @@
         <field name="arch" type="xml">
             <form>
                 <header>
+                    <field name="continuation_status" widget="statusbar"
+                           statusbar_visible="pending,confirmed,declined"/>
+                    <button name="action_send_blast_email" type="object"
+                            string="📧 Enviar email S0" class="btn-primary"
+                            invisible="blast_sent_date != False"
+                            confirm="¿Enviar el email de invitación S0 al representante?"/>
+                    <button name="action_send_blast_email" type="object"
+                            string="📧 Reenviar email S0" class="btn-secondary"
+                            invisible="blast_sent_date == False"/>
+                    <button name="action_send_wa" type="object"
+                            string="📱 Enviar WA" class="btn-secondary"/>
+                    <button name="action_reset_confirmation" type="object"
+                            string="🔄 Restablecer S0" class="btn-secondary"
+                            invisible="continuation_status == 'pending'"
+                            confirm="¿Restablecer la confirmación S0 a pendiente? El representante verá la pregunta nuevamente."/>
                     <button name="action_run_soft_checks" type="object"
                             string="🔄 Validaciones automáticas" class="btn-secondary"/>
                     <button name="action_open_journey_page" type="object"
@@ -56,6 +73,27 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="S0 — Continuidad">
+                            <group string="Respuesta del Representante">
+                                <group>
+                                    <field name="continuation_status"/>
+                                    <field name="confirmation_date" readonly="1"/>
+                                    <field name="decline_date" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="blast_sent_date" readonly="1"/>
+                                    <field name="email_missing" readonly="1"/>
+                                    <field name="email_bounced"/>
+                                    <field name="wa_sent_date" readonly="1"/>
+                                    <field name="phone_missing" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Motivo de No Continuidad"
+                                   invisible="continuation_status != 'declined'">
+                                <field name="decline_reason" readonly="1" nolabel="1"
+                                       widget="text"/>
+                            </group>
+                        </page>
                         <page string="Pasos">
 
                             <!-- BLOQUE 1 — Inscripción Formal -->
@@ -203,13 +241,26 @@
     </record>
 
     <record id="action_enrollment_journey" model="ir.actions.act_window">
-        <field name="name">Enrollment Journey</field>
+        <field name="name">Inscripción 2026-2027</field>
         <field name="res_model">enrollment.journey</field>
         <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Staff S0 review: pending or bounced, no response yet -->
+    <record id="action_enrollment_s0_review" model="ir.actions.act_window">
+        <field name="name">Revisión S0 — Pendientes y Rebotes</field>
+        <field name="res_model">enrollment.journey</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('continuation_status', 'in', ['pending', 'declined']), '|', ('email_bounced', '=', True), ('blast_sent_date', '!=', False)]</field>
+        <field name="context">{'search_default_group_by_status': 1}</field>
     </record>
 
     <menuitem id="menu_enrollment_journey_root" name="Inscripción 2026-2027"
               parent="sale.sale_menu_root" sequence="30"
               action="action_enrollment_journey"/>
+
+    <menuitem id="menu_enrollment_s0_review" name="Revisión S0"
+              parent="sale.sale_menu_root" sequence="31"
+              action="action_enrollment_s0_review"/>
 
 </odoo>
