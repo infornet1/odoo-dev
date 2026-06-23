@@ -338,33 +338,38 @@ class InvoiceReminderWizard(models.TransientModel):
     def _build_wa_payload(self, lines):
         """Build the ad-hoc payload the WA script will send verbatim.
 
-        Phone = Odoo `mobile` (normalised). Message variant by tag: PDVSA rows
-        get the 35%-advance template (with the latest invoice month);
-        everyone else (REP + untagged `all`) gets the generic template.
+        Phone = Odoo `mobile` (normalised). Message variant:
+        - `all` segment ("Todos con saldo pendiente") → GENERIC balance message
+          for EVERYONE (is_pdvsa=False), no PDVSA "factura lista / adelante el
+          35%" pitch — it's a plain balance reminder for a mixed audience.
+        - segmented modes (both/rep/pdvsa) → PDVSA rows keep the 35%-advance
+          template (with the latest invoice month); REP gets the generic one.
         """
-        pdvsa = lines.filtered(lambda l: l.tag == 'PDVSA')
+        generic_all = self.tag_filter == 'all'
         month_map = {}
-        for pid in pdvsa.mapped('partner_id').ids:
-            inv = self.env['account.move'].search([
-                ('partner_id', '=', pid),
-                ('move_type', 'in', ['out_invoice', 'out_receipt']),
-                ('state', '=', 'posted'),
-            ], order='invoice_date desc', limit=1)
-            if inv and inv.invoice_date:
-                month_map[pid] = inv.invoice_date.month
+        if not generic_all:
+            for pid in lines.filtered(lambda l: l.tag == 'PDVSA').mapped('partner_id').ids:
+                inv = self.env['account.move'].search([
+                    ('partner_id', '=', pid),
+                    ('move_type', 'in', ['out_invoice', 'out_receipt']),
+                    ('state', '=', 'posted'),
+                ], order='invoice_date desc', limit=1)
+                if inv and inv.invoice_date:
+                    month_map[pid] = inv.invoice_date.month
 
         items = []
         for l in lines:
             phone = self._normalise_ve_mobile(l.mobile)
             if not phone:
                 continue
+            is_pdvsa = False if generic_all else (l.tag == 'PDVSA')
             items.append({
                 'partner_id': l.partner_id.id,
                 'name':       l.partner_id.name,
                 'phone':      phone,
                 'balance':    round(l.balance, 2),
-                'is_pdvsa':   l.tag == 'PDVSA',
-                'month':      month_map.get(l.partner_id.id),
+                'is_pdvsa':   is_pdvsa,
+                'month':      None if generic_all else month_map.get(l.partner_id.id),
             })
         return items
 
