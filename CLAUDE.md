@@ -94,7 +94,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | Module | Version | Notes |
 |--------|---------|-------|
 | hr_payroll_community | 17.0.1.0.0 | testing only |
-| ueipab_payroll_enhancements | 17.0.1.73.0 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner |
+| ueipab_payroll_enhancements | 17.0.1.74.0 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner + invoice-reminder wizard: populate-on-open (server action) + `all` segment + `override_pdvsa_rule` toggle (2026-06-23) |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
 | ueipab_ai_agent | 17.0.1.59.4 | both — ⚠️ **Banco de Venezuela UNAVAILABLE** (2026-06-23): Glenda's MEDIOS DE PAGO knowledge no longer offers BdV (0102); see note below. + ACTION:QUOTE + live pricing ground truth (2026-06-11) |
@@ -407,7 +407,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **PENDING — Code / Infrastructure:**
 - **`LIQUID_UTILIDADES_V2` rate inconsistency (2026-06-05):** See [PAYROLL_PROCEDURES.md](documentation/PAYROLL_PROCEDURES.md) and CHANGELOG 2026-06-05. Decision needed: 60 days (company policy) or 15 days (LOTTT min); fix period to current fiscal year only.
-- **Invoice Reminder Wizard — 2 fixes needed (2026-06-01):** See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md#pending-enhancements-2026-06-01). (1) Remove `PDVSA_ADVANCE_PAID` exclusion. (2) Assign missing tags: REP→ids 2698,3658,2906,2919; PDVSA→ids 2467,2590,2822. Also resolve MARIA MARTIN duplicate (ids 3658 and 2666).
+- **Invoice Reminder Wizard (2026-06-01 enh.):** See [WA_INVOICE_REMINDER_PLAN.md](documentation/WA_INVOICE_REMINDER_PLAN.md#pending-enhancements-2026-06-01). ✅ **Fix 1 RESOLVED 2026-06-23 (v1.74.0, both envs)** — `PDVSA_ADVANCE_PAID` is now bypassable via the `override_pdvsa_rule` toggle (kept as opt-in, not removed; toggle also bypasses `fiscal_check`). New `all` segment surfaces untagged AR customers, so **Fix 2 (assign missing REP/PDVSA tags) is now optional for sending** — still nice-to-have for segmentation. ⚠️ **Still open:** MARIA MARTIN duplicate partner (ids 3658 and 2666) — merge/deactivate the blank one.
 - [Invoice Currency Rate Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md) — `tdv_multi_currency_account`; both envs
 - [Freescout Phone Conversation Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) — `Undefined array key 0`; fixed upstream, update Freescout on next release
 - **MassivaMóvil Webhook wrong Content-Type** — controller uses `type='json'` but MassivaMóvil sends form-encoded POST. Fix: change to `type='http'`, parse `request.httprequest.form.get()`, `json.loads(data)`.

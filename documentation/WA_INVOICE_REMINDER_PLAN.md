@@ -304,7 +304,16 @@ Analysis date: 2026-06-01. Ground truth: **SMS1** (Representante) and **SMS2** (
 - **May 31 carry-over balances** — partners with unpaid May 10, April 10, and older invoices are already summed into the balance. KARINA DE DELGADO ($789.52 = May+June), REINSON GUTIERREZ ($864.50 = Apr+May+Jun), etc. all appear. ✅
 - **PDVSA "didn't fully pay May + new June invoice"** — partners with both months stacked (ALEXIS QUILARQUE $201.60, ALIRIO ROSAS $325.68, JEAN MUNOZ $394.76) are already included. ✅
 
-### Fix 1 — Remove `PDVSA_ADVANCE_PAID` exclusion (code change)
+### Fix 1 — `PDVSA_ADVANCE_PAID` exclusion — ✅ RESOLVED 2026-06-23 (v1.74.0, both envs)
+
+**Resolution:** rather than deleting the rule, it is now **bypassable** via a new
+`override_pdvsa_rule` boolean toggle on the wizard. When enabled, the wizard
+skips BOTH PDVSA exclusions (`PDVSA_ADVANCE_PAID` 30% advance **and**
+`PDVSA_FISCAL_EXCLUDED` fiscal_check) so every PDVSA partner with a balance is
+reminded; left off, the conservative behaviour is unchanged. Also shipped the
+same release: populate-on-open (server action, fixes empty-list bug) + new `all`
+segment (surfaces untagged AR customers, partly obsoleting Fix 2 for *sending*).
+Verified: PDVSA sendable 4 → 33 with override ON. Original analysis kept below.
 
 **Impact: +7 PDVSA partners currently blocked.**
 
