@@ -312,6 +312,7 @@ class InvoiceReminderWizard(models.TransientModel):
 
     def action_send_wa(self):
         self.ensure_one()
+        self._sync_eligibility()
         wa_eligible = self.line_ids.filtered(lambda l: l.wa_will_send and l.selected)
         if not wa_eligible:
             raise UserError(_('No hay partners con número móvil elegibles para WA.'))
