@@ -4,6 +4,57 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-23 — prod payroll caught up to v1.73.0 (stale-registry OwlError fix)
+
+**Type:** Incident / deploy fix | **Module:** `ueipab_payroll_enhancements` | **Env:** production (`DB_UEIPAB`)
+
+### Symptom
+
+Opening a payslip batch (`hr.payslip.run`) in prod threw an Owl lifecycle error:
+`"hr.payslip.run"."advance_warning_count" field is undefined.` (client-side, at view `parseFieldNode` / `loadView`).
+
+### Root cause
+
+The 1.73.0 code (which adds the computed `advance_warning_count` field on
+`hr.payslip.run` + the period-advance warning view that references it) had been
+deployed to the prod **disk** within the prior ~3 days, but the container was
+**never restarted or upgraded**. So:
+
+- Prod DB held the **1.73.0 views** (id 2876, 3175) referencing the field, but
+- the running workers' **live registry was still 1.72.0** and lacked the field
+  (`fields_get` confirmed it absent; live ORM read faulted).
+- `ir.module.module`: `installed_version=17.0.1.72.0`, `latest_version=17.0.1.73.0`.
+
+The web client loaded the newer view arch, asked the server for the model's
+fields, the field wasn't there → error.
+
+### Fix (authorized 2026-06-23)
+
+```bash
+docker exec ueipab17 odoo -u ueipab_payroll_enhancements -d DB_UEIPAB --stop-after-init
+docker restart ueipab17
+```
+
+Clean load (165 modules, "Modules loaded"). The lone `Unexpected indentation`
+log line is the harmless RST warning from the manifest `description`, not a
+failure.
+
+### Verified (live, post-restart)
+
+- `fields_get(['advance_warning_count'])` → `{'type': 'integer'}` ✓
+- Live read of a batch → `advance_warning_count: 0` (no fault) ✓
+- Module `installed_version` = `latest_version` = **17.0.1.73.0** ✓
+
+### Lesson
+
+Prod had silently lagged a version behind testing — a prior deploy bumped the
+disk code but skipped the `-u`/restart, leaving DB views ahead of the live
+registry. After a payroll-module deploy to prod, always run
+`-u ueipab_payroll_enhancements` + restart the container so the registry,
+views, and `installed_version` all match the disk manifest.
+
+---
+
 ## 2026-06-17 — payslip batch: refuse-instead-of-delete audit trail (v1.72.0)
 
 **Type:** Enhancement | **Module:** `ueipab_payroll_enhancements` → `models/hr_payslip.py`
