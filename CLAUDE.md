@@ -97,7 +97,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_payroll_enhancements | 17.0.1.73.0 | both — `is_advance_payment` on individual payslips + `has_period_advance` double-pay guard + amber email banner |
 | ueipab_hr_contract | 17.0.2.0.0 | both |
 | ueipab_bounce_log | 17.0.1.4.0 | both |
-| ueipab_ai_agent | 17.0.1.59.3 | both — ACTION:QUOTE + Telegram bold fix + live pricing ground truth (2026-06-11) |
+| ueipab_ai_agent | 17.0.1.59.4 | both — ⚠️ **Banco de Venezuela UNAVAILABLE** (2026-06-23): Glenda's MEDIOS DE PAGO knowledge no longer offers BdV (0102); see note below. + ACTION:QUOTE + live pricing ground truth (2026-06-11) |
 | ueipab_attendance_report | 17.0.1.6.27 | both — hr.leave CC fix: RRHH notified immediately on approve/refuse |
 | ueipab_hr_employee | 17.0.1.3.0 | both |
 | ueipab_hrms_dashboard_ack | 17.0.1.0.0 | both |
@@ -367,6 +367,9 @@ See [AI_AGENT_MODULE.md](documentation/AI_AGENT_MODULE.md) for the full feature 
 - **Identity ring (v57.20):** Turn 1 for unverified contacts → identification prompt, no Claude call until identified
 - **Re-trigger stuck conv:** `env['ai.agent.conversation'].browse(ID).action_process_reply(message_text='...', wa_message_id=0); env.cr.commit()`
 - **Production:** Hours VET weekdays 06:30-20:30, weekends 09:30-19:00. `general_inquiry` exempt (24/7). Kill Telegram: `ai_agent.telegram_enabled=False`.
+- **⚠️ Banco de Venezuela UNAVAILABLE (2026-06-23):** BdV (0102) cannot receive payments. Glenda's MEDIOS DE PAGO block in `skills/general_inquiry.py` (`_INSTITUTIONAL_KNOWLEDGE`) now states this explicitly and offers only the alternatives — TRANSFERENCIAS (Plaza/BanPlus/Mercantil/Bancamiga), PAGO MÓVIL (Opción A `0414-1906296`, B `0414-2337463`, C `0414-4375222`), DIVISAS (Zelle `pagos@`, Binance `383 867 49`). Verified live (v1.59.4). **When BdV is restored, revert this block.** Same content drove the 2026-06-22 payment-notice email blast (`scripts/send_payment_notice_email.py`).
+
+> **⚠️ PROD DEPLOY MECHANISM:** prod addons (`/home/vision/ueipab17/addons`) is a **separate git repo** (`3DVision-CA/ueipab17-cm`), NOT this dev repo. `git pull` on prod does NOT carry dev commits — **scp changed files** to prod (back up first), then `docker exec ueipab17 odoo -u <module> -d DB_UEIPAB --stop-after-init` + `docker restart ueipab17`, then verify `installed_version` via XML-RPC. This is why prod silently lags the repo.
 
 ---
 
