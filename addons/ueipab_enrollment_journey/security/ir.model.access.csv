@@ -3,3 +3,5 @@ access_enrollment_journey_support,enrollment.journey support,model_enrollment_jo
 access_enrollment_journey_student_support,enrollment.journey.student support,model_enrollment_journey_student,group_enrollment_support,1,1,1,1
 access_enrollment_journey_user,enrollment.journey user,model_enrollment_journey,base.group_user,1,0,0,0
 access_enrollment_journey_student_user,enrollment.journey.student user,model_enrollment_journey_student,base.group_user,1,0,0,0
+access_enrollment_withdrawal_support,enrollment.withdrawal support,model_enrollment_withdrawal,group_enrollment_support,1,1,1,1
+access_enrollment_withdrawal_user,enrollment.withdrawal user,model_enrollment_withdrawal,base.group_user,1,0,0,0
