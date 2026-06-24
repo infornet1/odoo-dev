@@ -307,6 +307,17 @@ class EnrollmentJourney(models.Model):
         base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         return '%s/web#model=enrollment.journey&id=%d&view_type=form' % (base, self.id)
 
+    def _withdrawal_url(self):
+        """Deep-link to this journey's egreso (withdrawal) record so staff land on
+        the offboarding checklist. Falls back to the journey form until a
+        withdrawal exists (auto-create lands in Phase 4)."""
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        w = self.env['enrollment.withdrawal'].sudo().search(
+            [('journey_id', '=', self.id)], limit=1)
+        if w:
+            return '%s/web#model=enrollment.withdrawal&id=%d&view_type=form' % (base, w.id)
+        return self._backend_url()
+
     # -- Step 0 actions ----------------------------------------------------
 
     def action_reset_confirmation(self):
@@ -569,7 +580,8 @@ class EnrollmentJourney(models.Model):
             cta = _cta_button(self.journey_url,
                               'Ver flujo de proceso inscripción asistido →', '#e67e22')
         else:
-            cta = _cta_button(self._backend_url(), 'Ver expediente en Odoo →', '#e67e22')
+            cta = _cta_button(self._withdrawal_url(),
+                              'Ver expediente de egreso en Odoo →', '#e67e22')
 
         body = """
 <div style="background:#fef9e7;border-left:4px solid #e67e22;padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:20px;">

@@ -4,9 +4,42 @@ import logging
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from .enrollment_journey import STEP_STATES, DONE_STATES
+from .enrollment_journey import (
+    STEP_STATES, DONE_STATES, SOPORTE_EMAIL, _email_wrapper, _cta_button,
+)
 
 _logger = logging.getLogger(__name__)
+
+# Phase 3 notifications — staff-internal only (customers are served by the
+# farewell page). Addresses verified against res.users in testing 2026-06-24.
+JOSEFINA_EMAIL = 'josefina.rodriguez@ueipab.edu.ve'        # step 2 CC (exit docs)
+GMAIL_SUSPEND_CC = 'lorena.reyes@ueipab.edu.ve,alejandra.lopez@ueipab.edu.ve'  # step 5 CC
+
+# Which step clearances fire an email, and to whom. Steps 1/3/4 are silent.
+STEP_NOTIFY = {
+    2: {
+        'cc': JOSEFINA_EMAIL,
+        'subject': '[Egreso · Documentación] Familia %s',
+        'header': 'Egreso · Preparar documentación de egreso',
+        'banner': '📄 Solvencia confirmada — preparar la documentación de egreso',
+        'banner_color': '#2471a3',
+        'banner_bg': '#eaf2fb',
+        'intro': ('La familia <strong>%s</strong> confirmó la solvencia administrativa '
+                  '(paso 1). Por favor preparar y reunir toda la documentación de egreso '
+                  'del/los estudiante(s) indicados a continuación.'),
+    },
+    5: {
+        'cc': GMAIL_SUSPEND_CC,
+        'subject': '[Egreso · Suspender Gmail] Familia %s',
+        'header': 'Egreso · Suspender cuentas Gmail institucionales',
+        'banner': '📧 Egreso confirmado — suspender cuentas @ueipab.edu.ve',
+        'banner_color': '#7d3c00',
+        'banner_bg': '#fef9e7',
+        'intro': ('El egreso de la familia <strong>%s</strong> alcanzó el paso final. '
+                  'Por favor suspender las cuentas institucionales @ueipab.edu.ve '
+                  'del/los estudiante(s) indicados.'),
+    },
+}
 
 # 5-step offboarding (egreso) checklist. Driven by this constant the same way
 # enrollment.journey is driven by STEP_DEFS — reorder = no DB migration.
@@ -91,6 +124,89 @@ class EnrollmentWithdrawal(models.Model):
             rec.progress_pct = int(done * 100 / N_STEPS)
             rec.state = 'completed' if done == N_STEPS else 'in_progress'
 
+    # -- email helpers ----------------------------------------------------
+
+    def _backend_url(self):
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        return '%s/web#model=enrollment.withdrawal&id=%d&view_type=form' % (base, self.id)
+
+    def _student_rows_html(self):
+        """Current-grade student table for egreso emails (not a 2026-2027 grade)."""
+        students = self.student_ids
+        if not students:
+            return ('<p style="color:#8096b4;font-size:13px;font-style:italic;">'
+                    'Sin estudiantes registrados.</p>')
+        rows = ''.join(
+            '<tr>'
+            '<td style="padding:8px 12px;font-weight:600;color:#1a2c5b;">%s</td>'
+            '<td style="padding:8px 12px;color:#5d7a9a;">%s</td>'
+            '</tr>' % (s.name or '—', s.grade or '—')
+            for s in students
+        )
+        return ("""
+<table width="100%%" cellpadding="0" cellspacing="0"
+       style="border-collapse:collapse;background:#f8faff;border-radius:10px;overflow:hidden;margin:12px 0;">
+  <tr style="background:#e8edf5;">
+    <th style="padding:8px 12px;text-align:left;font-size:12px;color:#1a2c5b;font-weight:700;
+               text-transform:uppercase;letter-spacing:.5px;">Estudiante</th>
+    <th style="padding:8px 12px;text-align:left;font-size:12px;color:#1a2c5b;font-weight:700;
+               text-transform:uppercase;letter-spacing:.5px;">Grado 2025-2026</th>
+  </tr>
+  %s
+</table>""") % rows
+
+    def _build_step_notification_html(self, idx):
+        cfg = STEP_NOTIFY[idx]
+        partner_name = self.partner_id.name or '—'
+        reason = self.exit_reason or '<em style="color:#8096b4;">No especificado</em>'
+        body = """
+<div style="background:{bg};border-left:4px solid {color};padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:20px;">
+  <p style="margin:0;font-size:15px;font-weight:700;color:{color};">{banner}</p>
+</div>
+<p style="font-size:14px;line-height:1.7;margin:0 0 14px;color:#4a5568;">{intro}</p>
+<p style="font-size:13px;font-weight:600;color:#1a2c5b;margin:16px 0 6px;">Estudiante(s) en egreso:</p>
+{student_rows}
+<p style="font-size:13px;font-weight:600;color:#1a2c5b;margin:20px 0 6px;">Motivo de retiro:</p>
+<div style="background:#fdf2e9;border:1px solid #f5cba7;border-radius:8px;padding:14px 16px;
+            font-size:13px;color:#4a5568;line-height:1.7;">{reason}</div>
+{cta}""".format(
+            bg=cfg['banner_bg'], color=cfg['banner_color'], banner=cfg['banner'],
+            intro=cfg['intro'] % partner_name,
+            student_rows=self._student_rows_html(),
+            reason=reason,
+            cta=_cta_button(self._backend_url(), 'Ver expediente de egreso en Odoo →', '#7d3c00'),
+        )
+        return _email_wrapper(
+            header_title=cfg['header'],
+            header_subtitle='Egreso / Retiro 2025-2026 · Proceso interno',
+            header_color=cfg['banner_color'],
+            body_html=body,
+        )
+
+    def _notify_step(self, idx):
+        """Fire the staff-internal email for a notified step (2 or 5)."""
+        self.ensure_one()
+        cfg = STEP_NOTIFY.get(idx)
+        if not cfg:
+            return
+        self.env['mail.mail'].sudo().create({
+            'subject': cfg['subject'] % (self.partner_id.name or '—'),
+            'email_from': SOPORTE_EMAIL,
+            'email_to': SOPORTE_EMAIL,
+            'email_cc': cfg['cc'],
+            'reply_to': SOPORTE_EMAIL,
+            'body_html': self._build_step_notification_html(idx),
+            'state': 'outgoing',
+        })
+        self.message_post(
+            body='📧 Notificación de egreso (paso #%d) enviada a %s · CC %s.' % (
+                idx, SOPORTE_EMAIL, cfg['cc']),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        try:
+            self.env.ref('base.ir_cron_mail_scheduler_action').sudo().method_direct_trigger()
+        except Exception:
+            pass
+
     # -- staff one-click clearance + hard gate ----------------------------
 
     def _set_step(self, idx, state):
@@ -109,6 +225,7 @@ class EnrollmentWithdrawal(models.Model):
                     'la solvencia (paso 1) y la documentación de egreso (paso 2). '
                     'Pendiente(s): %s.' % ', '.join('#%d' % i for i in incomplete))
         prefix = 'step%d' % idx
+        was_done = self[prefix + '_state'] in DONE_STATES
         vals = {prefix + '_state': state}
         if state in DONE_STATES:
             vals[prefix + '_cleared_by'] = self.env.uid
@@ -122,6 +239,10 @@ class EnrollmentWithdrawal(models.Model):
             body='Egreso · paso #%d (%s) → %s por %s.' % (
                 idx, label, dict(STEP_STATES).get(state, state), self.env.user.name),
             message_type='comment', subtype_xmlid='mail.mt_note')
+        # Phase 3: notify on transition INTO a done state for steps 2 & 5 only
+        # (skip re-confirmations so staff aren't double-emailed).
+        if idx in STEP_NOTIFY and state in DONE_STATES and not was_done:
+            self._notify_step(idx)
 
     def action_clear_step(self):
         self._set_step(self.env.context.get('step', 0), 'done_manual')

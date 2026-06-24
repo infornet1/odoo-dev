@@ -1,6 +1,6 @@
 # Enrollment Withdrawal (Egreso / Retiro) Plan — 2025-2026
 
-**Status:** 🛠️ PHASE 1 DONE 2026-06-23 (v0.7.0) — model live in testing; Phases 2-4 pending
+**Status:** 🛠️ PHASES 1-3 DONE 2026-06-24 (v0.9.0) — model + staff UI + notifications live in testing; Phase 4 (auto-create on decline) + Phase 5 (Gmail automation) pending
 **Created:** 2026-06-23
 **Module:** `ueipab_enrollment_journey` (same module — new sibling model)
 **Related:** [ENROLLMENT_JOURNEY_WIZARD.md](ENROLLMENT_JOURNEY_WIZARD.md) · memory `project-enrollment-journey`
@@ -176,10 +176,21 @@ reimplementation.
    1+2), `_set_step` clearance + chatter audit, `solvencia_ref`/`sige_ref`,
    per-family related fields from `journey_id`, security. Smoke-tested
    (gate/completion/reopen/related/chatter), testing-only.
-2. **Phase 2 — Staff UI:** form (step buttons + refs), list (state badge),
-   menu item.
-3. **Phase 3 — Notifications:** step-2 and step-5 emails (reusing helpers);
-   re-point the declined internal email's button to the withdrawal record.
+2. **Phase 2 — Staff UI:** ✅ **DONE 2026-06-24 (v0.8.0)** — `views/enrollment_withdrawal_views.xml`
+   (registered in manifest): tree (state/progress badges + per-step cols) + form
+   (5-step checklist, clear/reopen buttons, hard gate, solvencia/SIGE refs,
+   chatter) + action + menu under Sales (seq 32). Also fixed: `enrollment.journey`
+   now `_inherit=['mail.thread']`.
+3. **Phase 3 — Notifications:** ✅ **DONE 2026-06-24 (v0.9.0)** — `_set_step` fires
+   a staff-internal email on transition INTO a done state for **step 2** (To
+   `soporte@`, CC `josefina.rodriguez@`) and **step 5** (To `soporte@`, CC
+   `lorena.reyes@`, `alejandra.lopez@`); steps 1/3/4 silent; double-send guard
+   (skips re-confirmations via `was_done`). Builders `_build_step_notification_html`
+   + `_notify_step` reuse `_email_wrapper`/`_cta_button`; CTA → withdrawal
+   `_backend_url`. Journey declined **internal** email button re-pointed to the
+   withdrawal record via new `_withdrawal_url()` (falls back to journey form until
+   Phase 4 auto-create exists). Verified end-to-end in testing (To/CC, gate,
+   no-double-send, deep-link, completion), mails non-delivered + rolled back.
 4. **Phase 4 — Trigger wiring:** auto-create on decline (idempotent).
 5. **Phase 5 (later) — Gmail automation:** Admin SDK suspension button.
 
