@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================ LIST ============================ -->
+    <record id="view_enrollment_withdrawal_tree" model="ir.ui.view">
+        <field name="name">enrollment.withdrawal.tree</field>
+        <field name="model">enrollment.withdrawal</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="state == 'completed'"
+                  decoration-warning="state == 'in_progress'">
+                <field name="partner_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'completed'"
+                       decoration-warning="state == 'in_progress'"/>
+                <field name="progress_pct" widget="progressbar"/>
+                <field name="step1_state" optional="show" string="1·Solvencia"/>
+                <field name="step2_state" optional="show" string="2·Docs"/>
+                <field name="step3_state" optional="show" string="3·Akdemia"/>
+                <field name="step4_state" optional="show" string="4·SIGE"/>
+                <field name="step5_state" optional="show" string="5·Gmail"/>
+                <field name="journey_id" optional="hide"/>
+                <field name="create_date" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================ FORM ============================ -->
+    <record id="view_enrollment_withdrawal_form" model="ir.ui.view">
+        <field name="name">enrollment.withdrawal.form</field>
+        <field name="model">enrollment.withdrawal</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="in_progress,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="display_name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="journey_id"/>
+                            <field name="partner_id"/>
+                            <field name="progress_pct" widget="progressbar"/>
+                        </group>
+                        <group>
+                            <field name="exit_reason"/>
+                        </group>
+                    </group>
+                    <field name="student_ids" readonly="1">
+                        <tree>
+                            <field name="name"/>
+                            <field name="grade"/>
+                        </tree>
+                    </field>
+
+                    <notebook>
+                        <page string="Pasos de Egreso">
+
+                            <!-- Step 1 — Solvencia -->
+                            <group string="1. Solvencia administrativa 2025-2026">
+                                <field name="step1_state"/>
+                                <field name="solvencia_ref"
+                                       placeholder="Nº/ref. de la carta de no deuda"/>
+                                <field name="step1_cleared_by" readonly="1"/>
+                                <field name="step1_cleared_at" readonly="1"/>
+                                <button name="action_clear_step" type="object"
+                                        string="✔️ Confirmar solvencia" class="btn-primary"
+                                        context="{'step': 1}"
+                                        invisible="step1_state in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object"
+                                        string="↺ Reabrir" context="{'step': 1}"
+                                        invisible="step1_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <!-- Step 2 — Documentación -->
+                            <group string="2. Documentación de egreso">
+                                <field name="step2_state"/>
+                                <field name="step2_cleared_by" readonly="1"/>
+                                <field name="step2_cleared_at" readonly="1"/>
+                                <button name="action_clear_step" type="object"
+                                        string="📄 Documentación lista" class="btn-primary"
+                                        context="{'step': 2}"
+                                        invisible="step2_state in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object"
+                                        string="↺ Reabrir" context="{'step': 2}"
+                                        invisible="step2_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <separator string="Requieren solvencia (1) y documentación (2) completas"/>
+
+                            <!-- Step 3 — Akdemia -->
+                            <group string="3. Desincorporación de Akdemia">
+                                <field name="step3_state"/>
+                                <field name="step3_cleared_by" readonly="1"/>
+                                <field name="step3_cleared_at" readonly="1"/>
+                                <div invisible="step1_state in ('done_auto','done_manual') and step2_state in ('done_auto','done_manual')"
+                                     class="text-muted">
+                                    🔒 Complete primero los pasos 1 y 2.
+                                </div>
+                                <button name="action_clear_step" type="object"
+                                        string="🎓 Desincorporar Akdemia" class="btn-primary"
+                                        context="{'step': 3}"
+                                        invisible="step3_state in ('done_auto','done_manual') or step1_state not in ('done_auto','done_manual') or step2_state not in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object"
+                                        string="↺ Reabrir" context="{'step': 3}"
+                                        invisible="step3_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <!-- Step 4 — SIGE -->
+                            <group string="4. Liberación de SIGE (MPPE)">
+                                <field name="step4_state"/>
+                                <field name="sige_ref"
+                                       placeholder="Nº/constancia SIGE"/>
+                                <field name="step4_cleared_by" readonly="1"/>
+                                <field name="step4_cleared_at" readonly="1"/>
+                                <div invisible="step1_state in ('done_auto','done_manual') and step2_state in ('done_auto','done_manual')"
+                                     class="text-muted">
+                                    🔒 Complete primero los pasos 1 y 2.
+                                </div>
+                                <button name="action_clear_step" type="object"
+                                        string="🏛️ Liberar SIGE" class="btn-primary"
+                                        context="{'step': 4}"
+                                        invisible="step4_state in ('done_auto','done_manual') or step1_state not in ('done_auto','done_manual') or step2_state not in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object"
+                                        string="↺ Reabrir" context="{'step': 4}"
+                                        invisible="step4_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                            <!-- Step 5 — Gmail -->
+                            <group string="5. Suspensión de cuentas Gmail">
+                                <field name="step5_state"/>
+                                <field name="step5_cleared_by" readonly="1"/>
+                                <field name="step5_cleared_at" readonly="1"/>
+                                <div invisible="step1_state in ('done_auto','done_manual') and step2_state in ('done_auto','done_manual')"
+                                     class="text-muted">
+                                    🔒 Complete primero los pasos 1 y 2.
+                                </div>
+                                <button name="action_clear_step" type="object"
+                                        string="📧 Suspender Gmail" class="btn-primary"
+                                        context="{'step': 5}"
+                                        invisible="step5_state in ('done_auto','done_manual') or step1_state not in ('done_auto','done_manual') or step2_state not in ('done_auto','done_manual')"/>
+                                <button name="action_reopen_step" type="object"
+                                        string="↺ Reabrir" context="{'step': 5}"
+                                        invisible="step5_state not in ('done_auto','done_manual')"/>
+                            </group>
+
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ========================== ACTION + MENU ========================== -->
+    <record id="action_enrollment_withdrawal" model="ir.actions.act_window">
+        <field name="name">Egresos / Retiros</field>
+        <field name="res_model">enrollment.withdrawal</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Sin egresos en proceso</p>
+            <p>Los egresos se generan cuando una familia indica que no continúa en la encuesta de continuidad (S0).</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_enrollment_withdrawal" name="Egresos / Retiros"
+              parent="sale.sale_menu_root" sequence="32"
+              action="action_enrollment_withdrawal"/>
+
+</odoo>
