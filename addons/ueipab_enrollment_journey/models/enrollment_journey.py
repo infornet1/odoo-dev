@@ -309,14 +309,30 @@ class EnrollmentJourney(models.Model):
 
     def _withdrawal_url(self):
         """Deep-link to this journey's egreso (withdrawal) record so staff land on
-        the offboarding checklist. Falls back to the journey form until a
-        withdrawal exists (auto-create lands in Phase 4)."""
+        the offboarding checklist. Falls back to the journey form if no withdrawal
+        exists yet."""
         base = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         w = self.env['enrollment.withdrawal'].sudo().search(
             [('journey_id', '=', self.id)], limit=1)
         if w:
             return '%s/web#model=enrollment.withdrawal&id=%d&view_type=form' % (base, w.id)
         return self._backend_url()
+
+    def _ensure_withdrawal(self):
+        """Idempotently create the egreso/withdrawal record when a family declines.
+        One withdrawal per journey (partner/students/exit_reason are related fields,
+        so they populate from journey_id automatically). Returns the record."""
+        self.ensure_one()
+        W = self.env['enrollment.withdrawal'].sudo()
+        existing = W.search([('journey_id', '=', self.id)], limit=1)
+        if existing:
+            return existing
+        rec = W.create({'journey_id': self.id})
+        self.message_post(
+            body='🗂️ Expediente de egreso creado automáticamente — la familia no '
+                 'continúa en 2026-2027.',
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return rec
 
     # -- Step 0 actions ----------------------------------------------------
 
@@ -482,6 +498,9 @@ class EnrollmentJourney(models.Model):
             customer_html = self._build_confirmed_notification_html(audience='customer')
             internal_cc = INTERNAL_S0_CC
         else:
+            # Auto-create the egreso expediente first so the internal email's
+            # "Ver expediente de egreso →" button deep-links to the real record.
+            self._ensure_withdrawal()
             subject_internal = '[S0 No Continúa] Familia %s' % self.partner_id.name
             subject_customer = 'Hemos recibido su respuesta — Inscripción 2026-2027'
             internal_html = self._build_declined_notification_html(audience='internal')

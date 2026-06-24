@@ -1,6 +1,6 @@
 # Enrollment Withdrawal (Egreso / Retiro) Plan — 2025-2026
 
-**Status:** 🛠️ PHASES 1-3 DONE 2026-06-24 (v0.9.0) — model + staff UI + notifications live in testing; Phase 4 (auto-create on decline) + Phase 5 (Gmail automation) pending
+**Status:** 🛠️ PHASES 1-4 DONE 2026-06-24 (v0.10.0) — model + staff UI + notifications + auto-create-on-decline live in testing; Phase 5 (Gmail automation) pending
 **Created:** 2026-06-23
 **Module:** `ueipab_enrollment_journey` (same module — new sibling model)
 **Related:** [ENROLLMENT_JOURNEY_WIZARD.md](ENROLLMENT_JOURNEY_WIZARD.md) · memory `project-enrollment-journey`
@@ -191,7 +191,14 @@ reimplementation.
    withdrawal record via new `_withdrawal_url()` (falls back to journey form until
    Phase 4 auto-create exists). Verified end-to-end in testing (To/CC, gate,
    no-double-send, deep-link, completion), mails non-delivered + rolled back.
-4. **Phase 4 — Trigger wiring:** auto-create on decline (idempotent).
+4. **Phase 4 — Trigger wiring:** ✅ **DONE 2026-06-24 (v0.10.0)** — `enrollment.journey._ensure_withdrawal()`
+   (idempotent: one withdrawal per journey, returns existing if present) is
+   called from `_send_response_notification('declined')` before the internal
+   email is built, so the "Ver expediente de egreso →" button always deep-links
+   to the real record. partner/students/exit_reason populate via related fields
+   from `journey_id`. Chatter note on the journey when created. Verified
+   (0→1 create, idempotent re-decline stays 1, related fields populated,
+   internal email embeds the withdrawal link); test rolled back.
 5. **Phase 5 (later) — Gmail automation:** Admin SDK suspension button.
 
 Testing-only until validated; production deploy is a separate later phase
