@@ -1,7 +1,14 @@
 # SMS Channel — MassivaMóvil SMS API Integration (Invoice Reminder Wizard)
 
 **Created:** 2026-06-24
-**Status:** 🛠️ PLAN — pre-flight passed (1000 credits); not yet built
+**Status:** 🛠️ PLAN APPROVED — pre-flight passed (1000 credits); **paused 2026-06-24, resume next session**
+
+> **▶ NEXT SESSION — start here:**
+> 1. Settle §7 decisions (esp. **D-SMS-1** send mechanism — recommendation: **inline with ≤50 chunking** + credit-guard pre-check).
+> 2. Build **Phase 1** — `sms_massiva` helper: `send_batch()`, `balance()`, `_sanitize_sms()` (strip accents/ñ/`$`/`?`/`'`/`#`/`|`, ≤160 chars), phone-normalize to `58XXXXXXXXXX`, parse `telefonos[].status`.
+> 3. Then **Phase 2** — wire the "Enviar SMS" button into `account.invoice.reminder.wizard` (mirror the WA channel + `_sync_eligibility` guard).
+>
+> Ready/done: pre-flight ✅ (1000 credits), creds in `config/sms_massiva.json` (gitignored), this plan. Nothing built or deployed yet — testing-first when we resume.
 **Goal:** Add **SMS** as a 3rd delivery channel in the "Recordatorio de Saldo" wizard
 (`account.invoice.reminder.wizard`, `ueipab_payroll_enhancements`), alongside the
 existing **Email** and **WhatsApp** channels.
