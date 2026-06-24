@@ -356,6 +356,21 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 
 ---
 
+### ⚠️ Pitfall: installment date in the SAME period as the advance slip (Lorena case, 2026-06-24)
+
+**A salary advance spans TWO pay periods** — money paid early in one period, recovered in a *later* one. If you set the LO installment date inside the **same** quincena as a `is_advance_payment` slip, the recovery line gets pulled onto the **advance slip itself** when it's computed/confirmed. Symptoms:
+
+- Loan shows `balance_amount = 0` / `paid=True` ("recovered"), **but** the advance slip's NET is unchanged (the advance NET formula ignores the loan deduction line) → **nothing is actually clawed back** ("phantom recovery").
+- Two journal entries exist for **one** real payment: the disbursement JE (`PAY1/.../NNNN`, ref `LO/000X`, DR `1.1.06.01.001` / CR bank) **plus** the payslip JE carrying a self-cancelling NET-out / recovery-in pair.
+
+**Root cause:** `action_compute_sheet`/`get_inputs` inject the `LO` input for any approved loan whose installment `date <= payslip.date_to`. The advance slip's own `date_to` satisfies that when the dates collide.
+
+**Avoidance:** Set the installment date in a **later, non-overlapping** quincena (Q1=1–15, Q2=16–end). And if you are merely paying someone their **current** quincena a few days early, **do not create an LO at all** — just generate and pay that period's payslip. Create an LO only when the money is *extra*, recovered from a *future* check.
+
+**Unwind procedure (mistaken advance — money paid ONCE):** see `documentation/PAYROLL_PROCEDURES.md` → "Unwinding a Mistaken Advance/Loan". Net effect: cancel the loan, cancel its disbursement JE (cancel-not-delete, kept for audit), recompute + reconfirm the slip without the loan so it stands alone as the employee's pay. Memory: `project-lorena-lo-payslip`.
+
+---
+
 ## Phase 2 Plan (Future)
 
 1. Configure portal access for `hr.loan` (employee self-service requests)
@@ -391,6 +406,7 @@ UPDATE account_move SET name='PAY1/2026/04/0006', sequence_prefix='PAY1/2026/04/
 | 17.0.1.64.8 | 2026-04-28 | `_get_veb_rate(for_date)` now accepts a date parameter: fetches last BCV rate on or before that date. New `@api.onchange('date')` auto-populates `advance_exchange_rate` when the loan date is changed — required for historical advances to get the correct period rate. |
 | 17.0.1.64.9 | 2026-04-28 | Recovery type messaging across all 3 surfaces: notification email, ack landing page, and ack confirmation email all display recovery-type-specific badge, table title, legal declaration, and confirmation note for `quincena` (blue) vs `liquidacion` (amber). Prevents confusion for liquidacion employees who see no quincena deductions. |
 | 17.0.1.65.0 | 2026-05-04 | `total_net_amount` on `hr.payslip.run` now includes `LIQUID_NET_V2` code — batch totals were showing 0 for liquidation-only batches. Relación de Liquidación: loan deduction `amount_formatted` sign fix — was using `abs()` causing positive display inconsistent with other deductions. |
+| DB-only fix | 2026-06-24 | **Lorena Reyes (emp 593) mistaken-advance unwind (prod).** Advance slip #940/SLIP/889 (Jun 16–30) + LO/0005 had colliding periods → phantom recovery on the advance slip. Resolved: cancelled LO/0005, cancelled disbursement JE PAY1/06/0046 + old payslip JE PAY1/06/0047 (cancel-not-delete, audit kept), recomputed/reconfirmed #940 without loan → clean move PAY1/06/0048 (NET $175.53, 0 receivable lines). See Pitfall section above + PAYROLL_PROCEDURES.md unwind procedure. |
 | 17.0.1.66.0 | 2026-05-04 | **Multiple loans per employee (Option A).** `HrLoan.create()` bypasses ohrms_loan one-loan constraint via MRO. `get_inputs()` rewritten: one LO input per active loan (date ≤ payslip end — handles skipped periods), removes last-wins bug. `action_payslip_done()` rewritten: uses `loan_line_id` directly, reverts paid=True for LO inputs HR zeroed out (skip). Salary rules `VE_LOAN_DED_V2`/`LIQUID_LOAN_DED_V2` updated to `sum all LO inputs` via `payslip.dict.input_line_ids`. Relación de Liquidación: removed `limit=1`, shows all active liquidación loans. |
 
 ---
