@@ -1,9 +1,20 @@
 # WA Invoice Reminder — Representante / Representante PDVSA
 
 **Created:** 2026-05-14  
-**Status:** Script built + dry run verified — First live send planned 2026-05-15  
-**Script (planned):** `scripts/wa_invoice_reminder.py`  
-**Cron (planned):** `/etc/cron.d/wa_invoice_reminder` — daily 11:00 UTC (7:00 AM VET)
+**Status:** LIVE in production. Latest run **2026-06-23: 61/61 sent, 0 errors** (all generic Standard message).  
+**Script:** `scripts/wa_invoice_reminder.py`  
+**Cron:** `/etc/cron.d/wa_invoice_reminder` (daily blast, currently disabled) + `/etc/cron.d/wa_invoice_reminder_poller` (UI-trigger poller, every 5 min)
+
+---
+
+## 2026-06-23 Update — wizard-driven WA + message-by-segment (payroll v1.74.5)
+
+- **WA button sends the wizard's EXACT selected list** (ad-hoc), not the standalone tag-based blast. Wizard → `wa_invoice_reminder.adhoc_payload` param (partner + Odoo `mobile` `+58…` + tag) → poller runs `wa_invoice_reminder.py --live --adhoc` → sends that list verbatim. Force-dry while `ai_agent.dry_run=True` (global WA pause).
+- **Message is chosen by the SELECTED SEGMENT, not the customer's tag:**
+  - **"Todos con saldo pendiente" (`all`)** → **Standard** generic balance message for **everyone, incl. PDVSA** (no 35% pitch). Wording (TEMPLATE_REP): *"Colegio Andrés Bello le informa que su saldo pendiente es de {deuda}. Le invitamos a protegerse de la volatilidad cambiaria pagando a la tasa BCV oficial, la cual puede consultar en nuestro monitor https://bit.ly/tasabcv …"*
+  - **"PDVSA Only" / "Representante + PDVSA"** → PDVSA rows get the **35%-advance** template (TEMPLATE_PDVSA, with invoice month). REP rows + `all` use the Standard template.
+- **Live result 2026-06-23:** 61/61 sent, 0 errors, 0 skipped — all `[REP]` Standard (0 PDVSA pitch). One emergency-stop earlier the same day (2 PDVSA customers got the wrong 35% body before the `all`-generic fix; their dedup was cleared and they were re-sent correctly).
+- WA **un-paused** (`ai_agent.dry_run=False`) and delivering via the **backup +584248944898** (dedicated primary +584148321989 still broken — Massiva ticket).
 
 ---
 
