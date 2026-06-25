@@ -202,11 +202,16 @@ checklist. Populate it as info is located.
     - **II Momento** "Consolidación y una calificación perfecta" — promedio 15,65 ·
       **85,14% aprobación (OFICIAL, 86/101 — NOT Alberto's letter 86,14%)** · matrícula 224 ·
       **Ángel Rangel un 20 perfecto** · Jadasa Mayz 19,67 · 3er A repite todos aprobados.
-  - ⏳ **Still `.ph` (5):** 2 year-in-numbers stats ("Estudiantes atendidos", "Docentes y
-    personal" — need verified counts; matrícula informe says **224 total**) + 3 in the
-    **III Momento** card (date span, cierre/graduación hitos beyond the Kurios gold already
-    shown). To resume: CEO/Subdirección supplies III Momento (Abr–Jul 2026) hitos + the two
-    verified counts; then strip remaining `.ph` styling and announce.
+  - ✅ **ALL `.ph` PLACEHOLDERS FILLED (2026-06-25)** — page is placeholder-free (0 `class="ph"`):
+    - **Year-in-numbers:** **224 estudiantes** (high-conf, II Lapso informe matrícula:
+      12 Inicial + 111 Primaria + 101 Media = 224) · **43 docentes y personal** (medium-conf,
+      payroll headcount per CLAUDE.md/budget memory; testing hr.employee shows ~49-51 incl.
+      non-payroll/test rows — 43 is the clean operational figure).
+    - **III Momento (Abr–Jul 2026)** "Cierre de oro" — completed with the **graduación de la
+      Promoción 2026** (5to Año) alongside the real Kurios gold; speculative placeholder dropped
+      (III Momento academic results not fabricated — that lapso is still in progress).
+  - **Launch-ready:** all scenes populated, 0 placeholders, `.ph` highlight CSS now inert (no
+    spans use it). Remaining before public announce = CEO go + journey-blast/Glenda push.
 
 ## 9. Phase 1 deployment (LIVE 2026-06-22)
 
