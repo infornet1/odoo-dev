@@ -695,14 +695,25 @@ class AiAgentConversation(models.Model):
         # Send AI response via configured channel
         response_text = action.get('message', ai_content)
 
-        # Telegram cross-channel invite — appended once on the very first WA reply
-        # for general_inquiry only. If the customer ignores it, WA conversation continues normally.
+        # Telegram cross-channel invite — appended at most ONCE per contact, ever.
+        # The guard is per-PHONE (not per-conversation): when a conversation is
+        # re-created (e.g. after a farewell auto-resolve), the new conversation
+        # has no outbound messages of its own, so the old per-conversation guard
+        # re-appended the invite on every fresh conversation — the customer
+        # received the same Telegram pitch repeatedly (loop bug 2026-06-24,
+        # RAIZA RENDON). Checking all outbound messages for this phone makes the
+        # invite idempotent regardless of how many conversations get spawned.
         icp = self.env['ir.config_parameter'].sudo()
         if (self.channel == 'whatsapp'
                 and self.skill_id.code == 'general_inquiry'
-                and not self.agent_message_ids.filtered(lambda m: m.direction == 'outbound')
+                and self.phone
                 and icp.get_param('ai_agent.telegram_invite_enabled', 'True') == 'True'
-                and 't.me/' not in response_text):
+                and 't.me/' not in response_text
+                and not self.env['ai.agent.message'].sudo().search_count([
+                    ('conversation_id.phone', '=', self.phone),
+                    ('direction', '=', 'outbound'),
+                    ('body', 'ilike', 't.me/'),
+                ])):
             bot_username = icp.get_param('ai_agent.telegram_bot_username', 'GlendaUeipabBot')
             response_text += (
                 f"\n\n📲 Por cierto, también puede escribirme por Telegram "
@@ -728,36 +739,51 @@ class AiAgentConversation(models.Model):
         if flyer_key and hasattr(skill_handler, 'send_flyer'):
             skill_handler.send_flyer(self, flyer_key)
 
-        # Payment receipt OCR — structured extraction + auto draft payment
+        # Payment receipt OCR — structured extraction + auto draft payment.
+        # CRITICAL: isolated in its own savepoint. The customer-facing WA reply
+        # was already sent above (irreversible). If anything in the receipt path
+        # raises (OCR, journal lookup, draft payment, pagos email), it must NOT
+        # roll back the inbound/outbound message log — a rolled-back log makes the
+        # poll-cron dedup miss the WA id and RE-SEND the whole reply next cycle,
+        # producing the duplicate-message loop (2026-06-24, RAIZA RENDON:
+        # `_TD_LABEL` NameError rolled back 3 turns → 3 resends + empty convs).
         if attachment_url and self._detect_attachment_type(attachment_url) == 'image':
-            receipt = self._extract_payment_receipt(attachment_url)
-            if receipt:
-                partner = self.partner_id
-                payment_id, odoo_url, matched_info, duplicate = None, None, None, None
+            try:
+                with self.env.cr.savepoint():
+                    receipt = self._extract_payment_receipt(attachment_url)
+                    if receipt:
+                        partner = self.partner_id
+                        payment_id, odoo_url, matched_info, duplicate = None, None, None, None
 
-                if partner:
-                    duplicate = self._check_duplicate_payment(
-                        partner.id, receipt.get('referencia'))
-                    if not duplicate:
-                        bcv_rate = self._get_bcv_rate_for_payment()
-                        journal_id = self._resolve_journal_for_payment(
-                            receipt.get('banco'), receipt.get('moneda'))
-                        matched_info = self._match_invoice_for_payment(
-                            partner, receipt.get('monto'), receipt.get('moneda'), bcv_rate)
-                        payment_id, odoo_url = self._create_draft_payment(
-                            partner, receipt, journal_id, matched_info)
+                        if partner:
+                            duplicate = self._check_duplicate_payment(
+                                partner.id, receipt.get('referencia'))
+                            if not duplicate:
+                                bcv_rate = self._get_bcv_rate_for_payment()
+                                journal_id = self._resolve_journal_for_payment(
+                                    receipt.get('banco'), receipt.get('moneda'))
+                                matched_info = self._match_invoice_for_payment(
+                                    partner, receipt.get('monto'), receipt.get('moneda'), bcv_rate)
+                                payment_id, odoo_url = self._create_draft_payment(
+                                    partner, receipt, journal_id, matched_info)
 
-                self._notify_pagos_payment_receipt(
-                    receipt, partner, self.phone,
-                    payment_id=payment_id, odoo_url=odoo_url,
-                    matched_invoice_info=matched_info, duplicate_payment=duplicate,
-                )
-                draft_tag = f" — Borrador #{payment_id}" if payment_id else ""
-                dup_tag = " — ⚠️ DUPLICADO" if duplicate else ""
-                self.message_post(body=_(
-                    "🧾 Comprobante: %s %s %s%s%s"
-                ) % (receipt.get('banco', ''), receipt.get('monto', ''),
-                     receipt.get('moneda', ''), draft_tag, dup_tag))
+                        self._notify_pagos_payment_receipt(
+                            receipt, partner, self.phone,
+                            payment_id=payment_id, odoo_url=odoo_url,
+                            matched_invoice_info=matched_info, duplicate_payment=duplicate,
+                        )
+                        draft_tag = f" — Borrador #{payment_id}" if payment_id else ""
+                        dup_tag = " — ⚠️ DUPLICADO" if duplicate else ""
+                        self.message_post(body=_(
+                            "🧾 Comprobante: %s %s %s%s%s"
+                        ) % (receipt.get('banco', ''), receipt.get('monto', ''),
+                             receipt.get('moneda', ''), draft_tag, dup_tag))
+            except Exception as exc:
+                # Swallow: the WA reply is already out; never let receipt
+                # bookkeeping unwind the message log or block the turn.
+                _logger.warning(
+                    "Conv %d: receipt processing failed (non-fatal): %s",
+                    self.id, exc)
 
         # Send school account help follow-up (student email found / not found)
         school_followup = action.get('_school_followup')
@@ -1819,14 +1845,14 @@ class AiAgentConversation(models.Model):
             bcv_rate = self._get_bcv_rate_for_payment()
             if bcv_rate > 0:
                 monto_usd = float(monto) / bcv_rate
-                bcv_line = (f'<tr><td style="{_TD_LABEL}">Equiv. USD</td>'
-                            f'<td style="{_TD_VAL}">'
+                bcv_line = (f'<tr><td style="{self._TD_LABEL}">Equiv. USD</td>'
+                            f'<td style="{self._TD_VAL}">'
                             f'<b>${monto_usd:,.2f}</b> '
                             f'<span style="color:#888;font-size:12px">(BCV {bcv_rate:,.2f})</span>'
                             f'</td></tr>')
 
         receipt_rows = ''.join(
-            f'<tr><td style="{_TD_LABEL}">{k}</td><td style="{_TD_VAL}">{v}</td></tr>'
+            f'<tr><td style="{self._TD_LABEL}">{k}</td><td style="{self._TD_VAL}">{v}</td></tr>'
             for k, v in [
                 ('Banco / Plataforma', banco),
                 ('Tipo de pago',       receipt.get('tipo_pago') or '—'),
@@ -2472,8 +2498,29 @@ class AiAgentConversation(models.Model):
                 return existing
             if existing.state in ('timeout', 'failed'):
                 return None  # unresponsive or broken conv — don't re-open within 24h
-            # state == 'resolved': customer engaged and completed — allow new conv
-            # (e.g. farewell "Gracias" after a handoff deserves an acknowledgment)
+            # state == 'resolved': if it resolved RECENTLY the customer is almost
+            # certainly still in the same live exchange — a follow-up right after a
+            # "Gracias" auto-resolve. Re-open and REUSE the same conversation
+            # instead of spawning a fresh one. Spawning a new conversation on every
+            # post-resolve message produced repeated greetings + repeated Telegram
+            # invites and fragmented history (loop bug 2026-06-24, RAIZA RENDON:
+            # 4 WhatsApp conversations created for one phone in 15 minutes).
+            reopen_window = int(icp.get_param(
+                'ai_agent.reopen_resolved_window_min', '30') or '30')
+            reopen_cutoff = fields.Datetime.now() - timedelta(minutes=reopen_window)
+            if existing.last_message_date and existing.last_message_date >= reopen_cutoff:
+                existing.write({
+                    'state': 'active',
+                    'last_sender': 'customer',
+                    'last_message_date': fields.Datetime.now(),
+                })
+                _logger.info(
+                    "Reopened recently-resolved conversation %d for phone %s "
+                    "(within %d-min window) instead of creating a new one",
+                    existing.id, phone, reopen_window)
+                return existing
+            # resolved long ago — allow a genuinely fresh conversation
+            # (e.g. a brand-new inquiry days later deserves a clean greeting)
 
         # Locate the skill record
         skill = self.env['ai.agent.skill'].sudo().search(
@@ -2617,6 +2664,12 @@ class AiAgentConversation(models.Model):
         # Phase 1: Collect and group messages by conversation
         from collections import OrderedDict
         conv_groups = OrderedDict()  # conv_id -> {'conversation': conv, 'items': [{'body', 'wa_id'}]}
+        # Conversations CREATED this run (vs reused). A new conv is materialized
+        # in the main transaction here in Phase 1, BEFORE its first message is
+        # logged inside the Phase-2 savepoint. If Phase 2 rolls back, the conv
+        # survives with zero messages — an empty orphan. We unlink it in the
+        # Phase-2 except handler so a single failed turn never leaves a fragment.
+        newly_created_ids = set()
 
         for msg in messages:
             # API uses 'recipient' for the other party's phone, 'phone' from webhook
@@ -2670,6 +2723,9 @@ class AiAgentConversation(models.Model):
                 if not conversation:
                     _logger.info("No active conversation for phone %s, ignoring message", phone)
                     continue
+                # Brand-new (no messages yet) vs reused/reopened existing conv.
+                if not conversation.agent_message_ids:
+                    newly_created_ids.add(conversation.id)
                 _logger.info("General inquiry conversation %d created for phone %s", conversation.id, phone)
 
             # Enforce schedule per skill: skip scheduled skills outside contact window
@@ -2722,6 +2778,60 @@ class AiAgentConversation(models.Model):
                 _logger.error(
                     "Error processing conversation %d (%s): %s",
                     conv_id, conv.partner_id.name, e)
+                # The Phase-2 savepoint rolled back the message log, but the
+                # conversation row (created in Phase 1, in the main transaction)
+                # survives. If it was created THIS run and still has no messages,
+                # it's an empty orphan — remove it so the next poll cycle starts
+                # clean and the customer's next message opens a fresh, coherent
+                # conversation instead of resuming an empty fragment.
+                if conv_id in newly_created_ids:
+                    try:
+                        orphan = self.sudo().browse(conv_id)
+                        if orphan.exists() and not orphan.agent_message_ids:
+                            orphan.unlink()
+                            _logger.info(
+                                "Removed empty orphaned conversation %d after Phase-2 failure",
+                                conv_id)
+                    except Exception as cleanup_err:
+                        _logger.warning(
+                            "Could not clean up orphaned conversation %d: %s",
+                            conv_id, cleanup_err)
+
+        # Sweep: catch orphaned empties from paths the per-conv handler can't
+        # reach (worker OOM/kill mid-run, a future code path that throws before
+        # the first message is logged). Runs under the same advisory lock.
+        self._sweep_empty_conversations()
+
+    def _sweep_empty_conversations(self):
+        """Delete orphaned empty general_inquiry conversations.
+
+        A conversation row is created in poll Phase 1 BEFORE its first message is
+        logged in Phase 2. If Phase 2 rolls back, or the worker dies mid-run, the
+        row persists with zero messages — an orphan that fragments history and
+        (pre-v59.7) drove resend loops. This removes active/waiting
+        general_inquiry conversations that have NO messages and were created
+        longer ago than the reopen window, so genuinely in-flight conversations
+        (created seconds ago, about to be processed) are never touched.
+        """
+        from datetime import timedelta
+        icp = self.env['ir.config_parameter'].sudo()
+        window = int(icp.get_param('ai_agent.reopen_resolved_window_min', '30') or '30')
+        cutoff = fields.Datetime.now() - timedelta(minutes=window)
+        orphans = self.sudo().search([
+            ('skill_id.code', '=', 'general_inquiry'),
+            ('state', 'in', ('active', 'waiting')),
+            ('create_date', '<', cutoff),
+            ('agent_message_ids', '=', False),
+        ])
+        if orphans:
+            _logger.info(
+                "Sweep: removing %d empty orphaned general_inquiry conversation(s): %s",
+                len(orphans), orphans.ids)
+            try:
+                orphans.unlink()
+            except Exception as e:
+                _logger.warning("Sweep: failed to unlink empty conversations %s: %s",
+                                orphans.ids, e)
 
     @api.model
     def _cron_check_timeouts(self):
