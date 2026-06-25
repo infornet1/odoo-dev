@@ -407,7 +407,16 @@ Akdemia is the **source**; data is **persisted** to `enrollment.journey.student`
 ### Verified (testing, rolled back)
 Import creates 2 akdemia lines → manual name edit flips `staff_edited` → re-sync **keeps** corrected name + póliza (`POL-999`) untouched → blank-VAT partner raises `UserError`. ✅
 
-### Pending (fast-follow, not blocking testing)
-- **Step 5 — daily cache param:** extend `akdemia_api_sync.py` cron to `set_param('akdemia.students_json', json.dumps(index))` so the button can run `use_cache=True` (no per-click API latency, ≤24h stale).
-- **Prod Akdemia base URL** — current default is **staging**; confirm a production endpoint before prod deploy.
+### v0.11.1 hardening (2026-06-25 — adversarial code-review fixes)
+- **HIGH — blank-cédula idempotency:** `_line_key(cedula, name)` falls back to normalized name when cédula is blank (preescolar pupils). Used for both the `existing` map and the loop/`seen` set, so blank-cédula students match across re-syncs instead of being re-created every run. Per-record body extracted to `_import_students_one()`.
+- **MED — pagination:** loop now driven off the LOCAL page counter + returned batch size (`len(batch) < per_page` → stop) with a hard `page > 200` cap, instead of the server-echoed `meta.page` (which could silently truncate or infinite-loop).
+- **MED — batch atomicity:** multi-record runs wrap each record in `cr.savepoint()`; a bad record (e.g. missing VAT) is skipped + collected, not fatal — single-record keeps the hard `UserError`. Combined batch notification.
+- Verified in testing: 3× re-sync keeps blank-cédula student at count 1; staff edit preserved; batch good-record survives a bad sibling.
+
+### Step 5 — daily cache param ✅ DONE (2026-06-25)
+`scripts/akdemia_api_sync.py` Phase 2b: `build_guardian_index(entries)` (1:1 mirror of `_akdemia_index_by_guardian`) + `publish_student_cache(index)` → XML-RPC `set_param('akdemia.students_json', …)` on every reachable env, **skipped under DRY_RUN**. Runs right after the parent map, wrapped in try/except (failure logged, never breaks sheets/bounce phases). Smoke-tested: normalized guardian keys, shared-guardian dedup, empty-name skip, DRY_RUN no-write.
+
+### Pending (not blocking testing)
+- **Prod Akdemia base URL** — `akdemia.base_url` default is **staging**; confirm a production endpoint before prod deploy.
+- **Cached-index sanity floor** (low) — `use_cache=True` trusts any parseable JSON; a degenerate/stale cache degrades silently. Add a min-guardians floor or cron-side size check.
 - **Re-sync diff preview UI** — current re-sync reports drift to chatter; a pre-overwrite diff dialog is a nice-to-have.

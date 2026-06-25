@@ -26,6 +26,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import smtplib
@@ -281,6 +282,75 @@ def build_parent_map(entries: list) -> dict:
     print(f'  Unique guardians: {len(parent_map)}')
     print(f'  With email: {with_email}')
     return parent_map
+
+
+# ============================================================================
+# Phase 2b: Build guardian->students index + publish to Odoo cache
+# (mirrors enrollment.journey._akdemia_index_by_guardian — keep in lock-step)
+# ============================================================================
+
+def build_guardian_index(entries: list) -> dict:
+    """Mirror enrollment.journey._akdemia_index_by_guardian.
+
+    Returns {normalized_guardian_cedula: [{name, cedula, grade, section}, ...]}.
+    Each student is indexed under EVERY guardian's normalized unique_id so that
+    parent 2/3 also match. Only the guardian KEY is digit-normalized; the
+    student's cedula/grade/section are kept RAW (via _s) to byte-match the
+    Odoo-side index. Dedup is by (cedula, name) within each bucket.
+    """
+    index = {}
+    for entry in entries:
+        s = entry.get('student') or {}
+        student = {
+            'name': f"{_s(s.get('first_name'))} {_s(s.get('last_name'))}".strip(),
+            'cedula': _s(s.get('unique_id')),
+            'grade': _s(s.get('course_name')),
+            'section': _s(s.get('batch_name')),
+        }
+        if not student['name']:
+            continue
+        for g in entry.get('guardians', []) or []:
+            key = normalize_cedula(g.get('unique_id'))
+            if not key:
+                continue
+            bucket = index.setdefault(key, [])
+            if not any(x['cedula'] == student['cedula']
+                       and x['name'] == student['name'] for x in bucket):
+                bucket.append(student)
+    return index
+
+
+def publish_student_cache(index: dict):
+    """Publish the guardian->students index to ir.config_parameter
+    'akdemia.students_json' on every reachable env so whichever Odoo hosts
+    ueipab_enrollment_journey always has a fresh (<=24h) cache for
+    _akdemia_student_index(use_cache=True). Skipped under DRY_RUN."""
+    header('Phase 2b: Publish Student Cache to Odoo')
+    if DRY_RUN:
+        print(f'  [DRY_RUN] Would publish akdemia.students_json '
+              f'({len(index)} guardians) to: {", ".join(ODOO_CONFIGS)}')
+        return
+    json_str = json.dumps(index, ensure_ascii=False)
+    for env_name, cfg in ODOO_CONFIGS.items():
+        if not cfg.get('password'):
+            print(f'  Skipping {env_name}: no password configured.')
+            continue
+        try:
+            common = xmlrpc.client.ServerProxy(
+                f'{cfg["url"]}/xmlrpc/2/common', allow_none=True)
+            uid = common.authenticate(cfg['db'], cfg['user'], cfg['password'], {})
+            if not uid:
+                print(f'  {env_name}: authentication failed - skipped.')
+                continue
+            models = xmlrpc.client.ServerProxy(
+                f'{cfg["url"]}/xmlrpc/2/object', allow_none=True)
+            models.execute_kw(cfg['db'], uid, cfg['password'],
+                              'ir.config_parameter', 'set_param',
+                              ['akdemia.students_json', json_str])
+            print(f'  OK {env_name}: akdemia.students_json set '
+                  f'({len(index)} guardians, {len(json_str)} bytes)')
+        except Exception as e:
+            print(f'  WARNING: {env_name} cache publish failed: {e}')
 
 
 # ============================================================================
@@ -766,6 +836,13 @@ def main():
 
     # Phase 2: Parent map
     parent_map = build_parent_map(entries)
+
+    # Phase 2b: Guardian->students index cache for ueipab_enrollment_journey
+    try:
+        student_index = build_guardian_index(entries)
+        publish_student_cache(student_index)
+    except Exception as e:
+        print(f'WARNING: Student cache publish error: {e}')
 
     # Phases 3-4: Odoo bounce log sync
     if not args.skip_odoo:

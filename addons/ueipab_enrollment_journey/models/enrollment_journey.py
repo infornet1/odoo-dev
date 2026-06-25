@@ -102,6 +102,15 @@ def _normalize_cedula(value):
     return re.sub(r'\D', '', str(value))
 
 
+def _line_key(cedula, name):
+    """Stable match key for a student line. Falls back to the normalized name
+    when the cédula is blank (preescolar/young pupils often have no cédula
+    escolar yet) so those students still match across re-syncs instead of being
+    re-created every time."""
+    c = _normalize_cedula(cedula)
+    return c if c else 'n:' + _s(name).lower().strip()
+
+
 # ---------------------------------------------------------------------------
 # Email HTML builders
 # ---------------------------------------------------------------------------
@@ -855,9 +864,17 @@ class EnrollmentJourney(models.Model):
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                entries.extend(data.get('data', []))
+                batch = data.get('data') or []
+                entries.extend(batch)
                 meta = data.get('meta') or {}
-                if meta.get('page', page) >= meta.get('total_pages', page):
+                total_pages = meta.get('total_pages')
+                # Drive the loop off the LOCAL counter + returned batch, never the
+                # server-echoed meta.page (which, if the server ignores `page`,
+                # could pin to 1 and loop forever). A short final batch or a
+                # reached total_pages ends it; a hard cap is the last-resort stop.
+                if not batch or len(batch) < per_page or (total_pages and page >= total_pages):
+                    break
+                if page >= 200:
                     break
                 page += 1
         except Exception as exc:  # noqa: BLE001 — surface any transport/JSON error to staff
@@ -925,87 +942,30 @@ class EnrollmentJourney(models.Model):
         use_cache = bool(self.env.context.get('use_cache'))
         index = self._akdemia_student_index(use_cache=use_cache)
         Student = self.env['enrollment.journey.student']
+        is_batch = len(self) > 1
         last = (0, 0, 0, 0)
+        errors = []
         for rec in self:
             vat = _normalize_cedula(rec.partner_id.vat)
             if not vat:
-                raise UserError(
-                    'El representante "%s" no tiene cédula (campo NIF/VAT) '
-                    'registrada. Asígnela antes de importar estudiantes.'
-                    % (rec.partner_id.name or '—'))
-
-            ak_students = index.get(vat, [])
-            if not ak_students:
-                rec.message_post(
-                    body='📥 Importación Akdemia: no se encontraron estudiantes para '
-                         'la cédula %s. Verifique que el representante esté registrado '
-                         'en Akdemia como acudiente.' % vat,
-                    message_type='comment', subtype_xmlid='mail.mt_note')
-                last = (0, 0, 0, 0)
+                msg = ('El representante "%s" no tiene cédula (campo NIF/VAT) '
+                       'registrada. Asígnela antes de importar estudiantes.'
+                       % (rec.partner_id.name or '—'))
+                if not is_batch:
+                    raise UserError(msg)
+                errors.append(msg)
                 continue
+            # Isolate each record so one failure can't roll back the others' work.
+            try:
+                with self.env.cr.savepoint():
+                    last = rec._import_students_one(index, Student)
+            except Exception as exc:  # noqa: BLE001
+                if not is_batch:
+                    raise
+                _logger.warning('Akdemia import failed for journey %s: %s', rec.id, exc)
+                errors.append('%s: %s' % (rec.partner_id.name or rec.id, exc))
 
-            existing = {}
-            for line in rec.student_ids:
-                k = _normalize_cedula(line.cedula)
-                if k:
-                    existing[k] = line
-
-            created = updated = unchanged = 0
-            seen = set()
-            for st in ak_students:
-                key = _normalize_cedula(st['cedula'])
-                if key:
-                    seen.add(key)
-                line = existing.get(key) if key else None
-                if not line:
-                    Student.create({
-                        'journey_id': rec.id,
-                        'name': st['name'],
-                        'cedula': st['cedula'],
-                        'grade': st['grade'],
-                        'source': 'akdemia',
-                        'staff_edited': False,
-                    })
-                    created += 1
-                elif line.staff_edited:
-                    if (line.name or '') != st['name'] or (line.grade or '') != st['grade']:
-                        rec.message_post(
-                            body='⚠️ Akdemia difiere de una línea editada manualmente '
-                                 '(%s): Akdemia indica nombre="%s", grado="%s". '
-                                 'No se sobrescribió — revise manualmente.'
-                                 % (line.name, st['name'], st['grade']),
-                            message_type='comment', subtype_xmlid='mail.mt_note')
-                    unchanged += 1
-                else:
-                    changes = {}
-                    if (line.name or '') != st['name']:
-                        changes['name'] = st['name']
-                    if (line.grade or '') != st['grade']:
-                        changes['grade'] = st['grade']
-                    if changes:
-                        changes['source'] = 'akdemia'
-                        # system refresh — bypass the staff_edited write-guard
-                        line.with_context(akdemia_sync=True).write(changes)
-                        updated += 1
-                    else:
-                        unchanged += 1
-
-            for k, line in existing.items():
-                if k not in seen and line.source == 'akdemia':
-                    rec.message_post(
-                        body='ℹ️ El estudiante %s (cédula %s) ya no aparece en Akdemia '
-                             'para este representante. Revise si corresponde retirarlo '
-                             'del expediente.' % (line.name, line.cedula or '—'),
-                        message_type='comment', subtype_xmlid='mail.mt_note')
-
-            rec.message_post(
-                body='📥 %d estudiantes sincronizados desde Akdemia '
-                     '(%d nuevos · %d actualizados · %d sin cambios).'
-                     % (len(ak_students), created, updated, unchanged),
-                message_type='comment', subtype_xmlid='mail.mt_note')
-            last = (created, updated, unchanged, len(ak_students))
-
-        if len(self) == 1:
+        if not is_batch:
             created, updated, unchanged, total = last
             return {
                 'type': 'ir.actions.client', 'tag': 'display_notification',
@@ -1017,7 +977,91 @@ class EnrollmentJourney(models.Model):
                     'sticky': False,
                 },
             }
-        return True
+        body = 'Importación completada para %d expediente(s).' % (len(self) - len(errors))
+        if errors:
+            body += ' %d con problemas: %s' % (len(errors), ' | '.join(errors[:5]))
+        return {
+            'type': 'ir.actions.client', 'tag': 'display_notification',
+            'params': {
+                'title': 'Importación Akdemia (lote)',
+                'message': body,
+                'type': 'warning' if errors else 'success',
+                'sticky': bool(errors),
+            },
+        }
+
+    def _import_students_one(self, index, Student):
+        """Import one journey's students from the prebuilt guardian index.
+        Idempotent; preserves staff-edited lines + UEIPAB-side fields. Returns
+        (created, updated, unchanged, total)."""
+        self.ensure_one()
+        vat = _normalize_cedula(self.partner_id.vat)
+        ak_students = index.get(vat, [])
+        if not ak_students:
+            self.message_post(
+                body='📥 Importación Akdemia: no se encontraron estudiantes para '
+                     'la cédula %s. Verifique que el representante esté registrado '
+                     'en Akdemia como acudiente.' % vat,
+                message_type='comment', subtype_xmlid='mail.mt_note')
+            return (0, 0, 0, 0)
+
+        # Key by cédula, falling back to name for blank-cédula students, so they
+        # match across re-syncs instead of being re-created every run.
+        existing = {_line_key(line.cedula, line.name): line for line in self.student_ids}
+
+        created = updated = unchanged = 0
+        seen = set()
+        for st in ak_students:
+            key = _line_key(st['cedula'], st['name'])
+            seen.add(key)
+            line = existing.get(key)
+            if not line:
+                Student.create({
+                    'journey_id': self.id,
+                    'name': st['name'],
+                    'cedula': st['cedula'],
+                    'grade': st['grade'],
+                    'source': 'akdemia',
+                    'staff_edited': False,
+                })
+                created += 1
+            elif line.staff_edited:
+                if (line.name or '') != st['name'] or (line.grade or '') != st['grade']:
+                    self.message_post(
+                        body='⚠️ Akdemia difiere de una línea editada manualmente '
+                             '(%s): Akdemia indica nombre="%s", grado="%s". '
+                             'No se sobrescribió — revise manualmente.'
+                             % (line.name, st['name'], st['grade']),
+                        message_type='comment', subtype_xmlid='mail.mt_note')
+                unchanged += 1
+            else:
+                changes = {}
+                if (line.name or '') != st['name']:
+                    changes['name'] = st['name']
+                if (line.grade or '') != st['grade']:
+                    changes['grade'] = st['grade']
+                if changes:
+                    changes['source'] = 'akdemia'
+                    # system refresh — bypass the staff_edited write-guard
+                    line.with_context(akdemia_sync=True).write(changes)
+                    updated += 1
+                else:
+                    unchanged += 1
+
+        for k, line in existing.items():
+            if k not in seen and line.source == 'akdemia':
+                self.message_post(
+                    body='ℹ️ El estudiante %s (cédula %s) ya no aparece en Akdemia '
+                         'para este representante. Revise si corresponde retirarlo '
+                         'del expediente.' % (line.name, line.cedula or '—'),
+                    message_type='comment', subtype_xmlid='mail.mt_note')
+
+        self.message_post(
+            body='📥 %d estudiantes sincronizados desde Akdemia '
+                 '(%d nuevos · %d actualizados · %d sin cambios).'
+                 % (len(ak_students), created, updated, unchanged),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return (created, updated, unchanged, len(ak_students))
 
 
 class EnrollmentJourneyStudent(models.Model):
