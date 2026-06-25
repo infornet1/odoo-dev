@@ -117,6 +117,28 @@
     .letter p { font-size: 15px; color: var(--text); margin: 14px 0; }
     .letter .sign { margin-top: 22px; font-weight: 700; color: var(--navy); }
     .letter .sign span { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+    /* CEO signature with portrait */
+    .letter .sign.sign-photo {
+      display: flex; align-items: center; gap: 20px; margin-top: 28px;
+      padding-top: 22px; border-top: 1px solid rgba(26,44,91,.10);
+    }
+    .letter .sign-photo .ceo-photo {
+      width: 92px; height: 92px; flex: 0 0 auto; border-radius: 50%;
+      object-fit: cover; object-position: center 20%;
+      border: 3px solid var(--gold);
+      box-shadow: 0 6px 18px rgba(26,44,91,.28);
+      background: var(--light);
+    }
+    .letter .sign-photo .sign-meta { display: flex; flex-direction: column; line-height: 1.35; }
+    .letter .sign-photo .sign-name { font-weight: 700; color: var(--navy); font-size: 17px; }
+    .letter .sign-photo .sign-role { font-weight: 400; font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .letter .sign-photo .sign-tag {
+      font-weight: 600; font-size: 11px; color: var(--gold); letter-spacing: .8px;
+      text-transform: uppercase; margin-top: 6px;
+    }
+    @media (max-width: 480px) {
+      .letter .sign.sign-photo { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
 
     /* ── TIMELINE (momentos) ── */
     .timeline { position: relative; padding-left: 32px; max-width: 820px; margin: 0 auto; }
@@ -326,9 +348,15 @@
         institución. Los invito a profundizar en los indicadores y gráficos detallados en este portal de
         transparencia y gestión.</p>
       <p>Con gratitud y visión de futuro,</p>
-      <div class="sign">
-        Gustavo J. Perdomo M.
-        <span>CEO — Instituto Privado "Andrés Bello"</span>
+      <div class="sign sign-photo">
+        <img class="ceo-photo" src="https://dev.ueipab.edu.ve/flyers/ceo-profile-pic.jpeg"
+             alt="Gustavo J. Perdomo M., CEO del Instituto Privado Andrés Bello"
+             width="92" height="92" loading="lazy"/>
+        <div class="sign-meta">
+          <span class="sign-name">Gustavo J. Perdomo M.</span>
+          <span class="sign-role">CEO — Instituto Privado "Andrés Bello"</span>
+          <span class="sign-tag">Gestión Basada en Resultados · 2025–2026</span>
+        </div>
       </div>
     </div>
   </div>
@@ -343,20 +371,29 @@
     <div class="tl-item">
       <div class="tl-dot">I</div>
       <div class="tl-body">
-        <div class="tl-label">I Momento · <span class="ph">Sep–Dic 2025</span></div>
-        <h4 class="ph">[Tema / enfoque del primer lapso]</h4>
-        <p class="ph">[2–3 hitos destacados del primer momento — proyectos, actividades, logros.]</p>
-        <span class="chip ph">Hito 1</span><span class="chip ph">Hito 2</span><span class="chip ph">Hito 3</span>
+        <div class="tl-label">I Momento · Sep–Dic 2025</div>
+        <h4>Arranque académico de excelencia</h4>
+        <p>Abrimos el año con <strong>223 estudiantes</strong> y el <strong>mejor promedio de un
+          I Momento en cuatro años (15,86)</strong>, con un <strong>89,21% de aprobación</strong>
+          en Media General. Brillaron nuestros estudiantes de 4to año
+          <strong>Ángel Rangel (19,5)</strong> y <strong>Edgar Perdomo (19,00)</strong>, y la
+          sección 3er Año «A» cerró con <strong>todos sus estudiantes aprobados</strong>.</p>
+        <span class="chip">📈 Promedio 15,86</span><span class="chip">✅ 89,21% aprobados</span><span class="chip">🎓 223 estudiantes</span>
       </div>
     </div>
 
     <div class="tl-item">
       <div class="tl-dot gold">II</div>
       <div class="tl-body">
-        <div class="tl-label gold">II Momento · <span class="ph">Ene–Mar 2026</span></div>
-        <h4 class="ph">[Tema / enfoque del segundo lapso]</h4>
-        <p class="ph">[2–3 hitos destacados del segundo momento.]</p>
-        <span class="chip ph">Hito 1</span><span class="chip ph">Hito 2</span><span class="chip ph">Hito 3</span>
+        <div class="tl-label gold">II Momento · Ene–Mar 2026</div>
+        <h4>Consolidación y una calificación perfecta</h4>
+        <p>Sostuvimos el alto desempeño con un <strong>promedio general de 15,65</strong> y un
+          <strong>85,14% de aprobación</strong> en Media General, mientras la matrícula crecía a
+          <strong>224 estudiantes</strong>. El hito del lapso: <strong>Ángel Eduardo Rangel
+          Villanueva alcanzó la calificación perfecta de 20 puntos</strong>, acompañado por
+          <strong>Jadasa Mayz (19,67)</strong>; y 3er Año «A» repitió el logro de
+          <strong>todos sus estudiantes aprobados</strong>.</p>
+        <span class="chip">🏅 Un 20 perfecto</span><span class="chip">📊 Promedio 15,65</span><span class="chip">✅ 85,14% aprobados</span>
       </div>
     </div>
 
