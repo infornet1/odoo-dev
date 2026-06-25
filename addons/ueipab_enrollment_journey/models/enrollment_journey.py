@@ -88,6 +88,20 @@ def _next_grade(grade):
     return ('%d%s' % (int(m.group(1)) + 1, m.group(2))) if m else grade
 
 
+def _s(value):
+    """Coerce any API value to a stripped string ('' for None)."""
+    return ('' if value is None else str(value)).strip()
+
+
+def _normalize_cedula(value):
+    """Reduce a cédula/VAT to comparable digits — strips V/E/J/G/P prefix,
+    dashes, dots and spaces. 'V-14.641.877' → '14641877'. Used as the match
+    key between Odoo partner.vat and Akdemia guardian unique_id."""
+    if not value:
+        return ''
+    return re.sub(r'\D', '', str(value))
+
+
 # ---------------------------------------------------------------------------
 # Email HTML builders
 # ---------------------------------------------------------------------------
@@ -803,6 +817,208 @@ class EnrollmentJourney(models.Model):
                     rec.contract_retained = False
                     rec.contract_released_date = fields.Date.context_today(rec)
 
+    # ------------------------------------------------------------------
+    # Phase 1b — Akdemia student import (live fetch → snapshot)
+    # ------------------------------------------------------------------
+    @api.model
+    def _akdemia_fetch_students(self):
+        """Live paginated pull from the Akdemia REST API. Returns the list of
+        student entries. Raises UserError on missing key / network / partial
+        data. Mirrors scripts/akdemia_api_sync.fetch_students()."""
+        icp = self.env['ir.config_parameter'].sudo()
+        api_key = (icp.get_param('akdemia.api_key') or '').strip()
+        if not api_key:
+            raise UserError(
+                'Falta configurar el parámetro del sistema "akdemia.api_key". '
+                'Solicite la clave de la API de Akdemia y regístrela en Ajustes Técnicos.')
+        base_url = (icp.get_param('akdemia.base_url')
+                    or 'https://api-staging.akdemia.com').rstrip('/')
+        try:
+            per_page = int(icp.get_param('akdemia.per_page') or '200')
+        except (TypeError, ValueError):
+            per_page = 200
+        try:
+            min_students = int(icp.get_param('akdemia.min_students') or '200')
+        except (TypeError, ValueError):
+            min_students = 200
+
+        import requests as _req
+        session = _req.Session()
+        session.headers['Authorization'] = 'Bearer %s' % api_key
+        entries, page = [], 1
+        try:
+            while True:
+                resp = session.get(
+                    '%s/api/ext/v1/students' % base_url,
+                    params={'per_page': per_page, 'page': page},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                entries.extend(data.get('data', []))
+                meta = data.get('meta') or {}
+                if meta.get('page', page) >= meta.get('total_pages', page):
+                    break
+                page += 1
+        except Exception as exc:  # noqa: BLE001 — surface any transport/JSON error to staff
+            _logger.warning('Akdemia fetch failed: %s', exc)
+            raise UserError('No se pudo conectar con Akdemia: %s' % exc)
+
+        if len(entries) < min_students:
+            raise UserError(
+                'Akdemia devolvió solo %d estudiantes (mínimo esperado %d). '
+                'Datos parciales detectados — importación cancelada para proteger '
+                'los expedientes.' % (len(entries), min_students))
+        return entries
+
+    @api.model
+    def _akdemia_index_by_guardian(self, entries):
+        """Build {normalized_guardian_cedula: [{name, cedula, grade, section}, ...]}
+        from raw Akdemia entries. A student is indexed under every guardian's
+        cédula so parent 2/3 also match."""
+        index = {}
+        for entry in entries:
+            s = entry.get('student') or {}
+            student = {
+                'name': ('%s %s' % (_s(s.get('first_name')),
+                                    _s(s.get('last_name')))).strip(),
+                'cedula': _s(s.get('unique_id')),
+                'grade': _s(s.get('course_name')),
+                'section': _s(s.get('batch_name')),
+            }
+            if not student['name']:
+                continue
+            for g in entry.get('guardians', []) or []:
+                key = _normalize_cedula(g.get('unique_id'))
+                if not key:
+                    continue
+                bucket = index.setdefault(key, [])
+                if not any(x['cedula'] == student['cedula']
+                           and x['name'] == student['name'] for x in bucket):
+                    bucket.append(student)
+        return index
+
+    @api.model
+    def _akdemia_student_index(self, use_cache=False):
+        """Return the guardian→students index. With use_cache, read the
+        daily-cron-published ir.config_parameter 'akdemia.students_json' (≤24h
+        stale, no API call); otherwise do a live fetch. Falls back to live on a
+        missing/corrupt cache."""
+        if use_cache:
+            cached = self.env['ir.config_parameter'].sudo().get_param(
+                'akdemia.students_json')
+            if cached:
+                try:
+                    return json.loads(cached)
+                except (ValueError, TypeError):
+                    _logger.warning(
+                        'akdemia.students_json is not valid JSON — '
+                        'falling back to live fetch')
+        return self._akdemia_index_by_guardian(self._akdemia_fetch_students())
+
+    def action_import_students(self):
+        """Staff button. Live-fetch from Akdemia, match partner.vat → guardian
+        cédula, and write/refresh student_ids. Idempotent; preserves staff-edited
+        lines and never touches UEIPAB-side fields (insurance_policy /
+        institutional_email). Pass context use_cache=True to read the daily cache
+        instead of calling the API live."""
+        use_cache = bool(self.env.context.get('use_cache'))
+        index = self._akdemia_student_index(use_cache=use_cache)
+        Student = self.env['enrollment.journey.student']
+        last = (0, 0, 0, 0)
+        for rec in self:
+            vat = _normalize_cedula(rec.partner_id.vat)
+            if not vat:
+                raise UserError(
+                    'El representante "%s" no tiene cédula (campo NIF/VAT) '
+                    'registrada. Asígnela antes de importar estudiantes.'
+                    % (rec.partner_id.name or '—'))
+
+            ak_students = index.get(vat, [])
+            if not ak_students:
+                rec.message_post(
+                    body='📥 Importación Akdemia: no se encontraron estudiantes para '
+                         'la cédula %s. Verifique que el representante esté registrado '
+                         'en Akdemia como acudiente.' % vat,
+                    message_type='comment', subtype_xmlid='mail.mt_note')
+                last = (0, 0, 0, 0)
+                continue
+
+            existing = {}
+            for line in rec.student_ids:
+                k = _normalize_cedula(line.cedula)
+                if k:
+                    existing[k] = line
+
+            created = updated = unchanged = 0
+            seen = set()
+            for st in ak_students:
+                key = _normalize_cedula(st['cedula'])
+                if key:
+                    seen.add(key)
+                line = existing.get(key) if key else None
+                if not line:
+                    Student.create({
+                        'journey_id': rec.id,
+                        'name': st['name'],
+                        'cedula': st['cedula'],
+                        'grade': st['grade'],
+                        'source': 'akdemia',
+                        'staff_edited': False,
+                    })
+                    created += 1
+                elif line.staff_edited:
+                    if (line.name or '') != st['name'] or (line.grade or '') != st['grade']:
+                        rec.message_post(
+                            body='⚠️ Akdemia difiere de una línea editada manualmente '
+                                 '(%s): Akdemia indica nombre="%s", grado="%s". '
+                                 'No se sobrescribió — revise manualmente.'
+                                 % (line.name, st['name'], st['grade']),
+                            message_type='comment', subtype_xmlid='mail.mt_note')
+                    unchanged += 1
+                else:
+                    changes = {}
+                    if (line.name or '') != st['name']:
+                        changes['name'] = st['name']
+                    if (line.grade or '') != st['grade']:
+                        changes['grade'] = st['grade']
+                    if changes:
+                        changes['source'] = 'akdemia'
+                        # system refresh — bypass the staff_edited write-guard
+                        line.with_context(akdemia_sync=True).write(changes)
+                        updated += 1
+                    else:
+                        unchanged += 1
+
+            for k, line in existing.items():
+                if k not in seen and line.source == 'akdemia':
+                    rec.message_post(
+                        body='ℹ️ El estudiante %s (cédula %s) ya no aparece en Akdemia '
+                             'para este representante. Revise si corresponde retirarlo '
+                             'del expediente.' % (line.name, line.cedula or '—'),
+                        message_type='comment', subtype_xmlid='mail.mt_note')
+
+            rec.message_post(
+                body='📥 %d estudiantes sincronizados desde Akdemia '
+                     '(%d nuevos · %d actualizados · %d sin cambios).'
+                     % (len(ak_students), created, updated, unchanged),
+                message_type='comment', subtype_xmlid='mail.mt_note')
+            last = (created, updated, unchanged, len(ak_students))
+
+        if len(self) == 1:
+            created, updated, unchanged, total = last
+            return {
+                'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {
+                    'title': 'Importación Akdemia',
+                    'message': '%d nuevos · %d actualizados · %d sin cambios'
+                               % (created, updated, unchanged),
+                    'type': 'success' if total else 'warning',
+                    'sticky': False,
+                },
+            }
+        return True
+
 
 class EnrollmentJourneyStudent(models.Model):
     _name = 'enrollment.journey.student'
@@ -814,3 +1030,20 @@ class EnrollmentJourneyStudent(models.Model):
     grade = fields.Char(string='Grado/Año')
     institutional_email = fields.Char(string='Correo @ueipab')
     insurance_policy = fields.Char(string='Nº Póliza Seguro')
+
+    # Phase 1b — provenance + edit guard for the Akdemia sync
+    source = fields.Selection([('manual', 'Manual'), ('akdemia', 'Akdemia')],
+                              default='manual', string='Origen')
+    staff_edited = fields.Boolean(
+        default=False, string='Editado por staff',
+        help='Marca que un humano corrigió esta línea; una re-sincronización con '
+             'Akdemia no sobrescribirá su nombre/grado.')
+
+    def write(self, vals):
+        # A human edit to the identity fields flags the line so a later Akdemia
+        # re-sync won't clobber the correction. The sync itself passes
+        # context akdemia_sync=True to bypass this.
+        if not self.env.context.get('akdemia_sync') and (
+                'name' in vals or 'grade' in vals or 'cedula' in vals):
+            vals.setdefault('staff_edited', True)
+        return super().write(vals)

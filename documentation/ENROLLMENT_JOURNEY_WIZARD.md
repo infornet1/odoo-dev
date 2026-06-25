@@ -1,6 +1,6 @@
 # Enrollment Journey Wizard — 2026-2027 Academic Period
 
-**Status:** IN PROGRESS | **Created:** 2026-06-12 | **Updated:** 2026-06-15 (v0.4.2) | **Owner:** Gustavo Perdomo
+**Status:** IN PROGRESS | **Created:** 2026-06-12 | **Updated:** 2026-06-19 (Step 0 design) | **Owner:** Gustavo Perdomo
 **Style reference:** https://odoo.ueipab.edu.ve/mora-policy/ (`/var/www/mora/index.html` — Poppins, navy `#1a2c5b` / gold `#f0c400` / teal palette, `.timeline` vertical component)
 
 ---
@@ -135,6 +135,196 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
 
 ---
 
+---
+
+## 4b. Step 0 — Continuidad Confirmation Gate (designed 2026-06-19)
+
+### Concept
+
+Before showing the 9-step wizard, the parent must answer whether their student(s) will continue at UEIPAB for 2026-2027. This is the **zero step** — a pre-qualification gate that the parent activates by opening their personal link for the first time.
+
+**The URL `/enrollment-journey/<token>` routes to 3 different pages depending on `continuation_status`:**
+
+| `continuation_status` | Page shown |
+|---|---|
+| `pending` (default) | Step 0 confirmation page |
+| `confirmed` | Existing 9-step wizard |
+| `declined` | Farewell/decline confirmation page (read-only) |
+
+### Step 0 page — "Sí / No" confirmation
+
+**Text displayed (Spanish):**
+
+> Estimado Representante, usted ha recibido su vínculo para invocar y dar inicio al proceso virtual asistido en referencia a la inscripción de su(s) representado(s) en nuestra institución. Para comenzar dicho proceso, primero que nada necesitamos saber y nos confirme si su(s) hijo(s):
+>
+> • **[Nombre Estudiante 1]** · [Grado Actual → Grado Siguiente]
+> • **[Nombre Estudiante 2]** · [Grado Actual → Grado Siguiente]
+>
+> ¿van a continuar con nosotros el próximo año escolar 2026-2027?
+
+Two buttons: **[ Sí, continuamos ✓ ]** and **[ No, no continuaremos ]**
+
+**Grade progression formula:** `_next_grade(grade)` — regex extracts leading digit, increments by 1. Example: "3° Grado" → "4° Grado", "2° Año" → "3° Año". Edge case: graduating 5° Año students produce "6° Año" (non-existent) — confirm with Gustavo whether graduating seniors are included in this wizard.
+
+**Student data prerequisite (critical):** Step 0 can only show student names if `student_ids` is populated. If the link is opened before Phase 1b (student import) has run, show a holding screen: *"Estamos preparando la información de tu familia, vuelve en breve."* Staff **must import students before sharing the link.**
+
+### YES flow
+
+`POST /enrollment-journey/<token>/confirm` → `continuation_status='confirmed'` + `confirmation_date=now()` → `302` redirect to GET → controller branches to 9-step wizard. No other action required.
+
+### NO flow — inline expand (two-stage UX)
+
+Clicking **"No"** does **NOT** immediately POST. JavaScript expands an inline section below the buttons showing:
+
+**Farewell message:**
+
+> Estimado Representante, ha sido un honor haber prestado los servicios educativos para su(s) representado(s) este año escolar 2025-2026 y los vamos a extrañar mucho en nuestra institución, independientemente de la razón por la cual lo llevó a usted a no seguir con nosotros. En este sentido, nos gustaría que nos comentara la razón de no continuidad:
+>
+> [textarea — libre, sin límite de caracteres]
+>
+> Finalmente le recordamos que para formalizar el retiro usted debe contar con la solvencia administrativa correspondiente, que se obtiene con el pago total del año escolar 2025-2026 en curso de las dos mensualidades pendientes correspondientes al mes de julio y agosto.
+>
+> [ Confirmar retiro ]
+
+**Important UX rule:** Clicking **"Sí"** after the NO section has expanded collapses it again — the parent can change their mind before the final submit.
+
+`POST /enrollment-journey/<token>/decline` → `continuation_status='declined'` + `decline_reason=<textarea>` + `decline_date=now()` → staff notification → `302` redirect to GET → controller shows decline confirmation (read-only, no textarea).
+
+### Staff notification on decline (immediate)
+
+When a parent POSTs a decline:
+1. `message_post()` chatter note on the `enrollment.journey` record (visible in backend to all users with access)
+2. Email to `pagos@ueipab.edu.ve` — subject: `[No Continuidad] Familia <partner_name>` — body includes student list + typed reason + timestamp
+
+### Decline confirmation page (read-only)
+
+Shown on any GET with `continuation_status='declined'`. Displays:
+- The farewell message (static)
+- The parent's recorded reason (read-only, labelled "Tu respuesta registrada el DD/MM/YYYY")
+- Contact: *"Si cometiste un error o cambiaste de opinión, contáctanos en pagos@ueipab.edu.ve"*
+
+**No re-edit from the parent side once submitted.** Staff resets via `action_reset_confirmation()` backend button.
+
+### Student list filtering — 5° Año excluded silently
+
+Venezuelan Educational Law (LOPNNA + reglamento) mandates that schools take all necessary remedial measures to ensure every student graduates. A 5° Año student not graduating is an extraordinary legal/administrative exception, not a normal enrollment decision a parent makes via a web form. Therefore:
+
+- **5° Año students are excluded from the Step 0 student list** — the question does not apply to them.
+- For a family with a mix of 5° Año + younger students, Step 0 shows only the younger students. The parent's Yes/No covers only them.
+- **Mass-create exclusion:** if a family's *only* student(s) are in 5° Año, do not create an `enrollment.journey` for them — they are graduating, not re-enrolling.
+
+**Binary (family-level) Yes/No is correct for V1.** The remaining mixed-family edge case (one sibling leaves voluntarily while another continues) is genuinely rare given the legal context. Staff handles it manually via chatter note if it arises. Per-student checkboxes are a possible V2 enhancement only if volume warrants it.
+
+### New model fields required
+
+```python
+continuation_status = fields.Selection([
+    ('pending',   'Pendiente de confirmación'),
+    ('confirmed', 'Continúa'),
+    ('declined',  'No continúa'),
+], default='pending', string='Continuidad')
+decline_reason   = fields.Text('Motivo de retiro', readonly=True)
+confirmation_date = fields.Datetime('Fecha de confirmación', readonly=True)
+decline_date      = fields.Datetime('Fecha de retiro', readonly=True)
+```
+
+### New controller routes required
+
+| Method | Route | Action |
+|---|---|---|
+| GET | `/enrollment-journey/<token>` | Branch on `continuation_status` (existing route, new branch logic) |
+| POST | `/enrollment-journey/<token>/confirm` | Set confirmed + redirect |
+| POST | `/enrollment-journey/<token>/decline` | Set declined + notify staff + redirect |
+
+### S0 Notification Architecture (locked 2026-06-19)
+
+Three distinct moments, all implemented inside `ueipab_enrollment_journey`:
+
+**Moment 1 — Blast email (staff-initiated, campaign launch)**
+
+Staff triggers "📧 Enviar email S0" from the journey list → sends the Step 0 link to each family.
+
+- **TO:** `partner_id.email`
+- **CC:** `soporte@ueipab.edu.ve`
+- **Reply-To:** `soporte@ueipab.edu.ve`
+- Sets `blast_sent_date` on the journey record
+- If `partner_id.email` is empty → skip send, set `email_missing=True`, flag visually in UI
+
+**Moment 2 — Response notification (auto, fires on POST /confirm or /decline)**
+
+- **TO:** `soporte@ueipab.edu.ve`
+- **CC:** `partner_id.email`
+- **Subject (Yes):** `[S0 Confirmada] Familia <name>`
+- **Subject (No):** `[S0 No Continúa] Familia <name>`
+- **Body (Yes):** family name, student list, timestamp, link to Odoo backend record
+- **Body (No):** same + parent's typed decline reason
+
+**Moment 3 — WA escalation (manual, staff-triggered from review UI)**
+
+Staff clicks **"📱 Enviar WA"** on any journey record (always available — not gated behind `email_bounced` flag, staff decides when to escalate).
+
+Phone resolution order:
+1. `partner_id.mobile` → use if present
+2. `partner_id.phone` → use if present
+3. Neither → block send, set `phone_missing=True`, show inline warning in UI
+
+WA message sent via existing MassivaMóvil integration (respects `dry_run` flag). Sets `wa_sent_date` on record.
+
+### New fields on `enrollment.journey`
+
+```python
+# Blast tracking
+blast_sent_date  = fields.Datetime('Email enviado', readonly=True)
+email_missing    = fields.Boolean('Sin email', readonly=True)   # auto-set at blast time
+# Response tracking (continuation_date / decline_date already listed above)
+# WA escalation
+wa_sent_date     = fields.Datetime('WA enviado', readonly=True)
+phone_missing    = fields.Boolean('Sin teléfono', readonly=True)  # auto-set at WA trigger
+email_bounced    = fields.Boolean('Email rebotado', default=False)  # staff toggles manually
+```
+
+### Staff S0 Review UI (new Odoo action within `ueipab_enrollment_journey`)
+
+Dedicated list view — action filters to journeys with `continuation_status=pending` or `email_bounced=True`. Columns:
+
+| Column | Source |
+|---|---|
+| Familia | `partner_id.name` |
+| Estudiantes | count `student_ids` |
+| Continuidad | `continuation_status` (color badge: amber/green/red) |
+| Email enviado | `blast_sent_date` |
+| Respuesta | `confirmation_date` or `decline_date` |
+| ⚠ Sin email | `email_missing` flag |
+| ⚠ Sin tel. | `phone_missing` flag |
+| WA enviado | `wa_sent_date` |
+
+Per-record header buttons: **📧 Reenviar email** · **📱 Enviar WA** · **🌐 Ver página**
+
+### Backend (staff) additions required
+
+- `continuation_status` color-coded badge in list view (amber=pending, green=confirmed, red=declined)
+- `decline_reason` + `decline_date` + `confirmation_date` in form view (readonly)
+- `action_reset_confirmation()` button — resets to `pending`, clears decline fields (staff only)
+- `email_bounced` toggle checkbox in form view (staff marks manually when they see bounce in Freescout)
+- List/group by `continuation_status`
+
+### Module ownership (important)
+
+All Step 0 functionality — model fields, controllers, blast email, response notifications, WA trigger, staff review UI — lives entirely in **`ueipab_enrollment_journey`** (not `ueipab_sales`).
+
+| Module | Scope |
+|---|---|
+| `ueipab_sales` | Quotation engine, Acuerdo PDF, T&C annex — no enrollment logic |
+| `ueipab_enrollment_journey` | Enrollment journey wizard, Step 0 gate, all S0 notifications, staff review UI |
+
+The module appears in the Odoo backend under **Sales → Inscripción 2026-2027**. `ueipab_enrollment_journey` depends on `ueipab_sales` (for `sale.order` linkage) but is fully independent — it can evolve without touching the sales module.
+
+### Open question — journey creation scope
+
+✅ Resolved 2026-06-19: mass-create for all ~207 active families at campaign launch, excluding families whose only student(s) are in 5° Año.
+
+---
+
 ## 5. Implementation phases (tracking checklist)
 
 - [x] **Phase 0 — Decisions (Gustavo):** ✅ 2026-06-12 — new module ✓; keep Acuerdo PDF ✓; QWeb contract PDF (not Google Docs) ✓; single Enrollment Support group for now ✓; legal snapshot model (draft→signed→amended) ✓
@@ -146,9 +336,10 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
   - **v0.4.3 — QR seal on page 2 T&C (2026-06-15):** Same QR also rendered at **bottom-right of page 2** T&C signature row (66pt). Both contract pages carry the verification seal.
 - [x] **Phase 5b — Contract escrow workflow (Option B):** ✅ 2026-06-13 — `contract_retained` (Boolean) + `contract_released_date` (Date) on `enrollment.journey`. Step 3 clear → auto `contract_retained=True`. Staff "📋 Liberar contrato" button → manual release. Soft-check hook: all `order_id.invoice_ids` `amount_residual==0` → auto-release. Customer page: retained → amber 📋 "en custodia" card; released → green ✓ + 🎉 celebration.
 - [x] **v0.4.0 — 9-step 3-block workflow:** ✅ 2026-06-13 — Restructured from 6 → 9 steps in 3 blocks. `BLOCK_DEFS` + `BLOCK1_STEPS` constants added. Hard gate prevents Block 2/3 clearance until Block 1 complete. Customer page renders block section headers. Contract escrow moved to step 3 (enrollment visit, not end). New steps 5 (Dawere), 8 (Guía Inglés), 9 (Expediente). DB verified: 27 step columns. Demo journey (id=1) reset: Block 1 done + retained, step 4 done, steps 5-9 pending (44%). **Visually verified 2026-06-13:** 3 block headers render correctly; step 3 amber "en custodia" card with left-border callout; step 5 pulsing blue ESTÁS AQUÍ; progress 44% paso 5 de 9.
+- [ ] **Phase S0 — Step 0 continuation gate (next priority — pre-prod):** Add `continuation_status/decline_reason/confirmation_date/decline_date` fields to model. Controller branches on status (pending→Step0 page / confirmed→wizard / declined→read-only farewell). POST routes: `/confirm` + `/decline`. Inline JS expand for NO path (prevents accidental irrevocable submit). Staff notification email on decline (`pagos@`). Backend: color badges in list view, reset button. `_next_grade()` helper for grade progression display. See §4b for full spec.
 - [ ] **Phase 2 — Soft checks engine:** step 1 wired (order.state='sale' → done_auto). Steps 6 (directory JSON) + step 3 contract-release cron = pending.
 - [ ] **Phase 4b — Glenda ENROLL_ handler:** `_handle_telegram_start(ENROLL_<token>)` → inject journey step context into prompt so Glenda answers "¿qué me falta?" precisely.
-- [ ] **Phase 1b — Student import:** "📥 Importar estudiantes" button — publish `school.akdemia_students_json` param (extend existing `akdemia_api_sync.py` cron), match partner VAT → guardian cédula, auto-fill student lines + grade auto-promote (+1 for 2026-2027). Staff editable before signing.
+- [~] **Phase 1b — Student import (HYBRID: live API fetch → snapshot):** ✅ **Steps 1-4 DONE 2026-06-25 (v0.11.0, testing)** — see "Phase 1b — Student Import" section below. Pending: optional daily-cron cache param + prod Akdemia URL confirmation.
 - [ ] **Phase 6 — Comms:** journey link in quote-confirmation message (Glenda/email); optional step-completion push notifications.
 - [ ] **Phase 7 — Prod deploy + runbook**
 
@@ -170,7 +361,9 @@ enrollment.journey.log   (audit: journey_id, step, old→new, user, ts)
 All Phase-0 decisions locked 2026-06-12/13. See Phase-0 Architecture decisions table in §5.
 
 **Still open (next discussions):**
-- **Journey creation trigger:** auto on every confirmed 2026-2027 enrollment order, or manually by support for committed families only?
+- ✅ **Journey creation scope (2026-06-19):** Mass-create journeys for all ~207 active families at campaign launch (excluding families whose only student(s) are in 5° Año).
+- ✅ **Graduating seniors (5° Año) (2026-06-19):** Excluded from Step 0 student list and from mass-create. Venezuelan law mandates remedial measures to ensure graduation — this is not a parent enrollment decision.
+- ✅ **Per-student continuity (2026-06-19):** V1 binary family-level Yes/No is correct. 5° Año students silently filtered from the list; any remaining mixed-family edge case handled manually by staff via chatter note.
 - **Clearance role split (future):** once volume grows, split Support (steps 2-3) / IT (4-5) / Finance (6) into separate groups?
 - **Notifications (Phase 6):** push notification per step completion via Telegram/email, or page-only pull?
 
@@ -182,3 +375,39 @@ All Phase-0 decisions locked 2026-06-12/13. See Phase-0 Architecture decisions t
 - **Akdemia has no API** — Step 3 soft check depends on the daily scraper; treat as advisory, manual clearance is authoritative.
 - **odoo_api_bridge contract code is 2025-2026 era** (MariaDB customer_matches) — do not reuse data layer blindly; only the Google Docs template-copy mechanism is salvageable as-is.
 - **Token security:** journey page exposes student names/grades — token must be long/random (reuse notice-ack generator); no enumeration; no financial amounts on the page beyond step status (amounts live in the Acuerdo PDF).
+
+---
+
+## Phase 1b — Student Import (Hybrid: live Akdemia API fetch → snapshot)
+
+**Status:** ✅ Steps 1-4 DONE 2026-06-25 (v0.11.0, testing-only). Tested end-to-end via `odoo shell` with rollback.
+
+> **⚠️ Correction to the older "Akdemia has no API" note above:** Akdemia **does** expose a REST API — `GET /api/ext/v1/students` (Bearer auth, paginated), already used by `scripts/akdemia_api_sync.py`. Phase 1b reuses that endpoint. The *scraper* (Playwright) remains for the 122-col XLS pipeline, but student import for the journey uses the API.
+
+### Design principle
+Akdemia is the **source**; data is **persisted** to `enrollment.journey.student` at a controlled moment (staff button, or future daily cache), **never read live on the public page**. Rationale: the contract PDF (`CSE-2627`) is a legal snapshot; the public page must survive Akdemia downtime; grade needs a `_next_grade()` +1 transform with staff override; `insurance_policy`/`institutional_email` are UEIPAB-side and have no Akdemia source.
+
+### What was built (steps 1-4)
+1. **Config params** (`ir.config_parameter`):
+   | Key | Default | Notes |
+   |-----|---------|-------|
+   | `akdemia.api_key` | *(none — UserError if missing)* | Bearer token; set in both envs |
+   | `akdemia.base_url` | `https://api-staging.akdemia.com` | ⚠️ **staging** — confirm prod URL before prod deploy |
+   | `akdemia.per_page` | `200` | pagination |
+   | `akdemia.min_students` | `200` | partial-data guard (abort below) |
+   | `akdemia.students_json` | *(cron-published, optional)* | guardian→students cache for `use_cache=True` |
+2. **Service methods on `enrollment.journey`** (model):
+   - `_akdemia_fetch_students()` — live paginated pull; `UserError` on missing key / network / partial (<min).
+   - `_akdemia_index_by_guardian(entries)` — `{normalized_cedula: [{name,cedula,grade,section}]}`; student indexed under **every** guardian (parent 2/3 also match).
+   - `_akdemia_student_index(use_cache=False)` — cache-or-live dispatcher (falls back to live on corrupt cache).
+   - Module helpers `_s()` (string coerce) + `_normalize_cedula()` (`re.sub(r'\D','')` → digits only; `V-14.641.877` → `14641877`).
+3. **`action_import_students()`** — matches `partner.vat` → guardian cédula; creates new lines (`source='akdemia'`), updates non-edited lines' name/grade, **preserves** `staff_edited` lines + póliza/correo; reports drift, missing students, and a summary to the chatter; returns a `display_notification` for single-record (form) calls. Context `use_cache=True` reads the daily cache.
+4. **`enrollment.journey.student`** gained `source` (manual/akdemia) + `staff_edited` (Boolean). `write()` override: any human edit to `name`/`grade`/`cedula` sets `staff_edited=True`; the sync passes context `akdemia_sync=True` to bypass the guard. View: 📥 Importar / 🔄 Re-sincronizar header buttons (visibility toggled on `student_ids`), `source` column, muted styling for unedited Akdemia rows.
+
+### Verified (testing, rolled back)
+Import creates 2 akdemia lines → manual name edit flips `staff_edited` → re-sync **keeps** corrected name + póliza (`POL-999`) untouched → blank-VAT partner raises `UserError`. ✅
+
+### Pending (fast-follow, not blocking testing)
+- **Step 5 — daily cache param:** extend `akdemia_api_sync.py` cron to `set_param('akdemia.students_json', json.dumps(index))` so the button can run `use_cache=True` (no per-click API latency, ≤24h stale).
+- **Prod Akdemia base URL** — current default is **staging**; confirm a production endpoint before prod deploy.
+- **Re-sync diff preview UI** — current re-sync reports drift to chatter; a pre-overwrite diff dialog is a nice-to-have.

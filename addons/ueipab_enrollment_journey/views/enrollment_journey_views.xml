@@ -48,6 +48,13 @@
                             string="🔄 Restablecer S0" class="btn-secondary"
                             invisible="continuation_status == 'pending'"
                             confirm="¿Restablecer la confirmación S0 a pendiente? El representante verá la pregunta nuevamente."/>
+                    <button name="action_import_students" type="object"
+                            string="📥 Importar estudiantes" class="btn-secondary"
+                            invisible="student_ids != []"/>
+                    <button name="action_import_students" type="object"
+                            string="🔄 Re-sincronizar Akdemia" class="btn-secondary"
+                            invisible="student_ids == []"
+                            confirm="Esto actualizará nombre/grado de las líneas NO editadas manualmente desde Akdemia. Las correcciones de staff y la póliza/correo se conservan. ¿Continuar?"/>
                     <button name="action_run_soft_checks" type="object"
                             string="🔄 Validaciones automáticas" class="btn-secondary"/>
                     <button name="action_open_journey_page" type="object"
@@ -225,12 +232,14 @@
                         </page>
                         <page string="Estudiantes">
                             <field name="student_ids">
-                                <tree editable="bottom">
+                                <tree editable="bottom" decoration-muted="source == 'akdemia' and not staff_edited">
                                     <field name="name"/>
                                     <field name="cedula"/>
                                     <field name="grade"/>
                                     <field name="institutional_email"/>
                                     <field name="insurance_policy"/>
+                                    <field name="source" optional="show"/>
+                                    <field name="staff_edited" optional="hide"/>
                                 </tree>
                             </field>
                         </page>
