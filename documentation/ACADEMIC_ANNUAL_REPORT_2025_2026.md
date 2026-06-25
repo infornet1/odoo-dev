@@ -1,6 +1,6 @@
 # Academic Executive Annual Report 2025–2026 — Initiative & Design
 
-**Status:** DESIGN / PROPOSAL · **Created:** 2026-06-22 · **Owner:** Gustavo Perdomo (CEO)
+**Status:** IN PROGRESS (Phase 3 content fill) · **Created:** 2026-06-22 · **Updated:** 2026-06-25 · **Owner:** Gustavo Perdomo (CEO)
 **Type:** Public-facing web page + continuity-survey on-ramp
 
 A beautifully designed, newsletter-style **executive academic report** for the
@@ -184,13 +184,29 @@ checklist. Populate it as info is located.
 - **Phase 1:** ✅ DONE (2026-06-22) — static report page built & **LIVE**. See
   deployment block below.
 - **Phase 2:** ✅ DONE (2026-06-22) — bidirectional journey ↔ report wiring. See §10.
-- **Phase 3:** ⏸️ **ON HOLD (2026-06-22)** — page is live with placeholders; the
-  CEO will provide real data, then we replace the `.ph` placeholders, remove the
-  `.ph` highlight styling, verify the stat counts, and announce via the journey
-  blast + Glenda WA/Telegram. **To resume,** the CEO supplies (see
-  [CONTENT_DRAFT](ACADEMIC_ANNUAL_REPORT_CONTENT_DRAFT.md) checklist): director's
-  name/title + logro 2/3; Momento I & II themes + hitos (+ scene photos →
-  `/flyers/annual/`); ORM olympics results; verified student/staff counts.
+- **Phase 3:** 🛠️ **IN PROGRESS (2026-06-25)** — real data being filled scene by scene:
+  - ✅ **CEO letter** — replaced the placeholder Director letter with the CEO's full
+    text + **circular portrait** (`/flyers/ceo-profile-pic.jpeg`, 1280² → 92px gold-ring
+    avatar beside the signature, `.sign-photo` styles; mobile-stacks).
+  - ✅ **Achievements row** — Kurios robotics gold · ORM Lengua y Matemática · National
+    Software Award (Congreso Pedagógico).
+  - ✅ **Tecnología & Plataforma / Aliados** — Google, Inter, Roraima, Dawere, Diario El
+    Tigre, La Antorcha logos + IG links; "Mirando al 2026-2027" Slides deck button.
+  - ✅ **Glenda section** — clickable WhatsApp + Telegram deep links.
+  - ✅ **3 Momentos timeline — I & II Momento FILLED (2026-06-25)** from Norka La Rosa's
+    Subdirección informes (source-verified via extraction workflows; full extracts in
+    `INFORME_GESTION_1ER_LAPSO_2025_2026_POSITIVOS.md` + `..._2DO_LAPSO_...md`):
+    - **I Momento** "Arranque académico de excelencia" — 223 estudiantes · promedio 15,86
+      (mejor I Momento en 4 años) · 89,21% aprobación · Ángel Rangel 19,5 / Edgar Perdomo
+      19,00 · 3er A todos aprobados.
+    - **II Momento** "Consolidación y una calificación perfecta" — promedio 15,65 ·
+      **85,14% aprobación (OFICIAL, 86/101 — NOT Alberto's letter 86,14%)** · matrícula 224 ·
+      **Ángel Rangel un 20 perfecto** · Jadasa Mayz 19,67 · 3er A repite todos aprobados.
+  - ⏳ **Still `.ph` (5):** 2 year-in-numbers stats ("Estudiantes atendidos", "Docentes y
+    personal" — need verified counts; matrícula informe says **224 total**) + 3 in the
+    **III Momento** card (date span, cierre/graduación hitos beyond the Kurios gold already
+    shown). To resume: CEO/Subdirección supplies III Momento (Abr–Jul 2026) hitos + the two
+    verified counts; then strip remaining `.ph` styling and announce.
 
 ## 9. Phase 1 deployment (LIVE 2026-06-22)
 
