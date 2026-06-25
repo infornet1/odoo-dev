@@ -48,13 +48,12 @@
                             string="🔄 Restablecer S0" class="btn-secondary"
                             invisible="continuation_status == 'pending'"
                             confirm="¿Restablecer la confirmación S0 a pendiente? El representante verá la pregunta nuevamente."/>
-                    <button name="action_import_students" type="object"
+                    <button name="action_preview_import" type="object"
                             string="📥 Importar estudiantes" class="btn-secondary"
                             invisible="student_ids != []"/>
-                    <button name="action_import_students" type="object"
+                    <button name="action_preview_import" type="object"
                             string="🔄 Re-sincronizar Akdemia" class="btn-secondary"
-                            invisible="student_ids == []"
-                            confirm="Esto actualizará nombre/grado de las líneas NO editadas manualmente desde Akdemia. Las correcciones de staff y la póliza/correo se conservan. ¿Continuar?"/>
+                            invisible="student_ids == []"/>
                     <button name="action_run_soft_checks" type="object"
                             string="🔄 Validaciones automáticas" class="btn-secondary"/>
                     <button name="action_open_journey_page" type="object"
@@ -271,5 +270,35 @@
     <menuitem id="menu_enrollment_s0_review" name="Revisión S0"
               parent="sale.sale_menu_root" sequence="31"
               action="action_enrollment_s0_review"/>
+
+    <!-- Akdemia import diff preview wizard -->
+    <record id="view_enrollment_student_import_preview_form" model="ir.ui.view">
+        <field name="name">enrollment.student.import.preview.form</field>
+        <field name="model">enrollment.student.import.preview</field>
+        <field name="arch" type="xml">
+            <form string="Vista previa — Importar estudiantes">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Vista previa de sincronización con Akdemia</h2>
+                    </div>
+                    <group>
+                        <field name="journey_id" readonly="1"/>
+                    </group>
+                    <field name="summary_html" readonly="1"/>
+                    <field name="has_changes" invisible="1"/>
+                    <field name="use_cache" invisible="1"/>
+                    <p invisible="has_changes" class="text-muted">
+                        No hay cambios que aplicar (todo está al día o solo hay conflictos
+                        que requieren revisión manual).
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_confirm" type="object" string="✅ Aplicar importación"
+                            class="btn-primary" invisible="not has_changes"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
 
 </odoo>

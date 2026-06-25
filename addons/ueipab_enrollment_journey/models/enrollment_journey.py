@@ -25,6 +25,8 @@ INTERNAL_S0_CC = (
 LOGO_URL = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
 # Public annual-report page (static, nginx). The blast links here with
 # ?j=<journey_url> so the report's CTA can route the parent back to their journey.
+# Overridable per-env via ir.config_parameter 'enrollment.report_url' (prod sets
+# its own host); this constant is the dev fallback.
 REPORT_URL = 'https://dev.ueipab.edu.ve/reporte-anual-2025-2026/'
 
 STEP_STATES = [
@@ -419,7 +421,9 @@ class EnrollmentJourney(models.Model):
         """Secondary 'annual report' card embedded in the blast (timing option b).
         Links to the public report carrying ?j=<journey_url> so the report's own
         CTA can route the parent back to their personal journey."""
-        report_url = '%s?j=%s' % (REPORT_URL, quote(journey_url or '', safe=''))
+        base_report = self.env['ir.config_parameter'].sudo().get_param(
+            'enrollment.report_url', REPORT_URL)
+        report_url = '%s?j=%s' % (base_report, quote(journey_url or '', safe=''))
         return (
             '<table width="100%%" cellpadding="0" cellspacing="0" style="margin:18px 0 0;">'
             '<tr><td style="background:#f8faff;border:1px solid #e0e7f0;border-radius:12px;'
@@ -922,15 +926,30 @@ class EnrollmentJourney(models.Model):
         stale, no API call); otherwise do a live fetch. Falls back to live on a
         missing/corrupt cache."""
         if use_cache:
-            cached = self.env['ir.config_parameter'].sudo().get_param(
-                'akdemia.students_json')
+            icp = self.env['ir.config_parameter'].sudo()
+            cached = icp.get_param('akdemia.students_json')
             if cached:
                 try:
-                    return json.loads(cached)
+                    parsed = json.loads(cached)
                 except (ValueError, TypeError):
+                    parsed = None
                     _logger.warning(
                         'akdemia.students_json is not valid JSON — '
                         'falling back to live fetch')
+                if parsed is not None:
+                    # Sanity floor: a degenerate/stale cache (empty or far fewer
+                    # guardians than expected) silently degrades every import, so
+                    # fall back to a live fetch rather than trust it.
+                    try:
+                        floor = int(icp.get_param('akdemia.min_cache_guardians', '50'))
+                    except (TypeError, ValueError):
+                        floor = 50
+                    if isinstance(parsed, dict) and len(parsed) >= floor:
+                        return parsed
+                    _logger.warning(
+                        'akdemia.students_json has %s guardians (< floor %s) — '
+                        'falling back to live fetch',
+                        len(parsed) if isinstance(parsed, dict) else 'invalid', floor)
         return self._akdemia_index_by_guardian(self._akdemia_fetch_students())
 
     def action_import_students(self):
@@ -1063,6 +1082,91 @@ class EnrollmentJourney(models.Model):
             message_type='comment', subtype_xmlid='mail.mt_note')
         return (created, updated, unchanged, len(ak_students))
 
+    def _akdemia_import_diff(self, index):
+        """Read-only: compute what action_import_students WOULD change for this
+        journey, without writing. Returns a dict {vat, found, new, updates,
+        conflicts, missing, unchanged}."""
+        self.ensure_one()
+        vat = _normalize_cedula(self.partner_id.vat)
+        out = {'vat': vat, 'found': 0, 'new': [], 'updates': [],
+               'conflicts': [], 'missing': [], 'unchanged': 0, 'error': None}
+        if not vat:
+            out['error'] = 'El representante no tiene cédula (NIF/VAT) registrada.'
+            return out
+        ak = index.get(vat, [])
+        out['found'] = len(ak)
+        existing = {_line_key(l.cedula, l.name): l for l in self.student_ids}
+        seen = set()
+        for st in ak:
+            key = _line_key(st['cedula'], st['name'])
+            seen.add(key)
+            line = existing.get(key)
+            differs = line and ((line.name or '') != st['name']
+                                or (line.grade or '') != st['grade'])
+            if not line:
+                out['new'].append(st)
+            elif line.staff_edited:
+                out['conflicts'].append((line, st)) if differs else None
+                out['unchanged'] += 1 if not differs else 0
+            elif differs:
+                out['updates'].append((line, st))
+            else:
+                out['unchanged'] += 1
+        for key, line in existing.items():
+            if key not in seen and line.source == 'akdemia':
+                out['missing'].append(line)
+        return out
+
+    def action_preview_import(self):
+        """Compute a read-only diff vs Akdemia and open the confirmation wizard
+        showing exactly what will change before anything is written."""
+        self.ensure_one()
+        use_cache = bool(self.env.context.get('use_cache'))
+        d = self._akdemia_import_diff(self._akdemia_student_index(use_cache=use_cache))
+
+        def _rows(items, fmt):
+            return ''.join('<li>%s</li>' % fmt(i) for i in items) or '<li><i>—</i></li>'
+
+        if d['error']:
+            body = '<p style="color:#c0392b;">⚠️ %s</p>' % d['error']
+        else:
+            body = (
+                '<p><b>%d</b> estudiante(s) encontrados en Akdemia para la cédula '
+                '<code>%s</code>.</p>'
+                '<p>🟢 <b>Nuevos (%d):</b></p><ul>%s</ul>'
+                '<p>🔵 <b>Actualizar (%d):</b></p><ul>%s</ul>'
+                '<p>🟠 <b>Conflictos — editados a mano, NO se tocan (%d):</b></p><ul>%s</ul>'
+                '<p>⚪ <b>Sin cambios:</b> %d</p>'
+                '<p>🔴 <b>Ya no en Akdemia (%d):</b></p><ul>%s</ul>'
+                % (
+                    d['found'], d['vat'],
+                    len(d['new']), _rows(d['new'], lambda s: '%s — %s' % (s['name'], s['grade'] or '?')),
+                    len(d['updates']), _rows(d['updates'], lambda u: '%s: «%s → %s» / grado «%s → %s»' % (
+                        u[0].name, u[0].name, u[1]['name'], u[0].grade or '—', u[1]['grade'] or '—')),
+                    len(d['conflicts']), _rows(d['conflicts'], lambda c: '%s (Akdemia: %s / %s)' % (
+                        c[0].name, c[1]['name'], c[1]['grade'] or '—')),
+                    d['unchanged'],
+                    len(d['missing']), _rows(d['missing'], lambda l: '%s (%s)' % (l.name, l.cedula or '—')),
+                ))
+
+        wiz = self.env['enrollment.student.import.preview'].sudo().create({
+            'journey_id': self.id,
+            'use_cache': use_cache,
+            'summary_html': body,
+            'new_count': len(d['new']),
+            'update_count': len(d['updates']),
+            'conflict_count': len(d['conflicts']),
+            'missing_count': len(d['missing']),
+            'unchanged_count': d['unchanged'],
+            'has_changes': bool(d['new'] or d['updates']),
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Vista previa — Importar estudiantes',
+            'res_model': 'enrollment.student.import.preview',
+            'res_id': wiz.id, 'view_mode': 'form', 'target': 'new',
+        }
+
 
 class EnrollmentJourneyStudent(models.Model):
     _name = 'enrollment.journey.student'
@@ -1091,3 +1195,24 @@ class EnrollmentJourneyStudent(models.Model):
                 'name' in vals or 'grade' in vals or 'cedula' in vals):
             vals.setdefault('staff_edited', True)
         return super().write(vals)
+
+
+class EnrollmentStudentImportPreview(models.TransientModel):
+    _name = 'enrollment.student.import.preview'
+    _description = 'Vista previa de importación de estudiantes (Akdemia)'
+
+    journey_id = fields.Many2one('enrollment.journey', required=True, ondelete='cascade')
+    use_cache = fields.Boolean(default=False)
+    summary_html = fields.Html(readonly=True, string='Resumen de cambios')
+    new_count = fields.Integer(readonly=True, string='Nuevos')
+    update_count = fields.Integer(readonly=True, string='Actualizar')
+    conflict_count = fields.Integer(readonly=True, string='Conflictos')
+    missing_count = fields.Integer(readonly=True, string='Ausentes')
+    unchanged_count = fields.Integer(readonly=True, string='Sin cambios')
+    has_changes = fields.Boolean(readonly=True)
+
+    def action_confirm(self):
+        """Apply the import the preview just described."""
+        self.ensure_one()
+        return self.journey_id.with_context(
+            use_cache=self.use_cache).action_import_students()
