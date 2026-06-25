@@ -370,6 +370,17 @@ These partners exist in Odoo but have no `category_id` assigned, so `('category_
 
 ⚠️ MARIA MARTIN has **two duplicate partner records** (ids 3658 and 2666, both no-tag). Resolve duplicate before assigning tag — merge or deactivate the blank one.
 
+> **Data-hygiene note (2026-06-25):** Not every untagged partner with a balance
+> should be *tagged into* the reminder list — some balances are stale and the
+> right fix is to clear them. The new `all` ("Todos con saldo pendiente")
+> segment surfaces these. Example: **YOJANA LEDEZMA** (id=2941, mobile
+> `+58 414 0836783`, tag *After School* only) carried a single $30.07 residual
+> from `INV/2024/00008` dated **2024-06-04** — a stale 2024 charge, no Glenda or
+> reminder history. Resolved by **canceling the invoice + archiving the partner**
+> (not by tagging her REP/PDVSA), which removes her from the `all` segment
+> entirely. Vet untagged `all`-segment hits for stale/illegitimate balances
+> before any send.
+
 **Fix procedure (Odoo UI or XML-RPC):**
 ```python
 # Assign REP tag (25) to REP partners
