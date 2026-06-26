@@ -1,6 +1,6 @@
 # UEIPAB Odoo Development - Project Guidelines
 
-**Last Updated:** 2026-06-13 (v40)
+**Last Updated:** 2026-06-25 (v41)
 
 ## Core Instructions
 
@@ -104,7 +104,7 @@ Date Sync (auto-recomputes), Total Net Payable (V1/V2/Aguinaldos), Exchange Rate
 | ueipab_ari_portal | 17.0.1.5.0 | both |
 | ohrms_loan + ohrms_loan_accounting | 17.0.1.0.0 | testing only |
 | ueipab_sales | 17.0.1.2.2 | both — quotation engine + T&C annex page 2 + QR verification seal `/verify-quote/<token>` on Acuerdo PDF (see UEIPAB_SALES_QUOTATION_PLAN.md) |
-| ueipab_enrollment_journey | 17.0.0.4.3 | testing only — 9-step 3-block timeline (🏛️ Inscripción Formal / 💻 Activación Plataformas / 📁 Cierre Administrativo), hard Block 1 gate, contract escrow step 3, Glenda bubble, QWeb PDF CSE-2627-XXXX + QR seal all pages `/verify-contract/<token>` — see ENROLLMENT_JOURNEY_WIZARD.md |
+| ueipab_enrollment_journey | 17.0.0.11.2 | testing only — onboarding (9-step 3-block timeline 🏛️/💻/📁, hard Block 1 gate, contract escrow step 3, Glenda bubble, QWeb PDF CSE-2627-XXXX + QR seal `/verify-contract/<token>`, **S0 continuity gate**) + **withdrawal/egreso** (`enrollment.withdrawal`, 5-step, auto-create on S0 decline) + **Phase 1b Akdemia student import** (live `GET /api/ext/v1/students` → snapshot, `_line_key` blank-cédula-safe match, diff-preview wizard, cron cache `akdemia.students_json`, params `akdemia.api_key`/`base_url`(staging)/`min_cache_guardians`). **PROD deploy kit ready (not deployed): `scripts/deploy_enrollment_journey_prod.sh` + `prod_post_deploy_enrollment_journey.py`** — see ENROLLMENT_JOURNEY_WIZARD.md + ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md |
 
 ---
 
@@ -216,7 +216,9 @@ See [LEAVE_NOTIFICATION_SYSTEM.md](documentation/LEAVE_NOTIFICATION_SYSTEM.md) f
 
 ### Attendance Daily Alert + check_out Auto-fill
 
-`scripts/attendance_daily_alert.py`; morning 11:30 VET (recap yesterday) + evening 23:30 VET (WiFi-based check_out auto-fill via Mikrotik Router 2 at `172.28.10.10`). Special-schedule employees 571/606/610 skipped. State: `attendance_daily_alert_state.json`. Correction button injects `/attendance-fix/<token>` link.
+`scripts/attendance_daily_alert.py`; morning 11:30 UTC=07:30 VET (recap yesterday) + evening 23:30 UTC=19:30 VET (WiFi-based check_out auto-fill via Mikrotik Router 2 at `172.28.10.10`). Special-schedule employees 571/606/610 skipped. State: `attendance_daily_alert_state.json`. Correction button injects `/attendance-fix/<token>` link. Connects to **PROD** (`DB_UEIPAB`) via XML-RPC.
+
+**Holidays:** `ir.config_parameter` key `attendance_report.holidays` = **JSON** array `[{"date","name"}]` (seeded by `ueipab_attendance_report/data/holidays_config.xml`, `noupdate=1`). ⚠️ **Fixed 2026-06-25:** `get_holidays()` used a CSV parser → silently returned empty → daily alert IGNORED EVERY holiday (24/06 Batalla de Carabobo false-flagged all staff). Now `json.loads` first + legacy CSV fallback. Two consumers must stay JSON lock-step (this script + `hr_attendance_report.py`). 25–26/06/2026 added as "Cierre por contingencia (sismo)".
 
 See [ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) Appendix A for cron schedule, WiFi fallback, source tracing (`in_mode`/`out_mode` fields).
 
@@ -393,7 +395,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **Sales / Quotations:** [UEIPAB Sales Quotation Plan](documentation/UEIPAB_SALES_QUOTATION_PLAN.md) — **DEPLOYED TO PRODUCTION 2026-06-11**; 17 products + 12 templates; smoke test $973.20 exact.
 
-**Enrollment:** [Enrollment Journey Wizard](documentation/ENROLLMENT_JOURNEY_WIZARD.md) — `ueipab_enrollment_journey` v0.4.3 testing; 9-step 3-block customer timeline + QWeb contract PDF (CSE-2627-XXXX) + QR seal on all pages (`/verify-contract/<token>`).
+**Enrollment:** [Enrollment Journey Wizard](documentation/ENROLLMENT_JOURNEY_WIZARD.md) · [Withdrawal Plan](documentation/ENROLLMENT_WITHDRAWAL_PLAN.md) · [Prod Deployment Assessment](documentation/ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md) — `ueipab_enrollment_journey` **v0.11.2 testing-only**; onboarding (9-step 3-block timeline + S0 gate + QWeb CSE-2627 PDF + QR) + withdrawal/egreso + Phase 1b Akdemia import; **prod deploy kit built, NOT yet deployed** (assessment verdict: conditionally ready — no hard blockers, clear B1 report host + akdemia.api_key + pilot).
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 
