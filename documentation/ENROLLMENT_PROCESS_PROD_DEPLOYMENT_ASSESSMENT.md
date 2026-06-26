@@ -110,3 +110,52 @@ Set these `ir.config_parameter` keys in prod before first use:
 ---
 
 **Bottom line:** the code is prod-grade and tested; what remains is **infra + config wiring**, not engineering. Clear B1–B4, run the pre-flight + pilot, and the full master process can go live.
+
+---
+
+## 9. Deploy kit (built 2026-06-25) + read-only prod probe
+
+**Scripts (run by the operator — harness blocks Claude from prod writes):**
+- `scripts/deploy_enrollment_journey_prod.sh -i|-u` — backup (outside addons_path) → scp → install/upgrade (captures odoo's real exit code) → restart → poll-for-boot → assert `state=installed` AND `installed_version==17.0.0.11.2`. Uses `sshpass -e` (no password in process table). Hardened per the deploy-kit review (8 findings applied).
+- `scripts/prod_post_deploy_enrollment_journey.py [--live] [--allow-dev-report]` — sets `akdemia.api_key` (from `AKDEMIA_API_KEY` env), `akdemia.base_url`, `akdemia.min_cache_guardians`, `enrollment.report_url`; **refuses `--live` if report URL still points at dev** unless `--allow-dev-report`. Read-only verification of deps/fields/sequence/group/mail.
+
+**Read-only prod probe (2026-06-25, via XML-RPC — NO hard blockers):**
+| Check | Result |
+|-------|--------|
+| `ueipab_sales` dependency | ✅ installed, 17.0.1.2.1 |
+| `ueipab_enrollment_journey` | ✅ cleanly absent (not yet deployed) |
+| `web.base.url` | ✅ `https://odoo.ueipab.edu.ve` (https prod, not dev) |
+| `ir.mail_server` | ✅ 1 configured |
+| `res.partner` with VAT | ⚠️ 753 / 972 (~77.5%) — ~219 parents lack the Akdemia match key (cédula); not a code blocker, limits import coverage until backfilled |
+| `enrollment.journey` records | ✅ model absent → 0 pre-existing |
+| Company id=1 | `Instituto Privado Andrés Bello CA` |
+
+## 10. Go / No-Go gates (all must be GREEN before any parent-facing blast)
+1. Module `state=installed`, `installed_version==17.0.0.11.2`, `ueipab_sales` installed.
+2. Config params set: `akdemia.api_key` (non-empty), `akdemia.base_url`, `min_cache_guardians=50`, `enrollment.report_url` = chosen public URL.
+3. `web.base.url` correct + `web.base.url.freeze=True`.
+4. Outbound mail proven: a real test S0 email arrived at `gustavo.perdomo@`; `soporte@`/`pagos@` + CC addresses monitored.
+5. `enrollment.report_url` loads with assets + CTA round-trips to `/enrollment-journey/<token>`.
+6. Akdemia import proven on a real pilot family (correct vat↔cédula match + next-grade roll; no `akdemia.api_key` UserError).
+7. Contract prints `CSE-2627-0001` + QR; `/verify-contract/<token>` resolves on prod.
+8. Decline S0 → `enrollment.withdrawal` auto-created + internal notice to `pagos@` with working backend link.
+9. Full pilot GREEN with **zero real-parent emails** (pilot contact = `gustavo.perdomo@`); `ai_agent.dry_run` at intended state; 5° Año inclusion decided.
+
+## 11. Smoke test (pilot ONE family, contact = gustavo.perdomo@)
+0. Create one `enrollment.journey` for a real family whose `partner.vat` is a valid Akdemia guardian cédula; note id/token.
+1. Open `/enrollment-journey/<token>` → 9-step timeline renders with correct students/grades.
+2. Import button → preview wizard lists real Akdemia students (vat↔cédula).
+3. Confirm → student lines created (next-year grades, no dupes).
+4. Send S0 (to gustavo.perdomo@) → click CONFIRM → gate flips, advances past Block 1.
+5. Print contract → `CSE-2627-0001` + QR on all pages → `/verify-contract/<token>` resolves on prod.
+6. Second pilot → click DECLINE → `enrollment.withdrawal` auto-created + internal notice to `pagos@` with backend link.
+7. Open `enrollment.report_url?j=<journey>` → loads with assets → CTA routes back to the journey.
+
+## 12. Rollback (ordered)
+1. Halt any in-flight blast.
+2. Restore `…/ueipab17_addon_backups/ueipab_enrollment_journey.bak-<TS>` (or **uninstall** if fresh install — clean, only `ueipab_sales` depends-on-it the other way).
+3. Delete config params (`akdemia.*`, `enrollment.report_url`); leave `web.base.url`.
+4. Revert nginx alias / repoint report URL (skip if using the dev-hosted page).
+5. DB restore only if data beyond the pilot was created (prefer surgical delete of pilot journeys/withdrawals).
+6. `docker restart ueipab17`; wait for boot.
+7. Verify via XML-RPC: module uninstalled (or prior version) + removed params return empty.
