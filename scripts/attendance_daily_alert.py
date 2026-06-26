@@ -307,16 +307,34 @@ def utc_to_vet(utc_str):
 # ============================================================================
 
 def get_holidays():
-    """Return set of holiday dates from ir.config_parameter."""
-    raw = odoo_get_param('attendance_report.holidays')
+    """Return set of holiday dates from ir.config_parameter.
+
+    The authoritative format (written by ueipab_attendance_report and parsed by
+    hr_attendance_report.py) is a JSON array of {"date": "YYYY-MM-DD", "name": ...}
+    objects. Parse that first; fall back to the legacy comma-separated ISO-date
+    list for backward compatibility. The previous CSV-only parser silently
+    returned an empty set against the JSON value, so the daily alert ignored
+    EVERY holiday (incident: 2026-06-24 Batalla de Carabobo false absences).
+    """
+    raw = odoo_get_param('attendance_report.holidays') or ''
     dates = set()
-    for part in raw.split(','):
-        part = part.strip()
-        if part:
+    try:
+        entries = json.loads(raw)
+        for entry in entries:
+            iso = entry['date'] if isinstance(entry, dict) else str(entry)
             try:
-                dates.add(date.fromisoformat(part))
-            except ValueError:
+                dates.add(date.fromisoformat(iso))
+            except (ValueError, KeyError, TypeError):
                 pass
+    except (ValueError, TypeError):
+        # Legacy comma-separated ISO dates ("2026-06-24,2026-07-05").
+        for part in raw.split(','):
+            part = part.strip()
+            if part:
+                try:
+                    dates.add(date.fromisoformat(part))
+                except ValueError:
+                    pass
     return dates
 
 
