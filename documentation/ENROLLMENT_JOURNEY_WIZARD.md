@@ -453,3 +453,27 @@ Investigation of the dry-run's 129 no-match families:
 - **129 breakdown:** 123 genuinely stale (VAT in neither Akdemia guardians nor Customers tab → old/graduated tags, correctly excluded); **6 active-customer data issues** (billing VAT ≠ Akdemia guardian AND Customers `Student(s)` = `#N/A`): BRIMENCA (J-RIF), DAMELIS DOMINGUEZ, DIOLEIDYS ESPINOZA, FIRAS EZZEDDIN, LUIS VILLAZANA, MARIANA GONZALEZ → need a manual cédula fix in Akdemia or manual student entry on the journey.
 
 **Enhanced DRY-RUN (testing):** universe 242 → eligible 103 → **created 98** (co_parent_skipped 4, mixed_household 0, already 1=Roberto), created_no_email 5, 8 shared households all → correct billing parent. **Not run live yet.**
+
+### Quote Accept / Revision + Version Control (v0.13.0, 2026-06-27)
+
+Full design: [QUOTE_ACCEPTANCE_VERSIONING_PLAN.md](QUOTE_ACCEPTANCE_VERSIONING_PLAN.md). Legal basis: [ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md](ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md).
+
+**Lifecycle** (`enrollment.journey.quote_state`): `none → draft → sent → accepted | revision_requested`; re-issue loops `revision_requested → sent` (v2, v3…). Auto-quote on S0 'Sí' lands in `draft`.
+
+**Download gate:** `GET /enrollment-journey/<token>/cotizacion.pdf` returns 404 while `none/draft`; once `sent` it serves the **frozen current version's** attachment (immutable = exactly what was sent), not a live render.
+
+**Version log** `enrollment.quote.version` (immutable audit): one row per issued version — `version`, `order_id`, `amount_total`, `pdf_attachment_id` (frozen PDF = retained *mensaje de datos*), `pdf_sha256`, `issued_date/by`, `state` (issued/superseded/accepted/rejected), plus acceptance evidence (`accept_ip`, `accept_user_agent`, `accept_timestamp_utc`, `tyc_accepted`) and revision evidence. **Single `sale.order` per journey** is kept so the token + QR stay stable across revisions; `_freeze_quote_version()` supersedes the prior `issued` row and bumps `quote_version`.
+
+**Staff:** `action_send_quote()` (header buttons **📤 Enviar cotización** / **🔁 Re-emitir cotización**) freezes a new version, sets `sent`, clears prior acceptance/revision, emails the parent the journey link. Backend page **"Cotización — Versiones"** shows the audit log.
+
+**Parent (public routes, token-scoped):**
+- `POST …/quote/accept` — Tier-2 e-signature: requires `tyc` checkbox (server-enforced), captures **IP via `X-Forwarded-For`** (nginx; `remote_addr`=127.0.0.1), User-Agent, UTC timestamp → marks the version `accepted`, sets journey `accepted`, auto-completes step 1, emails pagos@ (internal) + parent (confirmation w/ evidence block).
+- `POST …/quote/revision` — captures reason + IP → state `revision_requested`, escalates to **soporte@ CC pagos@** (auto-creates a Freescout conv); parent page shows "le contactaremos".
+
+**Step-1 page UI by state:** draft→"en preparación" (no download/accept); sent→download + **Acepto** (T&C checkbox) + JS-free `<details>` revision box; accepted→"✅ aceptada vN"+download; revision_requested→"🕓 en revisión"+download.
+
+**Legal mapping (Tier-2 / Art. 17 LMDFE):** consent+T&C = Art. 16 chapeau · IP+ts = Art. 8(3) · SHA-256 = Art. 7 integrity · frozen PDF retained = Art. 8 conservation · cédula in PDF = signer link. OTP identity = planned fast-follow; PSC-certified (Art. 18) reserved for highest-stakes clauses.
+
+**Smoke-tested in testing (journey #11, through nginx :8019):** draft download 404 → send (v1 frozen, sha+attachment, parent emailed, download 200) → revision (state+reason+IP, soporte@/pagos@ escalation) → re-issue (v1 superseded, v2 issued) → accept-without-T&C blocked → accept-with-T&C (state accepted, step1 done_auto, IP+UA+UTC+T&C captured, pagos@ notified). ✅ All green.
+
+**Infra:** the :8019 nginx vhost now forwards `Host $http_host` (preserves the port so post-POST 303 redirects don't 404) and already sets `X-Forwarded-For`/`X-Real-IP`. Prod deploy must (a) scp module changes, (b) add `/enrollment-journey` to the prod nginx route whitelist, (c) ensure the prod vhost forwards `X-Forwarded-For` for accurate acceptance IP capture.

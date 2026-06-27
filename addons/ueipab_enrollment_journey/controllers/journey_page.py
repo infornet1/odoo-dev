@@ -200,11 +200,24 @@ a{{color:#2471a3}}
         return request.redirect('/enrollment-journey/%s' % token)
 
     # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _client_ip(self):
+        """Real client IP behind nginx. The :8019/443 vhost forwards
+        X-Forwarded-For / X-Real-IP; remote_addr is just 127.0.0.1."""
+        req = request.httprequest
+        xff = req.headers.get('X-Forwarded-For', '')
+        if xff:
+            return xff.split(',')[0].strip()
+        return req.headers.get('X-Real-IP') or req.remote_addr or ''
+
+    # ------------------------------------------------------------------
     # GET /enrollment-journey/<token>/cotizacion.pdf
-    # Public, token-scoped download of the family's draft quotation
-    # (Acuerdo de Inscripción report) so the parent can review the
-    # numbers before signing. No sale.order access is exposed — the
-    # journey token is the only key.
+    # Public, token-scoped download of the family's quotation. Serves the
+    # FROZEN current version (exactly what was sent — immutable), not a live
+    # render. Gated: only available once the quote has been sent (not draft).
+    # No sale.order access is exposed — the journey token is the only key.
     # ------------------------------------------------------------------
 
     @http.route('/enrollment-journey/<string:token>/cotizacion.pdf', type='http',
@@ -212,10 +225,17 @@ a{{color:#2471a3}}
     def journey_quote_pdf(self, token, **kw):
         journey = request.env['enrollment.journey'].sudo().search(
             [('access_token', '=', token), ('active', '=', True)], limit=1)
-        if not journey or not journey.order_id:
+        if not journey or not journey.order_id \
+                or journey.quote_state in ('none', 'draft'):
             return request.not_found()
-        pdf, _ftype = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
-            'ueipab_sales.action_report_quotation_agreement', [journey.order_id.id])
+        ver = journey.current_quote_version()
+        if ver and ver.pdf_attachment_id:
+            pdf = ver.pdf_attachment_id.raw
+        else:
+            # Fallback: live render (e.g. a pre-versioning legacy quote).
+            pdf, _ftype = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
+                'ueipab_sales.action_report_quotation_agreement',
+                [journey.order_id.id])
         fname = 'Cotizacion_%s.pdf' % (
             (journey.partner_id.name or 'UEIPAB').replace(' ', '_'))
         return request.make_response(pdf, headers=[
@@ -223,6 +243,44 @@ a{{color:#2471a3}}
             ('Content-Length', len(pdf)),
             ('Content-Disposition', 'inline; filename="%s"' % fname),
         ])
+
+    # ------------------------------------------------------------------
+    # POST /enrollment-journey/<token>/quote/accept
+    # Tier-2 electronic acceptance (Art. 17 LMDFE) — captures IP + UTC
+    # timestamp + T&C consent; the PDF hash was frozen at send time.
+    # ------------------------------------------------------------------
+
+    @http.route('/enrollment-journey/<string:token>/quote/accept', type='http',
+                auth='public', website=False, csrf=False, methods=['POST'])
+    def journey_quote_accept(self, token, **kw):
+        journey = request.env['enrollment.journey'].sudo().search(
+            [('access_token', '=', token), ('active', '=', True)], limit=1)
+        if not journey:
+            return request.not_found()
+        tyc = str(kw.get('tyc') or '').strip() in ('1', 'on', 'true', 'yes')
+        if tyc and journey.quote_state == 'sent':
+            journey._record_acceptance(
+                ip=self._client_ip(),
+                user_agent=request.httprequest.headers.get('User-Agent', ''),
+                tyc=True)
+        return request.redirect('/enrollment-journey/%s' % token)
+
+    # ------------------------------------------------------------------
+    # POST /enrollment-journey/<token>/quote/revision
+    # Parent disagrees → escalate to soporte@ CC pagos@.
+    # ------------------------------------------------------------------
+
+    @http.route('/enrollment-journey/<string:token>/quote/revision', type='http',
+                auth='public', website=False, csrf=False, methods=['POST'])
+    def journey_quote_revision(self, token, **kw):
+        journey = request.env['enrollment.journey'].sudo().search(
+            [('access_token', '=', token), ('active', '=', True)], limit=1)
+        if not journey:
+            return request.not_found()
+        if journey.quote_state == 'sent':
+            journey._record_revision_request(
+                reason=kw.get('reason') or '', ip=self._client_ip())
+        return request.redirect('/enrollment-journey/%s' % token)
 
     # ------------------------------------------------------------------
     # Step 0 page — pending
@@ -570,6 +628,102 @@ footer a{{color:#2471a3;text-decoration:none}}
 </html>"""
 
     # ------------------------------------------------------------------
+    # Step 1 quotation block — state machine (download gate + accept/revision)
+    # ------------------------------------------------------------------
+
+    def _quote_step_html(self, j):
+        """HTML injected into wizard step 1 based on j.quote_state."""
+        if not j.order_id or j.quote_state == 'none':
+            return ''
+
+        order_name = escape(j.order_id.name or '')
+        dl_url = '/enrollment-journey/%s/cotizacion.pdf' % j.access_token
+        dl_btn = (
+            '<a href="%s" target="_blank" rel="noopener" '
+            'style="display:inline-flex;align-items:center;gap:8px;margin-top:12px;'
+            'padding:11px 18px;background:#2471a3;color:#fff;font-weight:600;'
+            'font-size:14px;text-decoration:none;border-radius:10px;'
+            'box-shadow:0 2px 6px rgba(36,113,163,.25);">'
+            '📄 Descargar cotización (PDF)</a>'
+        ) % dl_url
+
+        if j.quote_state == 'draft':
+            return (
+                '<p class="step-hint" style="background:#eef4fb;border-left:3px solid '
+                '#2471a3;padding:10px 14px;border-radius:0 8px 8px 0;margin-top:10px;">'
+                '🧾 Tu cotización está en preparación. Nuestro equipo de ventas la '
+                'revisará y te la enviará en breve para tu revisión y aceptación.</p>'
+            )
+
+        if j.quote_state == 'accepted':
+            dt = j.quote_accepted_date.strftime('%d/%m/%Y') if j.quote_accepted_date else ''
+            return (
+                '<div style="background:#eafaf1;border-left:3px solid #27ae60;'
+                'padding:10px 14px;border-radius:0 8px 8px 0;margin-top:10px;">'
+                '<p style="font-size:13.5px;color:#1e8449;font-weight:600;margin:0;">'
+                '✅ Aceptaste esta cotización (v%d) el %s.</p>'
+                '<p style="font-size:12.5px;color:#5d7a9a;margin:6px 0 0;">'
+                'Gracias. El siguiente paso es firmar el Acuerdo de Inscripción (paso 2).'
+                '</p></div>%s'
+            ) % (j.quote_version, dt, dl_btn)
+
+        if j.quote_state == 'revision_requested':
+            return (
+                '<div style="background:#fef9e7;border-left:3px solid #e67e22;'
+                'padding:10px 14px;border-radius:0 8px 8px 0;margin-top:10px;">'
+                '<p style="font-size:13.5px;color:#9c5a00;font-weight:600;margin:0;">'
+                '🕓 Recibimos tu solicitud de revisión.</p>'
+                '<p style="font-size:12.5px;color:#5d7a9a;margin:6px 0 0;">'
+                'Alguien de nuestro equipo de Atención al Representante te contactará '
+                'en breve para revisar tu cotización. Cuando esté lista, te enviaremos '
+                'la nueva versión a este mismo enlace.</p></div>%s'
+            ) % dl_btn
+
+        # quote_state == 'sent' → download + accept (T&C) + request-revision
+        amount = j.order_id.amount_total
+        currency = j.order_id.currency_id.name or 'USD'
+        accept_url = '/enrollment-journey/%s/quote/accept' % j.access_token
+        revision_url = '/enrollment-journey/%s/quote/revision' % j.access_token
+        return f"""
+<p class="step-hint" style="margin-top:10px;">
+  Revise su cotización <strong>{order_name}</strong>
+  (total {amount:,.2f} {currency}). Si está de acuerdo, acéptela en línea;
+  si necesita un ajuste, solicite una revisión.
+</p>
+{dl_btn}
+<form method="POST" action="{accept_url}" style="margin-top:16px;">
+  <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#2c3e50;
+                line-height:1.5;cursor:pointer;margin-bottom:12px;">
+    <input type="checkbox" name="tyc" value="1" required style="margin-top:3px;"/>
+    <span>He leído y acepto la cotización <strong>{order_name}</strong> y los
+    <strong>Términos y Condiciones</strong> del servicio educativo 2026-2027.</span>
+  </label>
+  <button type="submit"
+    style="width:100%;padding:13px 18px;background:#27ae60;color:#fff;border:none;
+           font-weight:700;font-size:15px;border-radius:10px;cursor:pointer;
+           box-shadow:0 2px 8px rgba(39,174,96,.3);">
+    ✓ &nbsp;Acepto esta cotización
+  </button>
+</form>
+<details style="margin-top:12px;">
+  <summary style="cursor:pointer;color:#c0392b;font-weight:600;font-size:13.5px;">
+    ✕ &nbsp;No estoy de acuerdo — solicitar una revisión
+  </summary>
+  <form method="POST" action="{revision_url}" style="margin-top:10px;">
+    <textarea name="reason" required rows="3"
+      placeholder="Cuéntenos qué debemos revisar de su cotización..."
+      style="width:100%;padding:10px 12px;border:1px solid #d4deef;border-radius:8px;
+             font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    <button type="submit"
+      style="margin-top:8px;padding:10px 16px;background:#fff;color:#c0392b;
+             border:1.5px solid #c0392b;font-weight:600;font-size:13.5px;
+             border-radius:8px;cursor:pointer;">
+      Enviar solicitud de revisión →
+    </button>
+  </form>
+</details>"""
+
+    # ------------------------------------------------------------------
     # 9-step wizard page — confirmed  (original _render, renamed)
     # ------------------------------------------------------------------
 
@@ -631,23 +785,10 @@ footer a{{color:#2471a3;text-decoration:none}}
                     meta='Próximamente', body='',
                 )
 
-        # Offer the parent a download of the draft quotation for review.
-        # Available on step 1 as soon as the quote exists (auto-created on
-        # S0 'Sí'), regardless of whether staff has cleared the step yet.
-        if j.order_id:
-            dl_btn = (
-                '<a href="/enrollment-journey/%s/cotizacion.pdf" target="_blank" '
-                'rel="noopener" style="display:inline-flex;align-items:center;gap:8px;'
-                'margin-top:12px;padding:11px 18px;background:#2471a3;color:#fff;'
-                'font-weight:600;font-size:14px;text-decoration:none;border-radius:10px;'
-                'box-shadow:0 2px 6px rgba(36,113,163,.25);">'
-                '📄 Descargar cotización (borrador) para revisión</a>'
-                '<p style="font-size:12.5px;color:#5d7a9a;margin-top:8px;">'
-                'Revise el detalle de su cotización <strong>%s</strong>. '
-                'Es un documento preliminar para su revisión; '
-                'la versión definitiva se firma en el paso 2.</p>'
-            ) % (j.access_token, escape(j.order_id.name or ''))
-            step_data[1]['body'] = (step_data[1].get('body') or '') + dl_btn
+        # State-aware quotation block on step 1 (download gate + accept/revision).
+        q_html = self._quote_step_html(j)
+        if q_html:
+            step_data[1]['body'] = (step_data[1].get('body') or '') + q_html
 
         sections = []
         for block_title, step_nums in BLOCK_DEFS:
