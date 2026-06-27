@@ -318,6 +318,39 @@ class EnrollmentJourney(models.Model):
         """Students excluding graduating 5° Año — used in Step 0 display."""
         return [s for s in self.student_ids if not _is_graduating_grade(s.grade)]
 
+    def _ensure_quote(self):
+        """Idempotently create the enrollment quotation when the family confirms
+        continuity (S0 = 'Sí'). One quote per journey, sized to the enrolling
+        (non-graduating) student count, priced at the llamado active on the day
+        of confirmation. Returns the linked sale.order, or False if it cannot be
+        built (no partner / quote engine error). Never raises — confirmation must
+        not fail because of a quote hiccup."""
+        self.ensure_one()
+        if self.order_id:
+            return self.order_id
+        if not self.partner_id:
+            return False
+        n = len(self._enrolling_students()) or 1
+        try:
+            summ = self.env['sale.order'].sudo().create_ai_quote(
+                self.partner_id.id, n, channel='manual')
+            order = self.env['sale.order'].browse(summ['order_id'])
+            self.order_id = order.id
+            self.message_post(
+                body='🧾 Cotización %s generada automáticamente al confirmar '
+                     'continuidad (%d estudiante(s), %s, total %s %s).' % (
+                         order.name, n, summ['llamado_code'],
+                         summ['amount_total'], summ['currency']),
+                message_type='comment', subtype_xmlid='mail.mt_note')
+            return order
+        except Exception as exc:  # noqa: BLE001 — confirmation must survive
+            _logger.warning('Auto-quote failed for journey %s: %s', self.id, exc)
+            self.message_post(
+                body='⚠️ No se pudo generar la cotización automáticamente al '
+                     'confirmar continuidad: %s. Genérela manualmente.' % exc,
+                message_type='comment', subtype_xmlid='mail.mt_note')
+            return False
+
     def _student_dicts(self, for_step0=False):
         """Returns list of dicts with display info for emails and Step 0 page."""
         students = self._enrolling_students() if for_step0 else list(self.student_ids)

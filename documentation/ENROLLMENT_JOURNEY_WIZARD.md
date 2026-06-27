@@ -417,6 +417,39 @@ Import creates 2 akdemia lines → manual name edit flips `staff_edited` → re-
 `scripts/akdemia_api_sync.py` Phase 2b: `build_guardian_index(entries)` (1:1 mirror of `_akdemia_index_by_guardian`) + `publish_student_cache(index)` → XML-RPC `set_param('akdemia.students_json', …)` on every reachable env, **skipped under DRY_RUN**. Runs right after the parent map, wrapped in try/except (failure logged, never breaks sheets/bounce phases). Smoke-tested: normalized guardian keys, shared-guardian dedup, empty-name skip, DRY_RUN no-write.
 
 ### Pending (not blocking testing)
-- **Prod Akdemia base URL** — `akdemia.base_url` default is **staging**; confirm a production endpoint before prod deploy.
+- **Prod Akdemia base URL** — `akdemia.base_url` default is **staging**; confirmed real for both envs (scope `school_id=63`, env-agnostic) — leave default unless a prod URL is issued.
 - **Cached-index sanity floor** (low) — `use_cache=True` trusts any parseable JSON; a degenerate/stale cache degrades silently. Add a min-guardians floor or cron-side size check.
 - **Re-sync diff preview UI** — current re-sync reports drift to chatter; a pre-overwrite diff dialog is a nice-to-have.
+
+### Akdemia API connectivity (configured 2026-06-26)
+Real credentials live in `/var/www/dev/odoo_api_bridge/.env` (loaded by `scripts/akdemia_api_sync.py` via `load_dotenv`): `AKDEMIA_API_KEY` (72-char Bearer, name `school-UEIAB-api-key-scoped`, scope `school_id=63`, **expires 2027-04-20**), `AKDEMIA_BASE_URL=https://api-staging.akdemia.com`. Set in **testing** `ir.config_parameter` (`akdemia.api_key`/`base_url`/`per_page=200`/`min_students=200`/`min_cache_guardians=150`). Live API verified: HTTP 200, `meta.total=227`, shape `data:[{student,guardians}]`. **Same key+URL go to prod** via `scripts/prod_post_deploy_enrollment_journey.py` (reads env `AKDEMIA_API_KEY`).
+
+---
+
+## Rollout model — bulk survey, per-family auto-quote (locked 2026-06-26)
+
+**Decision (Gustavo):** the S0 continuity survey is the **universal bulk trigger**; the quotation is created **per family, automatically when they answer 'Sí'** — never bulk up front (avoids ~200 wasted draft orders + pricing drift as the llamado window moves L1→L2→L3).
+
+```
+1. ONE-TIME mass-create journeys  → all eligible families (skip all-5°-Año), import students
+2. BULK S0 blast                  → continuity survey to each parent (action_send_blast_email is multi-record safe)
+3. Parent answers Sí / No
+4. Sí → auto-create quote (current llamado)   |   No → withdrawal/egreso flow
+```
+
+### Auto-quote on confirm (v0.12.0)
+`enrollment.journey._ensure_quote()` — idempotent (skips if `order_id` set), sizes to `len(_enrolling_students())` (excludes 5° Año), calls `sale.order.create_ai_quote(partner, n, channel='manual')` at the llamado active on confirmation day, links `order_id`, posts a chatter note. **Never raises** — confirmation must survive a quote hiccup. Wired into controller `journey_confirm` after the status write, before `_send_response_notification`. Verified in testing: idempotent on an existing-order journey; fresh 2-student family → draft $973.20, 2nd call no-dup (rolled back).
+
+### Mass-create script — `scripts/enrollment_journey_mass_create.py`
+DRY-RUN by default; `LIVE=1` env to create + import + commit. Universe = Representante tag (25); eligible = VAT matches an Akdemia guardian AND ≥1 enrolling (non-5°-Año) student; skips graduating-only + already-journeyed. LIVE publishes `akdemia.students_json` then imports per-partner with `use_cache=True`.
+
+**3-pass billing-parent dedup** (handles the two-parent case): collect per-student claims → assign each student to the billing parent via `_billing_rank = (posted out_invoices, customer_rank, -id)` → create one journey per partner that wins ≥1 student (pure co-parents skipped, mixed households flagged).
+
+### VAT-matching analysis (2026-06-26) — why the matcher is correct
+Investigation of the dry-run's 129 no-match families:
+- **The API is complete:** Akdemia API guardian cédulas (322) === Akdemia2526 sheet 3-guardian columns (cols 36/67/98). No guardian is missing from the API.
+- **The Customers-tab `Registration` VAT (col 1, 203 families) is the "one valid VAT"** — the curated **billing parent's** cédula, which already resolved the two-parent question (in every shared household exactly one side is in the Customers tab).
+- **Odoo reproduces that selection without a sheet dependency:** `max(posted invoices) → customer_rank → lowest id` picks the same billing parent the sheet does, in every shared household tested. (The sheet also has `#N/A` rows, so Odoo billing data is the more reliable authority.)
+- **129 breakdown:** 123 genuinely stale (VAT in neither Akdemia guardians nor Customers tab → old/graduated tags, correctly excluded); **6 active-customer data issues** (billing VAT ≠ Akdemia guardian AND Customers `Student(s)` = `#N/A`): BRIMENCA (J-RIF), DAMELIS DOMINGUEZ, DIOLEIDYS ESPINOZA, FIRAS EZZEDDIN, LUIS VILLAZANA, MARIANA GONZALEZ → need a manual cédula fix in Akdemia or manual student entry on the journey.
+
+**Enhanced DRY-RUN (testing):** universe 242 → eligible 103 → **created 98** (co_parent_skipped 4, mixed_household 0, already 1=Roberto), created_no_email 5, 8 shared households all → correct billing parent. **Not run live yet.**

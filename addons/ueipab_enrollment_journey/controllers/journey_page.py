@@ -174,6 +174,7 @@ a{{color:#2471a3}}
                 'continuation_status': 'confirmed',
                 'confirmation_date': fields.Datetime.now(),
             })
+            journey._ensure_quote()
             journey._send_response_notification('confirmed')
         return request.redirect('/enrollment-journey/%s' % token)
 
