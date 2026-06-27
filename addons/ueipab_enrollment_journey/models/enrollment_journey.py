@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import base64
+import hashlib
 import json
 import logging
 import re
@@ -39,6 +41,14 @@ STEP_STATES = [
 
 DONE_STATES = ('done_auto', 'done_manual')
 BLOCK1_STEPS = (1, 2, 3)
+
+QUOTE_STATES = [
+    ('none',               'Sin cotización'),
+    ('draft',              'Borrador'),
+    ('sent',               'Enviada al representante'),
+    ('accepted',           'Aceptada'),
+    ('revision_requested', 'Revisión solicitada'),
+]
 
 STEP_DEFS = [
     ('step1', 'Cotización confirmada',
@@ -211,6 +221,17 @@ class EnrollmentJourney(models.Model):
     partner_id = fields.Many2one('res.partner', string='Representante', required=True, index=True)
     order_id = fields.Many2one('sale.order', string='Cotización')
     access_token = fields.Char(string='Token', index=True, copy=False)
+
+    # Quotation lifecycle (accept / revision + version control)
+    quote_state = fields.Selection(
+        QUOTE_STATES, default='none', string='Estado cotización',
+        index=True, copy=False, tracking=True)
+    quote_sent_date     = fields.Datetime('Cotización enviada', readonly=True, copy=False)
+    quote_accepted_date = fields.Datetime('Cotización aceptada', readonly=True, copy=False)
+    quote_revision_reason = fields.Text('Motivo de revisión', readonly=True, copy=False)
+    quote_version = fields.Integer('Versión actual', default=0, copy=False, readonly=True)
+    quote_version_ids = fields.One2many(
+        'enrollment.quote.version', 'journey_id', string='Versiones de cotización')
     academic_year = fields.Char(default='2026-2027')
     active = fields.Boolean(default=True)
 
@@ -336,9 +357,12 @@ class EnrollmentJourney(models.Model):
                 self.partner_id.id, n, channel='manual')
             order = self.env['sale.order'].browse(summ['order_id'])
             self.order_id = order.id
+            if self.quote_state == 'none':
+                self.quote_state = 'draft'
             self.message_post(
                 body='🧾 Cotización %s generada automáticamente al confirmar '
-                     'continuidad (%d estudiante(s), %s, total %s %s).' % (
+                     'continuidad (%d estudiante(s), %s, total %s %s). '
+                     'Estado: borrador — revísela y use "Enviar cotización".' % (
                          order.name, n, summ['llamado_code'],
                          summ['amount_total'], summ['currency']),
                 message_type='comment', subtype_xmlid='mail.mt_note')
@@ -350,6 +374,352 @@ class EnrollmentJourney(models.Model):
                      'confirmar continuidad: %s. Genérela manualmente.' % exc,
                 message_type='comment', subtype_xmlid='mail.mt_note')
             return False
+
+    # -- Quotation lifecycle: send / accept / revision / re-issue ----------
+
+    def _render_quote_pdf(self):
+        """Render the Acuerdo/Cotización report PDF (bytes) for this journey's
+        order. Raises if no order."""
+        self.ensure_one()
+        pdf, _ftype = self.env['ir.actions.report'].sudo()._render_qweb_pdf(
+            'ueipab_sales.action_report_quotation_agreement', [self.order_id.id])
+        return pdf
+
+    def current_quote_version(self):
+        """The version row the parent is currently looking at (issued or
+        accepted), i.e. the one matching quote_version. False if none frozen."""
+        self.ensure_one()
+        return self.quote_version_ids.filtered(
+            lambda v: v.version == self.quote_version
+            and v.state in ('issued', 'accepted'))[:1]
+
+    def _freeze_quote_version(self):
+        """Freeze the CURRENT order PDF as an immutable version row + attachment
+        (the retained 'mensaje de datos'). Supersedes any prior 'issued' row,
+        bumps quote_version, returns the new version record. Never raises into
+        the caller's flow on a render hiccup — returns False instead."""
+        self.ensure_one()
+        if not self.order_id:
+            return False
+        try:
+            pdf = self._render_quote_pdf()
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning('Quote PDF render failed for journey %s: %s', self.id, exc)
+            return False
+        sha = hashlib.sha256(pdf).hexdigest()
+        new_ver = (self.quote_version or 0) + 1
+        safe = (self.partner_id.name or 'UEIPAB').replace(' ', '_')
+        att = self.env['ir.attachment'].sudo().create({
+            'name': 'Cotizacion_%s_v%d.pdf' % (safe, new_ver),
+            'type': 'binary',
+            'datas': base64.b64encode(pdf),
+            'mimetype': 'application/pdf',
+            'res_model': 'enrollment.journey',
+            'res_id': self.id,
+        })
+        # Any previously-issued (not yet accepted) version is now superseded.
+        self.quote_version_ids.filtered(
+            lambda v: v.state == 'issued').write({'state': 'superseded'})
+        ver = self.env['enrollment.quote.version'].sudo().create({
+            'journey_id': self.id,
+            'version': new_ver,
+            'order_id': self.order_id.id,
+            'amount_total': self.order_id.amount_total,
+            'currency_id': self.order_id.currency_id.id,
+            'pdf_attachment_id': att.id,
+            'pdf_sha256': sha,
+            'issued_date': fields.Datetime.now(),
+            'issued_by': self.env.uid,
+            'state': 'issued',
+        })
+        self.quote_version = new_ver
+        return ver
+
+    def action_send_quote(self):
+        """Staff action — initial send AND re-issue after a revision.
+        Freezes a new version from the current order, sets state to 'sent',
+        clears any prior acceptance/revision, and emails the parent the link."""
+        self.ensure_one()
+        if not self.order_id:
+            raise UserError(
+                'No hay cotización vinculada. Genere la cotización antes de enviarla.')
+        ver = self._freeze_quote_version()
+        if not ver:
+            raise UserError(
+                'No se pudo generar el PDF de la cotización. Revise la orden de venta.')
+        self.write({
+            'quote_state': 'sent',
+            'quote_sent_date': fields.Datetime.now(),
+            'quote_accepted_date': False,
+            'quote_revision_reason': False,
+        })
+        self._send_quote_email()
+        self.message_post(
+            body='📤 Cotización %s (v%d, %s) enviada al representante para su '
+                 'revisión y aceptación.' % (
+                     self.order_id.name, ver.version, self.order_id.amount_total),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return {
+            'type': 'ir.actions.client', 'tag': 'display_notification',
+            'params': {
+                'title': 'Cotización enviada',
+                'message': 'v%d enviada al representante.' % ver.version,
+                'type': 'success', 'sticky': False,
+            },
+        }
+
+    def _record_acceptance(self, ip, user_agent, tyc):
+        """Public flow: the parent accepted the current quote. Captures the
+        Tier-2 e-signature evidence (IP, UA, UTC timestamp, T&C, PDF already
+        hashed at freeze) and advances step 1. Returns True on success."""
+        self.ensure_one()
+        if self.quote_state != 'sent':
+            return False
+        ver = self.current_quote_version()
+        now = fields.Datetime.now()
+        if ver:
+            ver.sudo().write({
+                'state': 'accepted',
+                'accept_ip': (ip or '')[:64],
+                'accept_user_agent': (user_agent or '')[:512],
+                'accept_timestamp_utc': now,
+                'tyc_accepted': bool(tyc),
+            })
+        self.write({'quote_state': 'accepted', 'quote_accepted_date': now})
+        # Quote accepted == step 1 "Cotización confirmada" complete.
+        if self.step1_state not in DONE_STATES:
+            self.write({'step1_state': 'done_auto', 'step1_cleared_at': now})
+        self._send_quote_accepted_email()
+        self.message_post(
+            body='✅ El representante ACEPTÓ la cotización %s (v%s) — IP %s, '
+                 'T&C %s, %s UTC. Paso 1 completado automáticamente.' % (
+                     self.order_id.name if self.order_id else '—',
+                     ver.version if ver else '?', ip or '—',
+                     'aceptados' if tyc else 'NO aceptados',
+                     now.strftime('%Y-%m-%d %H:%M:%S') if now else '—'),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return True
+
+    def _record_revision_request(self, reason, ip):
+        """Public flow: the parent disagrees and requests a revision. Records
+        the evidence on the current version, flips state, and escalates to
+        soporte@ CC pagos@. Returns True on success."""
+        self.ensure_one()
+        if self.quote_state != 'sent':
+            return False
+        reason = (reason or '').strip()[:2000]
+        now = fields.Datetime.now()
+        ver = self.current_quote_version()
+        if ver:
+            ver.sudo().write({
+                'revision_reason': reason or None,
+                'revision_ip': (ip or '')[:64],
+                'revision_timestamp_utc': now,
+            })
+        self.write({
+            'quote_state': 'revision_requested',
+            'quote_revision_reason': reason or None,
+        })
+        self._send_quote_revision_escalation(reason)
+        self.message_post(
+            body='🕓 El representante SOLICITÓ una revisión de la cotización %s '
+                 '(v%s) — IP %s. Escalado a %s (CC %s).<br/>Motivo: %s' % (
+                     self.order_id.name if self.order_id else '—',
+                     ver.version if ver else '?', ip or '—',
+                     SOPORTE_EMAIL, PAGOS_EMAIL,
+                     (reason.replace('<', '&lt;').replace('>', '&gt;')
+                      if reason else '<em>sin detalle</em>')),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return True
+
+    # -- Quotation emails --------------------------------------------------
+
+    def _trigger_mail_queue(self):
+        try:
+            self.env.ref('base.ir_cron_mail_scheduler_action').sudo() \
+                .method_direct_trigger()
+        except Exception:  # noqa: BLE001 — best-effort flush
+            pass
+
+    def _send_quote_email(self):
+        """Customer email: the quote is ready to review + accept on the page."""
+        self.ensure_one()
+        email = self.partner_id.email
+        if not email:
+            self.message_post(
+                body='⚠️ Cotización no enviada por email: el representante no '
+                     'tiene email registrado. Comparta el enlace manualmente.',
+                message_type='comment', subtype_xmlid='mail.mt_note')
+            return
+        self.env['mail.mail'].sudo().create({
+            'subject': 'Su cotización de inscripción 2026-2027 está lista',
+            'email_from': SOPORTE_EMAIL,
+            'email_to': email,
+            'reply_to': SOPORTE_EMAIL,
+            'body_html': self._build_quote_sent_email_html(),
+            'state': 'outgoing',
+        })
+        self._trigger_mail_queue()
+
+    def _build_quote_sent_email_html(self):
+        partner_name = self.partner_id.name or 'Representante'
+        students = self._student_dicts(for_step0=True)
+        amount = self.order_id.amount_total if self.order_id else 0.0
+        currency = self.order_id.currency_id.name if self.order_id else 'USD'
+        body = """
+<p style="font-size:15px;line-height:1.7;margin:0 0 16px;color:#2c3e50;">
+  Estimado/a representante <strong>{partner_name}</strong>:
+</p>
+<p style="font-size:14px;line-height:1.8;margin:0 0 16px;color:#4a5568;">
+  Hemos preparado la <strong>cotización de inscripción</strong> para el año escolar
+  <strong>2026-2027</strong>. Puede revisarla, descargarla en PDF y — si está de acuerdo —
+  <strong>aceptarla en línea</strong> desde su página de inscripción. Si necesita algún
+  ajuste, puede solicitar una revisión desde la misma página.
+</p>
+{student_list}
+<table width="100%%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">
+  <tr><td style="background:#eaf2fb;border:1px solid #cfe0f5;border-radius:10px;padding:14px 18px;
+      text-align:center;font-size:15px;color:#1a2c5b;font-weight:700;">
+      Total estimado: {amount:,.2f} {currency}
+  </td></tr>
+</table>
+{cta}
+<p style="font-size:12px;color:#8096b4;margin:20px 0 0;border-top:1px solid #e8edf5;padding-top:14px;">
+  Si tiene dudas, responda a este correo o escríbanos a
+  <a href="mailto:{soporte}" style="color:#2471a3;">{soporte}</a>.
+</p>""".format(
+            partner_name=partner_name,
+            student_list=_student_list_html(students),
+            amount=amount, currency=currency,
+            cta=_cta_button(self.journey_url,
+                            'Ver y aceptar mi cotización →', '#1a2c5b'),
+            soporte=SOPORTE_EMAIL,
+        )
+        return _email_wrapper(
+            header_title='SU COTIZACIÓN DE INSCRIPCIÓN 2026-2027',
+            header_subtitle='Revise, descargue y acepte en línea — U.E. Instituto Privado Andrés Bello',
+            header_color='#1a2c5b',
+            body_html=body,
+        )
+
+    def _send_quote_accepted_email(self):
+        """Two copies on acceptance: internal (pagos@) + a customer confirmation."""
+        self.ensure_one()
+        ver = self.current_quote_version()
+        Mail = self.env['mail.mail'].sudo()
+        # Internal copy → pagos@
+        Mail.create({
+            'subject': '[Cotización Aceptada] Familia %s' % self.partner_id.name,
+            'email_from': SOPORTE_EMAIL,
+            'email_to': PAGOS_EMAIL,
+            'body_html': self._build_quote_accepted_html(ver, audience='internal'),
+            'state': 'outgoing',
+        })
+        # Customer confirmation
+        if self.partner_id.email:
+            Mail.create({
+                'subject': 'Cotización aceptada — Inscripción 2026-2027',
+                'email_from': SOPORTE_EMAIL,
+                'email_to': self.partner_id.email,
+                'reply_to': SOPORTE_EMAIL,
+                'body_html': self._build_quote_accepted_html(ver, audience='customer'),
+                'state': 'outgoing',
+            })
+        self._trigger_mail_queue()
+
+    def _build_quote_accepted_html(self, ver, audience='internal'):
+        partner_name = self.partner_id.name or '—'
+        amount = self.order_id.amount_total if self.order_id else 0.0
+        currency = self.order_id.currency_id.name if self.order_id else 'USD'
+        ts = ver.accept_timestamp_utc.strftime('%d/%m/%Y %H:%M UTC') if (ver and ver.accept_timestamp_utc) else '—'
+        if audience == 'customer':
+            lead = ('Hemos registrado la aceptación de su cotización. El siguiente paso '
+                    'es firmar el Acuerdo de Inscripción. Puede seguir su proceso desde '
+                    'su página de inscripción.')
+            cta = _cta_button(self.journey_url,
+                              'Ver mi proceso de inscripción →', '#27ae60')
+            evidence = ''
+        else:
+            lead = 'El representante aceptó la cotización en línea. Puede continuar con el Bloque 1.'
+            cta = _cta_button(self._backend_url(), 'Ver expediente en Odoo →', '#27ae60')
+            evidence = (
+                '<div style="background:#f8faff;border:1px solid #e0e7f0;border-radius:8px;'
+                'padding:12px 16px;margin:14px 0;font-size:12.5px;color:#5d7a9a;line-height:1.7;">'
+                '<strong style="color:#1a2c5b;">Evidencia de aceptación (Ley de Mensajes de '
+                'Datos y Firmas Electrónicas):</strong><br/>'
+                'Versión: v%s · IP: %s · Fecha/hora: %s · T&amp;C: %s<br/>'
+                'SHA-256 PDF: <code style="font-size:11px;">%s</code></div>' % (
+                    ver.version if ver else '?', ver.accept_ip if ver else '—', ts,
+                    'aceptados' if (ver and ver.tyc_accepted) else 'no',
+                    ver.pdf_sha256 if ver else '—')
+            )
+        body = """
+<div style="background:#eafaf1;border-left:4px solid #27ae60;padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:18px;">
+  <p style="margin:0;font-size:15px;font-weight:700;color:#1e8449;">✅ Cotización aceptada</p>
+</div>
+<p style="font-size:14px;color:#2c3e50;margin:0 0 6px;"><strong>{partner_name}</strong></p>
+<p style="font-size:14px;color:#1a2c5b;margin:0 0 12px;font-weight:700;">Total: {amount:,.2f} {currency}</p>
+<p style="font-size:13px;color:#4a5568;line-height:1.7;margin:0 0 8px;">{lead}</p>
+{evidence}
+{cta}""".format(
+            partner_name=partner_name, amount=amount, currency=currency,
+            lead=lead, evidence=evidence, cta=cta)
+        return _email_wrapper(
+            header_title='Cotización aceptada',
+            header_subtitle='Inscripción 2026-2027',
+            header_color='#1a5c2c',
+            body_html=body,
+        )
+
+    def _send_quote_revision_escalation(self, reason):
+        """Escalation to soporte@ (creates a Freescout conv) CC pagos@."""
+        self.ensure_one()
+        reason_html = (reason.replace('<', '&lt;').replace('>', '&gt;')
+                       if reason else '<em style="color:#8096b4;">No especificado</em>')
+        amount = self.order_id.amount_total if self.order_id else 0.0
+        currency = self.order_id.currency_id.name if self.order_id else 'USD'
+        body = """
+<div style="background:#fef9e7;border-left:4px solid #e67e22;padding:14px 18px;border-radius:0 10px 10px 0;margin-bottom:18px;">
+  <p style="margin:0;font-size:15px;font-weight:700;color:#9c5a00;">
+    🕓 El representante solicitó una revisión de su cotización
+  </p>
+</div>
+<p style="font-size:14px;color:#2c3e50;margin:0 0 4px;"><strong>{partner_name}</strong></p>
+<p style="font-size:13px;color:#5d7a9a;margin:0 0 4px;">Cotización: <strong>{order}</strong> (v{ver}) · Total: {amount:,.2f} {currency}</p>
+<p style="font-size:13px;color:#5d7a9a;margin:0 0 4px;">Cédula: {vat} · Email: {email} · Tel: {phone}</p>
+<p style="font-size:13px;font-weight:600;color:#1a2c5b;margin:16px 0 6px;">Motivo indicado:</p>
+<div style="background:#fdf2e9;border:1px solid #f5cba7;border-radius:8px;padding:14px 16px;font-size:13px;color:#4a5568;line-height:1.7;">{reason_html}</div>
+<p style="font-size:13px;color:#4a5568;line-height:1.7;margin:16px 0 8px;">
+  <strong>Acción:</strong> contactar al representante, aclarar/ajustar la cotización y luego
+  usar <strong>«Re-emitir cotización»</strong> en el expediente para enviar la nueva versión
+  (mismo enlace y QR).
+</p>
+{cta}""".format(
+            partner_name=self.partner_id.name or '—',
+            order=self.order_id.name if self.order_id else '—',
+            ver=self.quote_version, amount=amount, currency=currency,
+            vat=self.partner_id.vat or '—',
+            email=self.partner_id.email or '—',
+            phone=self.partner_id.mobile or self.partner_id.phone or '—',
+            reason_html=reason_html,
+            cta=_cta_button(self._backend_url(), 'Ver expediente en Odoo →', '#e67e22'),
+        )
+        html = _email_wrapper(
+            header_title='Solicitud de revisión de cotización',
+            header_subtitle='Inscripción 2026-2027 · Atención al Representante',
+            header_color='#7d3c00',
+            body_html=body,
+        )
+        self.env['mail.mail'].sudo().create({
+            'subject': '[Cotización - Revisión] Familia %s' % (self.partner_id.name or '—'),
+            'email_from': SOPORTE_EMAIL,
+            'email_to': SOPORTE_EMAIL,
+            'email_cc': PAGOS_EMAIL,
+            'reply_to': SOPORTE_EMAIL,
+            'body_html': html,
+            'state': 'outgoing',
+        })
+        self._trigger_mail_queue()
 
     def _student_dicts(self, for_step0=False):
         """Returns list of dicts with display info for emails and Step 0 page."""
@@ -1249,3 +1619,41 @@ class EnrollmentStudentImportPreview(models.TransientModel):
         self.ensure_one()
         return self.journey_id.with_context(
             use_cache=self.use_cache).action_import_students()
+
+
+class EnrollmentQuoteVersion(models.Model):
+    """Immutable audit log — one row per issued quotation version. Freezes the
+    exact PDF (retained 'mensaje de datos') + SHA-256 + the Tier-2 acceptance
+    evidence (IP / UA / UTC timestamp / T&C). Never edited by hand."""
+    _name = 'enrollment.quote.version'
+    _description = 'Versión de cotización (auditoría)'
+    _order = 'version desc, id desc'
+
+    journey_id = fields.Many2one(
+        'enrollment.journey', required=True, ondelete='cascade', index=True)
+    version = fields.Integer(string='Versión', required=True)
+    order_id = fields.Many2one('sale.order', string='Cotización')
+    currency_id = fields.Many2one('res.currency', string='Moneda')
+    amount_total = fields.Monetary(string='Total', currency_field='currency_id')
+    pdf_attachment_id = fields.Many2one(
+        'ir.attachment', string='PDF congelado', ondelete='set null')
+    pdf_sha256 = fields.Char(string='SHA-256', readonly=True)
+    issued_date = fields.Datetime(string='Emitida', readonly=True)
+    issued_by = fields.Many2one('res.users', string='Emitida por', readonly=True)
+    state = fields.Selection([
+        ('issued',     'Emitida'),
+        ('superseded', 'Reemplazada'),
+        ('accepted',   'Aceptada'),
+        ('rejected',   'Rechazada'),
+    ], default='issued', string='Estado', index=True)
+
+    # Tier-2 acceptance evidence
+    accept_ip = fields.Char(string='IP de aceptación', readonly=True)
+    accept_user_agent = fields.Char(string='User-Agent', readonly=True)
+    accept_timestamp_utc = fields.Datetime(string='Aceptada (UTC)', readonly=True)
+    tyc_accepted = fields.Boolean(string='T&C aceptados', readonly=True)
+
+    # Revision-request evidence
+    revision_reason = fields.Text(string='Motivo de revisión', readonly=True)
+    revision_ip = fields.Char(string='IP de revisión', readonly=True)
+    revision_timestamp_utc = fields.Datetime(string='Revisión (UTC)', readonly=True)

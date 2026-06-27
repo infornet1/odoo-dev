@@ -6,3 +6,5 @@ access_enrollment_journey_student_user,enrollment.journey.student user,model_enr
 access_enrollment_withdrawal_support,enrollment.withdrawal support,model_enrollment_withdrawal,group_enrollment_support,1,1,1,1
 access_enrollment_withdrawal_user,enrollment.withdrawal user,model_enrollment_withdrawal,base.group_user,1,0,0,0
 access_enrollment_student_import_preview,enrollment.student.import.preview support,model_enrollment_student_import_preview,group_enrollment_support,1,1,1,1
+access_enrollment_quote_version_support,enrollment.quote.version support,model_enrollment_quote_version,group_enrollment_support,1,1,1,1
+access_enrollment_quote_version_user,enrollment.quote.version user,model_enrollment_quote_version,base.group_user,1,0,0,0

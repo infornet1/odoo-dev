@@ -19,6 +19,11 @@
                 <field name="wa_sent_date" optional="show" string="WA enviado"/>
                 <field name="phone_missing" optional="show" string="Sin tel."/>
                 <field name="order_id" optional="hide"/>
+                <field name="quote_state" optional="show" widget="badge"
+                       decoration-warning="quote_state == 'draft'"
+                       decoration-info="quote_state == 'sent'"
+                       decoration-success="quote_state == 'accepted'"
+                       decoration-danger="quote_state == 'revision_requested'"/>
                 <field name="progress_pct" widget="progressbar"/>
                 <field name="current_step" optional="hide"/>
                 <field name="step3_state" optional="hide"/>
@@ -58,6 +63,14 @@
                             string="🔄 Validaciones automáticas" class="btn-secondary"/>
                     <button name="action_open_journey_page" type="object"
                             string="🌐 Ver página del Representante" class="btn-secondary"/>
+                    <button name="action_send_quote" type="object"
+                            string="📤 Enviar cotización" class="btn-primary"
+                            invisible="quote_state != 'draft'"
+                            confirm="¿Enviar la cotización al representante para su revisión y aceptación? Se congelará la versión actual (PDF + hash) y se le enviará el enlace."/>
+                    <button name="action_send_quote" type="object"
+                            string="🔁 Re-emitir cotización" class="btn-primary"
+                            invisible="quote_state not in ('sent','accepted','revision_requested')"
+                            confirm="¿Re-emitir la cotización? Se congelará una nueva versión a partir de la orden actual, se reemplazará la anterior y se enviará al representante (mismo enlace y QR)."/>
                     <button name="action_print_contract" type="object"
                             string="🖨️ Imprimir Contrato" class="btn-primary"/>
                 </header>
@@ -106,9 +119,21 @@
                             <separator string="🏛️ Bloque 1 — Inscripción Formal"/>
 
                             <group string="1. Cotización confirmada">
-                                <field name="step1_state"/>
-                                <field name="step1_cleared_by"/>
-                                <field name="step1_cleared_at"/>
+                                <group>
+                                    <field name="quote_state"/>
+                                    <field name="quote_version"/>
+                                    <field name="quote_sent_date" readonly="1"
+                                           invisible="quote_state in ('none','draft')"/>
+                                    <field name="quote_accepted_date" readonly="1"
+                                           invisible="quote_state != 'accepted'"/>
+                                </group>
+                                <group>
+                                    <field name="step1_state"/>
+                                    <field name="step1_cleared_by"/>
+                                    <field name="step1_cleared_at"/>
+                                </group>
+                                <field name="quote_revision_reason" readonly="1" colspan="2"
+                                       invisible="quote_state != 'revision_requested'"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 1}" class="btn-success"
                                         invisible="step1_state in ('done_auto','done_manual')"/>
@@ -239,6 +264,29 @@
                                     <field name="insurance_policy"/>
                                     <field name="source" optional="show"/>
                                     <field name="staff_edited" optional="hide"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Cotización — Versiones">
+                            <field name="quote_version_ids" readonly="1">
+                                <tree decoration-success="state == 'accepted'"
+                                      decoration-muted="state == 'superseded'"
+                                      decoration-warning="state == 'issued'">
+                                    <field name="version"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'accepted'"
+                                           decoration-warning="state == 'issued'"
+                                           decoration-muted="state == 'superseded'"
+                                           decoration-danger="state == 'rejected'"/>
+                                    <field name="amount_total"/>
+                                    <field name="currency_id" optional="hide"/>
+                                    <field name="issued_date"/>
+                                    <field name="issued_by" optional="show"/>
+                                    <field name="accept_ip" optional="show"/>
+                                    <field name="accept_timestamp_utc" optional="show"/>
+                                    <field name="tyc_accepted" optional="hide"/>
+                                    <field name="pdf_sha256" optional="show"/>
+                                    <field name="pdf_attachment_id" optional="show"/>
                                 </tree>
                             </field>
                         </page>
