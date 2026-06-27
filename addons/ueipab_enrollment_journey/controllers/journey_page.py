@@ -200,6 +200,31 @@ a{{color:#2471a3}}
         return request.redirect('/enrollment-journey/%s' % token)
 
     # ------------------------------------------------------------------
+    # GET /enrollment-journey/<token>/cotizacion.pdf
+    # Public, token-scoped download of the family's draft quotation
+    # (Acuerdo de Inscripción report) so the parent can review the
+    # numbers before signing. No sale.order access is exposed — the
+    # journey token is the only key.
+    # ------------------------------------------------------------------
+
+    @http.route('/enrollment-journey/<string:token>/cotizacion.pdf', type='http',
+                auth='public', website=False, csrf=False)
+    def journey_quote_pdf(self, token, **kw):
+        journey = request.env['enrollment.journey'].sudo().search(
+            [('access_token', '=', token), ('active', '=', True)], limit=1)
+        if not journey or not journey.order_id:
+            return request.not_found()
+        pdf, _ftype = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
+            'ueipab_sales.action_report_quotation_agreement', [journey.order_id.id])
+        fname = 'Cotizacion_%s.pdf' % (
+            (journey.partner_id.name or 'UEIPAB').replace(' ', '_'))
+        return request.make_response(pdf, headers=[
+            ('Content-Type', 'application/pdf'),
+            ('Content-Length', len(pdf)),
+            ('Content-Disposition', 'inline; filename="%s"' % fname),
+        ])
+
+    # ------------------------------------------------------------------
     # Step 0 page — pending
     # ------------------------------------------------------------------
 
@@ -605,6 +630,24 @@ footer a{{color:#2471a3;text-decoration:none}}
                     cls='pending', icon=str(idx), title=title,
                     meta='Próximamente', body='',
                 )
+
+        # Offer the parent a download of the draft quotation for review.
+        # Available on step 1 as soon as the quote exists (auto-created on
+        # S0 'Sí'), regardless of whether staff has cleared the step yet.
+        if j.order_id:
+            dl_btn = (
+                '<a href="/enrollment-journey/%s/cotizacion.pdf" target="_blank" '
+                'rel="noopener" style="display:inline-flex;align-items:center;gap:8px;'
+                'margin-top:12px;padding:11px 18px;background:#2471a3;color:#fff;'
+                'font-weight:600;font-size:14px;text-decoration:none;border-radius:10px;'
+                'box-shadow:0 2px 6px rgba(36,113,163,.25);">'
+                '📄 Descargar cotización (borrador) para revisión</a>'
+                '<p style="font-size:12.5px;color:#5d7a9a;margin-top:8px;">'
+                'Revise el detalle de su cotización <strong>%s</strong>. '
+                'Es un documento preliminar para su revisión; '
+                'la versión definitiva se firma en el paso 2.</p>'
+            ) % (j.access_token, escape(j.order_id.name or ''))
+            step_data[1]['body'] = (step_data[1].get('body') or '') + dl_btn
 
         sections = []
         for block_title, step_nums in BLOCK_DEFS:
