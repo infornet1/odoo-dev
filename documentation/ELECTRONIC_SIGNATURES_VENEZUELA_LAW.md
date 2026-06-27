@@ -130,6 +130,21 @@ To make an electronically signed enrollment contract **defensible in a Venezuela
 
 ---
 
+## 9. Implementation Decision (UEIPAB) — 2026-06-27
+
+**Decision: KEEP THE CURRENT TIER-2 IMPLEMENTATION AS-IS.** For enrollment adhesion contracts (low litigation risk, consumer/service contracts, high volume), the Tier-2 "simple signature + compensating controls" path is the proportionate, recommended approach (Art. 17). The live `ueipab_enrollment_journey` v0.13.0 acceptance flow already captures the full bundle: logged consent + separate **T&C checkbox** (Art. 16 chapeau), **IP** via `X-Forwarded-For` + **UTC timestamp** (Art. 8(3)), **PDF SHA-256** (Art. 7), **retained frozen PDF** data message (Art. 8), **cédula in the PDF** (signer link), user-agent + immutable `enrollment.quote.version` audit log (Art. 8). See [QUOTE_ACCEPTANCE_VERSIONING_PLAN.md](QUOTE_ACCEPTANCE_VERSIONING_PLAN.md).
+
+**Deferred enhancement backlog** (incremental risk reduction — NOT defects; build only when a real need arises), ranked by value÷effort:
+1. **OTP identity step** (SMS/email one-time code before "Acepto") — strongest single gain to *signer attribution* (Art. 16); medium effort; uses existing WA/email rails.
+2. **Acceptance "acta" page appended to the accepted PDF** (signer + cédula, version, UTC, IP, SHA-256, consent text) — self-proving single file; low effort.
+3. **Capture exact T&C text + its hash at acceptance** — defeats "those weren't the terms I saw"; low effort.
+4. **Explicit e-signature consent clause in the T&C** (cites Arts. 16/17) — trivial.
+5. **RFC-3161 trusted timestamp (sello de tiempo)** — third-party time proof (Art. 7); medium effort, niche.
+6. **PSC-certified signature (Art. 18)** via SUSCERTE PSC (PROCERT/FIIIDT) for highest-stakes clauses only — full handwritten equivalence; high effort + per-signer token + in-person ID; impractical as default.
+7. **WORM / external hash archival** (Art. 8 allows outsourced archival) — integrity survives DB tampering; low-medium effort.
+
+---
+
 ## Flagged Uncertainties & Source Conflicts
 
 1. **Art. 16 = THREE conditions, not four** (certificate-deeming = Art. 18; signatory control = Art. 19). *High confidence — verbatim ×2.*

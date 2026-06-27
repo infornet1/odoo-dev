@@ -60,6 +60,10 @@ none ──_ensure_quote (S0 'Sí')──▶ draft ──staff "Enviar cotizaci�
 
 consent + T&C = Art. 16 chapeau · IP + timestamp = Art. 8(3) · PDF SHA-256 = Art. 7 (integrity) · retained frozen PDF = Art. 8 (conservation) · printout = Art. 4 ¶3 (fotostática) · cédula in PDF = signer link. Evidentiary value under Art. 17 (sana crítica). OTP fast-follow strengthens identity.
 
+## Status & decision (2026-06-27)
+
+**Tier-2 implementation KEPT AS-IS** — for enrollment adhesion contracts this is the proportionate, recommended path (Art. 17). No further e-signature work scheduled. The ranked enhancement backlog (OTP, acceptance acta page, T&C hash, consent clause, RFC-3161 timestamp, PSC certification, WORM archival) lives in [ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md](ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md) §9 — build only when a real need arises.
+
 ## Out of scope (follow-ups)
 
-OTP identity step · PSC-certified signature (Art. 18) for highest-stakes clauses · prod nginx route whitelist for `/enrollment-journey` · `proxy_mode` (we read `X-Forwarded-For` manually instead).
+Deferred e-signature enhancements (see legal doc §9) · prod nginx route whitelist for `/enrollment-journey` · `proxy_mode` (we read `X-Forwarded-For` manually instead).
