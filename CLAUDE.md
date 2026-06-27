@@ -399,7 +399,7 @@ See [Full Documentation](documentation/AKDEMIA_DATA_PIPELINE.md). Scraper: `akde
 
 **Campaigns/School:** [PDVSA Campaign](documentation/PDVSA_CONTINUITY_CAMPAIGN.md) · [Representante Campaign](documentation/REPRESENTANTE_CONTINUITY_CAMPAIGN.md) · [Notice ACK](documentation/NOTICE_ACKNOWLEDGMENT_SYSTEM.md) · [Calibration](documentation/GLENDA_CALIBRATION_PROGRAMME.md) · [Budget Vote](documentation/BUDGET_VOTE_EMAIL.md) · [Attendance Plan](documentation/ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) · [Control Asistencia](documentation/CONTROL_ASISTENCIA_BRIDGE.md)
 
-**Ad-hoc / Legal:** [PDVSA Tag Check](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) · [Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) · [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md) · [Freescout Phone Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) · [Invoice Currency Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
+**Ad-hoc / Legal:** [PDVSA Tag Check](documentation/QUERY_REPRESENTANTE_PDVSA_TAG_CHECK.md) · [Salario Mínimo Mayo 2026](documentation/SALARIO_MINIMO_DECRETO_MAYO2026.md) · [LOTTT Research](documentation/LOTTT_LAW_RESEARCH_2025-11-13.md) · [Electronic Signatures VE Law](documentation/ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md) · [Freescout Phone Bug](documentation/FREESCOUT_PHONE_CONVERSATION_BUG.md) · [Invoice Currency Bug](documentation/INVOICE_CURRENCY_RATE_BUG.md)
 
 ### Known Issues
 
