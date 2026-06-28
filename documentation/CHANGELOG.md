@@ -4,6 +4,25 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-28 — FreeScout Turnstile CAPTCHA on main login (deployed)
+
+**Type:** Security hardening / deploy | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)
+
+Enabled Cloudflare Turnstile CAPTCHA on the FreeScout agent/admin main login form.
+Created a Turnstile widget via the Cloudflare API (domain
+`freescout.ueipab.edu.ve`, mode `managed`, site key `0x4AAAAAADsURQLrsIeJlDCP`),
+stored the encrypted secret in `.env`, set `EXTRASECURITY_RECAPTCHA_MAIN_*`
+(enabled/turnstile/checkbox), and rebuilt the config cache. Verified: secret valid
+via `siteverify`, config loaded, login page renders the `cf-turnstile` widget.
+Backup at `.env.bak-20260628_070546`.
+
+**Security debt:** the Cloudflare Global API Key + account password were shared in
+chat — must be rotated; account 2FA was disabled and should be enabled.
+
+See [FREESCOUT_TURNSTILE_LOGIN_CAPTCHA.md](FREESCOUT_TURNSTILE_LOGIN_CAPTCHA.md).
+
+---
+
 ## 2026-06-27 — FreeScout Venezuela IP allowlist research
 
 **Type:** Security research / hardening plan | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)
