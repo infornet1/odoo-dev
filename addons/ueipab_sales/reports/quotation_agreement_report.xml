@@ -354,15 +354,81 @@
                             tribunales declaran someterse expresamente.
                         </p>
 
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">10. ACEPTACIÓN ELECTRÓNICA Y VALIDEZ DE LA FIRMA ELECTRÓNICA</p>
+                        <p style="margin: 0;">
+                            De conformidad con el Decreto-Ley Sobre Mensajes de Datos y Firmas Electrónicas
+                            (Gaceta Oficial N° 37.148 del 28 de febrero de 2001), las partes reconocen y aceptan
+                            que el presente Acuerdo de Inscripción y sus Términos y Condiciones podrán suscribirse
+                            y aceptarse por medios electrónicos. Conforme a la facultad prevista en el
+                            <strong>artículo 16</strong> ("salvo que las partes dispongan otra cosa"), las partes
+                            <strong>convienen</strong> que la manifestación de voluntad del REPRESENTANTE expresada
+                            mediante la aceptación en línea —marcando la casilla de aceptación de estos Términos y
+                            Condiciones y accionando el botón "Acepto"— constituye una <strong>Firma
+                            Electrónica</strong> que lo vincula con el Mensaje de Datos y le atribuye su autoría,
+                            con la <strong>misma validez y eficacia probatoria que la ley otorga a la firma
+                            autógrafa (manuscrita)</strong>.
+                        </p>
+                        <p style="margin: 0;">
+                            El REPRESENTANTE reconoce que, como respaldo de dicha aceptación, EL PRESTADOR DE
+                            SERVICIOS registra y conserva la <strong>fecha y hora (UTC)</strong> de la aceptación,
+                            la <strong>dirección IP</strong> de origen, el identificador del dispositivo, y un
+                            <strong>valor criptográfico (hash SHA-256)</strong> del documento aceptado que
+                            garantiza su integridad e inalterabilidad. Las partes acuerdan que dichos registros,
+                            así como el Mensaje de Datos conservado y su reproducción impresa, tendrán pleno valor
+                            probatorio conforme a los <strong>artículos 4, 7 y 8</strong> del referido Decreto-Ley.
+                            En ausencia de los requisitos del artículo 16, la presente aceptación electrónica
+                            constituirá, en todo caso, un <strong>elemento de convicción valorable conforme a las
+                            reglas de la sana crítica (artículo 17)</strong>.
+                        </p>
+                        <p style="margin: 0;">
+                            Lo anterior se entiende sin perjuicio de que el documento pueda igualmente suscribirse
+                            mediante firma autógrafa y/o <strong>firma electrónica certificada</strong> por un
+                            Proveedor de Servicios de Certificación acreditado ante la SUSCERTE
+                            (<strong>artículo 18</strong>), cuando así lo requiera EL PRESTADOR DE SERVICIOS.
+                        </p>
+
+                        <p style="margin: 1px 0 0 0; font-size: 7.8pt; font-weight: bold; color: #1565c0;">11. FACTURACIÓN FRACCIONADA Y RECUPERACIÓN DE PAGOS ANTICIPADOS (ANTICIPOS)</p>
+                        <p style="margin: 0;">
+                            El REPRESENTANTE reconoce y autoriza expresamente que EL PRESTADOR DE SERVICIOS podrá
+                            emitir <strong>más de una (1) factura fiscal con cargo a un mismo pago anticipado o
+                            adelanto</strong> (en lo sucesivo, "Anticipo") recibido del REPRESENTANTE, con el fin
+                            de documentar e imputar progresivamente dicho Anticipo a los conceptos y aportes que se
+                            vayan causando durante el período escolar. En consecuencia, un solo Anticipo podrá ser
+                            recuperado (aplicado) mediante <strong>facturación fraccionada</strong> en tantas
+                            facturas como conceptos o cuotas correspondan. Esta facturación múltiple aplicará, de
+                            manera enunciativa y no limitativa, en los dos (2) supuestos habituales siguientes:
+                        </p>
+                        <ul style="margin: 0; padding-left: 14px;">
+                            <li><strong>Inscripción / Matrícula:</strong> cuando el REPRESENTANTE realice un único
+                                pago que cubra la inscripción y una o varias mensualidades anticipadas, EL
+                                PRESTADOR DE SERVICIOS emitirá facturas independientes por cada concepto
+                                (inscripción, seguro escolar, guías, mensualidades), imputando el Anticipo a cada
+                                una a medida que el servicio se cause.</li>
+                            <li><strong>Cierre de períodos académicos:</strong> al finalizar cada lapso o el
+                                período escolar, EL PRESTADOR DE SERVICIOS podrá emitir las facturas necesarias para
+                                imputar y conciliar los Anticipos pendientes contra los aportes y saldos causados,
+                                regularizando la situación fiscal del REPRESENTANTE.</li>
+                        </ul>
+                        <p style="margin: 0;">
+                            Cada factura se emitirá conforme a la normativa de facturación del SENIAT vigente,
+                            expresada en USD y/o liquidada en bolívares a la <strong>tasa oficial del Banco Central
+                            de Venezuela (BCV) del día de emisión de cada factura</strong>, pudiendo generar
+                            diferencias cambiarias que el REPRESENTANTE se compromete a reconocer conforme a la
+                            Cláusula 4 (Política de Facturación, Descuentos y Moneda). El REPRESENTANTE acepta que
+                            <strong>la emisión de múltiples facturas con cargo a un mismo Anticipo no constituye
+                            doble cobro</strong>, sino la imputación progresiva de un pago ya realizado.
+                        </p>
+
                         <!-- Declaración de aceptación -->
                         <div style="border: 1px solid #1565c0; border-radius: 4px; padding: 4px 8px; margin-top: 5px; background-color: #e3f2fd; font-size: 7.2pt;">
                             <strong>DECLARACIÓN DE ACEPTACIÓN:</strong>
-                            Al estampar la firma en el documento principal "Acuerdo de Inscripción" (identificado
+                            Al estampar su firma en el documento principal "Acuerdo de Inscripción" (identificado
                             con el número de control correlativo impreso en el mismo, Ref.
-                            <strong t-esc="report['order'].name"/>), el Representante ratifica que ha leído de
-                            manera detenida, comprende y acepta vincularse jurídicamente bajo los presentes
-                            Términos y Condiciones, manifestando su conformidad y procediendo a la colocación de
-                            sus firmas y huellas dactilares en el respectivo acuerdo.
+                            <strong t-esc="report['order'].name"/>) <strong>o, en su caso, al aceptarlo
+                            electrónicamente conforme a la Cláusula 10</strong>, el Representante ratifica que ha
+                            leído de manera detenida, comprende y acepta vincularse jurídicamente bajo los
+                            presentes Términos y Condiciones. <strong>La aceptación electrónica produce los mismos
+                            efectos jurídicos que la firma autógrafa.</strong>
                             <table style="width: 100%; margin-top: 3px;">
                                 <tr>
                                     <td style="font-size: 6.8pt; color: #888; text-align: left; vertical-align: bottom;">
