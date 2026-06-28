@@ -4,6 +4,27 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-28 — FreeScout Venezuela IP allowlist (deployed, module-only)
+
+**Type:** Security hardening / deploy | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)
+
+Enabled the ExtraSecurity module IP restriction to allow only Venezuela. `.env`
+`EXTRASECURITY_IPS` (base64) + `ENABLED=true`, `config:cache`. **223 collapsed CIDR
+entries** = ipdeny VE country list + mobile-carrier ASN prefixes (Movistar AS6306,
+Digitel AS264731/AS21826, Movilnet AS27889) + fixed pins (loopback, both droplets,
+home, school INTER+Roraima, Digitel gap 38.84.58.0/24, lorena.reyes' 2 remote US IPs).
+Exceptions derived from the DO firewall, Mikrotik topology, and a FreeScout agent
+login-IP audit (`activity_logs.properties.ip`). Weekly refresh via
+`/opt/odoo-dev/scripts/freescout_ve_allowlist.sh` + `/etc/cron.d/freescout-ve-allowlist`.
+
+Covers agent login + back-office only (REST API/EUP not covered, by design). Verified:
+allowed → `/login` 200; non-allowed → 403. The pre-existing nginx blocklist (Jun 2026
+incident ranges) is kept — complementary, still covers API/EUP.
+
+See [FREESCOUT_IP_ALLOWLIST_VENEZUELA.md](FREESCOUT_IP_ALLOWLIST_VENEZUELA.md).
+
+---
+
 ## 2026-06-28 — FreeScout Turnstile CAPTCHA on main login (deployed)
 
 **Type:** Security hardening / deploy | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)

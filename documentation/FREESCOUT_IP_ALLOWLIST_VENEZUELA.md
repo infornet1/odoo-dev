@@ -1,9 +1,11 @@
 # FreeScout — Restrict Access to Venezuela IP Ranges
 
-**Date:** 2026-06-27
-**Status:** Researched — not yet implemented (awaiting decision on enforcement layer + admin exception IPs)
+**Date:** 2026-06-27 (research) · **Implemented:** 2026-06-28
+**Status:** ✅ DEPLOYED — module-only enforcement, live on production
 **Requested by:** Gustavo Perdomo
-**Related:** [FINANZAS_EMAIL_SPOOFING_FIX.md](FINANZAS_EMAIL_SPOOFING_FIX.md)
+**Related:** [FINANZAS_EMAIL_SPOOFING_FIX.md](FINANZAS_EMAIL_SPOOFING_FIX.md) · [FREESCOUT_TURNSTILE_LOGIN_CAPTCHA.md](FREESCOUT_TURNSTILE_LOGIN_CAPTCHA.md)
+
+> **See the [Implementation (2026-06-28)](#implementation-2026-06-28) section at the bottom for what was actually deployed.** The research/best-practices below is retained for context; the final decision was **module-only** enforcement (not nginx/ipset).
 
 ---
 
@@ -140,8 +142,101 @@ nginx -t && systemctl reload nginx
 
 ## Follow-up actions
 
-- [ ] Decide enforcement layer (module-only vs nginx/ipset whole-site).
-- [ ] Collect admin/office exception IPs (incl. any Starlink/VPN egress IPs).
-- [ ] Implement chosen layer + cron refresh of `ve-aggregated.zone`.
-- [ ] Verify end-user portal access expectations (VE-only customers?).
-- [ ] Test from a non-VE IP to confirm 403, and from a VE/exception IP to confirm pass.
+- [x] Decide enforcement layer → **module-only** (chosen 2026-06-28).
+- [x] Collect admin/office exception IPs (DO firewall + agent login-IP audit).
+- [x] Implement + weekly cron refresh.
+- [x] Verify EUP access expectations → module-only spares the EUP (left open).
+- [x] Test allowed → 200 and non-allowed → 403 (see Verification below).
+
+---
+
+# Implementation (2026-06-28)
+
+**Enforcement: ExtraSecurity module only.** Chosen over nginx/ipset to avoid touching
+nginx and to deliberately spare the REST API and end-user portal. Trade-off accepted:
+the **REST API is not geo-restricted** (it has its own key auth) and the EUP stays open.
+
+### What was deployed
+
+- `/var/www/freescout/.env`:
+  - `EXTRASECURITY_IPS_ENABLED=true`
+  - `EXTRASECURITY_IPS="<base64 of the CIDR list>"`
+  - Applied with `php artisan config:cache` (config is cached in prod).
+- **223 collapsed IPv4 CIDR entries** = ipdeny VE country list **+ mobile-carrier ASN
+  prefixes** + fixed pins, deduped/aggregated with `ipaddress.collapse_addresses`.
+- IPv6 is moot — `freescout.ueipab.edu.ve` has **no AAAA record**, so the module's
+  IPv4-only matcher (`ip2long`) is sufficient.
+
+### Allowlist composition
+
+| Source | Notes |
+|--------|-------|
+| ipdeny `ve-aggregated.zone` | ~217 Venezuela country CIDR blocks |
+| Mobile carrier ASN prefixes | Movistar `AS6306`, Digitel `AS264731` + `AS21826` (Telemic), Movilnet `AS27889` — pulled from RIPEstat. Future-proofs DHCP/CGNAT mobile; all but one block (`38.84.58.0/24`) already inside the country list |
+| Fixed pins | `127.0.0.0/8` (loopback/internal HTTP), `64.23.157.121` + `146.190.55.97` (droplets ueipab2/ueipab), `200.82.130.93` (home), `186.14.93.234` (school INTER) + `190.121.236.34` (school Roraima), `38.84.58.0/24` (Digitel non-VE gap), `23.146.236.245` + `38.188.238.102` (lorena.reyes remote US IPs) |
+
+### How exceptions were derived
+
+- **DO Cloud Firewall** (`doctl`, fw `ueipab-fw` on droplets `ueipab` 146.190.55.97 /
+  `ueipab2` 64.23.157.121): web `80/443` are open to `0.0.0.0/0`+`::/0` (no network-layer
+  geo filter); SSH/FTP are restricted to admin source IPs — used to identify exceptions.
+- **Mikrotik routers** (`/var/www/dev/network/network_topology.md`): school egress is
+  Router 1 (750Gr3) via ISP1 INTER `186.14.93.234` and ISP2 Roraima `190.121.236.34`;
+  Router 2 (HapAC3) egresses through Router 1. Both already inside the VE list; pinned anyway.
+- **Agent login-IP audit** — FreeScout logs every login IP in `activity_logs`
+  (`log_name=users`, `description=login`, `properties.ip`). Audited 4 agents:
+  alejandra.lopez / josefina.rodriguez / jessica.bolivar = 100% VE; lorena.reyes mostly
+  VE + 2 stale US IPs (now pinned). *(Useful pattern for future access audits.)*
+
+### Automation
+
+- **Script:** `/opt/odoo-dev/scripts/freescout_ve_allowlist.sh` — builds the list
+  (ipdeny + carrier ASNs + pins → collapse → base64), backs up `.env` (keeps last 10),
+  writes the two keys, runs `config:cache`. Aborts if the assembled list is `<180`
+  entries (network-failure guard). Used for both initial deploy and refresh.
+- **Cron:** `/etc/cron.d/freescout-ve-allowlist` — `Sun 04:00` as root →
+  `/var/log/freescout-ve-allowlist.log`.
+
+### Verification
+
+| Test | Result |
+|------|--------|
+| Module matcher (`parseIpList`/`isIpInRange`) — home, school, droplets, carrier sample, lorena pins | ALLOW ✅ |
+| Module matcher — `8.8.8.8`, `1.1.1.1`, `198.163.192.180` | BLOCK ✅ |
+| Live `GET /login` from allowlisted source | HTTP **200** + Turnstile + password form ✅ |
+| Live `GET /login` from non-allowlisted source | HTTP **403** "not allowed" ✅ |
+
+`getClientIp()` = `request()->ip()` (no trusted proxies configured), so X-Forwarded-For
+cannot bypass it. Denials are logged to `storage/logs/security.log`.
+
+### Rollback
+
+```bash
+# disable: set EXTRASECURITY_IPS_ENABLED=  (empty) in /var/www/freescout/.env, then:
+php artisan config:cache
+# or restore a backup:
+cp /var/www/freescout/.env.bak-<timestamp> /var/www/freescout/.env && php artisan config:cache
+```
+
+### Relationship to the existing nginx blocklist
+
+The FreeScout vhost (`/etc/nginx/sites-available/example.com`, served as
+`freescout.ueipab.edu.ve`) already carries a **targeted blocklist** from the June 2026
+admin-compromise incident:
+
+```nginx
+deny 155.117.0.0/16;     # Nigerian ISP — Jun 2026 compromise/spam source
+deny 149.22.0.0/16;      # Datacamp VPN — attacker IPs Jun 12–14 2026
+deny 185.98.171.0/24;    # same incident
+deny 146.70.45.85/32;    # single Proton VPN exit node, Jun 10 2026
+```
+
+**Kept on purpose — complementary, not obsolete.** The module allowlist now makes these
+redundant *on the back-office* (all four are non-VE → already 403'd), but the nginx denies
+are **site-wide** and so remain the only thing blocking those specific ranges on the
+**REST API and end-user portal** (which the module does not cover), and they act at the
+web-server layer before PHP. The `location ~ /\. { deny all; }` rule (dotfile/.env/.git
+protection) is unrelated and must stay.
+
+> If the **API/EUP** ever need full Venezuela restriction too, that must be done at nginx
+> (the module cannot) — a separate decision, not a cleanup of the above.
