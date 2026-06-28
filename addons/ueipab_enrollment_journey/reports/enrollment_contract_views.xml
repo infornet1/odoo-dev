@@ -414,6 +414,25 @@
                             <li><strong>Jurisdicción:</strong> Para todos los efectos legales y judiciales derivados del incumplimiento de las obligaciones de este contrato, las partes eligen de forma exclusiva y excluyente como domicilio especial a la ciudad de El Tigre, Municipio Simón Rodríguez del Estado Anzoátegui, a la jurisdicción de cuyos tribunales declaran someterse de manera expresa.</li>
                         </ul>
 
+                        <!-- Clause 11 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">11. ACEPTACIÓN ELECTRÓNICA Y VALIDEZ DE LA FIRMA ELECTRÓNICA</p>
+                        <p style="margin:0 0 3px 0;">
+                            De conformidad con el Decreto-Ley Sobre Mensajes de Datos y Firmas Electrónicas (Gaceta Oficial N° 37.148 del 28/02/2001), las partes reconocen y aceptan que el presente Contrato de Servicio Educativo y sus Términos y Condiciones podrán suscribirse y aceptarse por medios electrónicos. Conforme al <strong>artículo 16</strong> ("salvo que las partes dispongan otra cosa"), las partes <strong>convienen</strong> que la aceptación en línea del REPRESENTANTE —marcando la casilla de aceptación y accionando el botón "Acepto"— constituye una <strong>Firma Electrónica</strong> con la <strong>misma validez y eficacia probatoria que la firma autógrafa</strong>. EL PRESTADOR DE SERVICIOS registra y conserva la <strong>fecha/hora (UTC)</strong>, la <strong>dirección IP</strong>, el identificador del dispositivo y el <strong>hash SHA-256</strong> del documento aceptado; dichos registros, el Mensaje de Datos conservado y su reproducción impresa tendrán pleno valor probatorio conforme a los <strong>artículos 4, 7 y 8</strong>, y en su defecto serán valorables conforme a la <strong>sana crítica (artículo 17)</strong>. Ello sin perjuicio de la firma autógrafa y/o de la <strong>firma electrónica certificada</strong> por un PSC acreditado ante la SUSCERTE (<strong>artículo 18</strong>) cuando la institución lo requiera.
+                        </p>
+
+                        <!-- Clause 12 -->
+                        <p style="margin:3px 0 1px 0; font-size:8pt; font-weight:bold; color:#1a2c5b;">12. FACTURACIÓN FRACCIONADA Y RECUPERACIÓN DE PAGOS ANTICIPADOS (ANTICIPOS)</p>
+                        <p style="margin:0 0 1px 0;">
+                            El REPRESENTANTE reconoce y autoriza expresamente que EL PRESTADOR DE SERVICIOS podrá emitir <strong>más de una (1) factura fiscal con cargo a un mismo pago anticipado o adelanto</strong> (en lo sucesivo, "Anticipo") recibido del REPRESENTANTE, con el fin de documentar e imputar progresivamente dicho Anticipo a los conceptos y aportes que se vayan causando durante el período escolar. Un solo Anticipo podrá ser recuperado (aplicado) mediante <strong>facturación fraccionada</strong> en tantas facturas como conceptos o cuotas correspondan. Esta facturación múltiple aplicará, de manera enunciativa y no limitativa, en los dos (2) supuestos habituales siguientes:
+                        </p>
+                        <ul style="margin:0 0 1px 0; padding-left:12px;">
+                            <li style="margin-bottom:1px;"><strong>Inscripción / Matrícula:</strong> cuando el REPRESENTANTE realice un único pago que cubra la inscripción y una o varias mensualidades anticipadas, EL PRESTADOR DE SERVICIOS emitirá facturas independientes por cada concepto (inscripción, seguro escolar, guías, mensualidades), imputando el Anticipo a cada una a medida que el servicio se cause.</li>
+                            <li><strong>Cierre de períodos académicos:</strong> al finalizar cada lapso o el período escolar, EL PRESTADOR DE SERVICIOS podrá emitir las facturas necesarias para imputar y conciliar los Anticipos pendientes contra los aportes y saldos causados, regularizando la situación fiscal del REPRESENTANTE.</li>
+                        </ul>
+                        <p style="margin:0 0 3px 0;">
+                            Cada factura se emitirá conforme a la normativa de facturación del SENIAT vigente, expresada en USD y/o liquidada en bolívares a la <strong>tasa oficial del Banco Central de Venezuela (BCV) del día de emisión de cada factura</strong>, pudiendo generar diferencias cambiarias que el REPRESENTANTE se compromete a reconocer conforme a la Cláusula 3 (Obligación Financiera y Aranceles). El REPRESENTANTE acepta que <strong>la emisión de múltiples facturas con cargo a un mismo Anticipo no constituye doble cobro</strong>, sino la imputación progresiva de un pago ya realizado.
+                        </p>
+
                         <!-- Page 2 signatures + QR seal -->
                         <div style="margin-top:10px;">
                             <table style="width:100%; font-size:8pt;">
@@ -446,6 +465,10 @@
                                 </tr>
                             </table>
                         </div>
+
+                        <p style="margin:6px 0 0 0; font-size:6.8pt; color:#555; text-align:center; font-style:italic;">
+                            Cuando el presente contrato sea aceptado por medios electrónicos conforme a la Cláusula 11, la firma manuscrita podrá ser sustituida por la aceptación electrónica registrada por la institución, con plenos efectos jurídicos.
+                        </p>
 
                         <div style="margin-top:6px; font-size:6.5pt; color:#aaa; text-align:center; border-top:1px solid #eee; padding-top:3px;">
                             Contrato CSE-2627 · Instituto Privado "Andrés Bello" C.A. · El Tigre, Anzoátegui · Período 2026-2027
