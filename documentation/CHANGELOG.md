@@ -4,6 +4,23 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-27 — FreeScout Venezuela IP allowlist research
+
+**Type:** Security research / hardening plan | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)
+
+Researched best practices for restricting FreeScout access to known Venezuela IP
+ranges after the Extra Security module was installed. Key findings: the module
+**cannot be configured via API**, its IP check **bypasses the REST API**, and it
+is **IPv4-only** — so nginx/ipset is the stronger enforcement point. Recommended a
+layered approach (module for back-office + nginx geo allowlist fed by ipdeny
+`ve-aggregated.zone`, ~247 CIDRs, with cron refresh and admin exception IPs).
+
+No config changed yet — awaiting decision on enforcement layer + exception IPs.
+
+See [FREESCOUT_IP_ALLOWLIST_VENEZUELA.md](FREESCOUT_IP_ALLOWLIST_VENEZUELA.md).
+
+---
+
 ## 2026-06-23 — prod payroll caught up to v1.73.0 (stale-registry OwlError fix)
 
 **Type:** Incident / deploy fix | **Module:** `ueipab_payroll_enhancements` | **Env:** production (`DB_UEIPAB`)
