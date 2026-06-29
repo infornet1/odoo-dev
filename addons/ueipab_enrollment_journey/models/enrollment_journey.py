@@ -127,8 +127,12 @@ def _line_key(cedula, name):
 # Email HTML builders
 # ---------------------------------------------------------------------------
 
-def _email_wrapper(header_title, header_subtitle, header_color, body_html):
-    """Shared branded wrapper for all S0 notification emails."""
+def _email_wrapper(header_title, header_subtitle, header_color, body_html,
+                   contact_email=SOPORTE_EMAIL):
+    """Shared branded wrapper for all S0 notification emails. ``contact_email``
+    is the address shown in the footer "¿Tiene dudas?" link (defaults to
+    soporte@; callers pass self._enroll_addr('contact') to use the configured
+    enrollment inbox)."""
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -163,7 +167,7 @@ def _email_wrapper(header_title, header_subtitle, header_color, body_html):
     <td style="background:#f8faff;border-top:1px solid #e8edf5;padding:16px 32px;text-align:center;">
       <p style="margin:0;font-size:12px;color:#8096b4;line-height:1.7;">
         ¿Tiene dudas? Escríbanos a
-        <a href="mailto:{SOPORTE_EMAIL}" style="color:#2471a3;text-decoration:none;">{SOPORTE_EMAIL}</a><br/>
+        <a href="mailto:{contact_email}" style="color:#2471a3;text-decoration:none;">{contact_email}</a><br/>
         U.E. Instituto Privado Andrés Bello · El Tigre, Anzoátegui · RIF J-080086171
       </p>
     </td>
@@ -582,7 +586,7 @@ class EnrollmentJourney(models.Model):
                  '(v%s) — IP %s. Escalado a %s (CC %s).<br/>Motivo: %s' % (
                      self.order_id.name if self.order_id else '—',
                      ver.version if ver else '?', ip or '—',
-                     SOPORTE_EMAIL, PAGOS_EMAIL,
+                     self._enroll_addr('escalation'), PAGOS_EMAIL,
                      (reason.replace('<', '&lt;').replace('>', '&gt;')
                       if reason else '<em>sin detalle</em>')),
             message_type='comment', subtype_xmlid='mail.mt_note')
@@ -597,6 +601,35 @@ class EnrollmentJourney(models.Model):
         except Exception:  # noqa: BLE001 — best-effort flush
             pass
 
+    def _enroll_addr(self, key):
+        """Enrollment-funnel email addresses, overridable per-env via
+        ir.config_parameter so the whole funnel can move off soporte@ (e.g. to a
+        dedicated inscripcion@ admissions inbox) WITHOUT code edits — avoiding
+        support-queue congestion from the S0 blast. Defaults preserve the
+        original soporte@/pagos@ behaviour until the params are set.
+
+        Keys → params:
+          from       → enrollment.notify_from   (From on all funnel emails)
+          reply_to   → enrollment.reply_to      (Reply-To on parent-facing emails)
+          contact    → enrollment.contact       ("escríbanos a …" link in bodies)
+          escalation → enrollment.escalation_to  (revision-request recipient)
+          internal   → enrollment.internal_to    (internal S0/quote staff inbox)
+          blast_cc   → enrollment.blast_cc        (CC on the S0 blast; set '' to drop)
+        """
+        icp = self.env['ir.config_parameter'].sudo()
+        spec = {
+            'from':       ('enrollment.notify_from',   SOPORTE_EMAIL),
+            'reply_to':   ('enrollment.reply_to',      SOPORTE_EMAIL),
+            'contact':    ('enrollment.contact',       SOPORTE_EMAIL),
+            'escalation': ('enrollment.escalation_to', SOPORTE_EMAIL),
+            'internal':   ('enrollment.internal_to',   PAGOS_EMAIL),
+            # Default '' = NO CC on the blast (the soporte@-congestion fix). Opt
+            # in by setting enrollment.blast_cc to an address if a copy is wanted.
+            'blast_cc':   ('enrollment.blast_cc',      ''),
+        }
+        param, default = spec[key]
+        return icp.get_param(param, default)
+
     def _send_quote_email(self):
         """Customer email: the quote is ready to review + accept on the page."""
         self.ensure_one()
@@ -609,9 +642,9 @@ class EnrollmentJourney(models.Model):
             return
         self.env['mail.mail'].sudo().create({
             'subject': 'Su cotización de inscripción 2026-2027 está lista',
-            'email_from': SOPORTE_EMAIL,
+            'email_from': self._enroll_addr('from'),
             'email_to': email,
-            'reply_to': SOPORTE_EMAIL,
+            'reply_to': self._enroll_addr('reply_to'),
             'body_html': self._build_quote_sent_email_html(),
             'state': 'outgoing',
         })
@@ -649,13 +682,14 @@ class EnrollmentJourney(models.Model):
             amount=amount, currency=currency,
             cta=_cta_button(self.journey_url,
                             'Ver y aceptar mi cotización →', '#1a2c5b'),
-            soporte=SOPORTE_EMAIL,
+            soporte=self._enroll_addr('contact'),
         )
         return _email_wrapper(
             header_title='SU COTIZACIÓN DE INSCRIPCIÓN 2026-2027',
             header_subtitle='Revise, descargue y acepte en línea — U.E. Instituto Privado Andrés Bello',
             header_color='#1a2c5b',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
 
     def _send_quote_accepted_email(self):
@@ -666,8 +700,8 @@ class EnrollmentJourney(models.Model):
         # Internal copy → pagos@
         Mail.create({
             'subject': '[Cotización Aceptada] Familia %s' % self.partner_id.name,
-            'email_from': SOPORTE_EMAIL,
-            'email_to': PAGOS_EMAIL,
+            'email_from': self._enroll_addr('from'),
+            'email_to': self._enroll_addr('internal'),
             'body_html': self._build_quote_accepted_html(ver, audience='internal'),
             'state': 'outgoing',
         })
@@ -675,9 +709,9 @@ class EnrollmentJourney(models.Model):
         if self.partner_id.email:
             Mail.create({
                 'subject': 'Cotización aceptada — Inscripción 2026-2027',
-                'email_from': SOPORTE_EMAIL,
+                'email_from': self._enroll_addr('from'),
                 'email_to': self.partner_id.email,
-                'reply_to': SOPORTE_EMAIL,
+                'reply_to': self._enroll_addr('reply_to'),
                 'body_html': self._build_quote_accepted_html(ver, audience='customer'),
                 'state': 'outgoing',
             })
@@ -725,6 +759,7 @@ class EnrollmentJourney(models.Model):
             header_subtitle='Inscripción 2026-2027',
             header_color='#1a5c2c',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
 
     def _send_quote_revision_escalation(self, reason):
@@ -765,13 +800,14 @@ class EnrollmentJourney(models.Model):
             header_subtitle='Inscripción 2026-2027 · Atención al Representante',
             header_color='#7d3c00',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
         self.env['mail.mail'].sudo().create({
             'subject': '[Cotización - Revisión] Familia %s' % (self.partner_id.name or '—'),
-            'email_from': SOPORTE_EMAIL,
-            'email_to': SOPORTE_EMAIL,
+            'email_from': self._enroll_addr('from'),
+            'email_to': self._enroll_addr('escalation'),
             'email_cc': PAGOS_EMAIL,
-            'reply_to': SOPORTE_EMAIL,
+            'reply_to': self._enroll_addr('reply_to'),
             'body_html': html,
             'state': 'outgoing',
         })
@@ -901,15 +937,21 @@ class EnrollmentJourney(models.Model):
                     message_type='comment', subtype_xmlid='mail.mt_note')
                 skipped += 1
                 continue
-            self.env['mail.mail'].sudo().create({
+            blast_vals = {
                 'subject': 'Proceso de Inscripción 2026-2027 — Confirme la continuidad de su(s) representado(s)',
-                'email_from': SOPORTE_EMAIL,
+                'email_from': rec._enroll_addr('from'),
                 'email_to': email,
-                'email_cc': SOPORTE_EMAIL,
-                'reply_to': SOPORTE_EMAIL,
+                'reply_to': rec._enroll_addr('reply_to'),
                 'body_html': rec._build_blast_email_html(),
                 'state': 'outgoing',
-            })
+            }
+            # CC the admissions inbox only if configured (enrollment.blast_cc).
+            # Set the param to '' to drop the CC and avoid support-queue congestion
+            # from a mass blast — the single biggest source of soporte@ overload.
+            blast_cc = rec._enroll_addr('blast_cc')
+            if blast_cc:
+                blast_vals['email_cc'] = blast_cc
+            self.env['mail.mail'].sudo().create(blast_vals)
             rec.blast_sent_date = fields.Datetime.now()
             rec.email_missing = False
             rec.message_post(
@@ -1009,13 +1051,14 @@ class EnrollmentJourney(models.Model):
             student_block=student_block,
             cta=_cta_button(journey_url, 'Responder la encuesta (Sí │ No) continuará →', '#1a2c5b'),
             report_cta=self._report_cta_block(journey_url),
-            soporte=SOPORTE_EMAIL,
+            soporte=self._enroll_addr('contact'),
         )
         return _email_wrapper(
             header_title='ENCUESTA DE CONTINUIDAD PERÍODO ACADÉMICO 2026-2027',
             header_subtitle='Proceso virtual asistido — U.E. Instituto Privado Andrés Bello',
             header_color='#1a2c5b',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
 
     # -- Response notification (Moment 2) ---------------------------------
@@ -1051,8 +1094,8 @@ class EnrollmentJourney(models.Model):
         # 1) Internal staff copy — pagos@ (+ admissions/finance CC on confirm)
         internal_vals = {
             'subject': subject_internal,
-            'email_from': SOPORTE_EMAIL,
-            'email_to': PAGOS_EMAIL,
+            'email_from': self._enroll_addr('from'),
+            'email_to': self._enroll_addr('internal'),
             'body_html': internal_html,
             'state': 'outgoing',
         }
@@ -1063,9 +1106,9 @@ class EnrollmentJourney(models.Model):
         if partner_email:
             Mail.create({
                 'subject': subject_customer,
-                'email_from': SOPORTE_EMAIL,
+                'email_from': self._enroll_addr('from'),
                 'email_to': partner_email,
-                'reply_to': SOPORTE_EMAIL,
+                'reply_to': self._enroll_addr('reply_to'),
                 'body_html': customer_html,
                 'state': 'outgoing',
             })
@@ -1126,6 +1169,7 @@ class EnrollmentJourney(models.Model):
             header_subtitle='Inscripción 2026-2027 · Respuesta recibida',
             header_color='#1a5c2c',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
 
     def _build_declined_notification_html(self, audience='internal'):
@@ -1184,6 +1228,7 @@ class EnrollmentJourney(models.Model):
             header_subtitle='Inscripción 2026-2027 · Respuesta recibida',
             header_color='#7d3c00',
             body_html=body,
+            contact_email=self._enroll_addr('contact'),
         )
 
     # -- WA escalation (Moment 3) -----------------------------------------
@@ -1222,7 +1267,8 @@ class EnrollmentJourney(models.Model):
             'Estimado/a Representante, le contactamos de parte de U.E. Instituto Privado '
             'Andrés Bello. Tiene pendiente confirmar la inscripción de %s para el año '
             'escolar 2026-2027. Por favor acceda al siguiente enlace para responder: %s '
-            '— Si tiene dudas escríbanos a %s.' % (names, journey_url, SOPORTE_EMAIL)
+            '— Si tiene dudas escríbanos a %s.' % (names, journey_url,
+                                                   self._enroll_addr('contact'))
         )
 
         if is_dry:
