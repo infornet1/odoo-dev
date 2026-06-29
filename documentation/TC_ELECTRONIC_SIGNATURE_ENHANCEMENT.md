@@ -1,7 +1,7 @@
 # T&C Electronic-Signature Enhancement — Contract & Quotation
 
 **Created:** 2026-06-27 · **Updated:** 2026-06-28
-**Status:** ✅ IMPLEMENTED IN TESTING (e-firma + anticipo clauses) — **pending counsel pass before production.**
+**Status:** ✅ IMPLEMENTED + **DEPLOYED TO PROD 2026-06-29** (e-firma + anticipo clauses now live in the prod Acuerdo/Contrato PDFs via `ueipab_sales` 17.0.1.2.5 + `ueipab_enrollment_journey` 17.0.0.14.0). ⚠️ **Counsel pass STILL PENDING — no parent-facing send (quote/contract blast) until counsel signs off** (Art. 16 *"las partes disponen"* wording is load-bearing). Deploy itself is safe: nothing auto-sends to parents.
 **Legal basis:** [ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md](ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md) · **Related:** [QUOTE_ACCEPTANCE_VERSIONING_PLAN.md](QUOTE_ACCEPTANCE_VERSIONING_PLAN.md)
 
 ## Implementation log

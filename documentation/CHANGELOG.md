@@ -4,6 +4,25 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-29 — Enrollment master process DEPLOYED to production
+
+**Type:** Production deployment | **Modules:** `ueipab_sales`, `ueipab_enrollment_journey` | **Env:** production (`DB_UEIPAB` / `odoo.ueipab.edu.ve`)
+
+The full enrollment business process went live in prod. Executed via a 6-agent read-only recon (nginx/report/cron/modules/params/legal) followed by sequential prod mutations, each with a verification gate.
+
+- **Modules:** `ueipab_sales` 17.0.1.2.1 → **17.0.1.2.5** (`-u`); `ueipab_enrollment_journey` **17.0.0.14.0** (fresh `-i`). Both `installed`, verified via XML-RPC. Models `enrollment.{journey,journey.student,withdrawal,quote.version,student.import.preview}` present; group + contract sequence present; 0 journeys (clean).
+- **Config:** `akdemia.api_key`, `akdemia.base_url=api-staging`, `akdemia.min_cache_guardians=50`, `enrollment.report_url=https://odoo.ueipab.edu.ve/reporte-anual-2025-2026/`, **`web.base.url.freeze=True`**.
+- **B1 Annual Report:** report HTML + 16 assets (CEO pic + 15 partner logos) copied to prod webroot (`/var/www/reporte-anual-2025-2026/` + `/var/www/flyers/`), asset URLs rewritten dev→odoo, nginx alias added before `/mora-policy/` (`nginx -t` clean, reload). Report + assets HTTP 200.
+- **B5 nginx:** **no proxy change needed** — prod `odoo.ueipab.edu.ve` vhost already forwards `X-Forwarded-For`/`X-Real-IP` + `Host $http_host`, and has no route allow-list (catch-all serves `/enrollment-journey`, `/verify-quote`, `/verify-contract` → 404 from Odoo on fake tokens = routed).
+- **B4 cron:** prod-independent **cache-only** Akdemia refresh — `/opt/akdemia/scripts/{akdemia_api_sync.py,akdemia_cache_refresh.sh}` + `/etc/akdemia_env_prod` (chmod 600) + `/etc/cron.d/akdemia_cache_refresh` (10:30 UTC = 06:30 VET, `--skip-odoo --skip-sheets` → no Sheets/bounce duplication with the dev cron). Prod has system `requests`+`dotenv` (no venv). Test run published 322 guardians.
+- **⚠️ B6 legal:** the T&C e-signature (Acuerdo Cl.10 / Contrato Cl.11) + anticipo (Acuerdo Cl.11 / Contrato Cl.12) clauses are now in the LIVE prod PDFs, but **counsel sign-off is NOT obtained**. Deploy is safe (nothing auto-sends to parents). **No parent-facing enrollment/quote blast until counsel signs off; validation to `gustavo.perdomo@` only.**
+- **Pilot:** deferred to manual UI validation. The integration user (uid=2) lacks `group_enrollment_support`, so script-driven enrollment writes need that group granted (or a superuser shell) — a separate authorization.
+- **Rollback artifacts (prod):** `…/ueipab17_addon_backups/ueipab_sales.bak-20260629_064613`, `…/ueipab_enrollment_journey.bak-20260629_064804`; nginx `…/odoo.ueipab.edu.ve.bak-20260629_065323`.
+
+Full runbook + verification log: **ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md §13**.
+
+---
+
 ## 2026-06-28 — FreeScout Venezuela IP allowlist (deployed, module-only)
 
 **Type:** Security hardening / deploy | **Module:** FreeScout `ExtraSecurity` | **Env:** production (`freescout.ueipab.edu.ve`)

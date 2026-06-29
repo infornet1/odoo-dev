@@ -201,8 +201,9 @@ reimplementation.
    internal email embeds the withdrawal link); test rolled back.
 5. **Phase 5 (later) — Gmail automation:** Admin SDK suspension button.
 
-Testing-only until validated; production deploy is a separate later phase
-(mirrors enrollment journey, which is also testing-only).
+✅ **Deployed to prod 2026-06-29** as part of the `ueipab_enrollment_journey` 17.0.0.14.0 install
+(mirrors enrollment journey — same deploy). `enrollment.withdrawal` model live in `DB_UEIPAB`;
+auto-create on S0 decline works. See ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md §13.
 
 ---
 

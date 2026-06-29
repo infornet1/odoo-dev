@@ -208,17 +208,18 @@ Parent asks price → Glenda emits ACTION:QUOTE:<n_students>
 - [x] Page 2 "TÉRMINOS Y CONDICIONES DEL CONVENIO DE PAGO (Anexo Vinculante)" — 9 sections, bank channels table, Declaración de Aceptación + Iniciales line; renders on every quote. Fit on one Letter page: 7.2pt body / line-height 1.15 / 6.8pt bank table. Wording "(según Promo del 31/07/2026)".
 - [x] Verified: testing S00007 + prod S00003 both exactly 2 pages.
 
-### v1.2.2 — QR verification seal ✅ 2026-06-15 (testing; pending prod deploy)
+### v1.2.2 — QR verification seal ✅ 2026-06-15 (testing) · **deployed to prod 2026-06-29** (in the 1.2.1→1.2.5 prod upgrade)
 - [x] New `controllers/` package: `quote_verify.py` — `/verify-quote/<token>` public route (`auth='public'`, `website=False`). Valid token → branded ✅ DOCUMENTO VÁLIDO page (order name, partner, students, dates, amount, line detail, state). Invalid → 404 "Documento no encontrado". Uses `.format()` not `%`-formatting (CSS `width:100%` causes `ValueError` with `%` operator).
 - [x] `models/quotation_agreement_report.py`: added `_make_qr_b64(url)` helper (`qrcode` lib, already in container); `order._portal_ensure_token()` on every render; `verify_url = base_url + '/verify-quote/' + access_token`; `qr_b64` passed to template.
 - [x] Page 1 signature row: QR at **50pt** (4th column, `vertical-align: bottom`, `width: 58pt` cell). Caption: "Escanear para verificar / autenticidad del documento" at 5.5pt.
 - [x] Page 2 T&C: **no QR** — T&C page has zero height headroom (fills Letter 10mm/10mm to the boundary); any addition overflows to page 3. Page 1 QR is sufficient for document authentication.
 - [x] **Root cause of 3-page overflow (diagnosed 2026-06-15):** original QR at 72pt made the page-1 signature row taller than the text columns (89px), adding ~17px to page-1 content and spilling it onto a new sheet. Fix: reduce to 50pt so row height is driven by text columns (not image). Verified with S00007 (6-line convenio order — worst case): exactly 2 pages.
 
-### v1.2.4 / v1.2.5 — Electronic-signature + anticipo T&C clauses ✅ 2026-06-28 (testing; **prod pending counsel pass**)
+### v1.2.4 / v1.2.5 — Electronic-signature + anticipo T&C clauses ✅ 2026-06-28 (testing) · **DEPLOYED TO PROD 2026-06-29** (clauses now live in prod PDFs; ⚠️ **counsel sign-off still pending before any parent-facing send**)
 - [x] **Cl.10 ACEPTACIÓN ELECTRÓNICA Y VALIDEZ DE LA FIRMA ELECTRÓNICA** (page 2, after Cl.9): binds the online accept (T&C checkbox + "Acepto") as a Firma Electrónica equivalent to firma autógrafa; cites Decreto-Ley G.O. 37.148/2001 arts. 16, 4, 7, 8, 17, 18; records IP + UTC + SHA-256. DECLARACIÓN DE ACEPTACIÓN amended to cover the electronic path ("…o, en su caso, al aceptarlo electrónicamente conforme a la Cláusula 10").
 - [x] **Cl.11 FACTURACIÓN FRACCIONADA Y RECUPERACIÓN DE PAGOS ANTICIPADOS (ANTICIPOS)** (page 2): authorizes multiple SENIAT invoices against one Anticipo — two named cases (inscripción/matrícula + cierre de períodos académicos) — states it is **not double-billing**; BCV rate at each invoice's emission date; ajustes link to Cl.4.
-- [x] Both upgraded in testing + PDFs re-rendered (S00007); review copies emailed to gustavo.perdomo@. Legal basis docs: TC_ELECTRONIC_SIGNATURE_ENHANCEMENT.md + ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md. **Not deployed to prod** (counsel sign-off pending).
+- [x] Both upgraded in testing + PDFs re-rendered (S00007); review copies emailed to gustavo.perdomo@. Legal basis docs: TC_ELECTRONIC_SIGNATURE_ENHANCEMENT.md + ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md.
+- [x] **Deployed to prod 2026-06-29** (`ueipab_sales` 17.0.1.2.5 in `DB_UEIPAB`). ⚠️ Clauses are now in the live prod PDFs but **counsel sign-off remains pending — no parent-facing quote/contract blast until signed** (deploy is safe: nothing auto-sends to parents).
 
 ### Phase 6 — Glenda `ACTION:QUOTE` (testing) ✅ 2026-06-11 — ai_agent v17.0.1.59.0 (testing only)
 - [x] `_handle_quote_action()` + `_format_quote_message()` in `skills/general_inquiry.py` → `sale.order.create_ai_quote()`; `quote_message` sent as separate message in `ai_agent_conversation.py` (normal + handoff/resolve paths); Venezuelan number format ($973,20); chatter log on conversation
