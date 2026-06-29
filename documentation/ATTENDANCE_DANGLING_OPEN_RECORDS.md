@@ -23,13 +23,7 @@
 
 The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_out = check_in + 60s` → `worked_hours ≈ 0`, a deliberately obvious **"needs-review"** signature RRHH can correct. (Non-destructive — no deletes; reversible by reopening.) Today's sessions are never touched.
 
-> ⚠️ **Pending operator action:** the production `hr.attendance` cleanup was **not auto-applied** (mass-mutating payroll-relevant prod records is gated for explicit review). Run once:
-> ```bash
-> # dry run first
-> python3 scripts/attendance_close_stale_open.py --env production
-> # then apply
-> python3 scripts/attendance_close_stale_open.py --env production --live
-> ```
+> ✅ **Applied 2026-06-29:** `python3 scripts/attendance_close_stale_open.py --env production --live` → **9 rows closed, 0 failed, 0 stale-open remaining**. (Re-runnable / idempotent.)
 
 ## 4. Fix — prevention (recurrence)
 
@@ -47,8 +41,8 @@ The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_
 |------|--------|
 | Sweep/cleanup script `attendance_close_stale_open.py` | ✅ created (committed) |
 | `sync_control_asistencia.py` raw-SQL hardening | ✅ done (committed) |
-| Production cleanup of the 9 stale rows | ⏳ **pending operator `--live` run** (gated) |
-| `/etc/cron.d/attendance_close_stale_open` nightly guard | ⏳ **pending install on the cron host** |
+| Production cleanup of the 9 stale rows | ✅ **applied 2026-06-29 — 9 closed, 0 remaining** |
+| `/etc/cron.d/attendance_close_stale_open` nightly guard | ✅ **installed on the cron host (dev), cron active** |
 | Kiosk check-out double-submit guard | ⏳ recommended follow-up |
 
 **Related:** [ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md](ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) (daily alert / WiFi auto-fill) · [CONTROL_ASISTENCIA_BRIDGE.md](CONTROL_ASISTENCIA_BRIDGE.md) · Josefina context: `project_josefina_overpayment` memory.
