@@ -13,9 +13,13 @@ class VoteAssistWizard(models.TransientModel):
     partner_name = fields.Char(related='ack_id.partner_name', readonly=True)
     notice_label = fields.Char(related='ack_id.notice_label', readonly=True)
 
+    # Static SÍ/NO labels — these always render in the radio regardless of the
+    # view-load context (the web client strips default_* keys / caches view
+    # metadata, so a context-dependent fields_get override is NOT reliable here).
+    # The stored values stay 'continuing'/'leaving'; only the display text changed.
     decision = fields.Selection([
-        ('continuing', 'Opción A — $218,88/mes'),
-        ('leaving',    'Opción B — $236,58/mes'),
+        ('continuing', 'SÍ — Estoy de acuerdo'),
+        ('leaving',    'NO — No estoy de acuerdo'),
     ], string='Decisión del representante', required=True)
 
     vote_channel = fields.Selection([

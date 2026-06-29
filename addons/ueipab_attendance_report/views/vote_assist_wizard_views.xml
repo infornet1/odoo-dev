@@ -24,7 +24,7 @@
                     </group>
                     <group string="Notas de auditoría (opcional)">
                         <field name="vote_notes" nolabel="1"
-                               placeholder="Ej: llamada entrante 10:32am, representante confirmó verbalmente Opción A"/>
+                               placeholder="Ej: llamada entrante 10:32am, representante confirmó verbalmente su decisión"/>
                     </group>
                 </sheet>
                 <footer>

@@ -40,6 +40,7 @@ class PartnerAckController(http.Controller):
 
     _VOTE_DEADLINES = {
         'budget_consulta_2026_2027': datetime.date(2026, 6, 8),
+        'contingencia_academica_2026': datetime.date(2026, 7, 1),
     }
 
     def _record_decision(self, token, decision):
@@ -79,6 +80,18 @@ class PartnerAckController(http.Controller):
                 'label': 'Votó por Opción B — $236,58/mes ✅',
                 'bg': '#f3e5f5', 'border': '#ce93d8', 'color': '#6c3483',
                 'emoji': '🗳️',
+            }
+        if ack.notice_key == 'contingencia_academica_2026':
+            if decision == 'continuing':
+                return {
+                    'label': 'SÍ — Estoy de acuerdo ✅',
+                    'bg': '#e8f5e9', 'border': '#c3e6cb', 'color': '#1b5e20',
+                    'emoji': '✅',
+                }
+            return {
+                'label': 'NO — Mantener el esquema actual',
+                'bg': '#fff3cd', 'border': '#ffe69c', 'color': '#856404',
+                'emoji': '📋',
             }
         # Default: continuity campaign
         if decision == 'continuing':
@@ -140,11 +153,19 @@ class PartnerAckController(http.Controller):
   </div>
 </div>"""
 
+            # All vote campaigns share the votacion@ inbox; only the subject prefix differs.
+            email_from  = 'Colegio Andrés Bello <votacion@ueipab.edu.ve>'
+            inbox       = 'votacion@ueipab.edu.ve'
+            if ack.notice_key == 'contingencia_academica_2026':
+                subject     = f'[Contingencia Académica] {label} — {name}'
+            else:
+                subject     = f'[Encuesta 2026-2027] {label} — {name}'
+
             request.env['mail.mail'].sudo().create({
-                'subject':    f'[Encuesta 2026-2027] {label} — {name}',
-                'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
-                'email_to':   f'{name} <{email}>' if email else 'votacion@ueipab.edu.ve',
-                'email_cc':   'votacion@ueipab.edu.ve',
+                'subject':    subject,
+                'email_from': email_from,
+                'email_to':   f'{name} <{email}>' if email else inbox,
+                'email_cc':   inbox,
                 'body_html':  body,
                 'state':      'outgoing',
             }).send()
@@ -260,6 +281,8 @@ class PartnerAckController(http.Controller):
     def _page_success_yes(self, ack):
         if ack.notice_key == 'budget_consulta_2026_2027':
             return self._page_budget_vote_success(ack, 'continuing')
+        if ack.notice_key == 'contingencia_academica_2026':
+            return self._page_contingencia_success(ack, 'continuing')
         name = ack.partner_name or ''
         dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
         return self._base_page(
@@ -292,6 +315,8 @@ class PartnerAckController(http.Controller):
     def _page_success_no(self, ack):
         if ack.notice_key == 'budget_consulta_2026_2027':
             return self._page_budget_vote_success(ack, 'leaving')
+        if ack.notice_key == 'contingencia_academica_2026':
+            return self._page_contingencia_success(ack, 'leaving')
         name = ack.partner_name or ''
         dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
         return self._base_page(
@@ -343,6 +368,14 @@ class PartnerAckController(http.Controller):
 
     def _page_voting_closed(self, ack):
         name = ack.partner_name or ''
+        if ack.notice_key == 'contingencia_academica_2026':
+            survey_name = 'Encuesta del Plan de Contingencia Acad&eacute;mica'
+            deadline    = '01 de julio de 2026'
+            contact     = 'votacion@ueipab.edu.ve'
+        else:
+            survey_name = 'Consulta Presupuestaria 2026-2027'
+            deadline    = '08 de junio de 2026'
+            contact     = 'pagos@ueipab.edu.ve'
         return self._base_page(
             'Consulta cerrada',
             f"""
@@ -353,14 +386,14 @@ class PartnerAckController(http.Controller):
 </div>
 <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;
             padding:16px 18px;font-size:13px;color:#856404;margin-bottom:16px;">
-  <p style="margin:0;">El plazo para participar en la Consulta Presupuestaria 2026-2027
-  venci&oacute; el <strong>08 de junio de 2026</strong>. Los resultados oficiales ya
+  <p style="margin:0;">El plazo para participar en la {survey_name}
+  venci&oacute; el <strong>{deadline}</strong>. Los resultados oficiales ya
   fueron publicados.</p>
 </div>
 <div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;font-size:13px;color:#444;">
-  <p style="margin:0;">Si tiene preguntas sobre la propuesta econ&oacute;mica aprobada,
+  <p style="margin:0;">Si tiene preguntas,
   escr&iacute;banos a
-  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>.</p>
+  <a href="mailto:{contact}" style="color:#2471a3;">{contact}</a>.</p>
 </div>
 <p style="font-size:12px;color:#aaa;text-align:center;margin:16px 0 0;">Puede cerrar esta p&aacute;gina.</p>
 """
@@ -397,6 +430,46 @@ class PartnerAckController(http.Controller):
   <p style="margin:0;">Los resultados de la votaci&oacute;n ser&aacute;n publicados el <strong>26 de mayo de 2026</strong>.
   Para consultas escr&iacute;banos a
   <a href="mailto:votacion@ueipab.edu.ve" style="color:#1a2c5b;">votacion@ueipab.edu.ve</a>.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:16px 0 0;">Puede cerrar esta p&aacute;gina.</p>
+"""
+        )
+
+    def _page_contingencia_success(self, ack, decision):
+        name   = ack.partner_name or ''
+        dt     = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        ctx    = self._vote_context(ack, decision)
+        is_yes = (decision == 'continuing')
+        hdr_bg = '#1b5e20' if is_yes else '#856404'
+        headline = '¡Respuesta registrada!' if is_yes else 'Respuesta registrada'
+        if is_yes:
+            stance = ('Est&aacute; de acuerdo con la activaci&oacute;n del plan bimodal '
+                      '&mdash; Google Classroom + Google Meet')
+        else:
+            stance = ('Prefiere mantener el esquema actual y esperar nuevas '
+                      'disposiciones de las autoridades')
+        return self._base_page(
+            'Respuesta registrada &mdash; Plan de Contingencia',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">{ctx['emoji']}</div>
+  <h2 style="color:{hdr_bg};margin:10px 0 4px;">{headline}</h2>
+  <p style="color:#555;font-size:14px;margin:0;">
+    <strong>{name}</strong>
+  </p>
+</div>
+<div style="background:{ctx['bg']};border:2px solid {ctx['border']};border-radius:10px;
+            padding:18px;font-size:13px;color:{ctx['color']};margin-bottom:16px;text-align:center;">
+  <div style="font-size:18px;font-weight:bold;margin-bottom:8px;">{ctx['emoji']} {ctx['label']}</div>
+  <div style="font-size:13px;line-height:1.6;">{stance}</div>
+  <div style="margin-top:10px;font-size:12px;">&#128336;&nbsp; Registrado el: <strong>{dt}</strong></div>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;font-size:13px;color:#444;">
+  <p style="margin:0 0 6px;">El Plan de Contingencia Acad&eacute;mica bajo el modelo bimodal
+  se activar&aacute; &uacute;nicamente al alcanzar el <strong>50% + 1</strong> de aprobaci&oacute;n
+  del total de la plantilla de representantes.</p>
+  <p style="margin:0;">Para consultas escr&iacute;banos a
+  <a href="mailto:votacion@ueipab.edu.ve" style="color:#1b5e20;">votacion@ueipab.edu.ve</a>.</p>
 </div>
 <p style="font-size:12px;color:#aaa;text-align:center;margin:16px 0 0;">Puede cerrar esta p&aacute;gina.</p>
 """
