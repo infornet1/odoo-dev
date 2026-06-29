@@ -134,9 +134,23 @@ class PsycopgBackend:
         return self.cur.fetchone() is not None
 
     def create_attendance(self, emp_id, ci_utc, co_utc):
+        # Guard: never insert a dangling open row (NULL check_out) — that is the
+        # exact bug that left null-audit ghost rows in prod (see
+        # documentation/ATTENDANCE_DANGLING_OPEN_RECORDS.md).
+        if not co_utc:
+            raise ValueError(
+                "refusing to insert attendance with NULL check_out (emp=%s, in=%s)"
+                % (emp_id, ci_utc))
+        # Raw SQL bypasses the ORM, so stamp the audit columns ourselves
+        # (create_uid=1 = superuser); otherwise the row has NULL create_date and
+        # is indistinguishable from a manual/ghost insert.
         self.cur.execute("""
-            INSERT INTO hr_attendance (employee_id, check_in, check_out, worked_hours)
-            VALUES (%s, %s, %s, %s) RETURNING id
+            INSERT INTO hr_attendance
+                (employee_id, check_in, check_out, worked_hours,
+                 create_uid, write_uid, create_date, write_date)
+            VALUES (%s, %s, %s, %s, 1, 1,
+                    (now() AT TIME ZONE 'UTC'), (now() AT TIME ZONE 'UTC'))
+            RETURNING id
         """, (emp_id, ci_utc, co_utc, WORKED_HOURS))
         return self.cur.fetchone()[0]
 
@@ -224,7 +238,7 @@ class XmlRpcBackend:
     def send_email(self, target_date, created, skipped, no_match):
         body = _build_email_body(target_date, created, skipped, no_match)
         self._call('mail.mail', 'create', [{
-            'subject':    f"Asistencia Docente {target_date.strftime('%d/%m/%Y')} — Sync Control Asistencias",
+            'subject':    f"📊 Asistencia Docente {target_date.strftime('%d/%m/%Y')} — {len(created)} creado{'s' if len(created) != 1 else ''}, {len(skipped)} ya registrado{'s' if len(skipped) != 1 else ''}",
             'email_from': 'recursoshumanos@ueipab.edu.ve',
             'email_to':   ALERT_TO,
             'body_html':  body,
@@ -237,38 +251,158 @@ class XmlRpcBackend:
 # ─── Email body builder ───────────────────────────────────────────────────────
 
 def _build_email_body(target_date, created, skipped, no_match):
-    def rows(items, fmt):
-        return ''.join(f'<tr>{fmt(i)}</tr>' for i in items) or '<tr><td colspan="2">(ninguno)</td></tr>'
+    logo = 'https://odoo.ueipab.edu.ve/web/image/res.company/1/logo'
+    date_str = target_date.strftime('%d/%m/%Y')
+    total = len(created) + len(skipped)
 
-    return f"""
-<p>Estimados Recursos Humanos,</p>
-<p>Resumen de sincronizaci&#243;n autom&#225;tica de asistencia docente
-para el <strong>{target_date.strftime('%d/%m/%Y')}</strong>
-(fuente: Sistema Control de Asistencias).</p>
+    def _row_green(item):
+        return (f'<tr><td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;">{item[0]}</td>'
+                f'<td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;color:#555;">07:00 → 13:30 VET</td></tr>')
 
-<h3 style="color:#155724;">&#9989; Registros creados en Odoo ({len(created)})</h3>
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
-<tr style="background:#d4edda;"><th>Docente</th><th>Horario registrado</th></tr>
-{rows(created, lambda i: f'<td>{i[0]}</td><td>07:00 &#8594; 13:30 (VET)</td>')}
-</table>
+    def _row_amber(item):
+        return (f'<tr><td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;">{item[0]}</td>'
+                f'<td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;color:#888;font-size:12px;">{item[1]}</td></tr>')
 
-<h3 style="color:#856404;">&#9197; Omitidos &#8212; ya ten&#237;an registro ({len(skipped)})</h3>
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
-<tr style="background:#fff3cd;"><th>Docente</th><th>Email</th></tr>
-{rows(skipped, lambda i: f'<td>{i[0]}</td><td>{i[1]}</td>')}
-</table>
+    def _row_red(email):
+        return f'<tr><td style="padding:7px 10px;border-bottom:1px solid #e0e0e0;color:#721c24;">{email}</td></tr>'
 
-<h3 style="color:#721c24;">&#9888;&#65039; Sin coincidencia en Odoo ({len(no_match)})</h3>
-<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
-<tr style="background:#fde8e8;"><th>Email control_asistencias</th></tr>
-{rows(no_match, lambda e: f'<td>{e}</td>')}
-</table>
+    def _empty_row(cols=2):
+        return f'<tr><td colspan="{cols}" style="padding:7px 10px;color:#aaa;font-style:italic;">Ninguno</td></tr>'
 
-<p style="color:#888;font-size:11px;margin-top:20px;">
-Generado autom&#225;ticamente por sync_control_asistencia.py &#8212;
-{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC
-</p>
-"""
+    rows_created = ''.join(_row_green(i) for i in created) or _empty_row(2)
+    rows_skipped = ''.join(_row_amber(i) for i in skipped) or _empty_row(2)
+    rows_nomatch = ''.join(_row_red(e) for e in no_match) or _empty_row(1)
+
+    no_match_section = ''
+    if no_match:
+        no_match_section = f"""
+      <div style="background:#fde8e8;border-left:4px solid #dc3545;border-radius:0 8px 8px 0;
+                  padding:14px 18px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#721c24;margin:0 0 8px;">
+          ⚠️ Docentes sin cuenta en Odoo ({len(no_match)})
+        </p>
+        <p style="font-size:12px;color:#721c24;margin:0 0 10px;line-height:1.5;">
+          Estos correos aparecen en Control de Asistencias pero no tienen un empleado activo
+          en Odoo con esa dirección. Revisar y corregir si corresponde.
+        </p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="background:#fac0c0;">
+            <th style="padding:7px 10px;text-align:left;">Email en Control de Asistencias</th>
+          </tr>
+          {rows_nomatch}
+        </table>
+      </div>"""
+
+    return f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
+                            padding:16px;background:#f0f4fa;">
+<div style="background:white;border-radius:10px;overflow:hidden;
+            box-shadow:0 4px 16px rgba(0,0,0,.08);">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1a2c5b,#2471a3);padding:22px 28px;
+              display:flex;align-items:center;gap:16px;">
+    <img src="{logo}" width="52" height="52"
+         style="width:52px;height:52px;border-radius:50%;object-fit:cover;
+                border:2px solid rgba(255,255,255,.3);flex-shrink:0;" alt="UEIPAB"/>
+    <div>
+      <p style="margin:0;color:white;font-size:16px;font-weight:700;">
+        Asistencia Docente — {date_str}
+      </p>
+      <p style="margin:3px 0 0;color:rgba(255,255,255,.8);font-size:12px;">
+        Sincronización automática · Sistema Control de Asistencias → Odoo
+      </p>
+    </div>
+  </div>
+
+  <!-- Purpose intro card -->
+  <div style="padding:16px 28px 0;">
+    <div style="background:#eef4fb;border-left:4px solid #2471a3;border-radius:0 8px 8px 0;
+                padding:14px 18px;">
+      <p style="font-size:13px;font-weight:700;color:#1a2c5b;margin:0 0 6px;">
+        ¿Para qué sirve este correo?
+      </p>
+      <p style="font-size:12px;color:#374151;line-height:1.75;margin:0;">
+        Muchos docentes no pasan por el Kiosco de Odoo, pero sí registran su presencia al tomar
+        lista en <strong>Control de Asistencias</strong>. Cada noche, este proceso automático
+        detecta esos registros y crea la entrada de asistencia correspondiente en Odoo —
+        garantizando que la jornada quede registrada para nómina sin intervención manual.
+        Este correo es el reporte de auditoría de ese proceso.
+      </p>
+    </div>
+  </div>
+
+  <!-- Summary chips -->
+  <div style="padding:12px 28px 0;display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="background:#d4edda;border-radius:20px;padding:6px 16px;font-size:13px;
+                font-weight:700;color:#155724;">
+      ✅ {len(created)} creado{'s' if len(created) != 1 else ''}
+    </div>
+    <div style="background:#fff3cd;border-radius:20px;padding:6px 16px;font-size:13px;
+                font-weight:700;color:#856404;">
+      ⏭ {len(skipped)} ya registrado{'s' if len(skipped) != 1 else ''}
+    </div>
+    <div style="background:#f0f4fa;border-radius:20px;padding:6px 16px;font-size:13px;
+                color:#555;">
+      👩‍🏫 {total} docente{'s' if total != 1 else ''} en total
+    </div>
+  </div>
+
+  <div style="padding:18px 28px 24px;">
+
+    <!-- Created -->
+    <div style="margin-bottom:20px;">
+      <p style="font-size:13px;font-weight:700;color:#155724;margin:0 0 8px;">
+        ✅ Registrados automáticamente hoy ({len(created)})
+      </p>
+      <p style="font-size:12px;color:#555;margin:0 0 8px;line-height:1.5;">
+        Docentes que constan en Control de Asistencias y no tenían registro en Odoo —
+        se les creó entrada 07:00 y salida 13:30 VET.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;
+                    border:1px solid #c3e6cb;border-radius:6px;overflow:hidden;">
+        <tr style="background:#d4edda;">
+          <th style="padding:7px 10px;text-align:left;color:#155724;">Docente</th>
+          <th style="padding:7px 10px;text-align:left;color:#155724;">Horario creado</th>
+        </tr>
+        {rows_created}
+      </table>
+    </div>
+
+    <!-- Skipped -->
+    <div style="margin-bottom:20px;">
+      <p style="font-size:13px;font-weight:700;color:#856404;margin:0 0 8px;">
+        ⏭ Ya tenían registro propio ({len(skipped)})
+      </p>
+      <p style="font-size:12px;color:#555;margin:0 0 8px;line-height:1.5;">
+        Estos docentes ya marcaron asistencia en Odoo por su cuenta (Kiosco o sistema).
+        No se realizó ninguna acción — su registro real se conserva intacto.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;
+                    border:1px solid #ffeeba;border-radius:6px;overflow:hidden;">
+        <tr style="background:#fff3cd;">
+          <th style="padding:7px 10px;text-align:left;color:#856404;">Docente</th>
+          <th style="padding:7px 10px;text-align:left;color:#856404;">Email</th>
+        </tr>
+        {rows_skipped}
+      </table>
+    </div>
+
+    <!-- No match (only shown if non-empty) -->
+    {no_match_section}
+
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#f0f4fa;padding:12px 28px;border-top:1px solid #dde3ee;
+              text-align:center;">
+    <p style="font-size:11px;color:#aaa;margin:0;">
+      Generado automáticamente · {datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC ·
+      sync_control_asistencia.py
+    </p>
+  </div>
+
+</div>
+</div>"""
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
