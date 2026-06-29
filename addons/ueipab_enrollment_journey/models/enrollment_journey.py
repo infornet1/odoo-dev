@@ -255,6 +255,15 @@ class EnrollmentJourney(models.Model):
     confirmation_date = fields.Datetime('Fecha de confirmación', readonly=True, copy=False)
     decline_date      = fields.Datetime('Fecha de retiro', readonly=True, copy=False)
 
+    # In-person assist (support team drives the process at the premises)
+    enrollment_mode = fields.Selection([
+        ('online',     'En línea (autogestión)'),
+        ('presencial', 'Presencial (atendido en sede)'),
+    ], default='online', string='Modalidad', index=True, copy=False)
+    assisted_by = fields.Many2one(
+        'res.users', string='Atendido por', copy=False,
+        help='Agente de soporte que acompañó a la familia en sede.')
+
     # Blast email tracking
     blast_sent_date = fields.Datetime('Email S0 enviado', readonly=True, copy=False)
     email_missing   = fields.Boolean('Sin email', default=False, copy=False)
@@ -296,6 +305,17 @@ class EnrollmentJourney(models.Model):
     step7_cleared_at = fields.Datetime(readonly=True)
     step8_cleared_at = fields.Datetime(readonly=True)
     step9_cleared_at = fields.Datetime(readonly=True)
+
+    # Checklist notes (per step) — for in-person assist (docs received, remarks)
+    step1_note = fields.Text('Nota paso 1')
+    step2_note = fields.Text('Nota paso 2')
+    step3_note = fields.Text('Nota paso 3')
+    step4_note = fields.Text('Nota paso 4')
+    step5_note = fields.Text('Nota paso 5')
+    step6_note = fields.Text('Nota paso 6')
+    step7_note = fields.Text('Nota paso 7')
+    step8_note = fields.Text('Nota paso 8')
+    step9_note = fields.Text('Nota paso 9')
 
     current_step = fields.Integer(compute='_compute_progress', store=True)
     progress_pct = fields.Integer(compute='_compute_progress', store=True, string='Progreso %')
@@ -497,6 +517,42 @@ class EnrollmentJourney(models.Model):
                      ver.version if ver else '?', ip or '—',
                      'aceptados' if tyc else 'NO aceptados',
                      now.strftime('%Y-%m-%d %H:%M:%S') if now else '—'),
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return True
+
+    def _record_acceptance_presencial(self, staff_user_id, attested, signed_attachment_id=False):
+        """In-person flow: the family signed the printed Acuerdo (wet signature)
+        and a support agent records the acceptance on their behalf. Mirrors
+        _record_acceptance but stores presencial evidence (staff attestation +
+        optional scanned PDF) instead of the Tier-2 electronic metadata.
+        Returns True on success."""
+        self.ensure_one()
+        if self.quote_state != 'sent':
+            return False
+        ver = self.current_quote_version()
+        now = fields.Datetime.now()
+        if ver:
+            ver.sudo().write({
+                'state': 'accepted',
+                'accept_method': 'presencial',
+                'accept_staff_user_id': staff_user_id,
+                'presencial_attested': bool(attested),
+                'tyc_accepted': True,  # wet signature on the printed T&C
+                'accept_timestamp_utc': now,
+                'signed_pdf_attachment_id': signed_attachment_id or False,
+            })
+        self.write({'quote_state': 'accepted', 'quote_accepted_date': now})
+        if self.step1_state not in DONE_STATES:
+            self.write({'step1_state': 'done_auto', 'step1_cleared_at': now})
+        self._send_quote_accepted_email()
+        staff = self.env['res.users'].browse(staff_user_id).name if staff_user_id else '—'
+        self.message_post(
+            body='✍️ Aceptación PRESENCIAL de la cotización %s (v%s) registrada por '
+                 '%s — firma física %s%s. Paso 1 completado automáticamente.' % (
+                     self.order_id.name if self.order_id else '—',
+                     ver.version if ver else '?', staff,
+                     'certificada' if attested else 'NO certificada',
+                     ' · Acuerdo escaneado adjunto' if signed_attachment_id else ''),
             message_type='comment', subtype_xmlid='mail.mt_note')
         return True
 
@@ -776,6 +832,60 @@ class EnrollmentJourney(models.Model):
             rec.message_post(
                 body='🔄 Confirmación S0 restablecida a pendiente por %s.' % self.env.user.name,
                 message_type='comment', subtype_xmlid='mail.mt_note')
+
+    # -- In-person assist: staff drives the process at the premises --------
+
+    def action_confirm_presencial(self):
+        """Staff confirms S0 continuity on the family's behalf (in person).
+        Mirrors the public /confirm route exactly: flips the gate, generates the
+        auto-quote, and sends the response notification."""
+        self.ensure_one()
+        if self.continuation_status != 'pending':
+            raise UserError('La continuidad ya fue %s; no se puede confirmar de nuevo.'
+                            % dict(self._fields['continuation_status'].selection).get(
+                                self.continuation_status, self.continuation_status))
+        self.write({
+            'continuation_status': 'confirmed',
+            'confirmation_date': fields.Datetime.now(),
+            'enrollment_mode': 'presencial',
+            'assisted_by': self.assisted_by.id or self.env.uid,
+        })
+        self._ensure_quote()
+        self._send_response_notification('confirmed')
+        self.message_post(
+            body='✅ Continuidad CONFIRMADA en sede por %s (modalidad presencial).'
+                 % self.env.user.name,
+            message_type='comment', subtype_xmlid='mail.mt_note')
+
+    def action_decline_presencial(self):
+        """Staff records an in-person decline; opens a small wizard for the reason."""
+        self.ensure_one()
+        if self.continuation_status != 'pending':
+            raise UserError('La continuidad ya fue resuelta; no se puede registrar el retiro.')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'No continúa (presencial)',
+            'res_model': 'enrollment.presencial.decline.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_journey_id': self.id},
+        }
+
+    def action_mark_quote_accepted_presencial(self):
+        """Staff records a wet-signature acceptance of the sent quote; opens the
+        attestation/attachment wizard."""
+        self.ensure_one()
+        if self.quote_state != 'sent':
+            raise UserError('Solo se puede registrar la aceptación cuando la cotización '
+                            'está en estado "Enviada al representante".')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Aceptación presencial de la cotización',
+            'res_model': 'enrollment.presencial.accept.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_journey_id': self.id},
+        }
 
     # -- Blast email (Moment 1) -------------------------------------------
 
@@ -1653,7 +1763,87 @@ class EnrollmentQuoteVersion(models.Model):
     accept_timestamp_utc = fields.Datetime(string='Aceptada (UTC)', readonly=True)
     tyc_accepted = fields.Boolean(string='T&C aceptados', readonly=True)
 
+    # Acceptance method — electronic (public Tier-2) vs presencial (wet signature, staff)
+    accept_method = fields.Selection([
+        ('electronic', 'Electrónica (en línea)'),
+        ('presencial', 'Presencial (firma física)'),
+    ], string='Modo de aceptación', default='electronic', readonly=True)
+    accept_staff_user_id = fields.Many2one(
+        'res.users', string='Aceptación atendida por', readonly=True)
+    presencial_attested = fields.Boolean(
+        string='Firma física certificada por personal', readonly=True)
+    signed_pdf_attachment_id = fields.Many2one(
+        'ir.attachment', string='Acuerdo firmado (escaneado)', ondelete='set null')
+
     # Revision-request evidence
     revision_reason = fields.Text(string='Motivo de revisión', readonly=True)
     revision_ip = fields.Char(string='IP de revisión', readonly=True)
     revision_timestamp_utc = fields.Datetime(string='Revisión (UTC)', readonly=True)
+
+
+class EnrollmentPresencialDeclineWizard(models.TransientModel):
+    """Capture the reason when staff records an in-person S0 decline."""
+    _name = 'enrollment.presencial.decline.wizard'
+    _description = 'Retiro presencial — motivo'
+
+    journey_id = fields.Many2one('enrollment.journey', required=True, ondelete='cascade')
+    reason = fields.Text('Motivo del retiro', required=True)
+
+    def action_apply(self):
+        self.ensure_one()
+        j = self.journey_id
+        if j.continuation_status != 'pending':
+            raise UserError('La continuidad ya fue resuelta.')
+        j.write({
+            'continuation_status': 'declined',
+            'decline_reason': (self.reason or '').strip()[:2000] or None,
+            'decline_date': fields.Datetime.now(),
+            'enrollment_mode': 'presencial',
+            'assisted_by': j.assisted_by.id or self.env.uid,
+        })
+        j._send_response_notification('declined')
+        j.message_post(
+            body='✖️ Retiro (no continúa) registrado en sede por %s (modalidad presencial).'
+                 % self.env.user.name,
+            message_type='comment', subtype_xmlid='mail.mt_note')
+        return {'type': 'ir.actions.act_window_close'}
+
+
+class EnrollmentPresencialAcceptWizard(models.TransientModel):
+    """Record a wet-signature acceptance of the sent quote, on the family's
+    behalf, with a required staff attestation + optional scanned signed PDF."""
+    _name = 'enrollment.presencial.accept.wizard'
+    _description = 'Aceptación presencial de la cotización'
+
+    journey_id = fields.Many2one('enrollment.journey', required=True, ondelete='cascade')
+    attested = fields.Boolean(
+        'Doy fe de que el representante firmó en físico el Acuerdo y sus Términos y Condiciones',
+        required=True)
+    signed_pdf = fields.Binary('Acuerdo firmado (escaneado, opcional)')
+    signed_pdf_filename = fields.Char('Nombre del archivo')
+
+    def action_apply(self):
+        self.ensure_one()
+        if not self.attested:
+            raise UserError('Debe certificar que el representante firmó el Acuerdo en físico '
+                            'antes de registrar la aceptación.')
+        j = self.journey_id
+        att_id = False
+        if self.signed_pdf:
+            att = self.env['ir.attachment'].create({
+                'name': self.signed_pdf_filename or ('Acuerdo_firmado_%s.pdf' % (
+                    j.order_id.name if j.order_id else j.id)),
+                'type': 'binary',
+                'datas': self.signed_pdf,
+                'res_model': 'enrollment.journey',
+                'res_id': j.id,
+                'mimetype': 'application/pdf',
+            })
+            att_id = att.id
+        ok = j._record_acceptance_presencial(
+            staff_user_id=self.env.uid, attested=self.attested,
+            signed_attachment_id=att_id)
+        if not ok:
+            raise UserError('No se pudo registrar la aceptación: la cotización no está en '
+                            'estado "Enviada".')
+        return {'type': 'ir.actions.act_window_close'}
