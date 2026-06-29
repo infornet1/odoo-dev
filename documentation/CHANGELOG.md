@@ -4,6 +4,19 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-29 — Attendance dangling-open records: cleanup + prevention + kiosk guard
+
+**Type:** Data fix + prevention | **Modules:** `ueipab_attendance_report` (→17.0.1.6.28), `sync_control_asistencia.py` | **Env:** production (`DB_UEIPAB`) + dev cron host
+
+Triggered by reviewing the company kiosk for empl. Josefina Rodríguez (#590), which exposed dangling `hr.attendance` rows (`check_out = NULL` on prior days). Full write-up: **ATTENDANCE_DANGLING_OPEN_RECORDS.md**.
+
+- **Cleanup (prod, applied):** `scripts/attendance_close_stale_open.py --env production --live` → **9 stale rows closed, 0 remaining** (`check_out = check_in+60s`, ~0h "needs-review"; non-destructive). Today's still-at-work sessions left untouched. Included 3 null-audit "ghost" rows (raw-SQL inserts) — incl. Josefina #7950 (Jun-2) — and 6 genuine forgot-to-checkouts.
+- **Prevention #1 (nightly guard):** `/etc/cron.d/attendance_close_stale_open` (03:45 UTC = 23:45 VET) runs the sweep `--live` so any future dangling row self-heals within 24h. Installed on the dev cron host.
+- **Prevention #2 (root cause):** `sync_control_asistencia.py` `PsycopgBackend.create_attendance()` hardened — refuses a NULL check_out and stamps `create_uid/write_uid/create_date/write_date` (no more null-audit ghost rows).
+- **Prevention #3 (kiosk double-submit, built+tested, prod deploy pending):** `ueipab_attendance_report` v17.0.1.6.28 adds `static/src/js/kiosk_double_submit_guard.js` — `patch()`es the public kiosk's manual path (`onManualSelection`/`kioskConfirm`) with a re-entrancy lock + `ui.block()`, mirroring the existing barcode guard. Root cause of the recurring `ERROR odoo.sql_db: could not serialize access due to concurrent update`: the manual path awaited a slow `getCurrentPosition(enableHighAccuracy)` without blocking the UI, so users tapped again → concurrent check-out writes. Verified in testing (kiosk HTTP 200, guard in compiled bundle). **Prod deploy of this module awaits explicit approval (kiosk is prod-critical).**
+
+---
+
 ## 2026-06-29 — Enrollment master process DEPLOYED to production
 
 **Type:** Production deployment | **Modules:** `ueipab_sales`, `ueipab_enrollment_journey` | **Env:** production (`DB_UEIPAB` / `odoo.ueipab.edu.ve`)
