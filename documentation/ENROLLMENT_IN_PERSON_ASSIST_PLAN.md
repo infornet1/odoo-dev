@@ -1,7 +1,7 @@
 # Enrollment In-Person Assist + Checklist — Plan
 
 **Created:** 2026-06-28
-**Module:** `ueipab_enrollment_journey` (testing-first; prod via the existing deploy kit)
+**Module:** `ueipab_enrollment_journey` (✅ deployed to prod 2026-06-29 as part of v0.14.0)
 **Related:** [ENROLLMENT_JOURNEY_WIZARD.md](ENROLLMENT_JOURNEY_WIZARD.md) · [QUOTE_ACCEPTANCE_VERSIONING_PLAN.md](QUOTE_ACCEPTANCE_VERSIONING_PLAN.md) · [ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md](ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md) · [ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md](ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md)
 
 ## Goal
@@ -65,4 +65,4 @@ Per-step file attachments as a structured One2many (chatter is enough for v1) ·
 
 ## Status
 
-📋 PLAN — building testing-first now. Prod deploy folds into the v0.13.x deploy (already pending counsel sign-off, B6).
+✅ **BUILT + DEPLOYED TO PROD 2026-06-29** (v0.14.0, folded into the enrollment prod deploy — see ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md §13). ⚠️ B6 counsel sign-off still pending before any parent-facing send; pilot deferred to manual UI validation.

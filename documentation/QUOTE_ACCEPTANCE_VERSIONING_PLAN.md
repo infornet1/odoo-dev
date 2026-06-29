@@ -66,4 +66,4 @@ consent + T&C = Art. 16 chapeau · IP + timestamp = Art. 8(3) · PDF SHA-256 = A
 
 ## Out of scope (follow-ups)
 
-Deferred e-signature enhancements (see legal doc §9) · prod nginx route whitelist for `/enrollment-journey` · `proxy_mode` (we read `X-Forwarded-For` manually instead).
+Deferred e-signature enhancements (see legal doc §9) · ~~prod nginx route whitelist for `/enrollment-journey`~~ (✅ moot — **prod deployed 2026-06-29**; prod vhost has no whitelist, catch-all serves all enrollment routes + already forwards `X-Forwarded-For`) · `proxy_mode` (we read `X-Forwarded-For` manually instead).

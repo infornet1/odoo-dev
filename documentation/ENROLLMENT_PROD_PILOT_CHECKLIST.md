@@ -1,6 +1,7 @@
 # Enrollment Process — Production Pilot Checklist
 
-**Module:** `ueipab_enrollment_journey` v17.0.0.11.2 · **Env:** PRODUCTION (`DB_UEIPAB` / `odoo.ueipab.edu.ve`)
+**Module:** `ueipab_enrollment_journey` v17.0.0.14.0 (✅ **deployed to prod 2026-06-29** — see ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md §13) · **Env:** PRODUCTION (`DB_UEIPAB` / `odoo.ueipab.edu.ve`)
+> **Pre-pilot gates A1–A4 (module install / params / report host / nginx) are already satisfied by the 2026-06-29 deploy.** Remaining before a pilot: B6 counsel sign-off and granting the integration user `group_enrollment_support` (or run via superuser shell). All pilot emails → `gustavo.perdomo@` only.
 **Goal:** prove the full enrollment process end-to-end on **ONE** real family before any parent-facing blast.
 **Safety rule:** set the pilot journey **contact email = `gustavo.perdomo@ueipab.edu.ve`** → every email lands in your inbox, **zero real parents touched**.
 

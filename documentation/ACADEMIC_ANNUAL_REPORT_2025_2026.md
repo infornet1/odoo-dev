@@ -99,6 +99,8 @@ WhatsApp/Telegram push, linking to the report.
 `/var/www/dev/flyers/partners/`, all verified **HTTP 200**. Base URL:
 `https://dev.ueipab.edu.ve/flyers/partners/<file>`.
 
+> **✅ Now ALSO served from PROD (2026-06-29):** the report + the 16 referenced assets (CEO pic + 15 partner logos) were copied to the prod host (`/var/www/reporte-anual-2025-2026/` + `/var/www/flyers/`), the report HTML's asset URLs rewritten `dev.ueipab.edu.ve`→`odoo.ueipab.edu.ve`, and nginx aliases added. Live at **`https://odoo.ueipab.edu.ve/reporte-anual-2025-2026/`** (HTTP 200); `enrollment.report_url` points here. See ENROLLMENT_PROCESS_PROD_DEPLOYMENT_ASSESSMENT.md §13 (B1).
+
 | Partner | Role (proposed copy) | Logo file | Source / link |
 |---------|----------------------|-----------|---------------|
 | **Kurios** | Robótica educativa & STEAM | ✅ `logo-kurios.jpg` | IG / kuriosedu.com |
