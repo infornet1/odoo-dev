@@ -43,6 +43,6 @@ The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_
 | `sync_control_asistencia.py` raw-SQL hardening | ✅ done (committed) |
 | Production cleanup of the 9 stale rows | ✅ **applied 2026-06-29 — 9 closed, 0 remaining** |
 | `/etc/cron.d/attendance_close_stale_open` nightly guard | ✅ **installed on the cron host (dev), cron active** |
-| Kiosk check-out double-submit guard | ✅ built + tested in `testing` (v17.0.1.6.28); ⏳ **prod deploy pending explicit OK** |
+| Kiosk check-out double-submit guard | ✅ **DEPLOYED to prod 2026-06-29** (v17.0.1.6.28; verified: kiosk HTTP 200 + guard in prod bundle). Also brought the lagging prod attendance 1.6.25→1.6.28 (incl. 1.6.27 hr.leave CC fix). |
 
 **Related:** [ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md](ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) (daily alert / WiFi auto-fill) · [CONTROL_ASISTENCIA_BRIDGE.md](CONTROL_ASISTENCIA_BRIDGE.md) · Josefina context: `project_josefina_overpayment` memory.
