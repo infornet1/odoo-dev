@@ -33,7 +33,7 @@ The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_
    45 3 * * *  root  /usr/bin/python3 /opt/odoo-dev/scripts/attendance_close_stale_open.py --live --env production >> /var/log/attendance_close_stale_open.log 2>&1
    ```
 2. **Hardened raw-SQL path** — `sync_control_asistencia.py` `PsycopgBackend.create_attendance()` now (a) **refuses to insert a NULL check_out**, and (b) **stamps `create_uid/write_uid/create_date/write_date`** so no future row is a null-audit ghost.
-3. **Kiosk double-submit (recommended, not yet done):** add a debounce / disable-on-first-click guard to the kiosk check-out to stop the `could not serialize access` errors (mirror of the attendance-correction-wizard double-submit guard, v6.23). Lower priority — errors are non-fatal.
+3. **Kiosk double-submit guard** — ✅ built + tested in `testing`, ⏳ pending prod deploy. Root cause: the public kiosk guards the **barcode** path (`lockScanner` + `ui.block`) but **not the manual** path — `onManualSelection` → `makeRpcWithGeolocation` awaits a slow `getCurrentPosition(enableHighAccuracy)` **without blocking the UI**, so users tap again → 2–3 concurrent `manual_selection` RPCs → concurrent check-out UPDATEs → `could not serialize access`. Fix: `ueipab_attendance_report/static/src/js/kiosk_double_submit_guard.js` (v17.0.1.6.28) `patch()`es `kioskAttendanceApp.prototype` to add a re-entrancy lock + `ui.block()` around `onManualSelection`/`kioskConfirm` (no core edits; into bundle `hr_attendance.assets_public_attendance`). Verified in testing: module installed 17.0.1.6.28, kiosk renders HTTP 200, guard present in the compiled bundle. **Prod deploy** (gated — kiosk is prod-critical): scp `ueipab_attendance_report` → `docker exec ueipab17 odoo -u ueipab_attendance_report -d DB_UEIPAB --stop-after-init` → restart → verify kiosk 200 + guard in bundle.
 
 ## 5. Status
 
@@ -43,6 +43,6 @@ The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_
 | `sync_control_asistencia.py` raw-SQL hardening | ✅ done (committed) |
 | Production cleanup of the 9 stale rows | ✅ **applied 2026-06-29 — 9 closed, 0 remaining** |
 | `/etc/cron.d/attendance_close_stale_open` nightly guard | ✅ **installed on the cron host (dev), cron active** |
-| Kiosk check-out double-submit guard | ⏳ recommended follow-up |
+| Kiosk check-out double-submit guard | ✅ built + tested in `testing` (v17.0.1.6.28); ⏳ **prod deploy pending explicit OK** |
 
 **Related:** [ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md](ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) (daily alert / WiFi auto-fill) · [CONTROL_ASISTENCIA_BRIDGE.md](CONTROL_ASISTENCIA_BRIDGE.md) · Josefina context: `project_josefina_overpayment` memory.
