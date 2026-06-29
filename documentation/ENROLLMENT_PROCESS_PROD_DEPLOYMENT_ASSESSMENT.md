@@ -3,7 +3,7 @@
 **Date:** 2026-06-25 · **Updated:** 2026-06-28 (refreshed to **v0.13.2**) · **Author:** assessment from direct code/infra inspection · **Target:** `DB_UEIPAB` (prod)
 **Scope:** Deploy the entire enrollment master business process to production: **onboarding** (`enrollment.journey`), **withdrawal/egreso** (`enrollment.withdrawal`), **Phase 1b Akdemia student import** + cron cache, the **continuity-survey** S0 gate, the **auto-quote on S0 'Sí' → quote send/accept/revision + version control** lifecycle (incl. the new `enrollment.quote.version` model + Tier-2 electronic acceptance), the **T&C legal clauses** (e-signature + fractioned-invoicing/anticipos) embedded in both PDFs, and the **Academic Annual Report** page that funnels into it.
 
-> **⚠️ 2026-06-28 refresh:** the original assessment was written against **v0.11.2**. Two feature waves landed since — **v0.12.x** (auto-quote on S0 'Sí') and **v0.13.x** (quote accept/revision + version control + electronic-acceptance T&C clauses). This revision updates every version target (→ **17.0.0.13.2** / `ueipab_sales` → **17.0.1.2.5**), adds the new model + public routes, and adds two infra gaps (nginx `X-Forwarded-For`, route-prefix) and a legal sign-off gate.
+> **⚠️ 2026-06-28 refresh:** the original assessment was written against **v0.11.2**. Three feature waves landed since — **v0.12.x** (auto-quote on S0 'Sí'), **v0.13.x** (quote accept/revision + version control + electronic-acceptance T&C clauses), and **v0.14.0** (in-person assist + enrollment checklist for walk-in families). This revision updates every version target (→ **17.0.0.14.0** / `ueipab_sales` → **17.0.1.2.5**), adds the new model + public routes, and adds two infra gaps (nginx `X-Forwarded-For`, route-prefix) and a legal sign-off gate. *(v0.14.0 in-person is backend-only — no new public routes or nginx impact; reuses the same model/token/QR/audit log.)*
 
 ---
 
@@ -41,7 +41,7 @@ The report is served from `/var/www/dev/reporte-anual-2025-2026/` on the **dev**
 ### B2 — Prod module deploy via the separate repo
 Prod addons (`/home/vision/ueipab17/addons`) is a **separate git repo** (`3DVision-CA/ueipab17-cm`), NOT this dev repo. `git pull` will NOT carry these commits.
 - **Action:** `scp` the whole `ueipab_enrollment_journey/` dir to prod (back up any existing copy first), then
-  `docker exec ueipab17 odoo -i ueipab_enrollment_journey -d DB_UEIPAB --stop-after-init` (first install → `-i`, later upgrades → `-u`), then `docker restart ueipab17`, then verify `installed_version == 17.0.0.13.2` via XML-RPC.
+  `docker exec ueipab17 odoo -i ueipab_enrollment_journey -d DB_UEIPAB --stop-after-init` (first install → `-i`, later upgrades → `-u`), then `docker restart ueipab17`, then verify `installed_version == 17.0.0.14.0` via XML-RPC.
 
 ### B3 — Prod config parameters (none exist yet in `DB_UEIPAB`)
 Set these `ir.config_parameter` keys in prod before first use:
@@ -94,7 +94,7 @@ Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato C
 1. **Backup** prod addons copy of any prior module + a `DB_UEIPAB` DB backup.
 2. `scp` **both** `ueipab_sales/` (1.2.5) and `ueipab_enrollment_journey/` (0.13.2) → prod `/home/vision/ueipab17/addons/` (back up the existing `ueipab_sales` first).
 3. **Upgrade `ueipab_sales` first** (it carries the QR path + the Acuerdo T&C clauses): `docker exec ueipab17 odoo -u ueipab_sales -d DB_UEIPAB --stop-after-init`. Then **install enrollment**: `docker exec ueipab17 odoo -i ueipab_enrollment_journey -d DB_UEIPAB --stop-after-init` → `docker restart ueipab17`.
-4. Verify via XML-RPC: `ueipab_sales installed_version == 17.0.1.2.5` **and** `ueipab_enrollment_journey installed_version == 17.0.0.13.2`; confirm model `enrollment.quote.version` exists.
+4. Verify via XML-RPC: `ueipab_sales installed_version == 17.0.1.2.5` **and** `ueipab_enrollment_journey installed_version == 17.0.0.14.0`; confirm model `enrollment.quote.version` exists.
 5. Set the **B3** config params.
 6. Resolve **B1** (report URL/host) + set `enrollment.report_url`.
 7. **Resolve B5** — add `proxy_set_header X-Forwarded-For`/`X-Real-IP` to the prod vhost; confirm `/enrollment-journey` is a **prefix** allow + add `/verify-quote` + `/verify-contract`; `nginx -t` + reload.
@@ -141,11 +141,11 @@ Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato C
 ## 9. Deploy kit (built 2026-06-25) + read-only prod probe
 
 **Scripts (run by the operator — harness blocks Claude from prod writes):**
-- `scripts/deploy_enrollment_journey_prod.sh -i|-u` — backup (outside addons_path) → scp → install/upgrade (captures odoo's real exit code) → restart → poll-for-boot → assert `state=installed` AND `installed_version==17.0.0.13.2`. Uses `sshpass -e` (no password in process table). Hardened per the deploy-kit review (8 findings applied).
+- `scripts/deploy_enrollment_journey_prod.sh -i|-u` — backup (outside addons_path) → scp → install/upgrade (captures odoo's real exit code) → restart → poll-for-boot → assert `state=installed` AND `installed_version==17.0.0.14.0`. Uses `sshpass -e` (no password in process table). Hardened per the deploy-kit review (8 findings applied).
 - `scripts/prod_post_deploy_enrollment_journey.py [--live] [--allow-dev-report]` — sets `akdemia.api_key` (from `AKDEMIA_API_KEY` env), `akdemia.base_url`, `akdemia.min_cache_guardians`, `enrollment.report_url`; **refuses `--live` if report URL still points at dev** unless `--allow-dev-report`. Read-only verification of deps/fields/sequence/group/mail.
 
 **⚠️ Deploy-kit gaps to close before running (2026-06-28):**
-- `deploy_enrollment_journey_prod.sh` reads `EXPECTED_VER` **dynamically from the manifest** → it auto-asserts `17.0.0.13.2`, no edit needed. ✅
+- `deploy_enrollment_journey_prod.sh` reads `EXPECTED_VER` **dynamically from the manifest** → it auto-asserts `17.0.0.14.0`, no edit needed. ✅
 - **But it only handles `ueipab_enrollment_journey`** and its pre-flight merely checks `ueipab_sales` is *present* — it does **not** upgrade `ueipab_sales` to 1.2.5 nor assert its version. **`ueipab_sales` must be scp'd + `-u` upgraded manually (runbook step 3) before the enrollment install.** Recommend tightening the pre-flight to assert `ueipab_sales installed_version >= 17.0.1.2.5`.
 - Neither script touches **nginx (B5)** — the `X-Forwarded-For` / route-prefix changes are a manual operator step.
 
@@ -161,7 +161,7 @@ Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato C
 | Company id=1 | `Instituto Privado Andrés Bello CA` |
 
 ## 10. Go / No-Go gates (all must be GREEN before any parent-facing blast)
-1. `ueipab_enrollment_journey` `state=installed`, `installed_version==17.0.0.13.2`; **`ueipab_sales` `installed_version==17.0.1.2.5`**; model `enrollment.quote.version` exists.
+1. `ueipab_enrollment_journey` `state=installed`, `installed_version==17.0.0.14.0`; **`ueipab_sales` `installed_version==17.0.1.2.5`**; model `enrollment.quote.version` exists.
 2. Config params set: `akdemia.api_key` (non-empty), `akdemia.base_url`, `min_cache_guardians=50`, `enrollment.report_url` = chosen public URL.
 3. `web.base.url` correct + `web.base.url.freeze=True`.
 4. **(B5) nginx:** `X-Forwarded-For`/`X-Real-IP` forwarded; `/enrollment-journey` is a **prefix** allow; `/verify-quote` + `/verify-contract` allowed; a POST→303 (e.g. `/confirm`) lands on https with path intact.
@@ -203,7 +203,7 @@ Live read-only probe of both environments (testing via dev-container `odoo shell
 
 | Item | Testing (`testing`) | Production (`DB_UEIPAB`) | Verdict |
 |---|---|---|---|
-| `ueipab_enrollment_journey` | ✅ installed **17.0.0.13.2** | ❌ **not installed** (absent) | Not deployed — expected, testing-only |
+| `ueipab_enrollment_journey` | ✅ installed **17.0.0.14.0** | ❌ **not installed** (absent) | Not deployed — expected, testing-only |
 | `enrollment.journey` | ✅ present (9-step, 60+ fields) | ❌ absent | gap |
 | `enrollment.journey.student` | ✅ incl. `source`, `staff_edited` | ❌ absent | gap |
 | `enrollment.withdrawal` | ✅ 5-step egreso | ❌ absent | gap |

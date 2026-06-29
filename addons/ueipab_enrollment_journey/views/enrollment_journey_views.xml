@@ -25,6 +25,9 @@
                        decoration-success="quote_state == 'accepted'"
                        decoration-danger="quote_state == 'revision_requested'"/>
                 <field name="progress_pct" widget="progressbar"/>
+                <field name="enrollment_mode" optional="show" widget="badge"
+                       decoration-info="enrollment_mode == 'presencial'"/>
+                <field name="assisted_by" optional="hide"/>
                 <field name="current_step" optional="hide"/>
                 <field name="step3_state" optional="hide"/>
                 <field name="contract_retained" optional="hide"/>
@@ -53,6 +56,16 @@
                             string="🔄 Restablecer S0" class="btn-secondary"
                             invisible="continuation_status == 'pending'"
                             confirm="¿Restablecer la confirmación S0 a pendiente? El representante verá la pregunta nuevamente."/>
+                    <button name="action_confirm_presencial" type="object"
+                            string="✅ Confirmar (presencial)" class="btn-primary"
+                            invisible="continuation_status != 'pending'"
+                            confirm="¿Confirmar la continuidad en sede a nombre de la familia? Se generará la cotización y se enviará la notificación, igual que la confirmación en línea."/>
+                    <button name="action_decline_presencial" type="object"
+                            string="✖️ No continúa (presencial)" class="btn-secondary"
+                            invisible="continuation_status != 'pending'"/>
+                    <button name="action_mark_quote_accepted_presencial" type="object"
+                            string="✍️ Aceptación presencial" class="btn-primary"
+                            invisible="quote_state != 'sent'"/>
                     <button name="action_preview_import" type="object"
                             string="📥 Importar estudiantes" class="btn-secondary"
                             invisible="student_ids != []"/>
@@ -83,6 +96,9 @@
                             <field name="order_id"/>
                             <field name="academic_year"/>
                             <field name="progress_pct" widget="progressbar"/>
+                            <field name="enrollment_mode"/>
+                            <field name="assisted_by"
+                                   invisible="enrollment_mode != 'presencial'"/>
                         </group>
                         <group>
                             <field name="contract_number" readonly="1"/>
@@ -134,6 +150,8 @@
                                 </group>
                                 <field name="quote_revision_reason" readonly="1" colspan="2"
                                        invisible="quote_state != 'revision_requested'"/>
+                                <field name="step1_note" colspan="2"
+                                       placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 1}" class="btn-success"
                                         invisible="step1_state in ('done_auto','done_manual')"/>
@@ -146,6 +164,7 @@
                                 <field name="step2_state"/>
                                 <field name="step2_cleared_by"/>
                                 <field name="step2_cleared_at"/>
+                                <field name="step2_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 2}" class="btn-success"
                                         invisible="step2_state in ('done_auto','done_manual')"/>
@@ -162,6 +181,7 @@
                                        invisible="step3_state not in ('done_auto','done_manual')"/>
                                 <field name="contract_released_date" readonly="1"
                                        invisible="contract_retained or step3_state not in ('done_auto','done_manual')"/>
+                                <field name="step3_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object"
                                         string="✅ Contrato firmado (en custodia)"
                                         context="{'step': 3}" class="btn-success"
@@ -182,6 +202,7 @@
                                 <field name="step4_state"/>
                                 <field name="step4_cleared_by"/>
                                 <field name="step4_cleared_at"/>
+                                <field name="step4_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 4}" class="btn-success"
                                         invisible="step4_state in ('done_auto','done_manual')"/>
@@ -194,6 +215,7 @@
                                 <field name="step5_state"/>
                                 <field name="step5_cleared_by"/>
                                 <field name="step5_cleared_at"/>
+                                <field name="step5_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 5}" class="btn-success"
                                         invisible="step5_state in ('done_auto','done_manual')"/>
@@ -206,6 +228,7 @@
                                 <field name="step6_state"/>
                                 <field name="step6_cleared_by"/>
                                 <field name="step6_cleared_at"/>
+                                <field name="step6_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 6}" class="btn-success"
                                         invisible="step6_state in ('done_auto','done_manual')"/>
@@ -218,6 +241,7 @@
                                 <field name="step7_state"/>
                                 <field name="step7_cleared_by"/>
                                 <field name="step7_cleared_at"/>
+                                <field name="step7_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 7}" class="btn-success"
                                         invisible="step7_state in ('done_auto','done_manual')"/>
@@ -233,6 +257,7 @@
                                 <field name="step8_state"/>
                                 <field name="step8_cleared_by"/>
                                 <field name="step8_cleared_at"/>
+                                <field name="step8_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 8}" class="btn-success"
                                         invisible="step8_state in ('done_auto','done_manual')"/>
@@ -245,6 +270,7 @@
                                 <field name="step9_state"/>
                                 <field name="step9_cleared_by"/>
                                 <field name="step9_cleared_at"/>
+                                <field name="step9_note" placeholder="Notas / documentos recibidos…"/>
                                 <button name="action_clear_step" type="object" string="✅ Completar"
                                         context="{'step': 9}" class="btn-success"
                                         invisible="step9_state in ('done_auto','done_manual')"/>
@@ -282,6 +308,12 @@
                                     <field name="currency_id" optional="hide"/>
                                     <field name="issued_date"/>
                                     <field name="issued_by" optional="show"/>
+                                    <field name="accept_method" optional="show" widget="badge"
+                                           decoration-success="accept_method == 'presencial'"
+                                           decoration-info="accept_method == 'electronic'"/>
+                                    <field name="accept_staff_user_id" optional="show"/>
+                                    <field name="presencial_attested" optional="hide"/>
+                                    <field name="signed_pdf_attachment_id" optional="hide"/>
                                     <field name="accept_ip" optional="show"/>
                                     <field name="accept_timestamp_utc" optional="show"/>
                                     <field name="tyc_accepted" optional="hide"/>
@@ -343,6 +375,55 @@
                 <footer>
                     <button name="action_confirm" type="object" string="✅ Aplicar importación"
                             class="btn-primary" invisible="not has_changes"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- In-person decline reason wizard -->
+    <record id="view_enrollment_presencial_decline_wizard_form" model="ir.ui.view">
+        <field name="name">enrollment.presencial.decline.wizard.form</field>
+        <field name="model">enrollment.presencial.decline.wizard</field>
+        <field name="arch" type="xml">
+            <form string="No continúa (presencial)">
+                <sheet>
+                    <field name="journey_id" invisible="1"/>
+                    <p>Registrar que la familia <strong>no continúa</strong> para el período
+                       2026-2027. Se creará el expediente de egreso y se notificará al equipo.</p>
+                    <group>
+                        <field name="reason" placeholder="Motivo del retiro indicado por el representante…"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_apply" type="object" string="✖️ Registrar retiro"
+                            class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- In-person wet-signature acceptance wizard -->
+    <record id="view_enrollment_presencial_accept_wizard_form" model="ir.ui.view">
+        <field name="name">enrollment.presencial.accept.wizard.form</field>
+        <field name="model">enrollment.presencial.accept.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Aceptación presencial de la cotización">
+                <sheet>
+                    <field name="journey_id" invisible="1"/>
+                    <p>El representante firmó el <strong>Acuerdo de Inscripción</strong> impreso
+                       (firma autógrafa) y sus Términos y Condiciones. Registre la aceptación a
+                       su nombre.</p>
+                    <group>
+                        <field name="attested"/>
+                        <field name="signed_pdf" filename="signed_pdf_filename"/>
+                        <field name="signed_pdf_filename" invisible="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_apply" type="object" string="✍️ Registrar aceptación"
+                            class="btn-primary"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
