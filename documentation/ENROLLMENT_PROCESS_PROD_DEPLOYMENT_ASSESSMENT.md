@@ -1,6 +1,12 @@
 # Enrollment Master Business Process — Production Deployment Assessment
 
-**Date:** 2026-06-25 · **Updated:** 2026-06-28 (refreshed to **v0.13.2**) · **Author:** assessment from direct code/infra inspection · **Target:** `DB_UEIPAB` (prod)
+> ## ✅ DEPLOYED TO PRODUCTION — 2026-06-29
+> The full stack is live in `DB_UEIPAB`. `ueipab_sales` **17.0.1.2.5** (`-u`) + `ueipab_enrollment_journey` **17.0.0.14.0** (fresh `-i`), both `installed` & verified; `enrollment.quote.version` present; 0 journeys (clean). Config params + `web.base.url.freeze=True` set. Annual Report + 16 assets served from the prod host (`/var/www/reporte-anual-2025-2026/` + `/var/www/flyers/`, nginx alias, HTTP 200). Prod-independent **cache-only** Akdemia cron installed (`/etc/cron.d/akdemia_cache_refresh`, 06:30 VET, `--skip-odoo --skip-sheets`; test run published 322 guardians). See **§13 Deployment log** below.
+> - **B5 needed no proxy change** — prod nginx already forwards `X-Forwarded-For`/`X-Real-IP` + `Host $http_host`; no route whitelist (catch-all serves all enrollment routes).
+> - **⚠️ B6 legal gate STILL OPEN** — the T&C e-sig + anticipo clauses are now in the LIVE prod PDFs, but **counsel sign-off is NOT obtained**. Deploy is safe (nothing auto-sends to parents). **No parent-facing blast until counsel signs off; pilot/validation to `gustavo.perdomo@` only.**
+> - **Pilot deferred** (user will validate the flow in the prod UI).
+
+**Date:** 2026-06-25 · **Updated:** 2026-06-29 (**DEPLOYED**; prior refresh 2026-06-28 to v0.13.2→v0.14.0) · **Author:** assessment from direct code/infra inspection · **Target:** `DB_UEIPAB` (prod)
 **Scope:** Deploy the entire enrollment master business process to production: **onboarding** (`enrollment.journey`), **withdrawal/egreso** (`enrollment.withdrawal`), **Phase 1b Akdemia student import** + cron cache, the **continuity-survey** S0 gate, the **auto-quote on S0 'Sí' → quote send/accept/revision + version control** lifecycle (incl. the new `enrollment.quote.version` model + Tier-2 electronic acceptance), the **T&C legal clauses** (e-signature + fractioned-invoicing/anticipos) embedded in both PDFs, and the **Academic Annual Report** page that funnels into it.
 
 > **⚠️ 2026-06-28 refresh:** the original assessment was written against **v0.11.2**. Three feature waves landed since — **v0.12.x** (auto-quote on S0 'Sí'), **v0.13.x** (quote accept/revision + version control + electronic-acceptance T&C clauses), and **v0.14.0** (in-person assist + enrollment checklist for walk-in families). This revision updates every version target (→ **17.0.0.14.0** / `ueipab_sales` → **17.0.1.2.5**), adds the new model + public routes, and adds two infra gaps (nginx `X-Forwarded-For`, route-prefix) and a legal sign-off gate. *(v0.14.0 in-person is backend-only — no new public routes or nginx impact; reuses the same model/token/QR/audit log.)*
@@ -250,3 +256,25 @@ Static page, **live on dev today**, not on a prod host → this is the **B1** de
 6. **(B6) Legal** — counsel sign-off on the T&C clauses before any parent-facing send.
 
 **Already aligned in prod:** `ai_agent` 59.8 · 322-guardian Akdemia cache · `web.base.url`. **Prod is clean** — no enrollment models, no demo residue, no half-deploy.
+
+---
+
+## 13. Deployment log — 2026-06-29 (EXECUTED)
+
+Executed via a 6-agent read-only recon (nginx/report/cron/modules/params/legal) followed by sequential prod mutations, each with a verification gate.
+
+| Step | Action | Result |
+|------|--------|--------|
+| B2a / B6 | scp + `docker exec … odoo -u ueipab_sales` | `ueipab_sales` **17.0.1.2.5** installed (exit 0, XML-RPC verified) — carries QR seal + Acuerdo title + e-sig Cl.10 + anticipo Cl.11 into live PDFs |
+| B2b | `deploy_enrollment_journey_prod.sh -i` (piped `DEPLOY`) | `ueipab_enrollment_journey` **17.0.0.14.0** installed (exit 0, verified); models `enrollment.{journey,journey.student,withdrawal,quote.version,student.import.preview}` present; group + contract sequence present; 1 mail server; **0 journeys** |
+| B3 | `prod_post_deploy_enrollment_journey.py` path + XML-RPC | `akdemia.api_key`, `akdemia.base_url=api-staging`, `akdemia.min_cache_guardians=50`, `enrollment.report_url=https://odoo.ueipab.edu.ve/reporte-anual-2025-2026/`, **`web.base.url.freeze=True`** |
+| B1 | copy report + 16 assets to prod webroot; URLs rewritten dev→odoo; nginx alias before `/mora-policy/` | report **HTTP 200** (correct title), `/flyers/ceo-profile-pic.jpeg` **200**, partner logo **200**; `nginx -t` clean + reload |
+| B5 | (verify only — **no proxy change**) | XFF/X-Real-IP + `Host $http_host` already set; no whitelist; `/enrollment-journey`, `/verify-quote`, `/verify-contract` all reach Odoo (404 on fake token = routed) |
+| B4 | `/opt/akdemia/{scripts/akdemia_api_sync.py,scripts/akdemia_cache_refresh.sh}` + `/etc/akdemia_env_prod` (600) + `/etc/cron.d/akdemia_cache_refresh` (06:30 VET) | cache-only (`--skip-odoo --skip-sheets`); prod has system `requests`+`dotenv` (no venv); **test run published 322 guardians** |
+
+**Rollback artifacts (prod):** `…/ueipab17_addon_backups/ueipab_sales.bak-20260629_064613`, `ueipab_enrollment_journey.bak-20260629_064804`; nginx `…/odoo.ueipab.edu.ve.bak-20260629_065323`.
+
+**Still open after deploy:**
+- **B6 legal counsel sign-off** — required before any parent-facing send (clauses are live in PDFs; nothing auto-sends to parents).
+- **Pilot** — deferred to manual UI validation. NB: the integration user (uid=2) lacks `group_enrollment_support`, so script-driven enrollment writes require granting that group (or a superuser shell) — a deliberate, separate authorization.
+- **Restore Roberto Vera's testing email/mobile** in `testing` after S0 testing (originals: `yamelsancheztellechesa@gmail.com` / `+58 414 0832852`).
