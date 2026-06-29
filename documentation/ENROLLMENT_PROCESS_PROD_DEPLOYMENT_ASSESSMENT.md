@@ -278,3 +278,11 @@ Executed via a 6-agent read-only recon (nginx/report/cron/modules/params/legal) 
 - **B6 legal counsel sign-off** — required before any parent-facing send (clauses are live in PDFs; nothing auto-sends to parents).
 - **Pilot** — deferred to manual UI validation. NB: the integration user (uid=2) lacks `group_enrollment_support`, so script-driven enrollment writes require granting that group (or a superuser shell) — a deliberate, separate authorization.
 - **Restore Roberto Vera's testing email/mobile** in `testing` after S0 testing (originals: `yamelsancheztellechesa@gmail.com` / `+58 414 0832852`).
+
+### 13.1 Dedicated sender `inscripcion@` (v0.15.0, 2026-06-29)
+
+To keep the S0 blast (and the whole funnel) **out of the soporte@ support queue**, `ueipab_enrollment_journey` **0.15.0** makes the sender addresses config-driven (`_enroll_addr()` ← `ir.config_parameter`). Deploy 0.15.0 (scp + `-u`), then wire prod with **`scripts/wire_enrollment_inscripcion.py --live`** (SMTP app password via env `INSCRIPCION_SMTP_PASS`):
+- params `enrollment.notify_from` = `Colegio Andrés Bello - Inscripción <inscripcion@ueipab.edu.ve>`, `enrollment.reply_to` / `enrollment.contact` / `enrollment.escalation_to` = `inscripcion@ueipab.edu.ve` (leave `internal_to`→pagos@ and `blast_cc`→'' = no CC at their code defaults);
+- a dedicated `ir.mail_server` (smtp.gmail.com:587 STARTTLS, user `inscripcion@`, `from_filter=inscripcion@`) so only enrollment mail uses it, no From rewrite.
+
+Verified in testing (2026-06-29): live send From the new sender → `gustavo.perdomo@` arrived (`state=sent`). **Optional:** add `inscripcion@` as a Freescout admissions mailbox for reply triage. Still gated by **B6** before any real parent blast.
