@@ -201,61 +201,67 @@ Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato C
 6. `docker restart ueipab17`; wait for boot.
 7. Verify via XML-RPC: module uninstalled (or prior version) + removed params return empty.
 
-## Appendix A — ENV DELTA (testing vs production, probed 2026-06-26)
+## Appendix A — ENV DELTA (testing vs production, refreshed 2026-06-29 **POST-DEPLOY**)
 
-Live read-only probe of both environments (testing via dev-container `odoo shell`; prod via XML-RPC, no writes). Snapshot of the enrollment stack as it stood the day before any prod deploy.
+Live read-only probe of both environments (testing via dev-container `odoo shell`; prod via XML-RPC, no writes). Snapshot **after** the 2026-06-29 rollout — the stack is now in sync; only expected per-env differences remain. *(Prior pre-deploy snapshot from 2026-06-26 is superseded.)*
 
 ### A.1 Module / code layer
 
-| Item | Testing (`testing`) | Production (`DB_UEIPAB`) | Verdict |
+| Module | Testing (`testing`) | Production (`DB_UEIPAB`) | Verdict |
 |---|---|---|---|
-| `ueipab_enrollment_journey` | ✅ installed **17.0.0.14.0** | ❌ **not installed** (absent) | Not deployed — expected, testing-only |
-| `enrollment.journey` | ✅ present (9-step, 60+ fields) | ❌ absent | gap |
-| `enrollment.journey.student` | ✅ incl. `source`, `staff_edited` | ❌ absent | gap |
-| `enrollment.withdrawal` | ✅ 5-step egreso | ❌ absent | gap |
-| `enrollment.student.import.preview` | ✅ diff-preview wizard | ❌ absent | gap |
-| `enrollment.quote.version` *(new v0.13.0)* | ✅ immutable quote audit log (frozen PDF + SHA-256 + accept IP/UTC/T&C) | ❌ absent | gap |
-| `ueipab_sales` (dependency) | **17.0.1.2.5** *(was 1.2.2 at probe 2026-06-26; +1.2.3/.4/.5 since)* | **17.0.1.2.1** | ⚠️ **prod 4 patches behind** |
+| `ueipab_enrollment_journey` | **17.0.0.15.0** | **17.0.0.15.0** | ✅ in sync (prod deployed 2026-06-29) |
+| `ueipab_sales` (dependency) | **17.0.1.2.5** | **17.0.1.2.5** | ✅ in sync |
 | `ueipab_ai_agent` | 17.0.1.59.8 | 17.0.1.59.8 | ✅ in sync |
+| `ueipab_attendance_report` | **17.0.1.6.28** | **17.0.1.6.28** | ✅ in sync (prod deployed 2026-06-29; was lagging at 1.6.25) |
+| `ueipab_payroll_enhancements` | 17.0.1.74.5 | 17.0.1.74.5 | ✅ in sync |
+| `ueipab_hr_contract` | 17.0.2.0.0 | 17.0.2.0.0 | ✅ in sync |
+| Models `enrollment.{journey, journey.student, withdrawal, quote.version, student.import.preview}` | ✅ present | ✅ present | ✅ in sync |
 
-⚠️ **`ueipab_sales` drift is enrollment-relevant.** Prod (1.2.1) is missing: the **QR verification seal on all PDF pages** (1.2.2), the **Acuerdo title change** (1.2.3), and the **e-signature Cl.10 + anticipo Cl.11 T&C clauses** (1.2.4/1.2.5). The enrollment contract PDF shares the QR-seal path **and** the Acuerdo PDF the enrollment quote renders is produced by `ueipab_sales`. → **bump prod `ueipab_sales` to 1.2.5 before/with the enrollment deploy**, else the contract QR may not render on all pages and the quote will lack the new legal clauses.
-
-> **Note:** the table below was probed **2026-06-26** (pre-v0.13.x). The module/code rows above are refreshed to **2026-06-28**; the config/report rows (A.2–A.3) were not re-probed and remain as of 2026-06-26 — re-verify at deploy time.
+✅ **The pre-deploy `ueipab_sales`/enrollment drift is fully resolved.** Prod now carries the QR seal, Acuerdo title, e-sig Cl.10 + anticipo Cl.11 (sales 1.2.5) and the full enrollment 0.15.0 stack (quote lifecycle + Contrato Cl.11/Cl.12 + in-person assist + config-driven sender). `ueipab_attendance_report` was the last lagging module (prod sat at 1.6.25) — now at 1.6.28, which also delivered the 1.6.27 hr.leave CC fix and the kiosk double-submit guard.
 
 ### A.2 Config / params layer
 
 | Param | Testing | Production | Note |
 |---|---|---|---|
-| `akdemia.api_key` | ❌ not set | ❌ not set | even testing relies on cron's own key — param-read import path would `UserError` |
-| `akdemia.base_url` | ❌ not set (code default) | ❌ not set | code default `api-staging` |
-| `akdemia.min_cache_guardians` | ❌ not set (default 50) | ❌ not set | code default fine |
-| `akdemia.students_json` (cron cache) | ✅ **322 guardians** | ✅ **322 guardians** | ✅ cron already publishes to **both** envs |
-| `enrollment.report_url` | ❌ not set | ❌ not set | falls back to dev URL (B1) |
-| `web.base.url` | `http://dev.ueipab.edu.ve:8019` | `https://odoo.ueipab.edu.ve` | correct per env |
+| `web.base.url` | `http://dev.ueipab.edu.ve:8019` | `https://odoo.ueipab.edu.ve` | ✅ correct per-env |
+| `web.base.url.freeze` | False | **True** | ✅ expected (prod frozen) |
+| `enrollment.notify_from` | `Colegio Andrés Bello - Inscripción <inscripcion@…>` | same | ✅ in sync |
+| `enrollment.reply_to` / `contact` / `escalation_to` | `inscripcion@ueipab.edu.ve` | same | ✅ in sync |
+| `enrollment.internal_to` | unset → `pagos@` | unset → `pagos@` | ✅ code default |
+| `enrollment.blast_cc` | unset → '' (no CC) | unset → '' (no CC) | ✅ congestion fix live |
+| `enrollment.report_url` | unset → dev fallback | `https://odoo.ueipab.edu.ve/reporte-anual-2025-2026/` | ✅ expected per-env |
+| `akdemia.api_key` | ✅ set | ✅ set | ✅ in sync |
+| `akdemia.base_url` | `api-staging` | `api-staging` | ✅ in sync |
+| `akdemia.min_cache_guardians` | **50** | **50** | ✅ aligned 2026-06-29 |
+| `akdemia.students_json` (cron cache) | ✅ **322 guardians** | ✅ **322 guardians** | ✅ in sync |
+| `ai_agent.dry_run` | False | False | ✅ WA live both |
 
-- The Akdemia student cache (`akdemia.students_json`, **322 guardians**) is **already syncing into prod** — the data backbone is live in prod even though the module isn't. Eases the deploy (B4 partially satisfied).
-- `akdemia.api_key` is **unset in testing too** — confirm whether testing's import runs off the cron-published cache (`use_cache`) vs a live fetch before relying on a live-fetch path in the prod pilot.
+**Outgoing mail servers (both envs):** `inscripcion@ueipab.edu.ve` [`from_filter=inscripcion@…`] + `soporte@ueipab.edu.ve` [`from_filter=ueipab.edu.ve`]. The specific `inscripcion@` filter wins for enrollment mail (no From rewrite) — verified by send-tests to `gustavo.perdomo@` in both envs.
+
+**Data:** `enrollment.journey` count — testing **2** (test journeys incl. Roberto) / prod **0** (clean). Expected.
 
 ### A.3 Annual report layer
 
 | Item | Status |
 |---|---|
-| Report page | `web/reporte-anual-2025-2026/index.html` (34 KB) |
-| Hosted on | **dev only** — `https://dev.ueipab.edu.ve/reporte-anual-2025-2026/` → **HTTP 200** ✅ |
-| CEO photo | `/var/www/dev/flyers/ceo-profile-pic.jpeg` (188 KB) ✅ |
-| Prod host | ❌ not served from a prod host; `enrollment.report_url` unset both envs |
+| Report page | `web/reporte-anual-2025-2026/index.html` (~35 KB) |
+| Dev host | `https://dev.ueipab.edu.ve/reporte-anual-2025-2026/` → **HTTP 200** ✅ |
+| **Prod host** | ✅ **`https://odoo.ueipab.edu.ve/reporte-anual-2025-2026/` → HTTP 200** (16 assets copied to `/var/www/flyers/`, report URLs rewritten dev→odoo, nginx alias added) |
+| CEO photo + 15 partner logos | served from prod `/var/www/flyers/` (200) ✅ |
+| `enrollment.report_url` | prod = the prod URL above ✅ |
 
-Static page, **live on dev today**, not on a prod host → this is the **B1** decision (dev-interim vs move to prod).
+Now served on **both** dev and prod; the **B1** host decision is resolved (prod-hosted).
 
-### A.4 Reconcile-before-deploy (refreshed 2026-06-28)
-1. Bump prod **`ueipab_sales` 1.2.1 → 1.2.5** (QR seal + Acuerdo title + e-sig Cl.10 + anticipo Cl.11). Upgrade with `-u` **before** the enrollment install.
-2. Install **`ueipab_enrollment_journey` 0.13.2** (`-i`, first install) — brings the `enrollment.quote.version` model + quote lifecycle + Contrato Cl.11/Cl.12.
-3. Set **`akdemia.api_key`** in prod (+ confirm testing import is live vs cache-only).
-4. Decide **B1** report host (dev-interim vs prod).
-5. **(B5) nginx** — add `X-Forwarded-For`/`X-Real-IP`; `/enrollment-journey` prefix allow + `/verify-quote` + `/verify-contract`.
-6. **(B6) Legal** — counsel sign-off on the T&C clauses before any parent-facing send.
+### A.4 Post-deploy status (2026-06-29)
 
-**Already aligned in prod:** `ai_agent` 59.8 · 322-guardian Akdemia cache · `web.base.url`. **Prod is clean** — no enrollment models, no demo residue, no half-deploy.
+All pre-deploy reconcile items are **DONE**: `ueipab_sales` 1.2.5 + `ueipab_enrollment_journey` 0.15.0 + `ueipab_attendance_report` 1.6.28 live in prod; `akdemia.api_key`/`base_url`/`min_cache_guardians` set; B1 report on prod host; B5 nginx confirmed (no whitelist needed — catch-all + XFF already in place); inscripcion@ sender wired (params + mail server) in both envs; `inscripcion@` is now a Freescout admissions mailbox.
+
+**Still open (not code/infra):**
+- **B6 — counsel legal sign-off** on the T&C clauses, required before any *real parent* blast (deploy is safe; nothing auto-sends to parents).
+- **Pilot** — one-family end-to-end run deferred to manual UI validation (integration user uid=2 still lacks `group_enrollment_support` for script-driven writes).
+- **Restore Roberto Vera's testing email/mobile** in `testing` after S0 testing.
+
+**Verdict:** testing and production are **in sync** across all reviewed modules; only expected per-env differences remain (`web.base.url`(+freeze), `enrollment.report_url`, journey counts).
 
 ---
 
