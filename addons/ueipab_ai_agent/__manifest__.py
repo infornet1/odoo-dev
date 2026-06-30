@@ -1,6 +1,6 @@
 {
     'name': 'UEIPAB AI Agent',
-    'version': '17.0.1.59.8',
+    'version': '17.0.1.60.0',
     'category': 'Services',
     'summary': 'AI-powered WhatsApp agent for automated customer interactions',
     'author': 'UEIPAB',
@@ -22,6 +22,7 @@
         'views/ai_agent_feedback_views.xml',
         'views/res_partner_views.xml',
         'views/ai_agent_freescout_task_views.xml',
+        'views/ai_agent_voice_call_views.xml',
         'views/menus.xml',
     ],
     'post_init_hook': '_load_api_configs',

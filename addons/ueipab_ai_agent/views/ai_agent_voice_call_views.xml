@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================ LIST ============================ -->
+    <record id="ai_agent_voice_call_view_list" model="ir.ui.view">
+        <field name="name">ai.agent.voice.call.list</field>
+        <field name="model">ai.agent.voice.call</field>
+        <field name="arch" type="xml">
+            <tree string="Llamadas de Voz"
+                  decoration-success="status == 'completed'"
+                  decoration-info="status in ('queued','initiated','ringing','in_progress')"
+                  decoration-danger="status in ('failed','busy','no_answer')"
+                  decoration-muted="status in ('draft','canceled')">
+                <field name="create_date" string="Creada"/>
+                <field name="partner_id" string="Contacto"/>
+                <field name="phone" string="Teléfono"/>
+                <field name="direction" optional="hide"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'completed'"
+                       decoration-info="status in ('queued','initiated','ringing','in_progress')"
+                       decoration-danger="status in ('failed','busy','no_answer')"/>
+                <field name="duration" string="Dur (s)"/>
+                <field name="disposition" optional="show"/>
+                <field name="caller_id" optional="hide"/>
+                <field name="voice" optional="hide"/>
+                <field name="price" optional="hide"/>
+                <field name="twilio_sid" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================ FORM ============================ -->
+    <record id="ai_agent_voice_call_view_form" model="ir.ui.view">
+        <field name="name">ai.agent.voice.call.form</field>
+        <field name="model">ai.agent.voice.call</field>
+        <field name="arch" type="xml">
+            <form string="Llamada de Voz">
+                <header>
+                    <button name="action_place_call" type="object"
+                            string="📞 Llamar ahora" class="btn-primary"
+                            invisible="status in ('queued','initiated','ringing','in_progress')"
+                            confirm="Se realizará una llamada de voz saliente a este contacto. ¿Continuar?"/>
+                    <field name="status" widget="statusbar"
+                           statusbar_visible="draft,queued,in_progress,completed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Destino">
+                            <field name="partner_id"/>
+                            <field name="phone"/>
+                            <field name="direction"/>
+                        </group>
+                        <group string="Resultado">
+                            <field name="duration"/>
+                            <field name="disposition"/>
+                            <field name="price"/>
+                            <field name="price_unit"/>
+                        </group>
+                    </group>
+                    <group string="Motivo de la llamada">
+                        <field name="call_reason" nolabel="1"
+                               placeholder="Ej.: Recordatorio de saldo pendiente del mes…"/>
+                    </group>
+                    <notebook>
+                        <page string="Transcripción">
+                            <field name="transcript" nolabel="1" readonly="1"
+                                   placeholder="La transcripción aparecerá al finalizar la llamada."/>
+                        </page>
+                        <page string="Técnico">
+                            <group>
+                                <group>
+                                    <field name="twilio_sid"/>
+                                    <field name="caller_id"/>
+                                    <field name="voice"/>
+                                    <field name="realtime_model"/>
+                                </group>
+                                <group>
+                                    <field name="started_at"/>
+                                    <field name="ended_at"/>
+                                    <field name="recording_url" widget="url"/>
+                                </group>
+                            </group>
+                            <field name="error_message" readonly="1"
+                                   invisible="not error_message"/>
+                        </page>
+                        <page string="Notas">
+                            <field name="notes" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =========================== SEARCH =========================== -->
+    <record id="ai_agent_voice_call_view_search" model="ir.ui.view">
+        <field name="name">ai.agent.voice.call.search</field>
+        <field name="model">ai.agent.voice.call</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <field name="phone"/>
+                <field name="twilio_sid"/>
+                <filter name="completed" string="Completadas" domain="[('status','=','completed')]"/>
+                <filter name="failed" string="Fallidas"
+                        domain="[('status','in',('failed','busy','no_answer'))]"/>
+                <filter name="in_progress" string="Activas"
+                        domain="[('status','in',('queued','initiated','ringing','in_progress'))]"/>
+                <separator/>
+                <filter name="grp_status" string="Estado" context="{'group_by':'status'}"/>
+                <filter name="grp_disposition" string="Resultado" context="{'group_by':'disposition'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- =========================== ACTION =========================== -->
+    <record id="ai_agent_voice_call_action" model="ir.actions.act_window">
+        <field name="name">Llamadas de Voz</field>
+        <field name="res_model">ai.agent.voice.call</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="ai_agent_voice_call_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay llamadas de voz.</p>
+            <p>Crea una llamada, escribe el motivo y pulsa "Llamar ahora".</p>
+        </field>
+    </record>
+
+    <!-- ===================== SETTINGS (app block) ==================== -->
+    <record id="res_config_settings_view_form_voice" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.voice</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Glenda Voz" string="Glenda Voz" name="ueipab_ai_agent">
+                    <block title="Llamadas de Voz (Glenda)" name="voice_call_block">
+                        <setting string="Activar llamadas de voz"
+                                 help="Permite a Glenda realizar llamadas salientes.">
+                            <field name="voice_call_enabled"/>
+                        </setting>
+                        <setting string="Caller ID (número origen)"
+                                 help="Número Twilio o caller ID verificado mostrado al destinatario.">
+                            <field name="voice_call_caller_id"/>
+                        </setting>
+                        <setting string="Voz" help="Voz de OpenAI Realtime (p.ej. sage).">
+                            <field name="voice_call_voice"/>
+                        </setting>
+                        <setting string="Modelo Realtime">
+                            <field name="voice_call_realtime_model"/>
+                        </setting>
+                    </block>
+                    <block title="Conexión con el Gateway" name="voice_gateway_block">
+                        <setting string="URL del Gateway de Voz"
+                                 help="Donde Odoo contacta el gateway para colocar llamadas.">
+                            <field name="voice_call_gateway_url"/>
+                        </setting>
+                        <setting string="URL pública de Odoo (callbacks)"
+                                 help="Base URL que el gateway usa para devolver estado/transcripción.">
+                            <field name="voice_call_callback_base"/>
+                        </setting>
+                        <setting string="Token de callback"
+                                 help="Secreto compartido validado en /ai-agent/voice/callback.">
+                            <field name="voice_call_callback_token"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_voice_settings" model="ir.actions.act_window">
+        <field name="name">Ajustes de Voz</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'ueipab_ai_agent'}</field>
+    </record>
+
+</odoo>

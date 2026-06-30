@@ -169,3 +169,10 @@ config/openai_api.json
 scripts/bounce_state.json
 scripts/bounce_logs/
 config/telegram_bot.json
+config/freescout_api.json
+config/twilio_api.json
+
+# Voice gateway runtime
+voice_gateway/.venv/
+voice_gateway/.tunnel_url
+voice_gateway/__pycache__/

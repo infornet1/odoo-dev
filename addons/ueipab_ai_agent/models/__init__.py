@@ -13,3 +13,5 @@ from . import mail_bot_glenda
 from . import ai_agent_telegram_service
 from . import res_partner
 from . import ai_agent_freescout_task
+from . import ai_agent_voice_call
+from . import res_config_settings_voice

@@ -17,3 +17,5 @@ access_ai_agent_feedback_user,ai.agent.feedback.user,model_ai_agent_feedback,bas
 access_ai_agent_feedback_manager,ai.agent.feedback.manager,model_ai_agent_feedback,base.group_system,1,1,1,1
 access_ai_agent_freescout_task_user,ai.agent.freescout.task.user,model_ai_agent_freescout_task,base.group_user,1,1,1,0
 access_ai_agent_freescout_task_manager,ai.agent.freescout.task.manager,model_ai_agent_freescout_task,base.group_system,1,1,1,1
+access_ai_agent_voice_call_user,ai.agent.voice.call.user,model_ai_agent_voice_call,base.group_user,1,1,1,0
+access_ai_agent_voice_call_manager,ai.agent.voice.call.manager,model_ai_agent_voice_call,base.group_system,1,1,1,1

@@ -1,0 +1,17 @@
+{
+  "_comment": "Twilio Programmable Voice + Glenda Voice Gateway. Copy to twilio_api.json (gitignored) and fill in.",
+  "_updated": "2026-06-30",
+  "api": {
+    "account_sid": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "auth_token": "your_twilio_auth_token",
+    "from_number": "+1XXXXXXXXXX",
+    "_note": "from_number must be a Twilio voice-capable number you own. account_sid starts with AC."
+  },
+  "gateway": {
+    "public_host": "voice.ueipab.edu.ve",
+    "_public_host_note": "Host (no scheme) Twilio reaches for TwiML (https) + media (wss). For local tests use your cloudflared/ngrok host.",
+    "realtime_model": "gpt-realtime-2",
+    "voice": "sage",
+    "test_number": "+584142337463"
+  }
+}
