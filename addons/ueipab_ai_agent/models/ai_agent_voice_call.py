@@ -117,6 +117,18 @@ class AiAgentVoiceCall(models.Model):
             'notice_key': notice_key, 'call_reason': reason,
         })
 
+    @api.model
+    def place_contingencia_reminder(self, partner_id, phone=None,
+                                    notice_key='contingencia_academica_2026'):
+        """Create + place a contingencia reminder in one shot. XML-RPC-safe
+        (returns a dict, not a recordset). Used by the batch runner."""
+        call = self.create_contingencia_reminder(partner_id, phone=phone, notice_key=notice_key)
+        try:
+            call.action_place_call()
+        except Exception as e:
+            return {'call_id': call.id, 'status': call.status, 'error': str(e)}
+        return {'call_id': call.id, 'sid': call.twilio_sid or '', 'status': call.status}
+
     # ------------------------------------------------------------- place a call
     def action_place_call(self):
         """Ask the voice gateway to dial this contact and bridge Glenda."""
