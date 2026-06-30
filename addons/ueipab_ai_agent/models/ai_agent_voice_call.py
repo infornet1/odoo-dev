@@ -248,7 +248,51 @@ class AiAgentVoiceCall(models.Model):
                               now, state, call.id, call.phone or ''),
         })
         _logger.info("voice vote recorded: ack %s → %s (call %s)", ack.id, state, call.id)
+        self._notify_vote_votacion(ack, call)
         return {'recorded': True, 'decision': state, 'partner': call.partner_id.name}
+
+    @api.model
+    def _notify_vote_votacion(self, ack, call):
+        """Email votacion@ (CC) when a vote is captured by voice — mirrors the web/WA
+        flow's confirmation so every voice vote is logged in the votacion@ inbox.
+        Best-effort: never breaks the vote."""
+        try:
+            label = {'continuing': 'SÍ — Estoy de acuerdo', 'leaving': 'NO'}.get(
+                ack.state, ack.state)
+            name = ack.partner_name or (ack.partner_id.name if ack.partner_id else '')
+            email = ack.partner_email or (ack.partner_id.email if ack.partner_id else '')
+            phone = call.phone or ack.partner_phone or ''
+            dt = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+            campaign = ack.notice_label or ack.notice_key or 'Encuesta'
+            subject = ("[Contingencia Académica] " if ack.notice_key ==
+                       'contingencia_academica_2026' else "[Encuesta] ") + \
+                      "%s — %s (voto por voz)" % (label, name)
+            body = (
+                "<div style=\"font-family:Arial,sans-serif;max-width:520px;\">"
+                "<div style=\"background:#1a2c5b;color:#fff;padding:16px 22px;border-radius:8px 8px 0 0;\">"
+                "<h2 style=\"margin:0;font-size:16px;\">&#128222; Voto registrado por llamada de voz (Glenda IA)</h2></div>"
+                "<div style=\"background:#fff;border:1px solid #dde;padding:18px 22px;border-radius:0 0 8px 8px;font-size:13px;color:#333;\">"
+                "<p style=\"margin:0 0 10px;\"><strong>Encuesta:</strong> %s</p>"
+                "<p style=\"margin:0 0 10px;\"><strong>Representante:</strong> %s%s</p>"
+                "<p style=\"margin:0 0 10px;\"><strong>Decisión:</strong> %s</p>"
+                "<p style=\"margin:0 0 10px;\"><strong>Teléfono:</strong> %s</p>"
+                "<p style=\"margin:0 0 10px;\"><strong>Fecha:</strong> %s</p>"
+                "<p style=\"margin:14px 0 0;font-size:11px;color:#888;\">Capturado automáticamente por "
+                "Glenda durante una llamada de voz saliente. Canal de voto: Llamada de voz (Glenda IA).</p>"
+                "</div></div>"
+            ) % (campaign, name, (' · ' + email) if email else '', label, phone, dt)
+            inbox = 'votacion@ueipab.edu.ve'
+            self.env['mail.mail'].sudo().create({
+                'subject': subject,
+                'email_from': 'Colegio Andrés Bello <votacion@ueipab.edu.ve>',
+                'email_to': ('%s <%s>' % (name, email)) if email else inbox,
+                'email_cc': inbox,
+                'body_html': body,
+                'state': 'outgoing',
+            }).send()
+            _logger.info("votacion@ voice-vote confirmation sent for ack %s", ack.id)
+        except Exception:
+            _logger.exception("votacion@ voice-vote confirmation failed for ack %s", ack.id)
 
     @api.model
     def _tool_get_balance(self, cedula):
