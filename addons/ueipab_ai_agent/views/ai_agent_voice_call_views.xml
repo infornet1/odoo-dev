@@ -57,10 +57,12 @@
                             <field name="price_unit"/>
                         </group>
                     </group>
-                    <group string="Motivo de la llamada">
-                        <field name="call_reason" nolabel="1"
-                               placeholder="Ej.: Recordatorio de saldo pendiente del mes…"/>
+                    <group>
+                        <field name="notice_key" placeholder="(opcional) p.ej. contingencia_academica_2026"/>
                     </group>
+                    <separator string="Motivo de la llamada"/>
+                    <field name="call_reason" nolabel="1"
+                           placeholder="Ej.: Recordatorio de saldo pendiente del mes…&#10;&#10;Escriba aquí el guion que Glenda usará al inicio de la llamada."/>
                     <notebook>
                         <page string="Transcripción">
                             <field name="transcript" nolabel="1" readonly="1"
