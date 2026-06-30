@@ -1,6 +1,33 @@
-# Glenda Voice Calls — Production Deployment Plan
+# Glenda Voice Calls — Production Deployment
 
-**Status:** PLANNING (not deployed) | **Created:** 2026-06-30 | **Depends on:** [GLENDA_VOICE_CALL_POC.md](GLENDA_VOICE_CALL_POC.md)
+**Status:** ✅ **DEPLOYED 2026-06-30** (capability live; parent-facing calling gated — see §1) | **Depends on:** [GLENDA_VOICE_CALL_POC.md](GLENDA_VOICE_CALL_POC.md)
+
+## ✅ Deployed 2026-06-30 — what was done
+
+| Step | Result |
+|------|--------|
+| DO firewall `ueipab-fw` | inbound + outbound **tcp/8090 restricted to VPC `10.124.0.0/20`** (prod↔gateway; NOT public) |
+| DNS | `A voice.ueipab.edu.ve → 64.23.157.121` (DigitalOcean) |
+| nginx + TLS | vhost on ueipab2 → `localhost:8090`, WS headers, Let's Encrypt cert; **`/place-call` denied publicly (403)** |
+| Gateway | `public_host=voice.ueipab.edu.ve`; **cloudflared tunnel retired** (service stopped+disabled) |
+| Odoo module | `ueipab_ai_agent` **17.0.1.60.0 installed in DB_UEIPAB** (backup `/root/ueipab_ai_agent_backup_20260630_065705.tgz`); model + menus live |
+| Prod settings | `voice_call.*` seeded: gateway_url `http://10.124.0.2:8090`, callback_base `http://10.124.0.3:8075`, caller_id `+15093843032` (US interim), fresh callback_token, **enabled=True** |
+| Smoke test | prod Odoo → call to Gustavo (62s); status + transcript landed on `DB_UEIPAB` record #1; `get_pricing` returns live DB_UEIPAB data |
+
+**Networking (prod):** prod Odoo `10.124.0.3` → gateway `10.124.0.2:8090` (VPC); gateway → prod Odoo
+`10.124.0.3:8075` (VPC); Twilio → `https://voice.ueipab.edu.ve` (public 443). The gateway is multi-tenant
+(each place-call carries its own callback/tool URLs), so it serves both `testing` and `DB_UEIPAB`.
+
+> ⚠️ **GATE STILL OPEN — do NOT cold-call parents yet.** Caller ID is the US interim (low VE pickup) and
+> legal consent/quiet-hours sign-off is pending. `voice_call.enabled=True` only powers the staff button +
+> internal use. Before any parent batch: resolve caller ID (Movistar SIM + display test) and consent.
+> **Kill switch:** set `voice_call.enabled=False` in DB_UEIPAB.
+
+---
+
+## (original plan retained below)
+
+
 
 Moves the outbound voice POC (validated in testing 2026-06-30) to production. The POC
 ran on the dev host `ueipab2` (64.23.157.121) behind an ephemeral cloudflared tunnel,
