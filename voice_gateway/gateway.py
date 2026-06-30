@@ -33,6 +33,8 @@ OPENAI_API_KEY = get_openai_key()
 PUBLIC_HOST = SETTINGS.get("public_host", "localhost:8090")
 DEFAULT_MODEL = SETTINGS.get("realtime_model", "gpt-realtime-2")
 DEFAULT_VOICE = SETTINGS.get("voice", "sage")
+HANGUP_DELAY = float(SETTINGS.get("hangup_delay_seconds", 3.0))   # let farewell audio drain
+MAX_CALL_SECONDS = int(SETTINGS.get("max_call_seconds", 360))     # hard cost/safety cap
 
 # Realtime function tools — LIVE data fetched from Odoo (static facts stay in the prompt).
 TOOLS = [
@@ -61,6 +63,15 @@ TOOLS = [
             },
             "required": ["cedula"],
         },
+    },
+    {
+        "type": "function",
+        "name": "end_call",
+        "description": (
+            "Finaliza y cuelga la llamada. Úsala cuando la persona se despida "
+            "(gracias, adiós, hasta luego) o indique que no tiene más preguntas — "
+            "SIEMPRE después de despedirte brevemente. No alargues la llamada."),
+        "parameters": {"type": "object", "properties": {}, "required": []},
     },
     {
         "type": "function",
@@ -243,6 +254,20 @@ async def media(ws: WebSocket):
                     arguments = json.loads(arguments_str or "{}")
                 except Exception:
                     arguments = {}
+
+                # Hang up: ack the tool, let the farewell audio drain, then end the
+                # Twilio call via its Call SID. No response.create (conversation is over).
+                if name == "end_call":
+                    await oai.send(json.dumps({
+                        "type": "conversation.item.create",
+                        "item": {"type": "function_call_output", "call_id": call_id,
+                                 "output": json.dumps({"ok": True})},
+                    }))
+                    _log.info("end_call requested → hanging up %s in %ss", call_sid, HANGUP_DELAY)
+                    await asyncio.sleep(HANGUP_DELAY)
+                    await _hangup(call_sid)
+                    return
+
                 result = {}
                 tool_url = ctx.get("tool_url")
                 if tool_url:
@@ -288,9 +313,15 @@ async def media(ws: WebSocket):
                     elif t == "error":
                         _log.error("OpenAI error: %s", msg.get("error"))
 
+            async def watchdog():
+                await asyncio.sleep(MAX_CALL_SECONDS)
+                _log.info("max call duration (%ss) reached → hangup %s", MAX_CALL_SECONDS, call_sid)
+                await _hangup(call_sid)
+
             t1 = asyncio.create_task(twilio_to_openai())
             t2 = asyncio.create_task(openai_to_twilio())
-            _done, pending = await asyncio.wait({t1, t2}, return_when=asyncio.FIRST_COMPLETED)
+            t3 = asyncio.create_task(watchdog())
+            _done, pending = await asyncio.wait({t1, t2, t3}, return_when=asyncio.FIRST_COMPLETED)
             for p in pending:
                 p.cancel()
 
@@ -307,6 +338,18 @@ async def media(ws: WebSocket):
 
 
 # --------------------------------------------------------------------- helpers
+async def _hangup(call_sid: str):
+    """End a live call via its Twilio Call SID (REST), best-effort."""
+    if not call_sid:
+        return
+    try:
+        client, _ = twilio_client()
+        await asyncio.to_thread(lambda: client.calls(call_sid).update(status="completed"))
+        _log.info("hung up call %s", call_sid)
+    except Exception as e:
+        _log.warning("hangup failed for %s: %s", call_sid, e)
+
+
 def _notify_odoo(ctx: dict, fields: dict):
     """POST an update to Odoo's voice callback (JSON-RPC envelope), best-effort."""
     url = (ctx or {}).get("callback_url")
