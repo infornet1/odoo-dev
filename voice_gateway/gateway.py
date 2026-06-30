@@ -62,6 +62,24 @@ TOOLS = [
             "required": ["cedula"],
         },
     },
+    {
+        "type": "function",
+        "name": "record_survey_vote",
+        "description": (
+            "Registra el voto del representante en la encuesta ligada a esta llamada "
+            "(p.ej. el Plan de Contingencia Académica). Úsala SOLO después de: (1) confirmar "
+            "que hablas con el representante, y (2) que exprese claramente su decisión. "
+            "decision='si' = está de acuerdo / Opción A; decision='no' = no está de acuerdo / Opción B. "
+            "Tras registrar, confírmale verbalmente que su voto quedó registrado."),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "decision": {"type": "string", "enum": ["si", "no"],
+                             "description": "'si' = de acuerdo; 'no' = no de acuerdo"},
+            },
+            "required": ["decision"],
+        },
+    },
 ]
 
 # Per-call context keyed by Twilio CallSid (set at /place-call, read in /media + /call-status).
@@ -230,6 +248,7 @@ async def media(ws: WebSocket):
                 if tool_url:
                     body = {"jsonrpc": "2.0", "method": "call", "params": {
                         "name": name, "arguments": arguments,
+                        "odoo_call_id": ctx.get("odoo_call_id"),
                         "callback_token": ctx.get("callback_token")}}
                     try:
                         resp = await asyncio.to_thread(

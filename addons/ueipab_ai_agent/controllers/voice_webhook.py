@@ -35,4 +35,4 @@ class VoiceWebhook(http.Controller):
         if expected and kw.get('callback_token') != expected:
             return {'error': 'unauthorized'}
         return request.env['ai.agent.voice.call'].sudo().voice_tool(
-            kw.get('name'), kw.get('arguments') or {})
+            kw.get('name'), kw.get('arguments') or {}, odoo_call_id=kw.get('odoo_call_id'))

@@ -26,6 +26,10 @@ class AiAgentVoiceCall(models.Model):
     call_reason  = fields.Text(
         'Motivo de la llamada',
         help='Texto que Glenda usa para presentar el motivo al inicio de la llamada.')
+    notice_key   = fields.Char(
+        'Campaña / Encuesta',
+        help='Si la llamada está ligada a una encuesta (p.ej. contingencia_academica_2026), '
+             'Glenda puede registrar el voto del representante con record_survey_vote.')
 
     status = fields.Selection([
         ('draft',       'Borrador'),
@@ -80,6 +84,40 @@ class AiAgentVoiceCall(models.Model):
     def _onchange_partner_id(self):
         if self.partner_id and not self.phone:
             self.phone = self.partner_id.mobile or self.partner_id.phone or ''
+
+    # --------------------------------------------- survey reminder call factory
+    @api.model
+    def create_contingencia_reminder(self, partner_id, phone=None,
+                                     notice_key='contingencia_academica_2026'):
+        """Create (not place) a voice call to remind a representative about the
+        Contingencia Académica survey and capture their SÍ/NO live."""
+        partner = self.env['res.partner'].browse(partner_id)
+        name = partner.name or 'representante'
+        dest = phone or partner.mobile or partner.phone or ''
+        reason = (
+            "Esta es una llamada del Colegio Andrés Bello sobre la encuesta del PLAN DE "
+            "CONTINGENCIA ACADÉMICA. Saluda con calidez y acento venezolano, identifícate como "
+            "Glenda, la asistente virtual automatizada del colegio, y CONFIRMA que hablas con %s "
+            "(pregunta '¿hablo con %s?'). Explica brevemente: enviamos por correo y WhatsApp una "
+            "consulta para aprobar el Plan de Contingencia Académica y aún no tenemos su respuesta; "
+            "la fecha límite es mañana 1 de julio.\n\n"
+            "CONTENIDO DEL PLAN (explícalo con tus palabras, breve, si la persona lo pide o duda):\n"
+            "Respetando las directrices de las autoridades para salvaguardar a la comunidad "
+            "estudiantil, ante un escenario donde sea necesario mantener a los alumnos en sus hogares, "
+            "el colegio propone activar un PLAN DE CONTINGENCIA ACADÉMICA bajo un MODELO BIMODAL: "
+            "continuar las clases a distancia usando EXCLUSIVAMENTE Google Classroom y Google Meet, "
+            "como canal seguro y eficiente para NO interrumpir el año escolar. La medida se activaría "
+            "solo si se alcanza el 50%% más 1 de aprobación de toda la plantilla de representantes. "
+            "Es una decisión democrática: por eso pedimos su postura.\n\n"
+            "Pregúntale claramente si está DE ACUERDO con activar el plan bimodal: responda SÍ "
+            "(estoy de acuerdo) o NO. Cuando exprese su decisión de forma clara, REGÍSTRALA con la "
+            "herramienta record_survey_vote y confírmale que su voto quedó registrado. Si prefiere "
+            "responder por correo o WhatsApp, indícale que también puede hacerlo. Sé breve y cordial."
+        ) % (name, name)
+        return self.create({
+            'partner_id': partner_id, 'phone': dest,
+            'notice_key': notice_key, 'call_reason': reason,
+        })
 
     # ------------------------------------------------------------- place a call
     def action_place_call(self):
@@ -156,7 +194,7 @@ class AiAgentVoiceCall(models.Model):
 
     # ----------------------------------------------- realtime function tools
     @api.model
-    def voice_tool(self, name, arguments=None):
+    def voice_tool(self, name, arguments=None, odoo_call_id=None):
         """Dispatch a function-tool call from the realtime session (via gateway).
 
         Returns a JSON-serialisable dict the model speaks back. Live data only —
@@ -168,10 +206,51 @@ class AiAgentVoiceCall(models.Model):
                 return {'pricing_es': self.env['sale.order'].sudo().get_pricing_ground_truth()}
             if name == 'get_balance':
                 return self._tool_get_balance(args.get('cedula'))
+            if name == 'record_survey_vote':
+                return self._tool_record_vote(odoo_call_id, args.get('decision'))
         except Exception as e:
             _logger.exception("voice_tool %s failed", name)
             return {'error': str(e)}
         return {'error': 'unknown_tool: %s' % name}
+
+    @api.model
+    def _tool_record_vote(self, odoo_call_id, decision):
+        """Record a SÍ/NO survey vote against the called representative's ack record.
+
+        Only fires for calls linked to a survey (notice_key + partner_id) and only
+        when the record is still 'pending' (never overrides an existing vote).
+        Stamped vote_channel='voice' + audit note for director review.
+        """
+        if not odoo_call_id:
+            return {'recorded': False, 'error': 'no_call_context'}
+        call = self.browse(int(odoo_call_id)).exists()
+        if not call or not call.notice_key or not call.partner_id:
+            return {'recorded': False, 'error': 'call_not_linked_to_survey'}
+        d = (decision or '').strip().lower()
+        if d in ('si', 'sí', 'yes', 'a', 'opcion_a', 'acuerdo', 'de_acuerdo'):
+            state = 'continuing'
+        elif d in ('no', 'b', 'opcion_b', 'desacuerdo'):
+            state = 'leaving'
+        else:
+            return {'recorded': False, 'error': 'invalid_decision'}
+        Ack = self.env['partner.communication.ack'].sudo()
+        ack = Ack.search([('notice_key', '=', call.notice_key),
+                          ('partner_id', '=', call.partner_id.id)], limit=1)
+        if not ack:
+            return {'recorded': False, 'error': 'no_ack_record'}
+        if ack.state != 'pending':
+            return {'recorded': False, 'already_voted': True, 'current_state': ack.state}
+        now = fields.Datetime.now()
+        ack.write({
+            'state': state,
+            'vote_channel': 'voice',
+            'ack_date': now,
+            'vote_notes': (ack.vote_notes or '') +
+                          "\n[Glenda voz %s] decisión=%s · call #%s · tel %s" % (
+                              now, state, call.id, call.phone or ''),
+        })
+        _logger.info("voice vote recorded: ack %s → %s (call %s)", ack.id, state, call.id)
+        return {'recorded': True, 'decision': state, 'partner': call.partner_id.name}
 
     @api.model
     def _tool_get_balance(self, cedula):

@@ -36,6 +36,7 @@ class PartnerCommunicationAck(models.Model):
         ('email_link', 'Enlace de correo'),
         ('whatsapp',   'WhatsApp (Glenda)'),
         ('phone',      'Teléfono (staff)'),
+        ('voice',      'Llamada de voz (Glenda IA)'),
         ('in_person',  'Presencial'),
     ], string='Canal de voto', readonly=True)
     recorded_by  = fields.Many2one('res.users', string='Registrado por',
