@@ -4,6 +4,27 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-30 — 🚀 Enrollment process LAUNCHED + kiosk toggle guard + website patch
+
+**Type:** Launch + bug fixes | **Modules:** `ueipab_enrollment_journey` (→17.0.0.15.3), `ueipab_sales` (→17.0.1.2.6), `ueipab_attendance_report` (→17.0.1.6.34) | **Env:** both + production (`DB_UEIPAB`)
+
+**Attendance — kiosk zero-duration toggle guard (v1.6.32–1.6.34):**
+- **"Notas de auditoría" view fix (v1.6.33):** the `partner.communication.ack` form group is now `invisible="not vote_notes and state != 'pending'"` + placeholder — an empty audit textarea no longer renders as a big expanded empty box (reported on record 439 NELLYS ARAY).
+- **Kiosk zero-duration toggle server-side guard (v1.6.34):** new `models/hr_employee_kiosk_guard.py` overrides `hr.employee._attendance_action_change` — a toggle within `attendance.kiosk_min_toggle_seconds` (ir.config_parameter, default/prod 60) of the employee's last attendance event is a **no-op**, preventing `check_in == check_out` (0h) rows. Root cause: the kiosk `manual_selection` is a toggle; a 2nd name-tap ~2s later flips check-in→check-out. The v1.6.28 JS lock only catches *concurrent* (in-flight) taps, not 2s-apart ones. Real cases: DIXIA BELLORIN (Jun-23, ×2), LEIDYMAR ARAY (×2) + MAIRELSY MOTTA (Jun-30). ⚠️ existing closed zero-duration rows still need RRHH manual correction. Deployed both + prod.
+
+**Enrollment — eligibility + grade fixes, clause softening, WA fallback, LAUNCH:**
+- **Eligibility bug (mass-create):** was gating on the Representante tag (id 25) → only ~97 of ~172 continuity families. **Fixed:** universe flipped to the **Akdemia continuity roster** (tag-independent — resolve each guardian cédula to ANY Odoo partner by normalized VAT; billing-parent dedup preserved). `scripts/enrollment_journey_mass_create.py`.
+- **Grade bug (v0.15.1, billing-critical):** `_is_graduating_grade` used `'a' in g` — matched the 'a' in "Gr**a**do", so the 13 continuing **"5to. Grado"** (primaria) students were wrongly graduated & their auto-quotes undersized. Only **"5to. Año"** (11, bachillerato final) graduate. Fixed to `('año' in g or 'ano' in g)`. `_next_grade` rewritten as a canonical ladder (6to.Grado→1er.Año, 5to.Año→'', Grupo→Grado). Verified vs Customers-tab + Akdemia: 216 continuity students, ~168–172 families.
+- **Orphans:** 2 students had no Odoo partner for their guardian cédula → created from Akdemia guardian data: **Antonio Lopez Oliveros** (#3822, V4896119) + **Candy Ramirez** (#3823, V14641852), tagged Representante. Now 0 orphans.
+- **MARIA MARTIN duplicate merged:** kept #3658 (real, 11 posted invoices, email+mobile); deleted blank company dup #2666 (`base.partner.merge.automatic.wizard`).
+- **Clause softening (v0.15.2 / sales 1.2.6):** electronic-capture sentence (Acuerdo Cl.10 / Contrato Cl.11) made conditional+permissive ("**Cuando la aceptación se efectúe por medios electrónicos**, EL PRESTADOR … **podrá** registrar y conservar …") for the **v1 no-e-signature scope** (CEO decision: v1 captures no e-sig; clause is contract text only; acceptance in-person/manual).
+- **WhatsApp fallback (v0.15.3):** `action_send_blast_email()` auto-falls-back to WA (`_send_wa_s0` via the canonical `ai.agent.whatsapp.service`) when a representante has no email (5 families, bounced). Context test overrides `s0_test_email`/`s0_test_phone`. Verified email→gustavo@ (testing) + WA→+584142337463 (prod, [PRUEBA], savepoint-rolled-back).
+- **Launch:** **B6 counsel gate CLEARED by CEO** (`enrollment.b6_counsel_signed=True`); CC=inscripcion@ (`enrollment.blast_cc`). **172 journeys mass-created LIVE** (all pending, students imported, 0 fail/0 orphan; 167 email + 5 WA). **S0 blast launched** (`scripts/enrollment_s0_blast.py`, background on prod, 10-per-batch, 30s pauses, per-batch mail flush, resumable, From+CC=inscripcion@) — first wave 10/10 delivered, journey links render HTTP 200.
+
+**Infra — website canonical-URL core patch:** `website/models/website.py` `_is_canonical_url` did `environ['REQUEST_URI']` → **500 KeyError** on requests lacking REQUEST_URI (gevent/longpolling worker + internet scanners hitting `/`). Patched to `.get('REQUEST_URI', .get('RAW_URI') or full_path)` in **both** containers (prod ueipab17 + dev odoo-dev-web). ⚠️ core-file patch → **re-apply on container rebuild** (see patterns memory). Surfaced during S0 blast monitoring; unrelated to the blast.
+
+---
+
 ## 2026-06-29 — Attendance dangling-open records: cleanup + prevention + kiosk guard
 
 **Type:** Data fix + prevention | **Modules:** `ueipab_attendance_report` (→17.0.1.6.28), `sync_control_asistencia.py` | **Env:** production (`DB_UEIPAB`) + dev cron host

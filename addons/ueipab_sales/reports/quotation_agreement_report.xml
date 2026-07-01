@@ -369,8 +369,9 @@
                             autógrafa (manuscrita)</strong>.
                         </p>
                         <p style="margin: 0;">
-                            El REPRESENTANTE reconoce que, como respaldo de dicha aceptación, EL PRESTADOR DE
-                            SERVICIOS registra y conserva la <strong>fecha y hora (UTC)</strong> de la aceptación,
+                            El REPRESENTANTE reconoce que, <strong>cuando la aceptación se efectúe por medios
+                            electrónicos</strong>, EL PRESTADOR DE SERVICIOS podrá registrar y conservar, como
+                            respaldo de dicha aceptación, la <strong>fecha y hora (UTC)</strong> de la aceptación,
                             la <strong>dirección IP</strong> de origen, el identificador del dispositivo, y un
                             <strong>valor criptográfico (hash SHA-256)</strong> del documento aceptado que
                             garantiza su integridad e inalterabilidad. Las partes acuerdan que dichos registros,

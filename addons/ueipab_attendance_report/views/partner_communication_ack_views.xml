@@ -127,8 +127,10 @@
                                    invisible="not freescout_conv_id"/>
                         </group>
                     </group>
-                    <group string="Notas de auditoría">
+                    <group string="Notas de auditoría"
+                           invisible="not vote_notes and state != 'pending'">
                         <field name="vote_notes" nolabel="1"
+                               placeholder="Sin notas de auditoría"
                                readonly="state in ('continuing', 'leaving')"/>
                     </group>
                 </sheet>

@@ -44,5 +44,28 @@ The sweep script below (run `--live`) closes all 9 stale rows: each gets `check_
 | Production cleanup of the 9 stale rows | ✅ **applied 2026-06-29 — 9 closed, 0 remaining** |
 | `/etc/cron.d/attendance_close_stale_open` nightly guard | ✅ **installed on the cron host (dev), cron active** |
 | Kiosk check-out double-submit guard | ✅ **DEPLOYED to prod 2026-06-29** (v17.0.1.6.28; verified: kiosk HTTP 200 + guard in prod bundle). Also brought the lagging prod attendance 1.6.25→1.6.28 (incl. 1.6.27 hr.leave CC fix). |
+| Server-side kiosk **zero-duration toggle** guard (see §6) | ✅ **DEPLOYED to BOTH envs 2026-06-30** (v17.0.1.6.34; prod installed, kiosk HTTP 200, registry healthy; `attendance.kiosk_min_toggle_seconds=60`). |
+| ACK form empty "Notas de auditoría" box (see §6) | ✅ **DEPLOYED to BOTH envs 2026-06-30** (v17.0.1.6.33; empty audit textarea no longer renders expanded). |
+
+## 6. Fix — kiosk zero-duration toggle rows (2026-06-30, v17.0.1.6.34)
+
+**A different failure than §1–§4.** The v1.6.28 JS guard (`kiosk_double_submit_guard.js`) only blocks RPCs fired **while the first is still in flight** — a per-instance re-entrancy lock. It does **not** cover two taps ~2 s apart: by then the first RPC has already returned and the lock is released. Result: a distinct class of **CLOSED zero-duration rows** (`check_in == check_out`, `worked_hours ≈ 0`).
+
+### 6.1 Root cause
+The public kiosk's `manual_selection` is a **toggle** — tap a name once = check in, tap again = check out. A second name-tap ~2 s later flips check-in → check-out, leaving a row where `check_in == check_out` — the employee's arrival is effectively **erased**. Because the two taps are seconds apart (not concurrent), the in-flight re-entrancy lock never engages. The guard therefore had to move **server-side**, independent of UI / session / device.
+
+### 6.2 Real incidents (prod, kiosk IP `186.14.93.234`)
+- **DIXIA BELLORIN, Jun-23:** rows **#7923 @ 10:58:48** and **#7953 @ 16:22:42** — both `check_in == check_out`, 0h. Reported as "the kiosk isn't recording."
+- **Post-v1.6.28 (Jun-30), zero-duration rows still occurred:** **LEIDYMAR ARAY (×2)** and **MAIRELSY MOTTA** — each correlated with a `hr_employee … last_attendance_id … could not serialize access` error (non-fatal, Odoo retries; a **correlated symptom, not the cause**).
+
+### 6.3 The fix
+- **New file** `models/hr_employee_kiosk_guard.py` overrides `hr.employee._attendance_action_change`. If the same employee toggles within **`attendance.kiosk_min_toggle_seconds`** (`ir.config_parameter`, default **60**, set to **60** in prod) of their **last** attendance event, the toggle is a **NO-OP**: it returns the last row and preserves the current state — so no `check_in == check_out` row is ever created. Tunable / disable via the param (**0 = off**).
+- **v1.6.33 (bundled):** the "Notas de auditoría" form group on `partner.communication.ack` (`views/partner_communication_ack_views.xml`) is now `invisible="not vote_notes and state != 'pending'"` + a placeholder, so an **empty** audit textarea no longer renders as a large expanded empty box (reported on record **439 NELLYS ARAY**).
+
+### 6.4 Verification
+- **testing:** tap 1 = check-in OK; tap 2 (immediate) = **ignored**, still `checked_in`, **1 row**; tap 3 (after 120 s) = checks out normally.
+- **prod:** installed **1.6.34**, kiosk **HTTP 200**, registry healthy.
+
+> ⚠️ **Note:** the nightly sweep (`attendance_close_stale_open.py`) closes dangling **OPEN** rows but does **not** touch these **CLOSED** zero-duration rows → **RRHH must correct Dixia's Jun-23 rows (and the LEIDYMAR / MAIRELSY rows) manually.**
 
 **Related:** [ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md](ATTENDANCE_BIWEEKLY_EMAIL_PLAN.md) (daily alert / WiFi auto-fill) · [CONTROL_ASISTENCIA_BRIDGE.md](CONTROL_ASISTENCIA_BRIDGE.md) · Josefina context: `project_josefina_overpayment` memory.

@@ -89,15 +89,41 @@ def _is_graduating_grade(grade):
     if not grade:
         return False
     g = grade.lower().replace('°', '').replace('º', '').strip()
-    return g.startswith('5') and 'a' in g
+    # "5to. Año" = final bachillerato year (GRADUATING — law guarantees it).
+    # "5to. Grado" = 5th grade primaria (CONTINUING). Match the word "año",
+    # NOT the bare letter 'a' — which also matched the 'a' in "grado" and
+    # wrongly dropped all 13 5to. Grado students from every enrolling list.
+    return g.startswith('5') and ('año' in g or 'ano' in g)
+
+
+_GRADE_LADDER = [
+    '1er Grupo', '2do Grupo', '3er Grupo',
+    '1er. Grado', '2do. Grado', '3er. Grado',
+    '4to. Grado', '5to. Grado', '6to. Grado',
+    '1er. Año', '2do. Año', '3er. Año', '4to. Año', '5to. Año',
+]
+
+
+def _grade_norm(g):
+    g = (g or '').lower().replace('°', '').replace('º', '').replace('.', '')
+    return ' '.join(g.split())
+
+
+_GRADE_NEXT = {
+    _grade_norm(lbl): (_GRADE_LADDER[i + 1] if i + 1 < len(_GRADE_LADDER) else '')
+    for i, lbl in enumerate(_GRADE_LADDER)
+}
 
 
 def _next_grade(grade):
-    """Increments leading digit: '3° Grado' → '4° Grado', '2° Año' → '3° Año'."""
+    """Next grade on the canonical Venezuelan ladder (primaria→bachillerato
+    aware). '6to. Grado' → '1er. Año'; '5to. Año' (graduating) → '';
+    unknown label → ''. Replaces the old leading-digit increment, which
+    produced '7to. Grado' (no such grade), '6to. Año' for graduates, and
+    ungrammatical ordinals ('1er. Año' → '2er. Año') on parent-facing pages."""
     if not grade:
         return ''
-    m = re.match(r'^(\d+)(.*)', grade.strip())
-    return ('%d%s' % (int(m.group(1)) + 1, m.group(2))) if m else grade
+    return _GRADE_NEXT.get(_grade_norm(grade), '')
 
 
 def _s(value):
@@ -926,16 +952,23 @@ class EnrollmentJourney(models.Model):
     # -- Blast email (Moment 1) -------------------------------------------
 
     def action_send_blast_email(self):
-        """Send Step 0 invitation email. Can be called from list (multi-record) or form."""
-        sent = skipped = 0
+        """Send Step 0 invitation. Email is the primary channel; when a
+        representante has NO email (typically a prior bounce stripped it), the S0
+        automatically falls back to WhatsApp via ``_send_wa_s0``. Multi-record safe.
+
+        Context overrides for safe testing (send only to a chosen recipient):
+          - ``s0_test_email`` → forces the email recipient (email path)
+          - ``s0_test_phone`` → forces the WA recipient (fallback path)
+        """
+        sent = 0
+        wa = {'sent': 0, 'dry': 0, 'no_phone': 0, 'error': 0}
+        test_email = self.env.context.get('s0_test_email')
         for rec in self:
-            email = rec.partner_id.email
+            email = test_email or rec.partner_id.email
             if not email:
+                # No email → fall back to WhatsApp for this family.
                 rec.email_missing = True
-                rec.message_post(
-                    body='⚠️ Email S0 no enviado: el representante no tiene email registrado.',
-                    message_type='comment', subtype_xmlid='mail.mt_note')
-                skipped += 1
+                wa[rec._send_wa_s0()] += 1
                 continue
             blast_vals = {
                 'subject': 'Proceso de Inscripción 2026-2027 — Confirme la continuidad de su(s) representado(s)',
@@ -962,12 +995,21 @@ class EnrollmentJourney(models.Model):
             self.env.ref('base.ir_cron_mail_scheduler_action').sudo().method_direct_trigger()
         except Exception:
             pass
+        wa_total = wa['sent'] + wa['dry']
+        parts = ['%d por email' % sent]
+        if wa_total or wa['no_phone'] or wa['error']:
+            parts.append('%d por WhatsApp%s' % (
+                wa_total, ' (dry_run)' if wa['dry'] and not wa['sent'] else ''))
+        if wa['no_phone']:
+            parts.append('%d sin email ni teléfono' % wa['no_phone'])
+        if wa['error']:
+            parts.append('%d error WA' % wa['error'])
         return {
             'type': 'ir.actions.client', 'tag': 'display_notification',
             'params': {
-                'title': 'Email S0',
-                'message': '%d enviado(s), %d sin email.' % (sent, skipped),
-                'type': 'success' if sent else 'warning',
+                'title': 'Envío S0',
+                'message': ', '.join(parts) + '.',
+                'type': 'success' if (sent or wa_total) else 'warning',
                 'sticky': False,
             },
         }
@@ -1233,93 +1275,97 @@ class EnrollmentJourney(models.Model):
 
     # -- WA escalation (Moment 3) -----------------------------------------
 
-    def action_send_wa(self):
-        """Staff manually triggers WA escalation (e.g. after email bounce)."""
+    def _send_wa_s0(self):
+        """Core S0 WhatsApp send. Returns 'sent' | 'dry' | 'no_phone' | 'error'.
+
+        Prefers the canonical ``ai.agent.whatsapp.service`` (config from
+        ir.config_parameter → works in prod + dev, honors the WA credit
+        kill-switch + anti-spam throttle); falls back to the dev file config only
+        if that model is absent. Honors context ``s0_test_phone`` to redirect the
+        recipient for a safe test send — the message is tagged [PRUEBA] and no
+        state fields (wa_sent_date/phone_missing) are stamped."""
         self.ensure_one()
         partner = self.partner_id
-        phone = partner.mobile or partner.phone
+        test_phone = self.env.context.get('s0_test_phone')
+        phone = test_phone or partner.mobile or partner.phone
         if not phone:
             self.phone_missing = True
             self.message_post(
-                body='⚠️ WA no enviado: el representante no tiene móvil ni teléfono registrado. '
+                body='⚠️ WA S0 no enviado: el representante no tiene móvil ni teléfono registrado. '
                      'Actualice los datos de contacto en el perfil del Representante.',
                 message_type='comment', subtype_xmlid='mail.mt_note')
-            return {
-                'type': 'ir.actions.client', 'tag': 'display_notification',
-                'params': {
-                    'title': 'Sin teléfono registrado',
-                    'message': 'Actualice el móvil/teléfono del representante e intente de nuevo.',
-                    'type': 'warning', 'sticky': True,
-                },
-            }
+            return 'no_phone'
 
         students = self._enrolling_students()
-        if students:
-            names = ', '.join(s.name for s in students)
-        else:
-            names = 'su(s) representado(s)'
-
+        names = ', '.join(s.name for s in students) if students else 'su(s) representado(s)'
         journey_url = self.journey_url
         dry_run = self.env['ir.config_parameter'].sudo().get_param('ai_agent.dry_run', 'True')
         is_dry = str(dry_run).lower() in ('true', '1', 'yes')
 
         wa_text = (
-            'Estimado/a Representante, le contactamos de parte de U.E. Instituto Privado '
+            '%sEstimado/a Representante, le contactamos de parte de U.E. Instituto Privado '
             'Andrés Bello. Tiene pendiente confirmar la inscripción de %s para el año '
             'escolar 2026-2027. Por favor acceda al siguiente enlace para responder: %s '
-            '— Si tiene dudas escríbanos a %s.' % (names, journey_url,
-                                                   self._enroll_addr('contact'))
+            '— Si tiene dudas escríbanos a %s.' % ('[PRUEBA] ' if test_phone else '', names,
+                                                   journey_url, self._enroll_addr('contact'))
         )
 
         if is_dry:
             self.message_post(
-                body='📱 WA (dry_run activo — no enviado) → %s<br/><pre>%s</pre>' % (phone, wa_text),
+                body='📱 WA S0 (dry_run activo — no enviado) → %s<br/><pre>%s</pre>' % (phone, wa_text),
                 message_type='comment', subtype_xmlid='mail.mt_note')
-            return {
-                'type': 'ir.actions.client', 'tag': 'display_notification',
-                'params': {
-                    'title': 'WA en modo dry_run',
-                    'message': 'Mensaje registrado en el chatter. Active WA (dry_run=False) para enviar.',
-                    'type': 'info', 'sticky': False,
-                },
-            }
+            return 'dry'
 
         try:
-            config_path = '/opt/odoo-dev/config/whatsapp_massiva.json'
-            with open(config_path) as fh:
-                wa_cfg = json.load(fh)
-            import requests as _req
-            resp = _req.post(
-                wa_cfg['base_url'].rstrip('/') + '/api/send/whatsapp',
-                json={
-                    'secret': wa_cfg['secret'],
-                    'account': wa_cfg.get('account', wa_cfg.get('key_name', 'ueipab1')),
-                    'recipient': phone,
-                    'type': 'text',
-                    'message': wa_text,
-                },
-                timeout=15,
-            )
-            resp.raise_for_status()
-            self.wa_sent_date = fields.Datetime.now()
-            self.phone_missing = False
+            if 'ai.agent.whatsapp.service' in self.env:
+                # Canonical sender (prod + dev): param config, credit guard, throttle.
+                self.env['ai.agent.whatsapp.service'].sudo().send_message(phone, wa_text)
+            else:
+                # Dev-only fallback: file-based Massiva config.
+                with open('/opt/odoo-dev/config/whatsapp_massiva.json') as fh:
+                    wa_cfg = json.load(fh)
+                import requests as _req
+                resp = _req.post(
+                    wa_cfg['base_url'].rstrip('/') + '/api/send/whatsapp',
+                    json={'secret': wa_cfg['secret'],
+                          'account': wa_cfg.get('account', wa_cfg.get('key_name', 'ueipab1')),
+                          'recipient': phone, 'type': 'text', 'message': wa_text},
+                    timeout=15)
+                resp.raise_for_status()
+            if not test_phone:
+                self.wa_sent_date = fields.Datetime.now()
+                self.phone_missing = False
             self.message_post(
-                body='📱 WA enviado a %s.' % phone,
+                body='📱 WA S0 %senviado a %s.' % ('(PRUEBA) ' if test_phone else '', phone),
                 message_type='comment', subtype_xmlid='mail.mt_note')
-            return {
-                'type': 'ir.actions.client', 'tag': 'display_notification',
-                'params': {'title': 'WA enviado', 'message': 'Mensaje enviado a %s.' % phone,
-                           'type': 'success', 'sticky': False},
-            }
+            return 'sent'
         except Exception as exc:
-            _logger.error('WA send failed for journey %s: %s', self.id, exc)
+            _logger.error('WA S0 send failed for journey %s: %s', self.id, exc)
             self.message_post(
-                body='⚠️ Error enviando WA a %s: %s' % (phone, exc),
+                body='⚠️ Error enviando WA S0 a %s: %s' % (phone, exc),
                 message_type='comment', subtype_xmlid='mail.mt_note')
-            return {
-                'type': 'ir.actions.client', 'tag': 'display_notification',
-                'params': {'title': 'Error WA', 'message': str(exc), 'type': 'danger', 'sticky': True},
-            }
+            return 'error'
+
+    def action_send_wa(self):
+        """Staff manually triggers WA escalation (e.g. after email bounce)."""
+        self.ensure_one()
+        status = self._send_wa_s0()
+        mapping = {
+            'no_phone': ('Sin teléfono registrado',
+                         'Actualice el móvil/teléfono del representante e intente de nuevo.',
+                         'warning', True),
+            'dry':      ('WA en modo dry_run',
+                         'Mensaje registrado en el chatter. Active WA (dry_run=False) para enviar.',
+                         'info', False),
+            'sent':     ('WA enviado', 'Mensaje S0 enviado por WhatsApp.', 'success', False),
+            'error':    ('Error WA', 'No se pudo enviar el WhatsApp. Revise el chatter.',
+                         'danger', True),
+        }
+        title, msg, typ, sticky = mapping.get(status, mapping['error'])
+        return {
+            'type': 'ir.actions.client', 'tag': 'display_notification',
+            'params': {'title': title, 'message': msg, 'type': typ, 'sticky': sticky},
+        }
 
     # -- staff one-click clearance ----------------------------------------
 

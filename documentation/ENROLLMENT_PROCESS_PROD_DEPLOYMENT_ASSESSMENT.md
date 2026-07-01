@@ -1,5 +1,17 @@
 # Enrollment Master Business Process — Production Deployment Assessment
 
+> ## 🚀 LAUNCHED — 2026-06-30
+> **The enrollment process is LIVE and the S0 continuity blast is sending to real parents in `DB_UEIPAB`.** All go/no-go gates are GREEN. Deployed versions: `ueipab_sales` **17.0.1.2.6** + `ueipab_enrollment_journey` **17.0.0.15.3**.
+> - **B6 legal gate CLEARED** by the CEO — `ir.config_parameter` **`enrollment.b6_counsel_signed=True`**. The e-sig capture clauses were **softened for the v1 (no e-signature) scope** (Acuerdo Cl.10 / Contrato Cl.11 now conditional+permissive — *"Cuando la aceptación se efectúe por medios electrónicos, EL PRESTADOR … podrá registrar y conservar …"*); v1 captures **no** electronic signature, acceptance is in-person/manual and the clause is contract text only.
+> - **Eligibility bug FIXED** — the mass-create previously gated the universe on the Odoo "Representante" tag (category id 25) → only ~97 of ~172 continuity families. Universe is now the **Akdemia continuity roster** (tag-independent): each guardian cédula resolves to ANY Odoo partner via normalized VAT, billing-parent dedup preserved (max posted `out_invoice` → `customer_rank` → lowest id).
+> - **Grade bug FIXED (billing-critical)** — `_is_graduating_grade` used `'a' in g`, which matched the "a" in "Grado" and wrongly excluded the **13 CONTINUING "5to. Grado"** (5th-grade PRIMARIA) students, undersizing their auto-quotes. Only **"5to. Año"** (11 students, final bachillerato year) actually graduate. Fixed to `('año' in g or 'ano' in g)`; `_next_grade` rewritten as a canonical ladder (6to. Grado→1er. Año primaria transition; 5to. Año→'' terminal). Customers-tab (sheet) and Akdemia now agree — **216 continuity students, ~168–172 continuity families**.
+> - **Orphans RESOLVED (0 remaining)** — 2 continuity students had no Odoo partner for their guardian cédula; created from Akdemia guardian data: **Antonio Lopez Oliveros** (id 3822, V4896119) + **Candy Ramirez** (id 3823, V14641852), both tagged Representante.
+> - **MARIA MARTIN duplicate MERGED** — kept 3658 (real, 11 posted invoices), deleted blank company dup 2666 via `base.partner.merge.automatic.wizard`.
+> - **WA fallback BUILT** — `action_send_blast_email` now auto-falls-back to WhatsApp (via `ai.agent.whatsapp.service`) for the 5 families with no (bounced) email. Test overrides: context `s0_test_email` / `s0_test_phone`.
+> - **Sender wired** — From `Colegio Andrés Bello - Inscripción <inscripcion@ueipab.edu.ve>`, Reply-To/Contact = `inscripcion@`, CC = `inscripcion@` (`enrollment.blast_cc`).
+> - **Mass-create LIVE** (`scripts/enrollment_journey_mass_create.py`) → **172 journeys created** on prod (all pending, students imported, **0 fail, 0 orphan**; 167 email + 5 WA-fallback).
+> - **S0 blast LAUNCHED** (`scripts/enrollment_s0_blast.py`, background on prod, 10-per-batch, 30s pauses, per-batch mail flush, resumable). First wave **10/10 delivered** (From+CC correct, journey links render HTTP 200); remaining 162 sending.
+
 > ## ✅ DEPLOYED TO PRODUCTION — 2026-06-29
 > The full stack is live in `DB_UEIPAB`. `ueipab_sales` **17.0.1.2.5** (`-u`) + `ueipab_enrollment_journey` **17.0.0.14.0** (fresh `-i`), both `installed` & verified; `enrollment.quote.version` present; 0 journeys (clean). Config params + `web.base.url.freeze=True` set. Annual Report + 16 assets served from the prod host (`/var/www/reporte-anual-2025-2026/` + `/var/www/flyers/`, nginx alias, HTTP 200). Prod-independent **cache-only** Akdemia cron installed (`/etc/cron.d/akdemia_cache_refresh`, 06:30 VET, `--skip-odoo --skip-sheets`; test run published 322 guardians). See **§13 Deployment log** below.
 > - **B5 needed no proxy change** — prod nginx already forwards `X-Forwarded-For`/`X-Real-IP` + `Host $http_host`; no route whitelist (catch-all serves all enrollment routes).
@@ -15,7 +27,9 @@
 
 ## 0. Verdict
 
-**🟡 CONDITIONALLY READY.** The module is functionally complete and tested in `testing`. There are **no architectural blockers**, but the must-do list has grown to **6 items** before flipping prod on (config + 2 nginx + 1 legal), plus recommended checks. Estimated effort: ~half a day including smoke tests. The most important gates are **#B1 (report host/URL)**, **#B3 (config params)**, **#B5 (nginx `X-Forwarded-For` for e-sig IP capture)**, and **#B6 (counsel sign-off on the T&C clauses)**.
+**🟢 LAUNCHED 2026-06-30.** All blockers cleared and the process is live in prod — 172 journeys created and the S0 continuity blast is sending to real parents. B1–B5 were resolved at the 2026-06-29 deploy; **B6 (counsel sign-off) was cleared by the CEO on 2026-06-30** (`enrollment.b6_counsel_signed=True`, clauses softened to the no-e-signature v1 scope). See the **🚀 LAUNCHED — 2026-06-30** banner at the top for the full change set (eligibility + grade bug fixes, orphan resolution, MARIA MARTIN merge, WA fallback, sender wiring). The historical assessment below is retained for reference.
+
+> _Original verdict (2026-06-25):_ 🟡 CONDITIONALLY READY — module functionally complete and tested in `testing`; no architectural blockers; a 6-item must-do list (config + 2 nginx + 1 legal) before flipping prod on. Key gates were **#B1 (report host/URL)**, **#B3 (config params)**, **#B5 (nginx `X-Forwarded-For` for e-sig IP capture)**, and **#B6 (counsel sign-off on the T&C clauses)**.
 
 ---
 
@@ -70,8 +84,10 @@ The quote lifecycle added public routes and a Tier-2 electronic-acceptance flow 
   The prod nginx whitelist for `/enrollment-journey` **must be a prefix match** (`location /enrollment-journey`), not exact — and `/verify-quote` + `/verify-contract` need their own allow entries.
 - **POST→303 redirect:** `/confirm`, `/quote/accept`, `/quote/revision` POST then 303-redirect. The dev S0 'Sí' 404 was a port-stripping bug fixed with `Host $http_host`. Prod (`https://odoo.ueipab.edu.ve` :443, no port to strip) likely works, but **verify the redirect lands on https with the path intact** — don't assume.
 
-### B6 — Legal sign-off on the embedded T&C clauses  *(NEW — added with v0.13.2)*
-Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato Cl.11) and **fractioned-invoicing / anticipo** clauses (Acuerdo Cl.11 / Contrato Cl.12). These ship to real parents on deploy. Status: **pending counsel pass** (the Art. 16 *"las partes disponen"* wording is load-bearing). **Obtain counsel sign-off before any parent-facing send.** See `TC_ELECTRONIC_SIGNATURE_ENHANCEMENT.md` + `ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md`.
+### B6 — Legal sign-off on the embedded T&C clauses  *(NEW — added with v0.13.2)* — ✅ **CLEARED 2026-06-30**
+Both PDFs embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato Cl.11) and **fractioned-invoicing / anticipo** clauses (Acuerdo Cl.11 / Contrato Cl.12).
+- ✅ **CLEARED by the CEO 2026-06-30** — `ir.config_parameter` **`enrollment.b6_counsel_signed=True`**. For the **v1 (no-e-signature) scope**, the electronic-capture sentence was **softened** to conditional+permissive (*"Cuando la aceptación se efectúe por medios electrónicos, EL PRESTADOR … podrá registrar y conservar …"*). v1 captures **no** electronic signature — the clause is contract text only and acceptance happens in-person/manual.
+- See `TC_ELECTRONIC_SIGNATURE_ENHANCEMENT.md` + `ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md`.
 
 ---
 
@@ -166,19 +182,20 @@ Both PDFs now embed **electronic-signature** clauses (Acuerdo Cl.10 / Contrato C
 | `enrollment.journey` records | ✅ model absent → 0 pre-existing |
 | Company id=1 | `Instituto Privado Andrés Bello CA` |
 
-## 10. Go / No-Go gates (all must be GREEN before any parent-facing blast)
-1. `ueipab_enrollment_journey` `state=installed`, `installed_version==17.0.0.14.0`; **`ueipab_sales` `installed_version==17.0.1.2.5`**; model `enrollment.quote.version` exists.
+## 10. Go / No-Go gates — ✅ **ALL GREEN 2026-06-30 (blast LAUNCHED)**
+> Prod now runs `ueipab_sales` **17.0.1.2.6** + `ueipab_enrollment_journey` **17.0.0.15.3**. Every gate below is satisfied; the S0 continuity blast is live to real parents. Gate list retained for the record.
+1. `ueipab_enrollment_journey` `state=installed`, `installed_version==17.0.0.15.3`; **`ueipab_sales` `installed_version==17.0.1.2.6`**; model `enrollment.quote.version` exists.
 2. Config params set: `akdemia.api_key` (non-empty), `akdemia.base_url`, `min_cache_guardians=50`, `enrollment.report_url` = chosen public URL.
 3. `web.base.url` correct + `web.base.url.freeze=True`.
 4. **(B5) nginx:** `X-Forwarded-For`/`X-Real-IP` forwarded; `/enrollment-journey` is a **prefix** allow; `/verify-quote` + `/verify-contract` allowed; a POST→303 (e.g. `/confirm`) lands on https with path intact.
-5. **(B6) Legal:** counsel sign-off obtained on the e-sig (Cl.10/Cl.11) + anticipo (Cl.11/Cl.12) T&C clauses.
+5. **(B6) Legal:** ✅ counsel sign-off obtained (CEO, 2026-06-30 — `enrollment.b6_counsel_signed=True`; e-sig clauses softened to the no-e-signature v1 scope) on the e-sig (Cl.10/Cl.11) + anticipo (Cl.11/Cl.12) T&C clauses.
 6. Outbound mail proven: a real test S0 email arrived at `gustavo.perdomo@`; quote-sent / accepted / revision-escalation mails route correctly; `soporte@`/`pagos@` + CC addresses monitored.
 7. `enrollment.report_url` loads with assets + CTA round-trips to `/enrollment-journey/<token>`.
 8. Akdemia import proven on a real pilot family (correct vat↔cédula match + next-grade roll; no `akdemia.api_key` UserError).
 9. **Quote lifecycle proven:** S0 'Sí' → draft auto-quote (no customer mail leak); download 404 before send / 200 after; **accept records real IP (≠127.0.0.1)** + UTC + SHA-256 + T&C; revision escalates to soporte@/pagos@; re-issue keeps same token+QR.
 10. Contract prints `CSE-2627-0001` + QR; `/verify-contract/<token>` resolves on prod; both PDFs carry the new clauses.
 11. Decline S0 → `enrollment.withdrawal` auto-created + internal notice to `pagos@` with working backend link.
-12. Full pilot GREEN with **zero real-parent emails** (pilot contact = `gustavo.perdomo@`); `ai_agent.dry_run` at intended state; 5° Año inclusion decided.
+12. Full pilot GREEN with **zero real-parent emails** (pilot contact = `gustavo.perdomo@`); `ai_agent.dry_run` at intended state; **graduating-grade logic decided & fixed** — only **"5to. Año"** (11 students) graduates; the **13 "5to. Grado"** primaria students CONTINUE (grade bug fixed 2026-06-30, auto-quotes correctly sized).
 
 ## 11. Smoke test (pilot ONE family, contact = gustavo.perdomo@)
 0. Create one `enrollment.journey` for a real family whose `partner.vat` is a valid Akdemia guardian cédula; note id/token.
@@ -292,3 +309,21 @@ To keep the S0 blast (and the whole funnel) **out of the soporte@ support queue*
 - a dedicated `ir.mail_server` (smtp.gmail.com:587 STARTTLS, user `inscripcion@`, `from_filter=inscripcion@`) so only enrollment mail uses it, no From rewrite.
 
 ✅ **DONE in prod 2026-06-29:** enrollment 0.15.0 deployed (`-u`), `wire_enrollment_inscripcion.py --live` set the params + created `ir.mail_server` id=2, and a prod send-test From the new sender → `gustavo.perdomo@` arrived (`state=sent`). Also verified in testing. **Optional:** add `inscripcion@` as a Freescout admissions mailbox for reply triage. Still gated by **B6** before any real parent blast.
+
+---
+
+## 14. Launch log — 2026-06-30 (EXECUTED — S0 blast LIVE)
+
+Final bug fixes + B6 clearance + mass-create + S0 blast. Prod on `ueipab_sales` **17.0.1.2.6** + `ueipab_enrollment_journey` **17.0.0.15.3**.
+
+| Step | Action | Result |
+|------|--------|--------|
+| Eligibility fix | Flip mass-create universe from Odoo "Representante" tag (cat id 25) → **Akdemia continuity roster** (tag-independent; cédula→normalized-VAT→any partner; billing-parent dedup via max posted `out_invoice`→`customer_rank`→lowest id) | universe grew from ~97 → **~168–172** continuity families |
+| Grade fix (billing-critical) | `_is_graduating_grade`: `'a' in g` → `('año' in g or 'ano' in g)`; `_next_grade` rewritten as canonical ladder | **13 "5to. Grado"** primaria students no longer mis-excluded (auto-quotes correctly sized); only **11 "5to. Año"** graduate; sheet ↔ Akdemia agree at **216 students** |
+| Orphans | create `res.partner` from Akdemia guardian data for 2 unmatched guardians | **Antonio Lopez Oliveros** (3822, V4896119) + **Candy Ramirez** (3823, V14641852), tagged Representante → **0 orphans** |
+| Dedup | merge MARIA MARTIN duplicate via `base.partner.merge.automatic.wizard` | kept **3658** (11 posted invoices), deleted blank company dup **2666** |
+| WA fallback | `action_send_blast_email` auto-falls-back to WhatsApp (`ai.agent.whatsapp.service`) for no-email families; test overrides `s0_test_email`/`s0_test_phone` | 5 families routed to WA |
+| B6 | CEO cleared legal gate; e-sig clause softened (conditional+permissive) for no-e-signature v1 | `enrollment.b6_counsel_signed=True` |
+| Sender | From `Colegio Andrés Bello - Inscripción <inscripcion@…>`, Reply-To/Contact/CC = `inscripcion@` | mail routes via `inscripcion@` server (no From rewrite) |
+| Mass-create | `enrollment_journey_mass_create.py` LIVE on prod | **172 journeys** (all pending, students imported, **0 fail / 0 orphan**; 167 email + 5 WA) |
+| S0 blast | `enrollment_s0_blast.py` (background, 10/batch, 30s pause, per-batch flush, resumable) | first wave **10/10 delivered** (From+CC correct, journey links HTTP 200); remaining 162 sending |

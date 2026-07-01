@@ -1,7 +1,7 @@
 # T&C Electronic-Signature Enhancement — Contract & Quotation
 
-**Created:** 2026-06-27 · **Updated:** 2026-06-28
-**Status:** ✅ IMPLEMENTED + **DEPLOYED TO PROD 2026-06-29** (e-firma + anticipo clauses now live in the prod Acuerdo/Contrato PDFs via `ueipab_sales` 17.0.1.2.5 + `ueipab_enrollment_journey` 17.0.0.14.0). ⚠️ **Counsel pass STILL PENDING — no parent-facing send (quote/contract blast) until counsel signs off** (Art. 16 *"las partes disponen"* wording is load-bearing). Deploy itself is safe: nothing auto-sends to parents.
+**Created:** 2026-06-27 · **Updated:** 2026-06-30
+**Status:** ✅ IMPLEMENTED + **DEPLOYED TO PROD** (e-firma + anticipo clauses live in the prod Acuerdo/Contrato PDFs). **2026-06-30: clause softened to CONDITIONAL/PERMISSIVE + scope narrowed — enrollment v1 does NOT capture e-signatures** (clause is contract text only; acceptance is in-person/manual). **B6 counsel gate CLEARED** (`enrollment.b6_counsel_signed=True`) and the **S0 enrollment blast launched**. See the 2026-06-30 entry below. (Earlier: deployed to prod 2026-06-29 via `ueipab_sales` 17.0.1.2.5 + `ueipab_enrollment_journey` 17.0.0.14.0.)
 **Legal basis:** [ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md](ELECTRONIC_SIGNATURES_VENEZUELA_LAW.md) · **Related:** [QUOTE_ACCEPTANCE_VERSIONING_PLAN.md](QUOTE_ACCEPTANCE_VERSIONING_PLAN.md)
 
 ## Implementation log
@@ -10,8 +10,27 @@
 |---|---|---|
 | 2026-06-28 | v17.0.1.2.4 — **Cl.10 Aceptación electrónica** + DECLARACIÓN amended | v17.0.0.13.1 — **Cl.11 Aceptación electrónica** + acceptance note under signatures |
 | 2026-06-28 | v17.0.1.2.5 — **Cl.11 Facturación fraccionada / recuperación de anticipos** | v17.0.0.13.2 — **Cl.12 Facturación fraccionada / recuperación de anticipos** |
+| 2026-06-30 | v17.0.1.2.6 — **Cl.10 softened to conditional/permissive** ("Cuando la aceptación se efectúe por medios electrónicos … **podrá** registrar y conservar …") | v17.0.0.15.2 — **Cl.11 softened to conditional/permissive** (same wording swap) |
 
-Both upgraded + PDFs re-rendered in `testing`; review copies emailed to gustavo.perdomo@ueipab.edu.ve. Not yet deployed to production (awaiting counsel sign-off).
+Both upgraded + PDFs re-rendered in `testing`; review copies emailed to gustavo.perdomo@ueipab.edu.ve. Deployed to production 2026-06-29; the 2026-06-30 softening deployed to both envs + prod.
+
+## 2026-06-30 — Scope decision (no e-sig capture in v1) + clause softening
+
+**Scope decision (CEO Gustavo, 2026-06-30):** enrollment **v1 will NOT capture electronic signatures.** There is **no e-signature acceptance flow** in v1 — nothing captures IP / UA / UTC timestamp / SHA-256 as the *binding* signature. The electronic-acceptance clause remains in the parent-facing PDFs as **contract text only**; actual acceptance in v1 is **in-person / manual (handwritten)**. The e-signature capture mechanism (the Tier-2 bundle described in this doc) is **deferred to a later version**.
+
+**Clause softening (deployed both envs + prod):** to match that scope, the present-tense *capture* sentence in the electronic-acceptance clause was made **conditional + permissive** in BOTH PDFs so the contract no longer asserts evidentiary capture that isn't happening:
+
+- **Acuerdo Cl.10** — `addons/ueipab_sales/reports/quotation_agreement_report.xml` — `ueipab_sales` **17.0.1.2.5 → 17.0.1.2.6**
+- **Contrato Cl.11** — `addons/ueipab_enrollment_journey/reports/enrollment_contract_views.xml` — `ueipab_enrollment_journey` **17.0.0.15.1 → 17.0.0.15.2**
+
+| | Text |
+|---|---|
+| **Before** | "EL PRESTADOR DE SERVICIOS **registra y conserva** la fecha/hora (UTC), la dirección IP, el identificador del dispositivo y el hash SHA-256 del documento aceptado …" |
+| **After** | "**Cuando la aceptación se efectúe por medios electrónicos,** EL PRESTADOR DE SERVICIOS **podrá registrar y conservar** la fecha/hora (UTC), la dirección IP, el identificador del dispositivo y el hash SHA-256 …" |
+
+**Rationale:** for a v1 in-person/manual signing, the clause now only bites **when electronic acceptance is actually used**, and the handwritten-signature path remains intact. **Legal basis unchanged** — Decreto-Ley Sobre Mensajes de Datos y Firmas Electrónicas: Art. 16 *("salvo que las partes dispongan otra cosa")*, Art. 4/7/8 (valor probatorio), Art. 17 (sana crítica), Art. 18 (SUSCERTE). See the article-mapping table below.
+
+**B6 counsel gate CLEARED:** the counsel sign-off gate (B6) was subsequently cleared by the CEO (`ir.config_parameter enrollment.b6_counsel_signed=True`) and the **S0 enrollment blast launched.**
 
 ## Why
 
