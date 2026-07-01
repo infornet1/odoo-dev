@@ -649,6 +649,10 @@ class EnrollmentJourney(models.Model):
             'contact':    ('enrollment.contact',       SOPORTE_EMAIL),
             'escalation': ('enrollment.escalation_to', SOPORTE_EMAIL),
             'internal':   ('enrollment.internal_to',   PAGOS_EMAIL),
+            # CC on the internal S0 confirm/decline notifications. Defaults to the
+            # follow-up team; set enrollment.internal_cc to also copy admissions
+            # (inscripcion@) so they can follow up on every S0 response.
+            'internal_cc': ('enrollment.internal_cc',  INTERNAL_S0_CC),
             # Default '' = NO CC on the blast (the soporte@-congestion fix). Opt
             # in by setting enrollment.blast_cc to an address if a copy is wanted.
             'blast_cc':   ('enrollment.blast_cc',      ''),
@@ -1121,7 +1125,7 @@ class EnrollmentJourney(models.Model):
             subject_customer = 'Confirmación recibida — Inscripción 2026-2027'
             internal_html = self._build_confirmed_notification_html(audience='internal')
             customer_html = self._build_confirmed_notification_html(audience='customer')
-            internal_cc = INTERNAL_S0_CC
+            internal_cc = self._enroll_addr('internal_cc')
         else:
             # Auto-create the egreso expediente first so the internal email's
             # "Ver expediente de egreso →" button deep-links to the real record.
@@ -1130,7 +1134,7 @@ class EnrollmentJourney(models.Model):
             subject_customer = 'Hemos recibido su respuesta — Inscripción 2026-2027'
             internal_html = self._build_declined_notification_html(audience='internal')
             customer_html = self._build_declined_notification_html(audience='customer')
-            internal_cc = INTERNAL_S0_CC
+            internal_cc = self._enroll_addr('internal_cc')
 
         Mail = self.env['mail.mail'].sudo()
         # 1) Internal staff copy — pagos@ (+ admissions/finance CC on confirm)
