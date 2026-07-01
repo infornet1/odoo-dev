@@ -9,13 +9,13 @@
 
 A **loyalty letter** ("Carta de Fidelidad") for parents who have been loyal to the institution, granting them a **special preferential price held throughout the 2026-2027 school year — including inscripción** — as recognition of their continued trust. The email carries a **one-click ACK button** so the representante confirms/accepts the benefit and it is recorded.
 
-## 2. The offer (⚠️ PROPOSAL — CEO must confirm exact figures)
+## 2. The offer (CEO-set 2026-06-30: flat $162,39)
 
-Frozen "Precio de Fidelidad" for the entire 2026-2027 year:
-- **Inscripción congelada:** early-bird **$187,51 / alumno**, honored even if formalized after 31 jul 2026.
-- **Mensualidad de fidelidad:** **$197,38 / alumno**, held Sep–Jul, instead of stepping up to the regular **$218,88** from 1 Sep 2026.
-- Annual add-ons (seguro $30,58, guía inglés $35/$40, olimpiadas $10, enciclopedia $36) billed **separately at standard rates** (unless CEO decides otherwise).
-- Example (Farias Madera, 2 alumnos): **$394,76/mes** held all year vs **$437,76** regular → ~**$43/mes** family saving + frozen inscripción.
+Frozen "Precio de Fidelidad" for the entire 2026-2027 year — a **single flat rate of $162,39 per alumno** (the pronto-pago rate) for **both inscripción and mensualidad**:
+- **Inscripción congelada:** **$162,39 / alumno**, held all year (even if formalized after 31 jul 2026).
+- **Mensualidad de fidelidad:** **$162,39 / alumno**, held Sep–Jul, instead of the regular **$218,88** from 1 Sep 2026.
+- Annual add-ons (seguro $30,58, guía inglés $35/$40, olimpiadas $10, enciclopedia $36) billed **separately at standard rates**.
+- Example (Farias Madera, 2 alumnos): **$324,78/mes** (2 × $162,39) held all year vs **$437,76** regular → ~**$113/mes** family saving (>$1.100/año) + frozen inscripción.
 
 ## 3. ACK mechanism (reuses the existing parent-communication stack — no code changes)
 
@@ -34,13 +34,12 @@ Frozen "Precio de Fidelidad" for the entire 2026-2027 year:
   ack_url = env['ir.config_parameter'].sudo().get_param('web.base.url') + '/partner-ack/' + rec.token + '/si'
   ```
 
-### Optional loyalty-branding polish (additive, no schema/migration)
-Small `if ack.notice_key == 'loyalty_2026_2027':` branches in `controllers/partner_ack.py`:
-- `_vote_context` → loyalty label/colors
-- `_page_success_yes` → "Beneficio de fidelidad confirmado" (vs generic "Continuidad confirmada")
-- `_send_ack_confirmation` → loyalty subject + **CC pagos@** (vs default votacion@)
-
-Not required for launch; the generic default branches already work (off-message wording + CC votacion@ only).
+### Loyalty-branding polish — ✅ APPLIED (v17.0.1.6.35, both envs + prod, 2026-06-30)
+Additive `if ack.notice_key == 'loyalty_2026_2027':` branches in `controllers/partner_ack.py` (no schema/migration; zero effect on the budget/contingencia surveys):
+- `_vote_context` → loyalty label "Beneficio de fidelidad aceptado ✅" (gold/navy palette 🤝)
+- `_page_success_yes` → new `_page_loyalty_success` page: "¡Gracias por su fidelidad! / Beneficio de fidelidad confirmado"
+- `_send_ack_confirmation` → receipt **from + CC pagos@** (not votacion@), subject "[Carta de Fidelidad 2026-2027] …", loyalty header
+Verified end-to-end in testing: click `/si` → HTTP 200 loyalty success page + receipt from/CC pagos@, record → `continuing`.
 
 ## 4. Example family — Farias Madera (used for the draft)
 
@@ -50,19 +49,19 @@ Not required for launch; the generic default branches already work (off-message 
 
 ## 5. Open decisions (CEO must confirm before any real send)
 
-1. **Exact loyalty price** — freeze mensualidad $197,38 (vs regular $218,88) all year? inscripción freeze at $187,51?
-2. **Scope** — freeze covers inscripción + mensualidad only; add-ons at standard rates? (email states this)
-3. **Draft invoices** — lock the existing $394,76/mo drafts; do NOT auto-step to $437,76 from Sep?
-4. **Eligibility / recipient list** — qualifying criteria + full list of loyal families to receive the carta.
-5. **notice_key** — standardize on `loyalty_2026_2027` for reporting? (draft uses this)
-6. **Acceptance UX** — one-sided accept (no "No" path), link valid all year — intended?
-7. **Confirmation receipt** — accept as-is (CC votacion@, survey wording) or apply the loyalty-branded controller polish (CC pagos@) first?
-8. **Sender identity** — From + Reply-To (draft used Reply-To pagos@) + mail server for the real send.
+1. ✅ **Loyalty price** — CEO set (2026-06-30): flat **$162,39/alumno** for inscripción AND mensualidad, frozen all year.
+2. **Scope** — freeze covers inscripción + mensualidad only; add-ons at standard rates (email states this). Confirm.
+3. **Draft invoices** — lock the family's existing 2026-2027 drafts to $162,39/alumno; do NOT auto-step to $218,88 from Sep. (Farias Madera drafts currently at $197,38 — would need adjusting to $162,39.)
+4. **Eligibility / recipient list** — qualifying criteria + full list of loyal families to receive the carta. ⚠️ STILL OPEN.
+5. ✅ **notice_key** — standardized on `loyalty_2026_2027`.
+6. **Acceptance UX** — one-sided accept (no "No" path), link valid all year — confirm intended.
+7. ✅ **Confirmation receipt** — loyalty-branded polish APPLIED (CC pagos@, loyalty wording).
+8. **Sender identity** — From + Reply-To for the real send (draft used Reply-To pagos@; the ACK receipt is from pagos@).
 
 ## 6. Draft status / test artifacts
 
-- **Draft sent 2026-06-30** to `gustavo.perdomo@ueipab.edu.ve` (CC pagos@, Reply-To pagos@) from **testing**. `mail.mail` id 1191, state=sent.
-- **Safe ACK test row** (testing): `partner.communication.ack` id 15, notice_key `loyalty_2026_2027`, against the CEO's own contact (so a click cannot flip a real family's record). Token `54b542da-…`.
+- **Draft re-sent 2026-06-30** (price $162,39 + loyalty polish) to `gustavo.perdomo@ueipab.edu.ve` (CC pagos@, Reply-To pagos@) from **testing**. `mail.mail` id 1192, state=sent. (First draft was mail 1191 at the old $187,51/$197,38 price.)
+- **Safe ACK test row** (testing): `partner.communication.ack` id 16, notice_key `loyalty_2026_2027`, against the CEO's own contact. Token `11dc14f2-…` (reset to pending after verification click, so the CEO's link works fresh).
 - Email HTML: branded (UEIPAB square logo `res.company/1/logo`), warm Georgia-serif layout, offer block, green "Acepto" CTA → `/partner-ack/<token>/si`. Subject: *"Gracias por su fidelidad: su precio preferencial 2026-2027, congelado todo el año."*
 - Built via the `loyalty-letter-draft` ultracode workflow (ACK-infra research + copy + Farias Madera data → synthesis).
 

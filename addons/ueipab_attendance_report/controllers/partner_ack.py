@@ -93,6 +93,12 @@ class PartnerAckController(http.Controller):
                 'bg': '#fff3cd', 'border': '#ffe69c', 'color': '#856404',
                 'emoji': '📋',
             }
+        if ack.notice_key == 'loyalty_2026_2027':
+            return {
+                'label': 'Beneficio de fidelidad aceptado ✅',
+                'bg': '#f6f9fc', 'border': '#c8a04b', 'color': '#0b3d6b',
+                'emoji': '🤝',
+            }
         # Default: continuity campaign
         if decision == 'continuing':
             return {
@@ -118,11 +124,16 @@ class PartnerAckController(http.Controller):
             border   = ctx['border']
             color    = ctx['color']
 
+            header_title = (
+                '&#129309; Carta de Fidelidad 2026-2027 &mdash; Beneficio aceptado'
+                if ack.notice_key == 'loyalty_2026_2027'
+                else '&#128221; Encuesta Continuidad 2026-2027 — Respuesta registrada'
+            )
             body = f"""
 <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
   <div style="background:#1a2c5b;color:#fff;padding:18px 24px;border-radius:8px 8px 0 0;">
     <h2 style="margin:0;font-size:16px;">
-      &#128221; Encuesta Continuidad 2026-2027 — Respuesta registrada
+      {header_title}
     </h2>
     <p style="margin:5px 0 0;font-size:12px;opacity:0.8;">Confirmaci&oacute;n autom&aacute;tica</p>
   </div>
@@ -153,10 +164,14 @@ class PartnerAckController(http.Controller):
   </div>
 </div>"""
 
-            # All vote campaigns share the votacion@ inbox; only the subject prefix differs.
+            # Vote campaigns share the votacion@ inbox; loyalty routes to pagos@.
             email_from  = 'Colegio Andrés Bello <votacion@ueipab.edu.ve>'
             inbox       = 'votacion@ueipab.edu.ve'
-            if ack.notice_key == 'contingencia_academica_2026':
+            if ack.notice_key == 'loyalty_2026_2027':
+                email_from = 'Colegio Andrés Bello - Pagos <pagos@ueipab.edu.ve>'
+                inbox      = 'pagos@ueipab.edu.ve'
+                subject    = f'[Carta de Fidelidad 2026-2027] {label} — {name}'
+            elif ack.notice_key == 'contingencia_academica_2026':
                 subject     = f'[Contingencia Académica] {label} — {name}'
             else:
                 subject     = f'[Encuesta 2026-2027] {label} — {name}'
@@ -278,11 +293,40 @@ class PartnerAckController(http.Controller):
 
     # ── Success pages ─────────────────────────────────────────────────────────
 
+    def _page_loyalty_success(self, ack):
+        name = ack.partner_name or ''
+        dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
+        return self._base_page(
+            'Beneficio de fidelidad confirmado',
+            f"""
+<div style="text-align:center;margin-bottom:20px;">
+  <div style="font-size:56px;">&#129309;</div>
+  <h2 style="color:#0b3d6b;margin:10px 0 4px;">¡Gracias por su fidelidad!</h2>
+  <p style="color:#555;font-size:14px;margin:0;"><strong>{name}</strong></p>
+</div>
+<div style="background:#f6f9fc;border:1px solid #c8a04b;border-radius:8px;
+            padding:18px;font-size:13px;color:#0b3d6b;margin-bottom:16px;line-height:1.8;">
+  <p style="margin:0 0 6px;">&#10003;&nbsp; <strong>Beneficio de fidelidad 2026-2027 registrado.</strong></p>
+  <p style="margin:0;">&#128336;&nbsp; <strong>Confirmado el:</strong> {dt}</p>
+</div>
+<div style="background:#f0f4fa;border-radius:8px;padding:14px 18px;
+            font-size:13px;color:#444;margin-bottom:16px;">
+  <p style="margin:0 0 6px;"><strong>Pr&oacute;ximos pasos:</strong></p>
+  <p style="margin:0;">El equipo de admisiones formalizar&aacute; su inscripci&oacute;n 2026-2027 con la
+  <strong>tarifa preferencial</strong> reservada para su familia. Para cualquier consulta escr&iacute;banos a
+  <a href="mailto:pagos@ueipab.edu.ve" style="color:#2471a3;">pagos@ueipab.edu.ve</a>.</p>
+</div>
+<p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Puede cerrar esta p&aacute;gina.</p>
+"""
+        )
+
     def _page_success_yes(self, ack):
         if ack.notice_key == 'budget_consulta_2026_2027':
             return self._page_budget_vote_success(ack, 'continuing')
         if ack.notice_key == 'contingencia_academica_2026':
             return self._page_contingencia_success(ack, 'continuing')
+        if ack.notice_key == 'loyalty_2026_2027':
+            return self._page_loyalty_success(ack)
         name = ack.partner_name or ''
         dt   = ack.ack_date.strftime('%d/%m/%Y a las %H:%M') if ack.ack_date else ''
         return self._base_page(
