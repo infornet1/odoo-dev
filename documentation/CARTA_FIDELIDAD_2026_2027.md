@@ -52,7 +52,10 @@ Verified end-to-end in testing: click `/si` → HTTP 200 loyalty success page + 
 1. ✅ **Loyalty price** — CEO set (2026-06-30): flat **$162,39/alumno** for inscripción AND mensualidad, frozen all year.
 2. **Scope** — freeze covers inscripción + mensualidad only; add-ons at standard rates (email states this). Confirm.
 3. **Draft invoices** — lock the family's existing 2026-2027 drafts to $162,39/alumno; do NOT auto-step to $218,88 from Sep. (Farias Madera drafts currently at $197,38 — would need adjusting to $162,39.)
-4. **Eligibility / recipient list** — qualifying criteria + full list of loyal families to receive the carta. ⚠️ STILL OPEN.
+4. ✅ **Eligibility / recipient list — DECIDED (CEO, 2026-06-30): "VIP tag only" tier.**
+   Criteria (all must hold): continuity journey (2026-2027) **+** VIP tag (category id 30) **+** solvent (`credit ≤ $5`) **+** has email. **WILLIANS VELASQUEZ excluded** (VIP+solvent but no email; not sent via WA per CEO).
+   **Final recipients (4):** MARIANA MADERA (id 2678, rank 167), PAOLA VELASCO (rank 133), ROBERTO VERA (rank 98), CRISTINA GONZALEZ (rank 87). *(PAOLA/ROBERTO/CRISTINA have dual `;`-joined emails → both co-parents reached.)*
+   Data basis: `customer_rank` is the workable loyalty proxy (Odoo invoice-count is uniformly recent); of 5 VIP continuity families, 4 qualify by email. Broader tiers were available (rank≥80→93, rank≥100→70, rank≥50→110) but CEO chose the curated VIP-only set.
 5. ✅ **notice_key** — standardized on `loyalty_2026_2027`.
 6. **Acceptance UX** — one-sided accept (no "No" path), link valid all year — confirm intended.
 7. ✅ **Confirmation receipt** — loyalty-branded polish APPLIED (CC pagos@, loyalty wording).
