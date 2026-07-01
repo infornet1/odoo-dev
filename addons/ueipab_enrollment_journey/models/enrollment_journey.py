@@ -17,6 +17,7 @@ SOPORTE_EMAIL = 'soporte@ueipab.edu.ve'
 # backend link ("Ver expediente en Odoo →") and must NEVER reach customers,
 # who are not yet involved in the Odoo business process.
 PAGOS_EMAIL = 'pagos@ueipab.edu.ve'
+INSCRIPCION_EMAIL = 'inscripcion@ueipab.edu.ve'
 # Admissions/finance follow-up team CC'd on the internal S0 notifications
 # (both confirmed and declined).
 INTERNAL_S0_CC = (
@@ -641,6 +642,7 @@ class EnrollmentJourney(models.Model):
           escalation → enrollment.escalation_to  (revision-request recipient)
           internal   → enrollment.internal_to    (internal S0/quote staff inbox)
           blast_cc   → enrollment.blast_cc        (CC on the S0 blast; set '' to drop)
+          quote_cc   → enrollment.quote_cc       (CC on the parent quote-send email)
         """
         icp = self.env['ir.config_parameter'].sudo()
         spec = {
@@ -649,6 +651,11 @@ class EnrollmentJourney(models.Model):
             'contact':    ('enrollment.contact',       SOPORTE_EMAIL),
             'escalation': ('enrollment.escalation_to', SOPORTE_EMAIL),
             'internal':   ('enrollment.internal_to',   PAGOS_EMAIL),
+            # CC on the parent-facing quote-send email so admissions (inscripcion@)
+            # and finance (pagos@) keep a copy of every cotización sent. Override
+            # via enrollment.quote_cc; set '' to drop.
+            'quote_cc':   ('enrollment.quote_cc',
+                           INSCRIPCION_EMAIL + ',' + PAGOS_EMAIL),
             # CC on the internal S0 confirm/decline notifications. Defaults to the
             # follow-up team; set enrollment.internal_cc to also copy admissions
             # (inscripcion@) so they can follow up on every S0 response.
@@ -670,14 +677,18 @@ class EnrollmentJourney(models.Model):
                      'tiene email registrado. Comparta el enlace manualmente.',
                 message_type='comment', subtype_xmlid='mail.mt_note')
             return
-        self.env['mail.mail'].sudo().create({
+        quote_vals = {
             'subject': 'Su cotización de inscripción 2026-2027 está lista',
             'email_from': self._enroll_addr('from'),
             'email_to': email,
             'reply_to': self._enroll_addr('reply_to'),
             'body_html': self._build_quote_sent_email_html(),
             'state': 'outgoing',
-        })
+        }
+        quote_cc = self._enroll_addr('quote_cc')
+        if quote_cc:
+            quote_vals['email_cc'] = quote_cc
+        self.env['mail.mail'].sudo().create(quote_vals)
         self._trigger_mail_queue()
 
     def _build_quote_sent_email_html(self):

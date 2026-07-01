@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-07-01 (pm) — Enrollment quote-send CC + journey access grants + Roberto Vera send
+
+**Type:** Feature + access/ops | **Module:** `ueipab_enrollment_journey` (→17.0.0.15.5) | **Env:** both + production
+
+- **Quote-send email now CC's admissions + finance (enrollment v0.15.5):** the parent-facing cotización email (`_send_quote_email`) previously went out with **no CC**. Added a config-driven CC — new `_enroll_addr('quote_cc')` key (param `enrollment.quote_cc`, default **`inscripcion@ueipab.edu.ve,pagos@ueipab.edu.ve`**; set `''` to drop) + new `INSCRIPCION_EMAIL` constant. So inscripción@ (admissions) and pagos@ (finance) keep a copy of every quote sent. Deployed to prod (scp + `-u --no-http` + restart; installed_version 0.15.5) and testing. **Verified live:** JOSE RODRIGUEZ quote (mail 9670, sent 15:03 after deploy) carried `email_cc = inscripcion@,pagos@`.
+
+- **Roberto Vera quote send (journey 142):** the quote was first **confirmed via the standard Sales button + PDF print — which sends NO customer email** and bypasses the journey (`quote_state` stayed draft). Used the journey's **Enviar cotización** to properly send it (mail 9662, frozen version 1) — but it went out **before** the CC fix, so no CC. Flushed 9662 via the **mail-queue cron (id 3, runs as OdooBot)** after a direct `send()` as the API user (uid 2) failed on a `mail.message` write ACL. Then, since Roberto had **already accepted** (`quote_state=accepted`, 14:50) — which `action_send_quote` would have *wiped* by re-freezing — sent a **fresh copy of the exact email body with CC** (mail 9671) WITHOUT touching journey state.
+
+- **Enrollment Journey Support group (90) grants:** the **📤 Enviar/Re-emitir cotización** button raised "You are not allowed to modify 'Enrollment Journey' records" for users lacking group **90 "Sales / Enrollment Journey / Support"**. Granted it to **Gustavo Perdomo (uid 6)**, **Jessica Bolivar (392)**, **Lorena Reyes (395)**, **ALEJANDRA LOPEZ (370)**, and the **API integration user (uid 2)** (the script-write gap noted in the deploy assessment). Even Settings-admins need this group — only the true superuser bypasses `ir.model.access`. Users must hard-refresh/re-login for the new group to take effect.
+
+- **Journey 118 (JOSE RODRIGUEZ) reviewed — healthy:** clean end-to-end **presencial** flow (confirmed in-person 15:00 → auto-quote S00013 → sent 15:03 → aceptación presencial 15:07 → step 1 `done_auto`). FYI: quote auto-generated at $973.20 but sent/accepted at $922.04 (a line adjusted during staff review).
+
+---
+
 ## 2026-07-01 — Prod ops: year-open invoices posted + attention report + attendance batch cancel + FreeScout CSP
 
 **Type:** Operational (prod `DB_UEIPAB`) + infra fix | **Modules:** none (data/config operations)
