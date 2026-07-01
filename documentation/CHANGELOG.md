@@ -4,6 +4,16 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-07-01 (pm-2) — Enrollment journey search view + Sales-access grants
+
+**Type:** UX fix + access | **Module:** `ueipab_enrollment_journey` (→17.0.0.15.6) | **Env:** both + production
+
+- **Journey list is now name-searchable (enrollment v0.15.6):** the list had **no `<search>` view** and its `_rec_name` (`display_name`) is a **computed, non-stored** field → Odoo cannot `ilike`-search it, so typing a parent name in the search box matched nothing. Added `view_enrollment_journey_search`: `partner_id` field with `filter_domain` on `partner_id.name` **+** `partner_id.vat` (cédula), a `student_ids.name` search (find by a child's name), quick filters (Pendiente / Continúa / No continúa) and Group-by (Continuidad / Estado de cotización — the latter activates the `search_default_group_by_status` the action already expected). Deployed both + prod (installed_version 0.15.6); verified search "roberto" → journey 142.
+
+- **Sales-access gap fixed for the admissions team:** Jessica (392), Lorena (395), Alejandra (370) had group 90 (Enrollment Journey Support) but **no base Sales group**, so they couldn't manage the linked `sale.order` quotation. Granted **group 22 "Sales / User: All Documents"** to all three (implies 21; the "All Orders" record rule `[(1,'=',1)]` lets them see enrollment quotes created under another salesperson). Verified the `sale.order` ACL+record-rule chain grants full read/write/create. ⚠️ Users must hard-refresh / re-login for cached session groups to update.
+
+---
+
 ## 2026-07-01 (pm) — Enrollment quote-send CC + journey access grants + Roberto Vera send
 
 **Type:** Feature + access/ops | **Module:** `ueipab_enrollment_journey` (→17.0.0.15.5) | **Env:** both + production

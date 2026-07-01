@@ -328,6 +328,35 @@
         </field>
     </record>
 
+    <!-- Search view: the record name (display_name) is a non-stored computed
+         field, so name-search does not work. Expose partner_id (parent/customer),
+         cédula and student name as searchable so typing a parent name matches. -->
+    <record id="view_enrollment_journey_search" model="ir.ui.view">
+        <field name="name">enrollment.journey.search</field>
+        <field name="model">enrollment.journey</field>
+        <field name="arch" type="xml">
+            <search string="Buscar expediente de inscripción">
+                <field name="partner_id" string="Representante / Cliente"
+                       filter_domain="['|', ('partner_id.name', 'ilike', self), ('partner_id.vat', 'ilike', self)]"/>
+                <field name="student_ids" string="Estudiante"
+                       filter_domain="[('student_ids.name', 'ilike', self)]"/>
+                <separator/>
+                <filter name="pending" string="Pendiente"
+                        domain="[('continuation_status', '=', 'pending')]"/>
+                <filter name="confirmed" string="Continúa"
+                        domain="[('continuation_status', '=', 'confirmed')]"/>
+                <filter name="declined" string="No continúa"
+                        domain="[('continuation_status', '=', 'declined')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_status" string="Continuidad"
+                            context="{'group_by': 'continuation_status'}"/>
+                    <filter name="group_by_quote" string="Estado de cotización"
+                            context="{'group_by': 'quote_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_enrollment_journey" model="ir.actions.act_window">
         <field name="name">Inscripción 2026-2027</field>
         <field name="res_model">enrollment.journey</field>
