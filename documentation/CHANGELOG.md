@@ -4,6 +4,22 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-07-01 — Prod ops: year-open invoices posted + attention report + attendance batch cancel + FreeScout CSP
+
+**Type:** Operational (prod `DB_UEIPAB`) + infra fix | **Modules:** none (data/config operations)
+
+- **Year-open 2026-2027 invoices confirmed (prod):** the **333 draft** customer invoices (162 dated Jul-01 = inscripción + 171 dated Aug-01 = 1ª mensualidad, all USD, ~$81,800.56) were **posted** in one batch via `account.move.action_post` (chunked 20/at-a-time, one-by-one fallback) — **333/333 OK, 0 failures, 0 drafts remaining**. Per CEO instruction: "confirm all, no other action" — **no repricing, no credit notes, no sends**. ⚠️ The 4 VIP loyalty families posted at their **existing (regular) prices**, not the $162,39 loyalty rate → those specific invoices will need **credit-note + reissue** (not a draft edit) once loyalty pricing is finalized.
+
+- **Pending-payment attention report (read-only diagnostic):** built a per-family report of the 340 unpaid/partial year-open invoices (173 families, ~$83.3k residual) cross-referenced against **129 unreconciled inbound customer payments** (127 VEB + 2 USD). Finding: the credits are **pronto-pago prepayments** (values match $162,39/$324,78 inscripción), **not stale debt** (only 3 families have <$1 rounding "dust" on old invoices). Of 84 credit-holding families: **7 COVERS / 76 PARTIAL / 0 SHORT** at locked USD value; **all carry `FX(VEB→USD)`** → each application is a cross-currency reconciliation booking an FX difference (payment-date ~515 VEB/USD → today 633.36). **No reconciliation posted** — deliberately left as finance's worklist. Deliverable: **3-sheet `.xlsx`** (Invoices–Attention / Family Summary / Available Credits, color-coded) at `/home/ftpuser/odoo-dev/invoicing/UEIPAB_pending_payments_attention_2026-07-01.xlsx`.
+
+- **Erroneous July-2026 attendance report batch CANCELLED (prod):** a biweekly `hr.attendance.report` batch for **Quincena 2 · 16–31 Jul 2026** (a period not yet elapsed) was accidentally generated + emailed to all **43** staff on 2026-07-01 01:28 (40 sent, 3 acknowledged incl. GLADYS BRITO). Per CEO: **deleted all 43** (`unlink`, after period/count safety asserts) → 0 remaining, total 836→793. Full CSV backup at `/home/ftpuser/odoo-dev/invoicing/CANCELLED_hr_attendance_report_jul2026_backup.csv`. ⚠️ Deletion kills ACK links + stops reminders but does **not** recall the already-sent emails.
+
+- **FreeScout Turnstile CSP widened (freescout host, infra):** the Cloudflare Turnstile CAPTCHA on `/login` could fail because the ExtraSecurity module's `csp.script_src` filter only allowed the exact file path `challenges.cloudflare.com/turnstile/v0/api.js`. Widened to the **domain** `https://challenges.cloudflare.com` (Cloudflare's own guidance — the widget loads sub-resources). File `Modules/ExtraSecurity/Providers/ExtraSecurityServiceProvider.php:491` (backup `.bak-csp-20260701`); caches cleared; verified in served `/login` CSP. Server side was already healthy (secret decrypts to 35 chars, `siteverify` accepts it); if the widget still fails, remaining suspect is the **Cloudflare-dashboard sitekey hostname allowlist** (must include `freescout.ueipab.edu.ve`) — not server-fixable.
+
+- **Enrollment S0 recap (Roberto Vera, diagnostic only):** confirmed the flow — parent clicks **Sí** → `_ensure_quote()` auto-creates a **draft** `sale.order` (NOT sent, NOT confirmed, generates NO invoice). Roberto Vera (journey 142) = `continuation_status=confirmed`, draft quote **S00006** ($496.47, regular price). Staff-review path: *Enviar cotización* (freeze immutable version + PDF/QR/SHA-256 → `sent`) → parent *Acepto* (Tier-2 e-sig IP/UA/UTC/T&C → `accepted`, step 1 auto-done). Left S00006 **as-is** for staff review per CEO (loyalty vs regular price is staff's call before sending).
+
+---
+
 ## 2026-06-30 (late) — Glenda enrollment knowledge + Loyalty letter + S0-CC fix
 
 **Type:** Feature + fix | **Modules:** `ueipab_ai_agent` (→17.0.1.60.5), `ueipab_attendance_report` (→17.0.1.6.35), `ueipab_enrollment_journey` (→17.0.0.15.4) | **Env:** both + production
