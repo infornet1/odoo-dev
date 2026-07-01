@@ -4,6 +4,20 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-06-30 (late) — Glenda enrollment knowledge + Loyalty letter + S0-CC fix
+
+**Type:** Feature + fix | **Modules:** `ueipab_ai_agent` (→17.0.1.60.5), `ueipab_attendance_report` (→17.0.1.6.35), `ueipab_enrollment_journey` (→17.0.0.15.4) | **Env:** both + production
+
+- **Glenda — 2026-2027 continuity/enrollment knowledge (ai_agent v1.60.5):** her `_INSTITUTIONAL_KNOWLEDGE` was 100% new-aspirant (Akdemia links) with zero awareness of the returning-family process that went live to 172 families. Added a dedicated section: S0 survey + `/enrollment-journey` link (route to **inscripcion@**, never invent links); **anticipos / facturación fraccionada FAQ** ("varias facturas por un anticipo NO es doble cobro"); grade progression (5° Año gradúa vs 5° Grado continúa; 6° Grado→1er Año); egreso; contingencia. Deliberately does NOT promise electronic acceptance (v1 in-person/manual scope). Follow-ups pending: per-conversation enrollment-status injection + `ACTION:ENROLLMENT_LINK`/`CONFIRM_CONTINUITY` + `ENROLL_<token>` Telegram handler.
+
+- **Carta de Fidelidad 2026-2027 (loyalty letter) — first draft:** loyalty letter for loyal parents offering a **flat $162,39/alumno frozen all year (inscripción + mensualidad)** vs the regular $218,88 from Sep. One-click **ACK** reuses `partner.communication.ack` notice_key `loyalty_2026_2027` (`/partner-ack/<token>/si`, no deadline). **Loyalty-branded polish (attendance v1.6.35, both+prod):** additive `partner_ack.py` branches — "Beneficio de fidelidad aceptado" label, new `_page_loyalty_success` page, receipt from/CC **pagos@**. First draft (personalized to Farias Madera example) sent to CEO only; verified ACK flow end-to-end. **Recipient list DECIDED: VIP-only tier** (continuity + VIP tag + solvent + email) → **4 families** (MARIANA MADERA, PAOLA VELASCO, ROBERTO VERA, CRISTINA GONZALEZ; WILLIANS VELASQUEZ excluded — no email). Built via the `loyalty-letter-draft` ultracode workflow. ⚠️ real send awaits CEO go + invoice-draft repricing. See CARTA_FIDELIDAD_2026_2027.md.
+
+- **S0 confirm/decline notifications CC admissions (enrollment v0.15.4):** the internal S0 response notification CC'd only the fixed follow-up team; admissions (inscripcion@) was never copied. Made the internal CC config-driven — new `enrollment.internal_cc` param (default = INTERNAL_S0_CC) via `_enroll_addr('internal_cc')`; set both envs to team + inscripcion@. Verified: `[S0 Confirmada]` mail now CC's inscripcion@.
+
+- **Auto-quote-on-'Sí' confirmed live:** verified in prod that a parent confirming S0 auto-creates a **draft** `sale.order` for staff review (`_ensure_quote()`); 3 confirmed families → 3 draft quotes (S00005/06/07), 1 declined → none.
+
+---
+
 ## 2026-06-30 — 🚀 Enrollment process LAUNCHED + kiosk toggle guard + website patch
 
 **Type:** Launch + bug fixes | **Modules:** `ueipab_enrollment_journey` (→17.0.0.15.3), `ueipab_sales` (→17.0.1.2.6), `ueipab_attendance_report` (→17.0.1.6.34) | **Env:** both + production (`DB_UEIPAB`)
