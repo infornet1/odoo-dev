@@ -160,6 +160,60 @@ function showFile(input){
 """
 
 
+_DAYS_LABEL = {
+    0: 'lunes', 1: 'martes', 2: 'miércoles',
+    3: 'jueves', 4: 'viernes', 5: 'sábados', 6: 'domingos',
+}
+
+
+def _suggest_checkout(env, emp_id, target_date):
+    """Return (h12_str, mm_str, ampm_str, label) for the pre-selected checkout suggestion.
+
+    3-tier fallback:
+      1. ≥3 clean records on same weekday → weekday median
+      2. ≥5 clean records any weekday    → all-day median
+      3. default                         → 17:00 PM
+    "Clean" = session duration ≥ 3 h (filters auto-fill artifacts).
+    Weekday is taken from check_in VET (the day the shift started).
+    Result is rounded to nearest 5 min and clamped to 07:00–21:00 VET.
+    """
+    target_wd = target_date.weekday()
+    recs = env['hr.attendance'].sudo().search(
+        [('employee_id', '=', emp_id), ('check_out', '!=', False)],
+        order='check_in desc', limit=60,
+    )
+
+    all_clean, wd_clean = [], []
+    for r in recs:
+        if (r.check_out - r.check_in).total_seconds() < 3 * 3600:
+            continue
+        ci_vet = r.check_in  - _timedelta(hours=4)
+        co_vet = r.check_out - _timedelta(hours=4)
+        m = co_vet.hour * 60 + co_vet.minute
+        all_clean.append(m)
+        if ci_vet.weekday() == target_wd:
+            wd_clean.append(m)
+
+    def _pick(pool):
+        raw = sorted(pool)[len(pool) // 2]        # median
+        return max(7 * 60, min(21 * 60, round(raw / 5) * 5))  # clamp + round
+
+    if len(wd_clean) >= 3:
+        mins = _pick(wd_clean)
+        label = f'Sugerido según tu historial de los {_DAYS_LABEL.get(target_wd, "")}'
+    elif len(all_clean) >= 5:
+        mins = _pick(all_clean)
+        label = 'Sugerido según tu historial general'
+    else:
+        return '12', '45', 'PM', 'Hora estándar de cierre'
+
+    h24   = mins // 60
+    mm    = f'{mins % 60:02d}'
+    ampm  = 'AM' if h24 < 12 else 'PM'
+    h12   = str(h24 % 12 or 12)
+    return h12, mm, ampm, label
+
+
 def _make_direct_sig(secret: str, emp_id: int, date_str: str) -> str:
     """HMAC-SHA256 signature for a direct fix URL (first 16 hex chars)."""
     return _hmac.new(secret.encode(), f"{emp_id}:{date_str}".encode(), 'sha256').hexdigest()[:16]
@@ -862,6 +916,13 @@ class AttendanceCorrectionController(http.Controller):
             ci_section   = ''
             co_req_badge = '<span style="color:#dc3545;">*</span>'
             co_required  = True
+            # Smart checkout suggestion — only on first render (not POST re-render)
+            sugg_h, sugg_m, sugg_ap, sugg_label = _suggest_checkout(
+                request.env, employee.id, target_date,
+            )
+            co_h_def  = post.get('co_hour', sugg_h)
+            co_m_def  = post.get('co_min',  sugg_m)
+            co_ap_def = post.get('co_ampm', sugg_ap)
         else:
             issue_info  = '&#128683; No se encontró registro de entrada para este día.'
             ci_section  = f"""
@@ -875,6 +936,16 @@ class AttendanceCorrectionController(http.Controller):
               </div>"""
             co_req_badge = '<span style="color:#888;font-size:11px;font-weight:400;">(opcional)</span>'
             co_required  = False
+            sugg_label   = ''
+            co_h_def  = post.get('co_hour', '')
+            co_m_def  = post.get('co_min',  '00')
+            co_ap_def = post.get('co_ampm', 'AM')
+
+        sugg_hint_html = (
+            f'<p style="font-size:11px;color:#2471a3;background:#eff6ff;border-radius:4px;'
+            f'padding:4px 10px;display:inline-block;margin:6px 0 0;">&#128336; {sugg_label}</p>'
+            if sugg_label else ''
+        )
 
         co_section = f"""
               <div class="section">
@@ -883,11 +954,12 @@ class AttendanceCorrectionController(http.Controller):
                   Hora de salida {co_req_badge}
                 </p>
                 {_time_row('co', 'Hora de salida',
-                           hint='Deje «hr» si no recuerda la hora exacta',
+                           hint='Ajusta si la hora sugerida no es correcta' if sugg_label else 'Deje «hr» si no recuerda la hora exacta',
                            required=co_required,
-                           sel_h=post.get('co_hour',''),
-                           sel_m=post.get('co_min','00'),
-                           sel_ap=post.get('co_ampm','AM'))}
+                           sel_h=co_h_def,
+                           sel_m=co_m_def,
+                           sel_ap=co_ap_def)}
+                {sugg_hint_html}
               </div>"""
 
         prev_motivo = post.get('motivo', '')

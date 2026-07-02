@@ -40,7 +40,10 @@ class PartnerAckController(http.Controller):
 
     _VOTE_DEADLINES = {
         'budget_consulta_2026_2027': datetime.date(2026, 6, 8),
-        'contingencia_academica_2026': datetime.date(2026, 7, 1),
+        # Closed early per CEO on 2026-07-01 (threshold 90 SÍ surpassed at 115).
+        # Gate moved a day back to force closure now; the closed page still
+        # DISPLAYS "01 de julio de 2026" (the deadline parents were promised).
+        'contingencia_academica_2026': datetime.date(2026, 6, 30),
     }
 
     def _record_decision(self, token, decision):
