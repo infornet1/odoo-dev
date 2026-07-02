@@ -4,6 +4,40 @@ This file contains detailed version history, bug fixes, and deployment notes mov
 
 ---
 
+## 2026-07-01 (pm-4) — WhatsApp provider abstraction (MassivaMóvil → Kapso), deployed dormant
+
+**Type:** Feature (infra migration groundwork) | **Module:** `ueipab_ai_agent` (→17.0.1.61.0) | **Env:** both + production (DORMANT — provider stays `massiva`)
+
+- **Why:** Glenda's dedicated primary WhatsApp number **+58 414-8321989 has been broken since 2026-05-22** (sends currently ride the backup +58 424-8944898). CEO decided 2026-07-01 to move the primary off MassivaMóvil to **Kapso** — a managed Meta Cloud API provider (official WABA, HMAC-signed real-time webhook push vs Massiva's 5-min polling).
+
+- **Facade dispatch — zero call-site changes:** `ai.agent.whatsapp.service` is now a thin facade. New `_provider()` reads `ir.config_parameter ai_agent.wa_provider` (`'massiva'` default | `'kapso'`) and dispatches `send_message`/`send_media`/`validate_phone`/`fetch_received` to the active provider. Every existing caller keeps calling the same service unchanged. **Rollback = flip that one param.**
+
+- **New `ai.agent.kapso.service`** (`models/kapso_service.py`): sends `POST https://api.kapso.ai/meta/whatsapp/v23.0/{phone_number_id}/messages` with `X-API-Key` auth + Meta-style snake_case JSON. Returns `{'message_id': 0, 'wamid': ...}` to keep the MassivaMóvil integer contract. Retries once on network/429/5xx (honors `Retry-After`, capped 30s); **does NOT raise on a missing wamid after a 2xx** (a retrying caller would double-send). Kill switch `ai_agent.wa_credits_ok` enforced. `fetch_received()` returns `[]` (inbound is webhook-push, so the poll cron becomes a harmless no-op under Kapso).
+
+- **New inbound webhook** `/ai-agent/kapso/webhook` (`controllers/kapso_webhook.py`, `type='http'`): verifies **HMAC-SHA256 of the raw body** against `X-Webhook-Signature` (also accepts `X-Hub-Signature-256`). **Fail-closed** — if Kapso is active (provider=`kapso` OR `kapso_inbound_enabled`) but `ai_agent.kapso_webhook_secret` is unset, the public route rejects with 401 rather than accept forged messages. Parses the Kapso v2 flat envelope (+ a defensive Meta-shaped fallback) → `ai.agent.conversation._handle_kapso_inbound` → same `action_process_reply` pipeline. Returns **502 on genuine processing error** so Kapso redelivers (wamid dedup makes redelivery idempotent); deliberate no-ops (skipped/deferred/dry_run/duplicate) return 200.
+
+- **Dedup:** new `ai.agent.message.kapso_message_id` Char (indexed) + **`unique(kapso_message_id)`** SQL constraint. Postgres unique ignores NULLs, so Massiva (Integer id) / Telegram (NULL) rows are unaffected.
+
+- **Adversarial review (13 confirmed / 2 refuted; all cheap+high-value fixes applied in 1.61.0):** fail-closed webhook, SSRF `_is_safe_media_url` (https + public-IP-only, resolves via `getaddrinfo`), unique dedup constraint, 4xx non-dict error crash guard, no-raise-after-2xx, 502-on-error redelivery, media-type propagation (`_KAPSO_MEDIA_TYPE_MAP`), empty-message/reaction guard. ⚠️ **Phase-2 BEFORE flipping to kapso:** (1) deferred/dry_run inbound persistence + drain (currently 200-and-dropped, no retry); (2) full SSRF helper across the other shared media sinks.
+
+- **Deploy verification:** testing — live facade send via Kapso **sandbox** (wamid returned) + full webhook matrix (fail-closed 401, valid-sig dry_run 200, dormant skipped 200, reaction→skipped, no/wrong sig→401). Prod — module 1.61.0 installed, `wa_provider=massiva` set explicitly, kapso params EMPTY (no test creds on prod), `kapso_message_id` column + `ai_agent_message_kapso_message_id_uniq` constraint present, Massiva params intact, webhook route returns 200 (loaded, dormant). Prod nginx already whitelists `/ai-agent/*`. Prod backups in `/home/vision/kapso_bak_20260701/`.
+
+- **⚠️ Cutover is gated (not done):** the dedicated **+58 414-8321989 is NOT yet connected to Kapso** — only the Kapso Sandbox number exists (`phone_number_id=597907523413541`). Before flipping: (1) release +58 414-8321989 from Massiva's WABA, (2) connect it via Kapso embedded signup → real `phone_number_id`, (3) issue a **prod** API key, (4) seed prod `kapso_api.json` + params, (5) register the webhook, (6) `kapso_inbound_enabled=True` smoke test while still on massiva, (7) FLIP `wa_provider=kapso`. Full runbook: **documentation/WA_PROVIDER_MIGRATION_KAPSO.md**.
+
+---
+
+## 2026-07-01 (pm-3) — Invoice-reminder wizard redesigned (two-step config → preview)
+
+**Type:** UX fix | **Module:** `ueipab_payroll_enhancements` (→17.0.1.75.0) | **Env:** both + production
+
+- **"Filters not working" was a client-side staleness bug, not a backend bug:** the *Recordatorio de Saldo por Email* wizard populated its confirmation list via an `@api.onchange`, which left the list **stale/empty when the user switched filter mode** (Representante+PDVSA / Representante Only / PDVSA Only / Todos con saldo pendiente) — read by staff as "the filters don't work". The server-side `_compute_lines()` was always correct. **Removed the onchange population** entirely.
+
+- **New two-step stateful flow:** wizard opens in **`state='config'`** (filters only, no list) → footer **«Ver lista →»** (`action_load_list`, a **warm** in-form reload = Owl-crash-safe) → **`state='preview'`** (readonly filter recap + the confirmation list + Email/WA send buttons + **«← Cambiar filtros»**). This avoids the Owl `this.fiber.bdom is null` crash that COLD-mounting a form with x2many rows already present re-triggers (the same trap that reverted the v1.74.1 populate-on-open attempt) — warm reloads from in-form buttons are safe.
+
+- **WA-outage notice banner:** new param-driven `wa_invoice_reminder.wa_notice` (set on both envs) surfaces an alert in the wizard noting Glenda's primary WA **+58 414-8321989 is down** (Massiva ticket open; sends currently via the backup). Clear the param to hide it. Prod backups `*.bak-20260701`.
+
+---
+
 ## 2026-07-01 (pm-2) — Enrollment journey search view + Sales-access grants
 
 **Type:** UX fix + access | **Module:** `ueipab_enrollment_journey` (→17.0.0.15.6) | **Env:** both + production

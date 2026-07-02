@@ -6,13 +6,21 @@
     <field name="name">account.invoice.reminder.wizard.form</field>
     <field name="model">account.invoice.reminder.wizard</field>
     <field name="arch" type="xml">
-      <form string="Recordatorio de Saldo — Envío por Email">
+      <form string="Recordatorio de Saldo — Email / WhatsApp">
         <field name="state" invisible="1"/>
+        <field name="wa_notice" invisible="1"/>
 
-        <!-- PREVIEW STATE -->
-        <group invisible="state == 'done'">
-          <group string="Configuración">
-            <field name="tag_filter" widget="radio" options="{'horizontal': true}"/>
+        <!-- Operational WA notice (param-driven, e.g. Massiva outage) -->
+        <div class="alert alert-warning" role="alert"
+             invisible="not wa_notice or state == 'done'">
+          <strong>⚠️ Aviso WhatsApp:</strong>
+          <field name="wa_notice" readonly="1" nolabel="1" class="oe_inline"/>
+        </div>
+
+        <!-- STEP 1 — CONFIG -->
+        <group invisible="state != 'config'">
+          <group string="1. Configuración del filtro">
+            <field name="tag_filter" widget="radio"/>
             <field name="include_vip" widget="boolean_toggle"/>
             <!-- Irrelevant for 'rep' (no PDVSA) and 'all' (override is implicit). -->
             <field name="override_pdvsa_rule" widget="boolean_toggle"
@@ -22,10 +30,25 @@
               ℹ️ «Todos con saldo pendiente» incluye automáticamente a los
               clientes PDVSA (sin las exclusiones de fiscal_check ni del 30%).
             </div>
+            <div class="text-muted" colspan="2">
+              Presione <strong>«Ver lista →»</strong> para cargar la lista de
+              confirmación según el segmento seleccionado. Nada se envía en
+              este paso.
+            </div>
           </group>
-          <group string="Resumen">
-            <field name="partner_count" string="Email: enviarán"/>
-            <field name="wa_count"      string="WA: enviarán"/>
+        </group>
+
+        <!-- STEP 2 — PREVIEW / CONFIRMATION -->
+        <group invisible="state != 'preview'">
+          <group string="Filtro aplicado">
+            <field name="tag_filter" readonly="1"/>
+            <field name="include_vip" readonly="1" widget="boolean"/>
+            <field name="override_pdvsa_rule" readonly="1" widget="boolean"
+                   invisible="tag_filter in ('rep', 'all')"/>
+          </group>
+          <group string="2. Confirmación de envío">
+            <field name="partner_count" string="✉ Email: enviarán"/>
+            <field name="wa_count"      string="📱 WA: enviarán"/>
             <field name="total_balance" string="Balance total (USD)"/>
             <field name="skipped_count" string="Excluidos / sin contacto"/>
             <field name="wa_queued_at"  string="✅ WA en cola desde" readonly="1"
@@ -33,15 +56,15 @@
           </group>
         </group>
 
-        <!-- DONE STATE -->
+        <!-- STEP 3 — DONE -->
         <group invisible="state != 'done'" string="Resultado">
           <field name="sent_count"     string="✓ Enviados"/>
           <field name="failed_count"   string="✗ Fallidos"/>
           <field name="no_email_count" string="Sin email"/>
         </group>
 
-        <!-- PARTNER TABLE -->
-        <notebook>
+        <!-- PARTNER TABLE (hidden while configuring) -->
+        <notebook invisible="state == 'config'">
           <page string="Partners">
             <field name="line_ids" nolabel="1">
               <tree string="Partners"
@@ -68,40 +91,51 @@
         </notebook>
 
         <footer>
-          <!-- Preview state buttons -->
+          <!-- Config state -->
+          <button name="action_load_list" string="Ver lista →"
+                  type="object" class="btn-primary"
+                  invisible="state != 'config'"/>
+          <!-- Preview state -->
           <button name="action_send" string="Enviar Emails"
                   type="object" class="btn-primary"
-                  invisible="state == 'done'"
-                  confirm="¿Confirma el envío del recordatorio por email a los clientes seleccionados?"/>
+                  invisible="state != 'preview'"
+                  confirm="¿Confirma el envío del recordatorio por EMAIL a los clientes seleccionados de la lista?"/>
           <button name="action_send_wa" string="Enviar WA (en segundo plano)"
                   type="object" class="btn-success"
-                  invisible="state == 'done' or wa_queued_at"
-                  confirm="¿Confirma el envío WA? El script se ejecutará en segundo plano (~50 min por el retraso anti-spam). Revisar log: /var/log/wa_invoice_reminder.log"/>
+                  invisible="state != 'preview' or wa_queued_at"
+                  confirm="¿Confirma el envío por WHATSAPP a los seleccionados? El script se ejecutará en segundo plano (~2 min por contacto, retraso anti-spam). Log: /var/log/wa_invoice_reminder.log"/>
           <button name="action_refresh" string="Actualizar Lista"
                   type="object" class="btn-secondary"
-                  invisible="state == 'done'"/>
+                  invisible="state != 'preview'"/>
           <button name="action_select_all" string="Seleccionar Todo"
                   type="object" class="btn-secondary"
-                  invisible="state == 'done'"/>
+                  invisible="state != 'preview'"/>
           <button name="action_deselect_all" string="Deseleccionar Todo"
                   type="object" class="btn-secondary"
-                  invisible="state == 'done'"/>
-          <!-- Done state buttons -->
+                  invisible="state != 'preview'"/>
+          <button name="action_back_to_config" string="← Cambiar filtros"
+                  type="object" class="btn-secondary"
+                  invisible="state != 'preview'"/>
+          <!-- Done state -->
           <button string="Cerrar" class="btn-primary"
                   special="cancel"
                   invisible="state != 'done'"/>
+          <button string="Cancelar" class="btn-secondary"
+                  special="cancel"
+                  invisible="state == 'done'"/>
         </footer>
       </form>
     </field>
   </record>
 
   <!-- ── Action ──
-       Plain act_window: the form MUST mount with an empty list. Mounting with
-       rows already present (default_get or a pre-populating server action)
-       re-triggers the Owl `this.fiber.bdom is null` crash. The list is filled
-       post-mount by _onchange_tag_filter (see the model). -->
+       Plain act_window: the form MUST mount with an empty list (state
+       'config'). Mounting with rows already present (default_get or a
+       pre-populating server action) re-triggers the Owl `this.fiber.bdom is
+       null` crash. Rows are added only by in-form buttons (warm reload):
+       action_load_list / action_refresh. -->
   <record id="action_invoice_reminder_wizard" model="ir.actions.act_window">
-    <field name="name">Recordatorio de Saldo por Email</field>
+    <field name="name">Recordatorio de Saldo (Email / WA)</field>
     <field name="res_model">account.invoice.reminder.wizard</field>
     <field name="view_mode">form</field>
     <field name="target">new</field>

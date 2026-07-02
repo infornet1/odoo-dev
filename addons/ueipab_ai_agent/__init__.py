@@ -83,6 +83,31 @@ def _load_api_configs(env):
         except Exception as e:
             _logger.warning("AI Agent: Could not load FreeScout config: %s", e)
 
+    # Load Kapso config (WA provider migration — WA_PROVIDER_MIGRATION_KAPSO.md)
+    kapso_config_path = _find_config('kapso_api.json')
+    if kapso_config_path:
+        try:
+            with open(kapso_config_path, 'r') as f:
+                kp_cfg = json.load(f)
+            if kp_cfg.get('api_key'):
+                ICP.set_param('ai_agent.kapso_api_key', kp_cfg['api_key'])
+            if kp_cfg.get('phone_number_id'):
+                ICP.set_param('ai_agent.kapso_phone_number_id',
+                              str(kp_cfg['phone_number_id']))
+            if kp_cfg.get('webhook_secret'):
+                ICP.set_param('ai_agent.kapso_webhook_secret',
+                              kp_cfg['webhook_secret'])
+            if kp_cfg.get('proxy_base_url'):
+                ICP.set_param('ai_agent.kapso_proxy_base_url',
+                              kp_cfg['proxy_base_url'])
+            _logger.info("AI Agent: Kapso config loaded from %s", kapso_config_path)
+        except Exception as e:
+            _logger.warning("AI Agent: Could not load Kapso config: %s", e)
+
+    # WA provider default: massiva until explicit Kapso cutover
+    if not ICP.get_param('ai_agent.wa_provider'):
+        ICP.set_param('ai_agent.wa_provider', 'massiva')
+
     # Set dry_run default
     if not ICP.get_param('ai_agent.dry_run'):
         ICP.set_param('ai_agent.dry_run', 'True')

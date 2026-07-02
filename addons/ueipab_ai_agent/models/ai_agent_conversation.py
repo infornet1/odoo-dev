@@ -422,7 +422,8 @@ class AiAgentConversation(models.Model):
         ))
 
     def action_process_reply(self, message_text, wa_message_id=0, extra_wa_ids=None,
-                             attachment_url=None, extra_attachments=None):
+                             attachment_url=None, extra_attachments=None,
+                             kapso_message_id=None, attachment_type_hint=None):
         """Process an incoming customer reply using Claude AI.
 
         Args:
@@ -433,6 +434,8 @@ class AiAgentConversation(models.Model):
             attachment_url: URL of attachment from the first/only message.
             extra_attachments: List of dicts {'url': ..., 'wa_id': ...} for
                 additional attachments from batched messages.
+            kapso_message_id: Kapso/Meta wamid of the inbound message (string);
+                stored on the message record for webhook dedup (Kapso provider).
         """
         self.ensure_one()
         if self.state not in ('waiting', 'active'):
@@ -445,9 +448,12 @@ class AiAgentConversation(models.Model):
             'direction': 'inbound',
             'body': message_text or '',
             'whatsapp_message_id': wa_message_id,
+            'kapso_message_id': kapso_message_id or False,
         }
         if attachment_url:
-            att_type = self._detect_attachment_type(attachment_url)
+            # Prefer the provider-supplied type (Kapso) over URL-extension
+            # guessing — Kapso media URLs are frequently extensionless.
+            att_type = attachment_type_hint or self._detect_attachment_type(attachment_url)
             msg_vals['attachment_url'] = attachment_url
             msg_vals['attachment_type'] = att_type
             # Transcribe audio — always mark with prefix so Claude knows it was a voice note.
@@ -2992,11 +2998,165 @@ class AiAgentConversation(models.Model):
                     _logger.warning("Credit Guard [%s]: KILL SWITCH activated after %d consecutive failures",
                                     label, new_count)
 
+    # Meta message type → ai.agent.message.attachment_type. Kapso carries the
+    # authoritative type in the payload; use it instead of guessing from the
+    # URL extension (Kapso media URLs are often extensionless).
+    _KAPSO_MEDIA_TYPE_MAP = {
+        'audio': 'audio', 'voice': 'audio',
+        'image': 'image', 'sticker': 'image',
+        'document': 'document', 'video': 'video',
+    }
+
+    @api.model
+    def _is_safe_media_url(self, url):
+        """True only for https URLs whose host resolves to public addresses.
+
+        Blocks SSRF via a forged/compromised inbound media_url pointing at
+        cloud metadata (169.254.169.254), loopback, or the private VPC.
+        """
+        import ipaddress
+        import socket
+        from urllib.parse import urlparse
+        try:
+            parsed = urlparse(url or '')
+            if parsed.scheme != 'https' or not parsed.hostname:
+                return False
+            infos = socket.getaddrinfo(parsed.hostname, None)
+            for family, _t, _p, _c, sockaddr in infos:
+                ip = ipaddress.ip_address(sockaddr[0])
+                if (ip.is_private or ip.is_loopback or ip.is_link_local
+                        or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+                    return False
+            return True
+        except Exception:
+            return False
+
+    @api.model
+    def _handle_kapso_inbound(self, phone, text, wamid, media_url=None,
+                              contact_name=None, media_type=None):
+        """Process one inbound WhatsApp message pushed by the Kapso webhook.
+
+        Push-mode mirror of the _cron_poll_messages() Phase-2 handoff
+        (Kapso has no batching here — one webhook delivery per message;
+        Kapso-side buffering can be enabled on the webhook config later).
+
+        Returns one of: 'processed', 'duplicate', 'skipped', 'deferred',
+        'dry_run', 'error' — for webhook response logging only.
+        """
+        icp = self.env['ir.config_parameter'].sudo()
+        wa_service = self.env['ai.agent.whatsapp.service']
+
+        # Gate: process only when Kapso is the active provider, or when
+        # explicitly enabled for parallel/sandbox testing while Massiva is
+        # still primary (ai_agent.kapso_inbound_enabled=True).
+        provider = wa_service._provider()
+        inbound_enabled = icp.get_param(
+            'ai_agent.kapso_inbound_enabled', 'False').lower() == 'true'
+        if provider != 'kapso' and not inbound_enabled:
+            _logger.info("Kapso inbound ignored (provider=%s, inbound_enabled=False)",
+                         provider)
+            return 'skipped'
+
+        if not self._is_active_environment():
+            _logger.info("Kapso inbound ignored: not the active environment")
+            return 'skipped'
+
+        # dry_run gates the WA leg exactly like the poll cron does.
+        if icp.get_param('ai_agent.dry_run', 'True').lower() == 'true':
+            _logger.info("DRY_RUN: Kapso inbound from %s not processed (%s)",
+                         phone, wamid)
+            return 'dry_run'
+
+        # Group-JID check MUST run on the RAW value — _normalize_phone strips
+        # the '@' (same ordering as the poll cron's raw_phone check).
+        if not phone or '@' in str(phone):
+            return 'skipped'
+        phone = wa_service._normalize_phone(phone)
+        if not phone:
+            return 'skipped'
+
+        # SSRF guard: media_url arrives from the (potentially forged, if
+        # misconfigured) webhook and is later GET'd server-side (transcription,
+        # receipt OCR, attachment archive). Only accept https URLs to public
+        # hosts — drop the attachment otherwise, keeping any text.
+        if media_url and not self._is_safe_media_url(media_url):
+            _logger.warning("Kapso inbound: unsafe media_url dropped (%s): %s",
+                            wamid, media_url)
+            media_url = None
+
+        # No user content (reactions/locations/contacts/unsupported types yield
+        # empty text + no media) — same guard as the poll cron's
+        # `(not body and not attachment)` skip. Prevents a Claude turn with an
+        # empty prompt (which the API would treat as an assistant prefill).
+        if not (text or '').strip() and not media_url:
+            _logger.info("Kapso inbound without text/media skipped: %s", wamid)
+            return 'skipped'
+
+        # Global dedup on wamid — Kapso retries deliveries on non-2xx and
+        # buffered/replayed events must not double-process.
+        if wamid and self.env['ai.agent.message'].search(
+                [('kapso_message_id', '=', wamid)], limit=1):
+            _logger.info("Kapso inbound duplicate skipped: %s", wamid)
+            return 'duplicate'
+
+        conversation = self.search([
+            ('phone', '=', phone),
+            ('state', 'in', ('waiting', 'active')),
+        ], limit=1, order='last_message_date desc')
+
+        newly_created = False
+        if not conversation:
+            conversation = self._get_or_create_general_inquiry_conversation(phone)
+            if not conversation:
+                _logger.info("Kapso inbound: no conversation for %s, ignoring", phone)
+                return 'skipped'
+            newly_created = not conversation.agent_message_ids
+            _logger.info("Kapso inbound: general inquiry conv %d for %s",
+                         conversation.id, phone)
+
+        # Per-skill schedule gate (same as poll cron). NOTE: deferred messages
+        # are NOT retried by Kapso once we return 200 — acceptable for now;
+        # general_inquiry (the 24/7 skill) is the only auto-created skill.
+        if conversation.skill_id.respect_schedule and not self._is_within_schedule():
+            _logger.info("Kapso inbound outside schedule: deferring conv %d (%s)",
+                         conversation.id, phone)
+            return 'deferred'
+
+        try:
+            with self.env.cr.savepoint():
+                conversation.action_process_reply(
+                    text or '',
+                    wa_message_id=0,
+                    kapso_message_id=wamid or None,
+                    attachment_url=media_url or None,
+                    attachment_type_hint=self._KAPSO_MEDIA_TYPE_MAP.get(
+                        (media_type or '').lower()) if media_url else None,
+                )
+            return 'processed'
+        except Exception:
+            _logger.exception("Kapso inbound processing failed for %s (%s)",
+                              phone, wamid)
+            # Orphan hygiene: a brand-new conv whose only turn failed would
+            # linger empty — same cleanup the poll cron does.
+            try:
+                if newly_created and not conversation.agent_message_ids:
+                    conversation.unlink()
+            except Exception:
+                _logger.exception("Kapso inbound: orphan cleanup failed")
+            return 'error'
+
     def _check_whatsapp_credits(self):
         """Check MassivaMóvil subscription remaining sends.
 
         Returns (ok: bool, detail: str).
         """
+        # Under the Kapso provider there is no MassivaMóvil subscription to
+        # check — report healthy so the Credit Guard doesn't false-trip
+        # wa_credits_ok on a provider that has no /get/subscription endpoint.
+        if self.env['ai.agent.whatsapp.service']._provider() == 'kapso':
+            return (True, "WhatsApp: proveedor Kapso activo (sin chequeo de "
+                          "creditos MassivaMovil)")
+
         ICP = self.env['ir.config_parameter'].sudo()
         threshold = int(ICP.get_param('ai_agent.wa_sends_threshold', '50'))
         try:

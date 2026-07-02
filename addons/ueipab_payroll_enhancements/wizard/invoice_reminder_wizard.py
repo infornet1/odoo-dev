@@ -70,9 +70,19 @@ class InvoiceReminderWizard(models.TransientModel):
         string='Skipped', compute='_compute_stats')
 
     state = fields.Selection([
+        ('config',  'Configuración'),
         ('preview', 'Preview'),
         ('done',    'Done'),
-    ], default='preview')
+    ], default='config')
+
+    wa_notice = fields.Char(
+        string='Aviso WA', readonly=True,
+        default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
+            'wa_invoice_reminder.wa_notice', ''),
+        help='Operational notice shown in the wizard (e.g. WA number outage). '
+             'Driven by ir.config_parameter wa_invoice_reminder.wa_notice — '
+             'clear the param to hide.',
+    )
 
     sent_count    = fields.Integer(string='Sent',    default=0)
     failed_count  = fields.Integer(string='Failed',  default=0)
@@ -92,23 +102,15 @@ class InvoiceReminderWizard(models.TransientModel):
             wiz.skipped_count = len(wiz.line_ids) - len(sendable)
             wiz.wa_count = len(wiz.line_ids.filtered(lambda l: l.wa_will_send and l.selected))
 
-    # ── Default / onchange ────────────────────────────────────────────────
-
-    @api.model
-    def default_get(self, fields_list):
-        # NOTE: line_ids deliberately NOT populated here. Returning x2many
-        # commands from default_get — or opening the form on a record that
-        # already has rows — re-triggers the Owl `this.fiber.bdom is null`
-        # crash. The form must mount with an EMPTY list; _onchange_tag_filter
-        # fills it post-mount (Odoo runs onchange on new-record load).
-        return super().default_get(fields_list)
-
-    @api.onchange('tag_filter', 'include_vip', 'override_pdvsa_rule')
-    def _onchange_tag_filter(self):
-        self.line_ids = [(5, 0, 0)] + self._compute_lines(
-            self.tag_filter or 'both',
-            include_vip=self.include_vip or False,
-            override_pdvsa=self.override_pdvsa_rule or False)
+    # ── Line computation ──────────────────────────────────────────────────
+    # NOTE: line_ids must NEVER be populated at mount time (default_get or a
+    # pre-populating server action) — cold-mounting the form with rows present
+    # re-triggers the Owl `this.fiber.bdom is null` crash (v1.74.1 revert).
+    # Population happens ONLY via in-form buttons (warm reload = crash-safe):
+    # the wizard opens in state 'config' with an empty list; "Ver lista"
+    # (action_load_list) fills it and moves to 'preview'. The onchange path
+    # was removed in v1.75.0 — it left the visible list stale/empty when the
+    # user switched segment or toggles.
 
     def _compute_lines(self, tag_filter, include_vip=False, override_pdvsa=False):
         if tag_filter == 'all':
@@ -236,6 +238,30 @@ class InvoiceReminderWizard(models.TransientModel):
         return lines
 
     # ── Actions ───────────────────────────────────────────────────────────
+
+    def _reopen(self):
+        return {'type': 'ir.actions.act_window', 'res_model': self._name,
+                'res_id': self.id, 'view_mode': 'form', 'target': 'new'}
+
+    def action_load_list(self):
+        """Config → Preview: populate the confirmation list from the filters.
+
+        This is the ONLY population path (plus action_refresh in preview).
+        Rows arrive via an in-form button warm reload — the crash-safe path.
+        """
+        self.ensure_one()
+        self.line_ids = [(5, 0, 0)] + self._compute_lines(
+            self.tag_filter, include_vip=self.include_vip,
+            override_pdvsa=self.override_pdvsa_rule)
+        self.state = 'preview'
+        return self._reopen()
+
+    def action_back_to_config(self):
+        """Preview → Config: clear the list so filters can be changed."""
+        self.ensure_one()
+        self.line_ids = [(5, 0, 0)]
+        self.state = 'config'
+        return self._reopen()
 
     def _sync_eligibility(self):
         """Recompute line eligibility from the LIVE flags before sending.

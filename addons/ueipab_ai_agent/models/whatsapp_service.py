@@ -16,8 +16,21 @@ _last_send_time = 0.0
 
 
 class WhatsAppService(models.AbstractModel):
+    """WhatsApp send/receive facade.
+
+    Historically MassivaMóvil-only; now dispatches per provider via
+    ir.config_parameter ai_agent.wa_provider ('massiva' default | 'kapso').
+    ALL consumers (conversations, skills, wizards, other modules) keep
+    calling this model — the provider swap happens here, in one place.
+    See documentation/WA_PROVIDER_MIGRATION_KAPSO.md.
+    """
     _name = 'ai.agent.whatsapp.service'
     _description = 'WhatsApp Service (MassivaMóvil)'
+
+    def _provider(self):
+        """Active WA provider: 'massiva' (default) or 'kapso'."""
+        return (self.env['ir.config_parameter'].sudo()
+                .get_param('ai_agent.wa_provider', 'massiva') or 'massiva').strip().lower()
 
     def _get_config(self):
         """Load WhatsApp API config from system parameters."""
@@ -86,6 +99,9 @@ class WhatsAppService(models.AbstractModel):
         Respects anti-spam throttling interval between sends.
         Returns dict with message_id on success.
         """
+        if self._provider() == 'kapso':
+            return self.env['ai.agent.kapso.service'].send_message(phone, message)
+
         # Credit guard kill switch — WA leg only (Telegram/OdooBot unaffected)
         wa_credits_ok = self.env['ir.config_parameter'].sudo().get_param(
             'ai_agent.wa_credits_ok', 'True').lower() == 'true'
@@ -140,6 +156,9 @@ class WhatsAppService(models.AbstractModel):
             caption: Optional text caption displayed below the image
         Returns dict with message_id on success.
         """
+        if self._provider() == 'kapso':
+            return self.env['ai.agent.kapso.service'].send_media(phone, url, caption=caption)
+
         wa_credits_ok = self.env['ir.config_parameter'].sudo().get_param(
             'ai_agent.wa_credits_ok', 'True').lower() == 'true'
         if not wa_credits_ok:
@@ -189,6 +208,9 @@ class WhatsAppService(models.AbstractModel):
 
         Returns True if valid, False otherwise.
         """
+        if self._provider() == 'kapso':
+            return self.env['ai.agent.kapso.service'].validate_phone(phone)
+
         config = self._get_config()
         url = config['base_url'].rstrip('/') + '/validate/whatsapp'
         normalized_phone = self._normalize_phone(phone)
@@ -220,6 +242,12 @@ class WhatsAppService(models.AbstractModel):
 
         Returns list of message dicts.
         """
+        if self._provider() == 'kapso':
+            # Kapso inbound is webhook-push (/ai-agent/kapso/webhook);
+            # nothing to poll — the poll cron becomes a harmless no-op.
+            return self.env['ai.agent.kapso.service'].fetch_received(
+                limit=limit, page=page, account_id=account_id)
+
         config = self._get_config()
         url = config['base_url'].rstrip('/') + '/get/wa.received'
 

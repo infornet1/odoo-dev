@@ -7,6 +7,15 @@
 
 ---
 
+## 2026-07-01 Update — wizard redesigned to two-step config → preview (payroll v1.75.0)
+
+- **"Filters not working" root cause = client-side onchange staleness, NOT the backend.** The wizard populated its confirmation list via an `@api.onchange`, which left the list **stale/empty when the user switched filter mode**. Staff read the empty/mismatched list as "the filters don't work". Server-side `_compute_lines()` was always correct. **Removed the onchange population.**
+- **New stateful flow:** opens in **`state='config'`** (filters only, no list) → footer **«Ver lista →»** (`action_load_list`, a **warm** in-form reload = Owl-crash-safe) → **`state='preview'`** (readonly filter recap + confirmation list + Email/WA send + **«← Cambiar filtros»**). Warm reloads avoid the Owl `this.fiber.bdom is null` crash that COLD-mounting a form with x2many rows re-triggers (same trap that reverted the v1.74.1 populate-on-open attempt).
+- **WA-outage banner:** param-driven `wa_invoice_reminder.wa_notice` (set both envs) shows an alert noting Glenda's primary WA **+58 414-8321989 is down** (Massiva ticket; sends via backup). Clear the param to hide. Prod backups `*.bak-20260701`.
+- **Deployed both + prod.** See CHANGELOG 2026-07-01 (pm-3).
+
+---
+
 ## 2026-06-23 Update — wizard-driven WA + message-by-segment (payroll v1.74.5)
 
 - **WA button sends the wizard's EXACT selected list** (ad-hoc), not the standalone tag-based blast. Wizard → `wa_invoice_reminder.adhoc_payload` param (partner + Odoo `mobile` `+58…` + tag) → poller runs `wa_invoice_reminder.py --live --adhoc` → sends that list verbatim. Force-dry while `ai_agent.dry_run=True` (global WA pause).
@@ -331,6 +340,11 @@ ON. Original analysis kept below.
 > wizard with rows already present re-triggers the Owl `this.fiber.bdom is null`
 > crash. The list still fills post-mount via onchange. The empty-list /
 > force-refresh annoyance therefore remains open and needs a crash-safe fix.
+>
+> ✅ **RESOLVED 2026-07-01 (v1.75.0):** redesigned to a two-step **config → preview**
+> flow — the onchange population was removed and the list now fills via a **warm**
+> in-form reload («Ver lista →»), which is crash-safe (COLD-mounting rows was the
+> trap). See the 2026-07-01 update section at the top of this doc.
 
 **Impact: +7 PDVSA partners currently blocked.**
 
